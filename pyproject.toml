@@ -160,9 +160,10 @@ select = [
 # roboco/infra/* adapters lazy-import google clients inside methods so a bare
 # `from roboco.infra import ...` never requires GCP credentials at load time.
 "roboco/infra/*.py" = ["PLC0415"]
-# tests/unit/infra/* — pytest fixtures (tmp_path/monkeypatch) and lambdas are
-# standard test shape; pytest is imported for type hints only.
-"tests/unit/infra/*.py" = ["ARG001", "ARG005", "TC002"]
+# tests/unit/infra/* - pytest fixtures (tmp_path/monkeypatch) and lambdas are
+# standard test shape; pytest is imported for type hints only; lazy imports
+# control mock ordering (the wiring tests patch the module before importing).
+"tests/unit/infra/*.py" = ["ARG001", "ARG005", "TC002", "PLC0415"]
 # MCP tool surfaces ARE the LLM-facing contract — every parameter must be
 # top-level + typed so the SDK exposes it as a discrete schema field with
 # enum constraints. Bundling into a dataclass would hide enum hints from

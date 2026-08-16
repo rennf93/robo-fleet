@@ -9,7 +9,7 @@ Documentation for the Backend Cell team.
 
 ## Contents
 
-- `framework-comparison-2026.md` - Factual LangGraph / CrewAI / AutoGPT vs. RoboCo comparison mapping each framework's model to a real RoboCo mechanism (task lifecycle, role hierarchy, per-agent git isolation, PR-review gates, CEO-approval gate), with code citations
+- `framework-comparison-2026.md` - Factual LangGraph / CrewAI / AutoGPT vs. RoboFleet comparison mapping each framework's model to a real RoboFleet mechanism (task lifecycle, role hierarchy, per-agent git isolation, PR-review gates, CEO-approval gate), with code citations
 - `/api/` - API documentation
   - `x-post-response-schemas.md` - `XPostResponse` / `XPostHistoryResponse` Pydantic schemas and their source-specific ref fields (mention, feature, campaign, editorial, barfly) for the CEO X post queue and history view
 - `/qa/` - QA-related docs

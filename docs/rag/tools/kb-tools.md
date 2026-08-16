@@ -4,18 +4,18 @@
 
 | Tool | Purpose |
 |------|---------|
-| `roboco_kb_search` | Semantic search |
-| `roboco_rag_query` | AI-synthesized answer |
-| `roboco_ask_mentor` | Conversational help |
-| `roboco_kb_stats` | Index statistics |
+| `robofleet_kb_search` | Semantic search |
+| `robofleet_rag_query` | AI-synthesized answer |
+| `robofleet_ask_mentor` | Conversational help |
+| `robofleet_kb_stats` | Index statistics |
 
 ## Semantic Search
 
 ```python
-roboco_kb_search(
+robofleet_kb_search(
     query="rate limiting redis",
     top_k=5,
-    project="roboco-api",
+    project="robofleet-api",
     index_types=["code", "docs"],
 )
 ```
@@ -23,16 +23,16 @@ roboco_kb_search(
 ## AI-Generated Answers
 
 ```python
-roboco_rag_query(query="How does authentication work?", top_k=5)
+robofleet_rag_query(query="How does authentication work?", top_k=5)
 ```
 
 ## Mentor (Conversational)
 
 ```python
-response = roboco_ask_mentor(question="How do I handle auth?", domain="coding")
+response = robofleet_ask_mentor(question="How do I handle auth?", domain="coding")
 
 # Follow-up
-roboco_ask_mentor(
+robofleet_ask_mentor(
     question="What about refresh tokens?", conversation_id=response["conversation_id"]
 )
 ```
@@ -41,7 +41,7 @@ roboco_ask_mentor(
 
 ```python
 # Write/update documentation (auto-dedup via RAG)
-roboco_docs_write(
+robofleet_docs_write(
     {
         "task_id": "task-uuid",
         "filename": "api-endpoints.md",
@@ -52,37 +52,37 @@ roboco_docs_write(
 )
 
 # List docs for a task
-roboco_docs_list(task_id="task-uuid")
+robofleet_docs_list(task_id="task-uuid")
 
 # Read a doc
-roboco_docs_read(path="backend/api/endpoints.md")
+robofleet_docs_read(path="backend/api/endpoints.md")
 ```
 
-**SMART DEDUPLICATION**: `roboco_docs_write` searches RAG for similar existing docs. If high-similarity match found, updates instead of creating duplicate.
+**SMART DEDUPLICATION**: `robofleet_docs_write` searches RAG for similar existing docs. If high-similarity match found, updates instead of creating duplicate.
 
-**LIVE-WRITE PROVENANCE**: a doc indexed via `roboco_docs_write` (or captured from your workspace at `i_documented`) is written mid-task, before your task's PR merges — it may describe an API/contract that doesn't exist yet on the deployed tree. It's indexed with `provenance: "live_write"`, and any `roboco_kb_search` / `roboco_ask_mentor` / `roboco_rag_query` hit built from it comes back with an appended line: `[caveat: written during in-flight work — verify the contract exists on the deployed tree/git before relying on it]`. Docs picked up by the repo-tree scan (`docs/rag`, `docs/map`, or a manual/startup reindex) carry `provenance: "repo_tree"` instead and render with no caveat.
+**LIVE-WRITE PROVENANCE**: a doc indexed via `robofleet_docs_write` (or captured from your workspace at `i_documented`) is written mid-task, before your task's PR merges — it may describe an API/contract that doesn't exist yet on the deployed tree. It's indexed with `provenance: "live_write"`, and any `robofleet_kb_search` / `robofleet_ask_mentor` / `robofleet_rag_query` hit built from it comes back with an appended line: `[caveat: written during in-flight work — verify the contract exists on the deployed tree/git before relying on it]`. Docs picked up by the repo-tree scan (`docs/rag`, `docs/map`, or a manual/startup reindex) carry `provenance: "repo_tree"` instead and render with no caveat.
 
-**The caveat does NOT auto-clear on merge.** There is no lifecycle hook wiring a task's PR merge back into the KB, and the periodic re-scan only walks `docs/rag` + `docs/map` — siblings of the team dirs `roboco_docs_write` actually targets, so it never revisits a `live_write` doc. The marker persists until that doc's content is re-indexed from the repo tree — a startup reindex, or the operator-only `roboco_reindex_all` escape hatch — merged or not. So read a caveated hit as "verify against git", not "this is unmerged": don't assume a caveat's absence means merged, and don't assume its presence means still-open. Check the referenced PR/branch before building against it either way.
+**The caveat does NOT auto-clear on merge.** There is no lifecycle hook wiring a task's PR merge back into the KB, and the periodic re-scan only walks `docs/rag` + `docs/map` — siblings of the team dirs `robofleet_docs_write` actually targets, so it never revisits a `live_write` doc. The marker persists until that doc's content is re-indexed from the repo tree — a startup reindex, or the operator-only `robofleet_reindex_all` escape hatch — merged or not. So read a caveated hit as "verify against git", not "this is unmerged": don't assume a caveat's absence means merged, and don't assume its presence means still-open. Check the referenced PR/branch before building against it either way.
 
 ## Bulk Indexing
 
 ```python
 # Index code (PM, Developer)
-roboco_kb_index_code(sources=["src/**/*.py"], project="roboco-api")
+robofleet_kb_index_code(sources=["src/**/*.py"], project="robofleet-api")
 
 # Index docs (PM, Documenter) - for bulk/explicit indexing
-# Note: roboco_docs_write() auto-indexes when writing
-roboco_kb_index_docs(sources=["docs/**/*.md"], project="roboco-api")
+# Note: robofleet_docs_write() auto-indexes when writing
+robofleet_kb_index_docs(sources=["docs/**/*.md"], project="robofleet-api")
 ```
 
 ## Error Tracking
 
 ```python
 # Search for similar errors
-roboco_search_error(error_message="Redis connection timed out", context="startup")
+robofleet_search_error(error_message="Redis connection timed out", context="startup")
 
 # Record solution
-roboco_record_error_solution(
+robofleet_record_error_solution(
     error_message="Redis connection timed out",
     solution="Added retry with backoff",
     worked=True,
@@ -93,10 +93,10 @@ roboco_record_error_solution(
 
 ```python
 # Check for similar decisions
-roboco_check_decision(topic="session storage")
+robofleet_check_decision(topic="session storage")
 
 # Record decision
-roboco_record_decision(
+robofleet_record_decision(
     params={topic: "Session storage", decision: "Use Redis", rationale: "Sub-ms reads"}
 )
 ```
@@ -106,7 +106,7 @@ roboco_record_decision(
 ### Get Standards
 
 ```python
-roboco_get_standards(domain="coding", language="python")
+robofleet_get_standards(domain="coding", language="python")
 ```
 
 **Domains:** `coding`, `security`, `workflow`, `architecture`
@@ -116,7 +116,7 @@ roboco_get_standards(domain="coding", language="python")
 Uses LLM to check code/context against organizational standards.
 
 ```python
-result = roboco_validate_action(
+result = robofleet_validate_action(
     action_type="create_endpoint",
     context="""
 def create_user(email, password):
@@ -157,7 +157,7 @@ def create_user(email, password):
 ### Code Review
 
 ```python
-roboco_review_code(
+robofleet_review_code(
     code="def handle(...):",
     file_path="src/api/auth.py",
     change_type="modify",  # add, modify, delete

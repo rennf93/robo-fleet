@@ -2,7 +2,7 @@
 
 ## What It Is
 
-RoboCo can author and post short marketing videos for the company's X (Twitter) and TikTok accounts — a release announcement, a feature spotlight, or an on-demand CEO request — implemented in `roboco/services/video_engine.py` (`VideoEngine`), `roboco/services/video_post_service.py` (`VideoPostService`), and the `motion/` composition package, rendered by a credential-free `video-renderer` sidecar. Every clip is HELD for an explicit, per-clip CEO approval; nothing is ever posted automatically. It mirrors the `XEngine` "detect → originate a CEO-gated artifact → hold" shape, extended with a render pass between authoring and the held draft.
+RoboFleet can author and post short marketing videos for the company's X (Twitter) and TikTok accounts — a release announcement, a feature spotlight, or an on-demand CEO request — implemented in `robofleet/services/video_engine.py` (`VideoEngine`), `robofleet/services/video_post_service.py` (`VideoPostService`), and the `motion/` composition package, rendered by a credential-free `video-renderer` sidecar. Every clip is HELD for an explicit, per-clip CEO approval; nothing is ever posted automatically. It mirrors the `XEngine` "detect → originate a CEO-gated artifact → hold" shape, extended with a render pass between authoring and the held draft.
 
 ## Enable/Disable
 

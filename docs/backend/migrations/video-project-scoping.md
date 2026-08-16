@@ -39,7 +39,7 @@ class VideoRequestBody(BaseModel):
 **Before**:
 - `VideoEngine.open_video_task()` no-op'd if `settings.self_heal_project_slug` was unresolvable or not opted in
 - The render loop's `_render_both_cuts()` hardcoded `settings.self_heal_project_slug` for workspace resolution
-- All video authoring was scoped to a single fixed project (RoboCo's own)
+- All video authoring was scoped to a single fixed project (RoboFleet's own)
 
 **After**:
 - `VideoEngine.open_video_task(project_id=...)` requires an explicit `project_id` parameter
@@ -115,7 +115,7 @@ class VideoRequestBody(BaseModel):
 
 ### If You Use Release/Spotlight Hooks
 
-**No change required.** When no `project_id` is supplied, the hooks default to `settings.self_heal_project_slug` (the fixed RoboCo project), maintaining backward compatibility.
+**No change required.** When no `project_id` is supplied, the hooks default to `settings.self_heal_project_slug` (the fixed RoboFleet project), maintaining backward compatibility.
 
 ### If You Render Videos
 
@@ -129,10 +129,10 @@ class VideoRequestBody(BaseModel):
 
 | File | Changes |
 |------|---------|
-| `roboco/api/schemas/video.py` | `VideoRequestBody.project_id` added as required UUID |
-| `roboco/api/routes/video.py` | `request_video()` validates project; added `rerender_video_task()`; added `get_video_preview()` + `_resolve_preview_path()` helper |
-| `roboco/services/video_engine.py` | `_opted_in_project()` renamed to public `resolve_authoring_project(project_id, occasion)`; `open_video_task(project_id=None)` added; new `rerender(task_id)` method |
-| `roboco/runtime/orchestrator.py` | `_render_both_cuts(project_id)` now resolves workspace from `project_id` instead of `settings.self_heal_project_slug` |
+| `robofleet/api/schemas/video.py` | `VideoRequestBody.project_id` added as required UUID |
+| `robofleet/api/routes/video.py` | `request_video()` validates project; added `rerender_video_task()`; added `get_video_preview()` + `_resolve_preview_path()` helper |
+| `robofleet/services/video_engine.py` | `_opted_in_project()` renamed to public `resolve_authoring_project(project_id, occasion)`; `open_video_task(project_id=None)` added; new `rerender(task_id)` method |
+| `robofleet/runtime/orchestrator.py` | `_render_both_cuts(project_id)` now resolves workspace from `project_id` instead of `settings.self_heal_project_slug` |
 | `pyproject.toml` | Added PLR0913 per-file-ignore for `video_engine.py` (6 params in `open_video_task`) |
 | `tests/integration/test_video_routes.py` | Updated `test_request_video_opens_authoring_task()` to supply `project_id`; added 404 tests |
 | `tests/unit/services/test_video_engine.py` | Added tests for `resolve_authoring_project()`, `rerender()` |

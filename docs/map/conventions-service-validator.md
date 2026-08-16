@@ -2,26 +2,26 @@
 
 ## Purpose
 
-The per-project architectural-conventions standard for RoboCo: a service layer (`ConventionsService`) that builds, caches, renders, scaffolds, and restores the *effective* conventions map (auto-derived scan overlaid by the committed `.roboco/conventions.yml`), plus a standalone tree-sitter validator CLI (`python -m roboco.conventions`) that classifies each changed definition and flags forbidden placements, hygiene violations, custom-rule matches, and modularity smells. `DocsService` (in scope because it shares the `roboco-docs`/docs-MCP surface the standard's enforcement relies on) handles documentation file management with RAG dedup, team/path resolution, and repo commit. The standard is gated by `ROBOFLEET_CONVENTIONS_ENABLED` and enforced deterministically at `i_am_done` / `pr_pass` / `claim_review`.
+The per-project architectural-conventions standard for RoboFleet: a service layer (`ConventionsService`) that builds, caches, renders, scaffolds, and restores the *effective* conventions map (auto-derived scan overlaid by the committed `.robofleet/conventions.yml`), plus a standalone tree-sitter validator CLI (`python -m robofleet.conventions`) that classifies each changed definition and flags forbidden placements, hygiene violations, custom-rule matches, and modularity smells. `DocsService` (in scope because it shares the `robofleet-docs`/docs-MCP surface the standard's enforcement relies on) handles documentation file management with RAG dedup, team/path resolution, and repo commit. The standard is gated by `ROBOFLEET_CONVENTIONS_ENABLED` and enforced deterministically at `i_am_done` / `pr_pass` / `claim_review`.
 
 ## Files
 
 | Path | Role | approx LOC |
 |------|------|-----------:|
-| `roboco/services/conventions.py` | `ConventionsService` — cache/render/scaffold/restore the effective conventions map; record + read findings | 448 |
-| `roboco/services/docs.py` | `DocsService` — write/read/list/delete docs, RAG dedup, commit doc to repo, path-traversal containment | 737 |
-| `roboco/conventions/__init__.py` | Package public API re-exports (`run`, `Finding`, `check_*`, `get_parser`, `GrammarUnavailable`, `ValidatorCouldNotRun`) | 30 |
-| `roboco/conventions/__main__.py` | argparse CLI entrypoint (`check --root <dir> --files ...`), JSONL output, exit-0/exit-3 fail-loud | 69 |
-| `roboco/conventions/runner.py` | `run()` orchestrator: per-file dispatch by suffix, waiver filtering, `ValidatorCouldNotRun` on grammar failure | 107 |
-| `roboco/conventions/findings.py` | `Finding` frozen dataclass + `as_json()` (one JSONL line) | 27 |
-| `roboco/conventions/grammars.py` | Lazy cached tree-sitter parser construction per language; `GrammarUnavailable` | 57 |
-| `roboco/conventions/placement.py` | `check_placement` — map a file to its module, flag forbidden kinds (`no_<kind>s_in_<leaf>`) | 70 |
-| `roboco/conventions/classify_python.py` | Python top-level definition classifier → `model`/`route`/`helper`/`other` | 101 |
-| `roboco/conventions/classify_ts.py` | TypeScript/TSX top-level definition classifier → `model`/`route`/`component`/`other` | 159 |
-| `roboco/conventions/hygiene.py` | `check_hygiene` — inline-comment + lint/type-suppression findings; sanctioned-code allowlist | 139 |
-| `roboco/conventions/modularity.py` | `check_modularity` — cohesion (1 concern/file), thin routes, thin components, god class | 344 |
-| `roboco/conventions/custom.py` | `check_custom` — project regex rules scoped by language with tsx→typescript dialect relation; `unrecognized_rule_languages` surfaces typo language tags | 85 |
-| `roboco/conventions/scan.py` | `derive_from_scan` — infer modules/languages/rules from a repo; `render_yaml`; CLAUDE.md token lifting | 318 |
+| `robofleet/services/conventions.py` | `ConventionsService` — cache/render/scaffold/restore the effective conventions map; record + read findings | 448 |
+| `robofleet/services/docs.py` | `DocsService` — write/read/list/delete docs, RAG dedup, commit doc to repo, path-traversal containment | 737 |
+| `robofleet/conventions/__init__.py` | Package public API re-exports (`run`, `Finding`, `check_*`, `get_parser`, `GrammarUnavailable`, `ValidatorCouldNotRun`) | 30 |
+| `robofleet/conventions/__main__.py` | argparse CLI entrypoint (`check --root <dir> --files ...`), JSONL output, exit-0/exit-3 fail-loud | 69 |
+| `robofleet/conventions/runner.py` | `run()` orchestrator: per-file dispatch by suffix, waiver filtering, `ValidatorCouldNotRun` on grammar failure | 107 |
+| `robofleet/conventions/findings.py` | `Finding` frozen dataclass + `as_json()` (one JSONL line) | 27 |
+| `robofleet/conventions/grammars.py` | Lazy cached tree-sitter parser construction per language; `GrammarUnavailable` | 57 |
+| `robofleet/conventions/placement.py` | `check_placement` — map a file to its module, flag forbidden kinds (`no_<kind>s_in_<leaf>`) | 70 |
+| `robofleet/conventions/classify_python.py` | Python top-level definition classifier → `model`/`route`/`helper`/`other` | 101 |
+| `robofleet/conventions/classify_ts.py` | TypeScript/TSX top-level definition classifier → `model`/`route`/`component`/`other` | 159 |
+| `robofleet/conventions/hygiene.py` | `check_hygiene` — inline-comment + lint/type-suppression findings; sanctioned-code allowlist | 139 |
+| `robofleet/conventions/modularity.py` | `check_modularity` — cohesion (1 concern/file), thin routes, thin components, god class | 344 |
+| `robofleet/conventions/custom.py` | `check_custom` — project regex rules scoped by language with tsx→typescript dialect relation; `unrecognized_rule_languages` surfaces typo language tags | 85 |
+| `robofleet/conventions/scan.py` | `derive_from_scan` — infer modules/languages/rules from a repo; `render_yaml`; CLAUDE.md token lifting | 318 |
 
 ## Key Symbols
 
@@ -32,7 +32,7 @@ The per-project architectural-conventions standard for RoboCo: a service layer (
 | `ConventionsService.get_map` | method | `services/conventions.py:85` | Return effective standard for a project at its HEAD (cache-first; degraded rows not trusted from cache) |
 | `ConventionsService.baseline_constraints` | method | `services/conventions.py:111` | Render block rules + module boundaries as per-task constraints |
 | `ConventionsService.render_ambient_block` | method | `services/conventions.py:129` | Bounded `## Architectural Standard` prompt block (2000-char cap) |
-| `ConventionsService.scaffold` | method | `services/conventions.py:171` | Open a PR adding the auto-scaffolded `.roboco/conventions.yml` |
+| `ConventionsService.scaffold` | method | `services/conventions.py:171` | Open a PR adding the auto-scaffolded `.robofleet/conventions.yml` |
 | `ConventionsService.restore` | method | `services/conventions.py:180` | Open a PR re-committing the file from the last-good map (or a scan) |
 | `ConventionsService.commit_standard` | method | `services/conventions.py:194` | Open a PR committing an externally-edited standard (panel save) |
 | `ConventionsService.health` | method | `services/conventions.py:206` | Report live file status at HEAD + last-good commit SHA (reads file, not cache) |
@@ -41,7 +41,7 @@ The per-project architectural-conventions standard for RoboCo: a service layer (
 | `ConventionsService.resolve_workspace` | method | `services/conventions.py:300` | Ensure the project's read clone; None if unavailable (backfill path) |
 | `ConventionsService._resolve` | method | `services/conventions.py:316` | Resolve repo root + HEAD sha; persist clone path + sha back onto project |
 | `ConventionsService._head_sha_at` | method | `services/conventions.py:344` | `git rev-parse HEAD` in the clone (10s timeout), None if not a repo |
-| `ConventionsService._read_committed_standard` | method | `services/conventions.py:362` | Read/parse `.roboco/conventions.yml` → `(standard, status)` |
+| `ConventionsService._read_committed_standard` | method | `services/conventions.py:362` | Read/parse `.robofleet/conventions.yml` → `(standard, status)` |
 | `ConventionsService._publish` | method | `services/conventions.py:379` | Open the conventions scaffold/restore PR via `GitService` |
 | `ConventionsService._cache_get` | method | `services/conventions.py:411` | Read cached effective map row by `(project_id, commit_sha)` |
 | `ConventionsService._cache_put` | method | `services/conventions.py:422` | Persist effective map in a savepoint (UNIQUE-violation-only swallow; non-unique IntegrityError re-raised) |
@@ -91,11 +91,11 @@ The per-project architectural-conventions standard for RoboCo: a service layer (
 
 ## Data Flow
 
-**Validator (gate path).** `GitService.conventions_check_for_task` resolves the task's worktree + changed files and spawns `python -m roboco.conventions check --root <worktree> --files ...`. `__main__.main` parses args, `_load_file` reads `.roboco/conventions.yml` (or None), `derive_from_scan(root)` auto-derives the default standard, `effective_map(scan, file)` merges them. `runner.run` iterates files, dispatching by suffix (`.py`/`.ts`/`.tsx`); `_check_file` reads bytes, classifies via `classify_python`/`classify_ts` (tree-sitter), then runs `check_placement` + `check_hygiene` + `check_custom` + `check_modularity`. `_apply_waivers` drops waived findings. Each `Finding` is printed as one JSONL line on stdout. Exit 0 = ran (findings maybe empty); exit 3 = could not run (fail-loud). The caller parses stdout into `findings`, treats exit≠0/timeout as `could_not_run=True` (block gate refuses submit). The choreographer then calls `ConventionsService.record_findings` to persist them, and `block`-level findings refuse `i_am_done` / `pr_pass` with the offending `file:line` + fix hint.
+**Validator (gate path).** `GitService.conventions_check_for_task` resolves the task's worktree + changed files and spawns `python -m robofleet.conventions check --root <worktree> --files ...`. `__main__.main` parses args, `_load_file` reads `.robofleet/conventions.yml` (or None), `derive_from_scan(root)` auto-derives the default standard, `effective_map(scan, file)` merges them. `runner.run` iterates files, dispatching by suffix (`.py`/`.ts`/`.tsx`); `_check_file` reads bytes, classifies via `classify_python`/`classify_ts` (tree-sitter), then runs `check_placement` + `check_hygiene` + `check_custom` + `check_modularity`. `_apply_waivers` drops waived findings. Each `Finding` is printed as one JSONL line on stdout. Exit 0 = ran (findings maybe empty); exit 3 = could not run (fail-loud). The caller parses stdout into `findings`, treats exit≠0/timeout as `could_not_run=True` (block gate refuses submit). The choreographer then calls `ConventionsService.record_findings` to persist them, and `block`-level findings refuse `i_am_done` / `pr_pass` with the offending `file:line` + fix hint.
 
 **Service (render path).** On spawn (`_base.conventions_ambient_layer`) and on task create (`TaskService._baseline_constraints_for` — the auto-attached `## Constraints` section), `ConventionsService.get_map` is called. `_resolve` picks the read clone (via `resolve_workspace` → `WorkspaceService.ensure_read_clone`) or the legacy `workspace_path`, rev-parses the HEAD sha, and persists both back onto the project (the backfill). `_cache_get` returns a cached row if `status != "degraded"` (degraded rows are re-derived on every call); otherwise `_read_committed_standard` reads the committed file (status `ok`/`missing`/`degraded`). On `degraded`, the last-good `status="ok"` cached map is returned but NOT re-cached (so a repaired file is immediately visible on the next call). `effective_map(derive(root), file_standard)` builds the effective standard, cached via `_cache_put` (savepoint-guarded; UNIQUE-only IntegrityError swallowed). `render_ambient_block` / `baseline_constraints` render it into the prompt.
 
-**Scaffold/restore (panel path).** `/api/projects/{id}/conventions/*` routes call `scaffold` / `restore` / `commit_standard`, which render YAML via `render_yaml` and open a PR through `GitService.open_conventions_pr` on the `chore/roboco-conventions-scaffold` branch. `health` reports status + last-good SHA; `recent_findings` feeds the panel.
+**Scaffold/restore (panel path).** `/api/projects/{id}/conventions/*` routes call `scaffold` / `restore` / `commit_standard`, which render YAML via `render_yaml` and open a PR through `GitService.open_conventions_pr` on the `chore/robofleet-conventions-scaffold` branch. `health` reports status + last-good SHA; `recent_findings` feeds the panel.
 
 **DocsService.** `write_doc` validates role (`WRITE_ROLES` = documenter/cell_pm) + doc_type + filename, RAG-searches for a similar existing doc (≥0.75 same team) → update or create under `/app/docs/{team}/{subfolder}/{filename}`, append a `DocRef` to `task.documents`, RAG-index, then best-effort commit the doc into the project workspace clone onto the task branch. `read_doc`/`delete_doc` are role-gated and path-contained via `_resolve_contained_path`. `list_docs` reads from `task.documents` (by task) or filesystem scan (by team).
 
@@ -105,10 +105,10 @@ The per-project architectural-conventions standard for RoboCo: a service layer (
 flowchart TD
   subgraph Gate["Enforcement gate (i_am_done / pr_pass / claim_review)"]
     G["GitService.conventions_check_for_task"]
-    G -->|"spawn"| CLI["python -m roboco.conventions check"]
+    G -->|"spawn"| CLI["python -m robofleet.conventions check"]
   end
 
-  subgraph Validator["roboco.conventions (pure, tree-sitter)"]
+  subgraph Validator["robofleet.conventions (pure, tree-sitter)"]
     CLI --> Main["__main__.main"]
     Main --> Load["_load_file + derive_from_scan"]
     Load --> EM["effective_map(scan, file)"]
@@ -145,7 +145,7 @@ flowchart TD
 
 ```
 conventions-service-validator
-├── roboco/services/conventions.py      # ConventionsService (cache/render/scaffold/restore/record)
+├── robofleet/services/conventions.py      # ConventionsService (cache/render/scaffold/restore/record)
 │   ├── ScaffoldResult, ConventionsHealth (frozen dataclasses)
 │   ├── _is_unique_violation (module-level helper — narrows IntegrityError to UNIQUE-only)
 │   ├── get_map / baseline_constraints / render_ambient_block
@@ -153,13 +153,13 @@ conventions-service-validator
 │   ├── record_findings / recent_findings
 │   └── internals: _resolve, _head_sha_at, _read_committed_standard,
 │       _publish, _cache_get/_cache_put (savepoint, UNIQUE-only swallow), _latest_ok_*
-├── roboco/services/docs.py             # DocsService (docs CRUD + RAG + repo commit)
+├── robofleet/services/docs.py             # DocsService (docs CRUD + RAG + repo commit)
 │   ├── WriteDocInput, TEAM_PATHS, TYPE_SUBFOLDERS, WRITE_ROLES, READ_ROLES
 │   ├── _coerce_doc_ref, _resolve_contained_path (anti path-traversal)
 │   ├── write_doc -> _find_similar_doc -> _create/_update -> _index_doc_in_rag
 │   ├── _commit_doc_to_repo (best-effort git commit; returns "committed"/"skipped"/"failed")
 │   └── read_doc / list_docs / delete_doc
-└── roboco/conventions/                 # validator CLI (pure, tree-sitter)
+└── robofleet/conventions/                 # validator CLI (pure, tree-sitter)
     ├── __init__.py        # public re-exports
     ├── __main__.py        # argparse CLI, JSONL out, exit-3 fail-loud
     ├── runner.py          # run() orchestrator + language-scope findings + waiver filter
@@ -176,19 +176,19 @@ conventions-service-validator
 
 ## Dependencies
 
-**Internal (roboco):**
-- `roboco.foundation.policy.conventions.effective_map.effective_map` — overlay scan defaults with committed file (pure).
-- `roboco.foundation.policy.conventions.models` — `ConventionsStandard`, `ConventionsParseError`, `Module`, `Rule`, `RuleLevel`, `DefinitionKind`, `CustomRule`, `Waiver`, `BUILTIN_RULES`.
-- `roboco.db.tables` — `ProjectConventionsCacheTable`, `ProjectConventionFindingTable`, `ProjectTable`, `TaskTable`.
-- `roboco.services.base.BaseService` (+ `NotFoundError`, `UnauthorizedError`, `ValidationError`).
-- `roboco.services.git` — `get_git_service`, `conventions_check_for_task`, `open_conventions_pr`, `CONVENTIONS_SCAFFOLD_BRANCH`.
-- `roboco.services.workspace.get_workspace_service` — `ensure_read_clone` (backfill path).
-- `roboco.services.project.get_project_service` (docs repo-commit + conventions scaffold-on-create).
-- `roboco.services.optimal.get_optimal_service` (RAG dedup + indexing).
-- `roboco.models.task.DocRef`, `roboco.models.optimal.{IndexType,QueryContext}`.
-- `roboco.agents_config.{get_agent_role,get_agent_team}` (docs role/team resolution).
-- `roboco.seeds.initial_data.AGENT_UUIDS` (docs agent slug→UUID).
-- `roboco.config.settings.conventions_enabled` (gate).
+**Internal (robo-fleet):**
+- `robofleet.foundation.policy.conventions.effective_map.effective_map` — overlay scan defaults with committed file (pure).
+- `robofleet.foundation.policy.conventions.models` — `ConventionsStandard`, `ConventionsParseError`, `Module`, `Rule`, `RuleLevel`, `DefinitionKind`, `CustomRule`, `Waiver`, `BUILTIN_RULES`.
+- `robofleet.db.tables` — `ProjectConventionsCacheTable`, `ProjectConventionFindingTable`, `ProjectTable`, `TaskTable`.
+- `robofleet.services.base.BaseService` (+ `NotFoundError`, `UnauthorizedError`, `ValidationError`).
+- `robofleet.services.git` — `get_git_service`, `conventions_check_for_task`, `open_conventions_pr`, `CONVENTIONS_SCAFFOLD_BRANCH`.
+- `robofleet.services.workspace.get_workspace_service` — `ensure_read_clone` (backfill path).
+- `robofleet.services.project.get_project_service` (docs repo-commit + conventions scaffold-on-create).
+- `robofleet.services.optimal.get_optimal_service` (RAG dedup + indexing).
+- `robofleet.models.task.DocRef`, `robofleet.models.optimal.{IndexType,QueryContext}`.
+- `robofleet.agents_config.{get_agent_role,get_agent_team}` (docs role/team resolution).
+- `robofleet.seeds.initial_data.AGENT_UUIDS` (docs agent slug→UUID).
+- `robofleet.config.settings.conventions_enabled` (gate).
 
 **External:**
 - `tree_sitter`, `tree_sitter_python`, `tree_sitter_typescript` (grammars).
@@ -199,13 +199,13 @@ conventions-service-validator
 
 ## Entry Points
 
-- **CLI:** `python -m roboco.conventions check --root <repo> --files a b ...` (`__main__.main`, exit 0 ran / exit 3 could-not-run). Spawned as a subprocess by `GitService._run_conventions_validator` per gate evaluation.
+- **CLI:** `python -m robofleet.conventions check --root <repo> --files a b ...` (`__main__.main`, exit 0 ran / exit 3 could-not-run). Spawned as a subprocess by `GitService._run_conventions_validator` per gate evaluation.
 - **Gate verbs (choreographer):** `i_am_done` (dev pre-submit) and `pr_pass` (in-path PR gate) call `GitService.conventions_check_for_task`; `claim_review` (QA) assembles findings into evidence. `block`-level findings refuse the transition. Routed via `_impl.py:2011` / `:2059` and `qa.py:187`.
 - **Spawn ambient block:** `agents/factories/_base.conventions_ambient_layer` calls `render_ambient_block` per project at spawn (when flag on).
 - **Task create:** `TaskService._baseline_constraints_for` (task.py:1003) calls `baseline_constraints` to auto-attach the `## Constraints` section.
 - **Panel HTTP routes:** `/api/projects/{id}/conventions` (scaffold/save/ restore/health/findings) in `api/routes/project.py:480-541` → `scaffold`/`commit_standard`/`restore`/`health`/`recent_findings`.
 - **Project create:** `ProjectService` (project.py:134) + `WorkspaceService` (workspace.py:946) call `scaffold` to seed the file on first project setup.
-- **Docs MCP / HTTP:** `/api/docs` routes (`api/routes/docs.py`) → `write_doc`/`read_doc`/`list_docs`/`delete_doc`; `roboco-docs` MCP server wraps these for the `roboco-docs` tool mount (documenter / cell_pm write; board + delivery roles read).
+- **Docs MCP / HTTP:** `/api/docs` routes (`api/routes/docs.py`) → `write_doc`/`read_doc`/`list_docs`/`delete_doc`; `robofleet-docs` MCP server wraps these for the `robofleet-docs` tool mount (documenter / cell_pm write; board + delivery roles read).
 
 ## Config Flags
 
@@ -232,7 +232,7 @@ conventions-service-validator
 
 ## Drift from CLAUDE.md
 
-- **CLAUDE.md** says the validator is `python -m roboco.conventions check --root <repo> --files <a> <b> ...`. **Actual** (`__main__.py:57-65`): matches exactly. No drift.
+- **CLAUDE.md** says the validator is `python -m robofleet.conventions check --root <repo> --files <a> <b> ...`. **Actual** (`__main__.py:57-65`): matches exactly. No drift.
 - **CLAUDE.md** says "Precision over recall … a validator that cannot run exits 3 so the gate blocks, never silently passes." **Actual** (`__main__.py:27`, `runner.py:29`): `ValidatorCouldNotRun` → `_fail` → exit 3. Matches. The *gate-level* fail-closed/fail-open split (resolution errors block, branchless / no-changed-files pass) lives in `GitService.conventions_check_for_task` (out of scope) and is consistent with the doc.
 - **CLAUDE.md** says `thin_routes` doesn't count an explicit `db.commit()`. **Actual** (`modularity.py:40-55`): `_DB_METHODS` excludes `commit`/`flush`/`refresh` and includes `execute`/`scalar`/`scalars`/`add`/ `add_all`/`merge`/`query`. Matches.
 - **CLAUDE.md** says the allowlist is "ruff `TC001`–`TC003`, pydantic `prop-decorator`". **Actual** (`hygiene.py:40`): `_ALLOWED_SUPPRESSION_CODES = {"TC001","TC002","TC003","prop-decorator"}`. Matches.
@@ -247,9 +247,9 @@ conventions-service-validator
 
 Baseline: `fd10cc862c2020b3f639cdb686d427b0198a2441`. One commit touched this slice: `15effce0` "Chore: 141 Gaps fill-in (#283)".
 
-- **`roboco/conventions/custom.py`** — Added `_DIALECT_OF = {"tsx": "typescript"}` + `_rule_applies()`, replacing the bare `rule.languages and language not in rule.languages` check. **IMPACT:** a `typescript`-scoped custom rule now fires on `.tsx` files (previously it did not — a React+TS repo with a `typescript`-scoped rule silently skipped every `.tsx` file). One- directional: a `tsx`-scoped rule still does not fire on `.ts`.
-- **`roboco/services/conventions.py` `_cache_put`** — Wrapped the cache insert in `begin_nested()` savepoint + `IntegrityError` swallow (F042). **IMPACT:** a concurrent duplicate cache insert (two task creates for the same project/HEAD) no longer poisons the shared session and crashes task creation. Previously a bare `add`+`flush` left the session in error state.
-- **`roboco/services/docs.py`** — Replaced the `if ".." in path` guard in `read_doc` and `delete_doc` with `_resolve_contained_path` (empty/NUL/`.`/ `..`/empty-segment reject + resolve-and-contain). **IMPACT:** closes a path-traversal escape where an absolute `path` (`/etc/passwd`) bypassed the `..`-only check because `DOCS_BASE_PATH / "/etc/passwd"` evaluates to `/etc/passwd`. `read_doc` and `delete_doc` are now contained; `write_doc`'s `filename` guard is unchanged (still substring-based, no containment call).
+- **`robofleet/conventions/custom.py`** — Added `_DIALECT_OF = {"tsx": "typescript"}` + `_rule_applies()`, replacing the bare `rule.languages and language not in rule.languages` check. **IMPACT:** a `typescript`-scoped custom rule now fires on `.tsx` files (previously it did not — a React+TS repo with a `typescript`-scoped rule silently skipped every `.tsx` file). One- directional: a `tsx`-scoped rule still does not fire on `.ts`.
+- **`robofleet/services/conventions.py` `_cache_put`** — Wrapped the cache insert in `begin_nested()` savepoint + `IntegrityError` swallow (F042). **IMPACT:** a concurrent duplicate cache insert (two task creates for the same project/HEAD) no longer poisons the shared session and crashes task creation. Previously a bare `add`+`flush` left the session in error state.
+- **`robofleet/services/docs.py`** — Replaced the `if ".." in path` guard in `read_doc` and `delete_doc` with `_resolve_contained_path` (empty/NUL/`.`/ `..`/empty-segment reject + resolve-and-contain). **IMPACT:** closes a path-traversal escape where an absolute `path` (`/etc/passwd`) bypassed the `..`-only check because `DOCS_BASE_PATH / "/etc/passwd"` evaluates to `/etc/passwd`. `read_doc` and `delete_doc` are now contained; `write_doc`'s `filename` guard is unchanged (still substring-based, no containment call).
 
 No other logic-touching commits in the range.
 

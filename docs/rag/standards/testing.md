@@ -6,7 +6,7 @@ Minimum 80% code coverage for all modules.
 
 ```bash
 # Run with coverage
-uv run pytest --cov=roboco --cov-report=term-missing
+uv run pytest --cov=robo-fleet --cov-report=term-missing
 ```
 
 ## Async Tests
@@ -67,7 +67,7 @@ Run full test suite:
 # Backend
 uv run pytest
 uv run ruff check .
-uv run mypy roboco/
+uv run mypy robofleet/
 
 # Frontend
 pnpm test

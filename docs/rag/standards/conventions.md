@@ -6,14 +6,14 @@ The standard is gated by `ROBOFLEET_CONVENTIONS_ENABLED` (default off) and is fu
 
 ## How a project declares it
 
-Each project carries a repo-canonical `.roboco/conventions.yml`. It is auto-scaffolded into a project's clone the first time the project is worked on, editable from the per-project **Conventions** tab in the panel, and committed like any other repo file.
+Each project carries a repo-canonical `.robofleet/conventions.yml`. It is auto-scaffolded into a project's clone the first time the project is worked on, editable from the per-project **Conventions** tab in the panel, and committed like any other repo file.
 
 Consumers always read the *effective* map: auto-derived defaults (from a repo scan plus the built-in rules) overlaid by the committed file. Behaviour is identical whether the file is present, absent, or partial — a missing file just means "defaults only". The scan excludes test and documentation trees (`tests/`, `docs/`) — those legitimately define fixtures and aren't enforced code.
 
 The committed file and the scan are read from a project-level **read clone** the service ensures on demand (pinned to the default branch's HEAD), not from any agent's working clone — so the standard resolves even for a project created long before it existed, with no manual workspace configuration.
 
 ```yaml
-# .roboco/conventions.yml
+# .robofleet/conventions.yml
 version: 1
 languages: [python, typescript]
 
@@ -51,7 +51,7 @@ waivers:
 A single Python CLI classifies every changed definition with tree-sitter (Python and TypeScript grammars, shipped in the agent image) and reports forbidden placements, hygiene violations, and custom-rule matches as JSONL findings, after waiver filtering:
 
 ```bash
-python -m roboco.conventions check --root <repo> --files <a> <b> ...
+python -m robofleet.conventions check --root <repo> --files <a> <b> ...
 ```
 
 It favours precision over recall — it abstains when it cannot classify a definition, so a `block` gate can never strand a task on a guess — and it fails loud: a validator that cannot run exits non-zero so the gate blocks rather than silently passing. A **hung** validator is reaped after a timeout and the gate blocks the same way, and a conventions **resolution error** (effective-map build failure) fails closed — the gate is never silently disabled by an upstream error.
@@ -81,7 +81,7 @@ A `warn`-level finding is reported but never blocks.
 
 ## Clearing a false positive
 
-A false positive is relieved by a **waiver** the developer commits in their branch — so the escape is accountable and reviewed in the PR, not a silent in-code suppression (`# noqa` / `# type: ignore` are themselves hygiene violations the standard flags). Add the waiver to `.roboco/conventions.yml`, commit it, and the finding is filtered on the next check.
+A false positive is relieved by a **waiver** the developer commits in their branch — so the escape is accountable and reviewed in the PR, not a silent in-code suppression (`# noqa` / `# type: ignore` are themselves hygiene violations the standard flags). Add the waiver to `.robofleet/conventions.yml`, commit it, and the finding is filtered on the next check.
 
 The one exception to "suppressions are violations" is a small allowlist of *structurally unavoidable* framework codes that the validator does not flag: ruff's flake8-type-checking codes (`TC001`–`TC003`, for an import a framework needs at runtime) and pydantic's `prop-decorator`. A bare `# noqa` / `# type: ignore` or any other code is still a finding.
 

@@ -4,10 +4,10 @@
 
 ## Recommended: Ask Mentor
 
-For most questions, use `roboco_ask_mentor`:
+For most questions, use `robofleet_ask_mentor`:
 
 ```python
-roboco_ask_mentor(question="How do I handle authentication?")
+robofleet_ask_mentor(question="How do I handle authentication?")
 ```
 
 It searches ALL knowledge sources and supports follow-up questions.
@@ -16,17 +16,17 @@ It searches ALL knowledge sources and supports follow-up questions.
 
 | Tool | Purpose | Best For |
 |------|---------|----------|
-| `roboco_ask_mentor` | Conversational help | **Most questions** |
-| `roboco_kb_search` | Semantic search | Browsing, exploration |
-| `roboco_rag_query` | AI-synthesized answer | Quick answers |
+| `robofleet_ask_mentor` | Conversational help | **Most questions** |
+| `robofleet_kb_search` | Semantic search | Browsing, exploration |
+| `robofleet_rag_query` | AI-synthesized answer | Quick answers |
 
 ## Semantic Search
 
 ```python
-roboco_kb_search(
+robofleet_kb_search(
     query="rate limiting redis implementation",
     top_k=5,  # Results to return
-    project="roboco-api",  # Optional project filter
+    project="robofleet-api",  # Optional project filter
     index_types=["code", "docs"],  # Filter by type
 )
 ```
@@ -36,7 +36,7 @@ Returns similar content - not just keyword matches.
 ## RAG Query (AI Answer)
 
 ```python
-roboco_rag_query(query="How does authentication work in this codebase?", top_k=5)
+robofleet_rag_query(query="How does authentication work in this codebase?", top_k=5)
 ```
 
 Returns AI-synthesized answer with citations.
@@ -50,12 +50,12 @@ Good for:
 
 ```python
 # First question
-response = roboco_ask_mentor(
+response = robofleet_ask_mentor(
     question="How do I handle authentication?", domain="coding"
 )
 
 # Follow-up
-roboco_ask_mentor(
+robofleet_ask_mentor(
     question="What about refresh tokens?", conversation_id=response["conversation_id"]
 )
 ```
@@ -77,9 +77,9 @@ roboco_ask_mentor(
 
 Always search first:
 ```python
-roboco_kb_search(query="implementing rate limiter")
+robofleet_kb_search(query="implementing rate limiter")
 # Journal entries are part of the KB — filter to them with index_types:
-roboco_kb_search(query="rate limit decisions", index_types=["journals", "decisions"])
+robofleet_kb_search(query="rate limit decisions", index_types=["journals", "decisions"])
 ```
 
 This helps you:
@@ -91,7 +91,7 @@ This helps you:
 
 System auto-provides context when you claim:
 ```python
-roboco_get_proactive_context(task_id)
+robofleet_get_proactive_context(task_id)
 # Returns: similar_tasks, relevant_learnings, code_patterns,
 #          applicable_standards, recent_decisions, known_issues
 ```

@@ -22,8 +22,8 @@
 - Make code commits via `commit(message, files)` (auto-prefixed with `[task-id]`, auto-pushed by the choreographer)
 - Submit for QA when implementation is done
 - Block your own task if you hit an external dependency
-- Search the knowledge base via `roboco_ask_mentor` / `roboco_kb_search`
-- Read-only inspect git via `roboco_git_status / _log / _diff / _branch_list`
+- Search the knowledge base via `robofleet_ask_mentor` / `robofleet_kb_search`
+- Read-only inspect git via `robofleet_git_status / _log / _diff / _branch_list`
 
 ## What You CANNOT Do
 
@@ -61,12 +61,12 @@ i_am_idle()                    → no work in your queue right now
 
 | MCP server            | Verbs you can call |
 |-----------------------|--------------------|
-| `roboco-flow`         | `give_me_work`, `i_will_work_on`, `open_pr`, `i_am_done`, `i_am_blocked`, `unclaim`, `resume`, `sync_branch`, `i_am_idle` |
-| `roboco-do`           | `commit`, `note`, `dm`, `evidence` |
-| `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
+| `robofleet-flow`         | `give_me_work`, `i_will_work_on`, `open_pr`, `i_am_done`, `i_am_blocked`, `unclaim`, `resume`, `sync_branch`, `i_am_idle` |
+| `robofleet-do`           | `commit`, `note`, `dm`, `evidence` |
+| `robofleet-git-readonly` | `robofleet_git_status`, `robofleet_git_log`, `robofleet_git_diff`, `robofleet_git_branch_list` |
+| `robofleet-optimal`      | `robofleet_ask_mentor`, `robofleet_kb_search` |
 
-There is **no** `roboco_git_commit / _push / _create_pr / _merge_pr / _checkout` tool. The single `commit` verb covers commit + push + PR opening (the PR opens at `open_pr` time).
+There is **no** `robofleet_git_commit / _push / _create_pr / _merge_pr / _checkout` tool. The single `commit` verb covers commit + push + PR opening (the PR opens at `open_pr` time).
 
 ## Branch Discipline
 
@@ -79,7 +79,7 @@ There is **no** `roboco_git_commit / _push / _create_pr / _merge_pr / _checkout`
 
 1. **Tests:** `uv run pytest` (backend) or `pnpm test` (frontend)
 2. **Lint:** `uv run ruff check .` or `pnpm lint`
-3. **Types:** `uv run mypy roboco/` or `pnpm typecheck`
+3. **Types:** `uv run mypy robofleet/` or `pnpm typecheck`
 4. **Format:** `uv run ruff format .` or `pnpm format`
 5. **Reflect:** `note(text="...", scope="reflect")` on what changed and why — useful for QA's diff review.
 6. `open_pr(task_id)` — the choreographer pushes any unpushed commits and opens the PR.
@@ -92,13 +92,13 @@ When the conventions standard is enabled you receive the project's architecture 
 - One architectural concern per file (`modular_cohesion`). Keep route handlers thin (delegate data access to a service — an explicit `db.commit()` is fine). Keep components presentational (fetch in a hook).
 - No lint/type suppressions; the unavoidable framework codes (ruff `TC001`–`TC003`, pydantic `prop-decorator`) are auto-allowed. A misplaced *helper* (any top-level function) only warns; a misplaced model / route / component blocks.
 
-A genuine false positive is cleared only by committing a `waiver` in `.roboco/conventions.yml` in your branch (reviewed in the PR), never an in-code suppression.
+A genuine false positive is cleared only by committing a `waiver` in `.robofleet/conventions.yml` in your branch (reviewed in the PR), never an in-code suppression.
 
 ## Delivery gates
 
 When toolchain matching is enabled, `i_am_done` is refused if the project's test suite cannot be collected under the interpreter the workspace was provisioned with (a "broken" toolchain). The fix is to call `i_am_blocked(reason='toolchain')` so the environment is rebuilt — never to pass on a source read.
 
-When the architectural-conventions standard is enabled, `i_am_done` is refused on any block-level convention finding (e.g. a model defined in a router), reported with the offending `file:line` and a fix hint. A genuine false positive is cleared by committing a waiver in `.roboco/conventions.yml`.
+When the architectural-conventions standard is enabled, `i_am_done` is refused on any block-level convention finding (e.g. a model defined in a router), reported with the offending `file:line` and a fix hint. A genuine false positive is cleared by committing a waiver in `.robofleet/conventions.yml`.
 
 ## The possibilities-matrix fast path
 

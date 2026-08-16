@@ -3,10 +3,10 @@
 **Finding F-9e193527 (major) - Resolved (PR #864)**
 
 ## Root Cause
-`tests/integration/test_telegram_webapp_auth.py` had three conditional-mount tests - `test_mount_skipped_when_miniapp_flag_off`, `test_mount_skipped_when_cloud_auth_off`, `test_mount_included_when_both_armed` - that called a test-local helper, `_mount_miniapp_auth`, which duplicated the inline conditional-mount logic that actually lives in `roboco/api/app.py` (lines 560-571). The helper's own docstring admitted it was a "test-local mirror of `roboco.api.app`'s inline conditional mount." Because none of the three tests ever constructed `create_app()` with `telegram_miniapp_enabled` / `cloud_auth_enabled` toggled, the real mount gate in `app.py` had zero coverage - a regression there would have passed CI silently.
+`tests/integration/test_telegram_webapp_auth.py` had three conditional-mount tests - `test_mount_skipped_when_miniapp_flag_off`, `test_mount_skipped_when_cloud_auth_off`, `test_mount_included_when_both_armed` - that called a test-local helper, `_mount_miniapp_auth`, which duplicated the inline conditional-mount logic that actually lives in `robofleet/api/app.py` (lines 560-571). The helper's own docstring admitted it was a "test-local mirror of `robofleet.api.app`'s inline conditional mount." Because none of the three tests ever constructed `create_app()` with `telegram_miniapp_enabled` / `cloud_auth_enabled` toggled, the real mount gate in `app.py` had zero coverage - a regression there would have passed CI silently.
 
 ## Solution Applied
-Repointed all three tests at the real `roboco.api.app.create_app()` factory, monkeypatching `settings.telegram_miniapp_enabled` / `settings.cloud_auth_enabled` instead of hand-rolling a mirror, following the exact pattern already established in `tests/unit/api/test_app.py` and `tests/unit/runtime/test_rate_limit_sweep.py`:
+Repointed all three tests at the real `robofleet.api.app.create_app()` factory, monkeypatching `settings.telegram_miniapp_enabled` / `settings.cloud_auth_enabled` instead of hand-rolling a mirror, following the exact pattern already established in `tests/unit/api/test_app.py` and `tests/unit/runtime/test_rate_limit_sweep.py`:
 
 - Added a module-local `_registered_paths(app)` helper (mirroring `test_app.py`'s helper of the same name) that reads routes from `app.openapi()`'s path table plus each included router's prefix, since FastAPI 0.137+ wraps sub-routers in an `_IncludedRouter` with no `.path` attribute and doesn't flatten into `app.routes`.
 - `test_mount_skipped_when_miniapp_flag_off` / `test_mount_skipped_when_cloud_auth_off` each monkeypatch one flag off (the sibling flag stays on via the module's autouse `_armed_settings` fixture) and assert `/api/telegram/webapp-auth` is absent from `_registered_paths(app)`.
@@ -14,7 +14,7 @@ Repointed all three tests at the real `roboco.api.app.create_app()` factory, mon
 - Deleted `_mount_miniapp_auth` and its now-unused `_post_unmounted_probe` live-request helper entirely; nothing references either anymore.
 
 ## Impact
-- **Scope:** Test-only, single file (`tests/integration/test_telegram_webapp_auth.py`). No production code touched - `roboco/api/app.py`, `roboco/api/routes/telegram.py`, and `roboco/api/utils/telegram.py` were explicitly out of scope and unchanged.
+- **Scope:** Test-only, single file (`tests/integration/test_telegram_webapp_auth.py`). No production code touched - `robofleet/api/app.py`, `robofleet/api/routes/telegram.py`, and `robofleet/api/utils/telegram.py` were explicitly out of scope and unchanged.
 - **Risk:** Minimal - the three tests were converted from exercising a hand-rolled mirror to exercising the real app factory; the exchange-flow tests in the same file (which use the `client`/`db_session` fixtures) were not touched.
 - **Behavior:** No production behavior change. Test coverage change only: `app.py`'s conditional-mount gate (lines 560-571) is now exercised by real `create_app()` calls instead of having zero coverage.
 - **Verification:** `make gate` green (ruff format/check + mypy clean); the 3 repointed mount tests pass locally. The 5 exchange-flow tests in the same file skip in sandboxes without a reachable Postgres - unrelated to this change and unaffected by it.

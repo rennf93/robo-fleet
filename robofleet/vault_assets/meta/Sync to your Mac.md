@@ -9,7 +9,7 @@ Two-way, real-time, no cloud hop. Best if you edit notes on both sides (e.g. the
 1. On the NAS: install Syncthing — via Docker (a small sidecar container) or your NAS app center if it ships one.
 2. On the Mac: `brew install syncthing` then `brew services start syncthing`.
 3. Open each Syncthing web UI (NAS: its container port; Mac: `localhost:8384`) and add the other as a remote device using its device ID.
-4. On the NAS side, share the vault's root folder (the one containing `RoboCo/` and `.obsidian/`).
+4. On the NAS side, share the vault's root folder (the one containing `RoboFleet/` and `.obsidian/`).
 5. Accept the share on the Mac and pick a local folder to receive it into. Open that folder as an Obsidian vault.
 6. Set the share type to **Send & Receive** on both sides so edits on the Mac (e.g. dropping a note in the Inbox) sync back to the NAS.
 7. Add a `.stignore` entry on both devices for `.obsidian/workspace.json`:

@@ -52,7 +52,7 @@ Body: Task {held_back_task_id} was held back by the collision-sequencing
        resume once that task reaches a terminal state.
 ```
 
-**Example scenario:** Two backend dev tasks both touch `roboco/models/task.py` and one adds a migration. The analyzer detects a collision and adds a sequencing edge, notifying the developer of the held-back task.
+**Example scenario:** Two backend dev tasks both touch `robofleet/models/task.py` and one adds a migration. The analyzer detects a collision and adds a sequencing edge, notifying the developer of the held-back task.
 
 ---
 
@@ -135,7 +135,7 @@ async def _notify_<event>(self, ...) -> None:
     if <guard condition>:
         return
     try:
-        from roboco.services.notification import NotificationService
+        from robofleet.services.notification import NotificationService
         await NotificationService().send_<event>_notification(...)
     except Exception as e:
         self.log.warning(
@@ -163,9 +163,9 @@ See `test_notification.py` and `test_task.py` for worked examples of producer-le
 
 ## Related Files
 
-- **Implementation:** `roboco/services/notification.py` (producers)
-- **Wiring:** `roboco/services/task.py` (TaskService helpers), `roboco/runtime/orchestrator.py` (reaper hook)
-- **Route:** `roboco/api/routes/tasks.py` (`unblock` endpoint; service-layer ALERT only, no route-level duplicate)
+- **Implementation:** `robofleet/services/notification.py` (producers)
+- **Wiring:** `robofleet/services/task.py` (TaskService helpers), `robofleet/runtime/orchestrator.py` (reaper hook)
+- **Route:** `robofleet/api/routes/tasks.py` (`unblock` endpoint; service-layer ALERT only, no route-level duplicate)
 - **Unit tests:** `tests/unit/services/test_notification.py` (producer unit tests), `tests/unit/services/test_task.py` (chokepoint double-fire proofs)
 - **Route/chokepoint integration tests:** `tests/integration/test_tasks_routes.py` (unblock returns 200 and leaves `blocked` with no duplicate notification), `tests/e2e_smoke/test_notification_coordination_events.py` (DB-truth checks for unblock and dependency-revival ALERT rows)
-- **Data model:** `roboco/models/notification.py` (CreateNotificationParams)
+- **Data model:** `robofleet/models/notification.py` (CreateNotificationParams)

@@ -71,7 +71,7 @@ In anything you write for an end user — copy, demo data, layout — not your o
 - No default AI-purple glow, no pure `#000`/`#fff`. One icon family per project.
 
 ### Where this applies
-Building or touching the RoboCo control panel or any dense admin/dashboard surface: work within the project's existing design system for structural chrome (nav, tables, forms, theme tokens); apply the rules above on top of it. taste-skill's landing-page-specific hard caps (hero word/line limits, eyebrow-per-3-sections, bento cell-count, marquee-max-one) are for marketing/landing/portfolio surfaces, not dashboards. Check the task brief if you're unsure which mode you're in.
+Building or touching the RoboFleet control panel or any dense admin/dashboard surface: work within the project's existing design system for structural chrome (nav, tables, forms, theme tokens); apply the rules above on top of it. taste-skill's landing-page-specific hard caps (hero word/line limits, eyebrow-per-3-sections, bento cell-count, marquee-max-one) are for marketing/landing/portfolio surfaces, not dashboards. Check the task brief if you're unsure which mode you're in.
 
 ## Niche aesthetic vocabularies
 

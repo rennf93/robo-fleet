@@ -1,6 +1,6 @@
 # Journal Tools
 
-There is **no** `roboco_journal_*` tool. Journaling is a single content tool on the `roboco-do` MCP server: `note`. The `scope` argument selects the entry kind; structured fields are filled per scope.
+There is **no** `robofleet_journal_*` tool. Journaling is a single content tool on the `robofleet-do` MCP server: `note`. The `scope` argument selects the entry kind; structured fields are filled per scope.
 
 ```python
 note(
@@ -104,12 +104,12 @@ note(
 
 ## Reading Journals
 
-Journals are written by `note` and surface through the knowledge base — there is no separate journal-read tool. Search past notes (yours and your team's, where permitted) via the `roboco-optimal` MCP server:
+Journals are written by `note` and surface through the knowledge base — there is no separate journal-read tool. Search past notes (yours and your team's, where permitted) via the `robofleet-optimal` MCP server:
 
 ```python
 # Semantic search over indexed notes/decisions/learnings
-roboco_kb_search(query="rate limiting", index_types=["journals", "decisions"])
+robofleet_kb_search(query="rate limiting", index_types=["journals", "decisions"])
 
 # Conversational lookup with follow-up context
-roboco_ask_mentor(question="What did we decide about session storage?")
+robofleet_ask_mentor(question="What did we decide about session storage?")
 ```

@@ -1,16 +1,16 @@
 # robo-fleet
 
-robo-fleet is a virtual AI company of 25 AI agents plus one human CEO that runs as a self-organizing software workforce on Google Cloud. Each agent is built on Google ADK and Gemini 3.5 Flash; together they plan, code, QA, review, and merge real tasks through a structured lifecycle, observable from a live control panel. This is the RoboCo AI-agent-company system ported to the Google Cloud stack for the All Things Agentic hackathon, Fortified Enterprise Fleet track.
+robo-fleet is a virtual AI company of 25 AI agents plus one human CEO that runs as a self-organizing software workforce on Google Cloud. Each agent is built on Google ADK and Gemini 3.5 Flash; together they plan, code, QA, review, and merge real tasks through a structured lifecycle, observable from a live control panel. This is the RoboFleet AI-agent-company system ported to the Google Cloud stack for the All Things Agentic hackathon, Fortified Enterprise Fleet track.
 
 ## Architecture overview
 
-Three real changes from RoboCo, everything else copied verbatim:
+Three real changes from RoboFleet, everything else copied verbatim:
 
 1. **Spawn backend: docker containers -> Cloud Run Jobs.** The orchestrator no longer `docker run`s an agent container per task. A `CloudRunJobsProvider` submits a Cloud Run Job execution (one image serves every role; role behavior comes from the tool manifest + composed system prompt) and polls the job to completion.
-2. **Agent runtime: Claude Code CLI -> ADK Runner + Gemini 3.5 Flash.** The `roboco-agent-adk` image runs `roboco.agent.adk_entry`, which builds an ADK `LlmAgent` with the gateway tool-shim and git/file `FunctionTools`, runs it over an `InMemorySessionService` session on Gemini 3.5 Flash, accumulates token counts, and POSTs usage to `/api/v1/usage/report`. No MCP servers, no Claude CLI, no Node.js: a pure Python ADK runtime.
-3. **Infra: homelab docker-compose -> Cloud SQL, Memorystore, Filestore, GCS, Secret Manager, Artifact Registry, Cloud Run.** Postgres + pgvector moves to Cloud SQL Postgres 16 (via the Cloud SQL python connector, `roboco.infra.cloudsql`), Redis to Memorystore for Redis 7.x, the workspaces volume to a Filestore NFS share, agent clones to GCS, the Fernet key + HMAC secret + Gemini API key to Secret Manager, and the three images to Artifact Registry, built by Cloud Build.
+2. **Agent runtime: Claude Code CLI -> ADK Runner + Gemini 3.5 Flash.** The `robofleet-agent-adk` image runs `robofleet.agent.adk_entry`, which builds an ADK `LlmAgent` with the gateway tool-shim and git/file `FunctionTools`, runs it over an `InMemorySessionService` session on Gemini 3.5 Flash, accumulates token counts, and POSTs usage to `/api/v1/usage/report`. No MCP servers, no Claude CLI, no Node.js: a pure Python ADK runtime.
+3. **Infra: homelab docker-compose -> Cloud SQL, Memorystore, Filestore, GCS, Secret Manager, Artifact Registry, Cloud Run.** Postgres + pgvector moves to Cloud SQL Postgres 16 (via the Cloud SQL python connector, `robofleet.infra.cloudsql`), Redis to Memorystore for Redis 7.x, the workspaces volume to a Filestore NFS share, agent clones to GCS, the Fernet key + HMAC secret + Gemini API key to Secret Manager, and the three images to Artifact Registry, built by Cloud Build.
 
-Everything else (the org hierarchy, task lifecycle, gateway verbs, findings ledger, conventions standard, audit log, the Next.js panel) is unchanged from RoboCo.
+Everything else (the org hierarchy, task lifecycle, gateway verbs, findings ledger, conventions standard, audit log, the Next.js panel) is unchanged from RoboFleet.
 
 ## Architecture diagram
 
@@ -39,7 +39,7 @@ cd ..
 #    cloud-auth secret, Gemini API key). Requires ROBOFLEET_GEMINI_API_KEY.
 ROBOFLEET_GEMINI_API_KEY=your-key ./infra/seed-secrets.sh PROJECT_ID
 
-# 3. Build the three images (roboco-orchestrator, roboco-panel, roboco-agent-adk)
+# 3. Build the three images (robofleet-orchestrator, robofleet-panel, robofleet-agent-adk)
 #    into Artifact Registry via Cloud Build. Reads ROBOFLEET_GCP_PROJECT_ID and
 #    ROBOFLEET_GCP_REGION; uses cloudbuild.yaml at the repo root.
 export ROBOFLEET_GCP_PROJECT_ID=your-project
@@ -81,17 +81,17 @@ See `.env.gcp.example` for the full set. One-line-per-section summary:
 - **Cloud auth (armed on GCP):** `ROBOFLEET_CLOUD_AUTH_ENABLED=true`, `ROBOFLEET_CLOUD_AUTH_EMAIL` / `_PASSWORD` (the seeded CEO login).
 - **URLs:** `ROBOFLEET_PUBLIC_BASE_URL` (the Cloud Run panel URL), `ROBOFLEET_API_URL` / `ROBOFLEET_ORCHESTRATOR_URL` (localhost in the orchestrator container).
 - **Agent images:** `ROBOFLEET_AGENT_IMAGE_REGISTRY`, `ROBOFLEET_AGENT_IMAGE_TAG`.
-- **Gemini:** `ROBOFLEET_GEMINI_API_KEY`, `ROBOFLEET_AGENT_MODEL` (defaults to `gemini-3.5-flash` in `roboco.agent.adk_entry`).
+- **Gemini:** `ROBOFLEET_GEMINI_API_KEY`, `ROBOFLEET_AGENT_MODEL` (defaults to `gemini-3.5-flash` in `robofleet.agent.adk_entry`).
 
 ## The 7 fleet properties
 
-The Fortified Enterprise Fleet track scores seven fleet properties; all already exist in RoboCo and map onto the Google stack:
+The Fortified Enterprise Fleet track scores seven fleet properties; all already exist in RoboFleet and map onto the Google stack:
 
 1. **Agent registry** = the agent registry in `agents_config` / the `agents` DB table (25 agents + the human CEO), loaded at orchestrator startup.
-2. **Runtime** = Cloud Run Jobs (one execution per agent task) running the ADK `Runner` + `LlmAgent` on Gemini 3.5 Flash in the `roboco-agent-adk` image.
+2. **Runtime** = Cloud Run Jobs (one execution per agent task) running the ADK `Runner` + `LlmAgent` on Gemini 3.5 Flash in the `robofleet-agent-adk` image.
 3. **Memory bank** = the pgvector knowledge base (in-house RAG engine) on Cloud SQL plus the organizational-memory loop (learnings + playbooks, captured on task completion and injected into the next claim's briefing).
 4. **Identity** = per-agent HMAC tokens (`X-Agent-Token`, signed with `ROBOFLEET_AGENT_AUTH_SECRET`) for the agent gateway, plus FastAPI Users cloud auth (cookie + JWT) for the human CEO on the public panel.
-5. **Gateway** = the Choreographer + the `roboco-flow` / `roboco-do` v1 routes (`/api/v1/flow/{role}/{verb}` and `/api/v1/do`); agents never call domain services directly, only through intent verbs that return a standardized Envelope.
+5. **Gateway** = the Choreographer + the `robofleet-flow` / `robofleet-do` v1 routes (`/api/v1/flow/{role}/{verb}` and `/api/v1/do`); agents never call domain services directly, only through intent verbs that return a standardized Envelope.
 6. **Model armor** = the task-content guardrails (prompt-injection guard, forbidden-content screening, per-role tool manifests) + the architectural-conventions standard, enforced at `i_am_done` and the in-path PR-review gate.
 7. **Observability** = the `audit_log` transition journal + `MetricsService` (cycle time, rework, spawn-waste) surfaced in the panel, plus Cloud Logging for the Cloud Run services and jobs.
 
@@ -105,7 +105,7 @@ This repository is licensed under AGPL-3.0 (see [`LICENSE`](./LICENSE)). A judge
 uv sync                       # install deps (google-adk is a main dep)
 docker compose up -d postgres redis ollama   # backing services only (local dev)
 uv run alembic upgrade head   # migrate the database
-uv run python -m roboco.cli   # API + orchestrator
+uv run python -m robofleet.cli   # API + orchestrator
 uv run pytest                 # tests
 make quality                  # the full gate (ruff/format/markdown/mypy/pytest/xenon)
 ```

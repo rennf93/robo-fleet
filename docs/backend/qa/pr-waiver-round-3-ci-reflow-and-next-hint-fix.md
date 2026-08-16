@@ -10,7 +10,7 @@ The round-3 finding speculated the Python quality gate was failing on ruff/mypy/
 
 ## F-f72f238e (minor): next_hint lied on the PR-waived path
 
-`submit_up`'s `next_hint` and `_next_hint_submit_root` (`roboco/foundation/policy/lifecycle.py`) were static strings claiming a PR had been opened and a reviewer would review it — true on the normal path, false on the PR-waived (zero-diff report-only) path, where no PR exists and the reviewer gate never fires. A waived PM following the envelope's `next` field would be pointed at a gate that never triggers.
+`submit_up`'s `next_hint` and `_next_hint_submit_root` (`robofleet/foundation/policy/lifecycle.py`) were static strings claiming a PR had been opened and a reviewer would review it — true on the normal path, false on the PR-waived (zero-diff report-only) path, where no PR exists and the reviewer gate never fires. A waived PM following the envelope's `next` field would be pointed at a gate that never triggers.
 
 **Fix:** both hint functions now branch on `markers.is_pr_waived(t)`:
 - `submit_up`'s hint (moved from an inline lambda to a named `_next_hint_submit_up`, for parity with `_next_hint_submit_root`'s existing pattern) returns a waived-specific string naming `complete(task_id)` directly instead of `pr_pass`.
@@ -19,7 +19,7 @@ The round-3 finding speculated the Python quality gate was failing on ruff/mypy/
 ## What shipped (commit `de9d3356`)
 
 - `docs/backend/qa/pr-waiver-marker-latch-duplicate-fetch-fix.md`: reflow only.
-- `roboco/foundation/policy/lifecycle.py`: new `_next_hint_submit_up`; `_next_hint_submit_root` gains the `markers.is_pr_waived(t)` branch; both wired into `_INTENT_VERBS`.
+- `robofleet/foundation/policy/lifecycle.py`: new `_next_hint_submit_up`; `_next_hint_submit_root` gains the `markers.is_pr_waived(t)` branch; both wired into `_INTENT_VERBS`.
 - Tests: `tests/unit/gateway/test_verb_runner.py`'s 4 existing waiver tests (`test_submit_up_waives_pr_on_zero_commit_branch`, `test_submit_root_waives_pr_on_zero_commit_branch`, `test_submit_up_still_creates_pr_when_branch_has_commits`, `test_submit_root_still_creates_pr_when_branch_has_commits`) each gained an assertion on the envelope's `next` field for both the waived and non-waived case.
 
 ## Full picture

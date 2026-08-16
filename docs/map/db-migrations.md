@@ -1,17 +1,17 @@
 # db-migrations slice
 
 ## Purpose
-The DB layer is async SQLAlchemy 2.0 over PostgreSQL+asyncpg, with pgvector for the in-house RAG engine. Schema evolution is owned by an Alembic chain (001→086) that runs on every boot via `init_db()`; `Base.metadata.create_all` is no longer the source of truth — migration 017 reconciled the drift the other way. The ORM tables live in one fat module `roboco/db/tables.py` (~2.5k lines, 38+ tables — not recomputed for this delta, several 077-086 migrations add columns to existing tables rather than new ones).
+The DB layer is async SQLAlchemy 2.0 over PostgreSQL+asyncpg, with pgvector for the in-house RAG engine. Schema evolution is owned by an Alembic chain (001→086) that runs on every boot via `init_db()`; `Base.metadata.create_all` is no longer the source of truth — migration 017 reconciled the drift the other way. The ORM tables live in one fat module `robofleet/db/tables.py` (~2.5k lines, 38+ tables — not recomputed for this delta, several 077-086 migrations add columns to existing tables rather than new ones).
 
 ## Files
 
 | Path | Role |
 |------|------|
-| `roboco/db/__init__.py` | Re-exports `Base`, session helpers, `bootstrap_database`, table classes. |
-| `roboco/db/base.py` | `Base` (DeclarativeBase + naming convention), `get_engine`, `get_session_factory`, `get_db` (FastAPI dep), `get_db_context`, `run_migrations`, `init_db`, `_db_has_*` probes. Stamps a pre-Alembic DB at 001 then upgrades head. |
-| `roboco/db/tables.py` | All 37 ORM table classes (single module). |
-| `roboco/db/seed.py` | `bootstrap_database()` — runs `init_db` then seeds agents. |
-| `alembic/env.py` | Async Alembic env; imports `roboco.db.tables` to register metadata, overrides `sqlalchemy.url` from settings, `compare_type` + `compare_server_default` on. |
+| `robofleet/db/__init__.py` | Re-exports `Base`, session helpers, `bootstrap_database`, table classes. |
+| `robofleet/db/base.py` | `Base` (DeclarativeBase + naming convention), `get_engine`, `get_session_factory`, `get_db` (FastAPI dep), `get_db_context`, `run_migrations`, `init_db`, `_db_has_*` probes. Stamps a pre-Alembic DB at 001 then upgrades head. |
+| `robofleet/db/tables.py` | All 37 ORM table classes (single module). |
+| `robofleet/db/seed.py` | `bootstrap_database()` — runs `init_db` then seeds agents. |
+| `alembic/env.py` | Async Alembic env; imports `robofleet.db.tables` to register metadata, overrides `sqlalchemy.url` from settings, `compare_type` + `compare_server_default` on. |
 | `alembic.ini` | Standard config; `script_location=alembic`, `prepend_sys_path=.`, no URL (set in env.py). |
 | `alembic/versions/` | 86 migration files 001..086 (two share number 026 — chained, not a collision). |
 
@@ -111,12 +111,12 @@ The DB layer is async SQLAlchemy 2.0 over PostgreSQL+asyncpg, with pgvector for 
 | 060 | 060_drop_messaging.py | Drops the channels/groups/sessions/session_tasks/messages subsystem (comms teardown — A2A is now the sole directed-message channel): `journal_entries.session_id` column, the 5 tables, and 4 enum types (`messagetype`/`sessionstatus`/`sessionscope`/`channeltype`); one-way (`downgrade()` raises `NotImplementedError`). |
 | 061 | 061_x_feature_spotlight.py | `x_seen_features` (feature-spotlight dedup ledger, keyed by feature slug) + `company_goals.brand_voice` (Text, CEO-authored brand-voice sample, feeds `_voice_guide`) — X feature-spotlight (`ROBOFLEET_X_FEATURE_SPOTLIGHT_ENABLED`, default off, sub-switch of `x_engine_enabled`). |
 | 062-072 | *(not yet reflected in this table — pre-existing gap, out of scope for this pass)* | Vault V1/V2, revision-findings ledger, sandbox extensions, and other slices landed migrations in this range; see `alembic/versions/` directly until this table is backfilled. |
-| 073 | 073_project_environments.py | `projects.environments` (nullable JSONB) — the per-project ordered environment ladder (`list[{name, branch}]`, index 0 = head rung, index -1 = prod rung) that replaces `default_branch` as the source of truth for a project's PR target and release target. Additive: a null value falls back to a degenerate single-branch ladder synthesized from `default_branch` at read time (`roboco/models/env_branches.py`), so existing projects are unaffected until the CEO declares a real ladder. |
+| 073 | 073_project_environments.py | `projects.environments` (nullable JSONB) — the per-project ordered environment ladder (`list[{name, branch}]`, index 0 = head rung, index -1 = prod rung) that replaces `default_branch` as the source of truth for a project's PR target and release target. Additive: a null value falls back to a degenerate single-branch ladder synthesized from `default_branch` at read time (`robofleet/models/env_branches.py`), so existing projects are unaffected until the CEO declares a real ladder. |
 | 074 | 074_telegram_credentials.py | `telegram_credentials` (singleton Fernet-encrypted `bot_token_encrypted` + `chat_id_encrypted`, mirrors `x_credentials`) — the Telegram notifications bridge (`ROBOFLEET_TELEGRAM_ENABLED`, default off). |
-| 075 | 075_company_goals_company_name.py | `company_goals.company_name` (Text, `server_default=""`) — CEO-authored product/company name, mirroring `brand_voice`. Feeds `CompanyGoalsService.resolve_product_name` (project name → this field → the "RoboCo" literal fallback), which `XEngine`/`VideoEngine` both call so release posts/videos stop hardcoding "RoboCo". Additive and inert until the CEO sets it in the Business → Goals editor. |
-| 076 | 076_project_git_provider.py | `projects.git_provider` (nullable `String(16)`, not a pg enum — validated at the service layer by `roboco.foundation.policy.forge.validate_project_forge`) — Phase 0 of the forge-providers spec (GitHub + Gitea + GitLab). Null = auto-detect from the `git_url` host (github.com → github; anything else is a registration-time rejection unless the operator sets this column explicitly — the GitHub Enterprise / self-hosted escape hatch). Additive: every existing project keeps resolving to GitHub behavior until GitLab/Gitea providers are set. See `docs/map/worksession-git.md`. |
+| 075 | 075_company_goals_company_name.py | `company_goals.company_name` (Text, `server_default=""`) — CEO-authored product/company name, mirroring `brand_voice`. Feeds `CompanyGoalsService.resolve_product_name` (project name → this field → the "RoboFleet" literal fallback), which `XEngine`/`VideoEngine` both call so release posts/videos stop hardcoding "RoboFleet". Additive and inert until the CEO sets it in the Business → Goals editor. |
+| 076 | 076_project_git_provider.py | `projects.git_provider` (nullable `String(16)`, not a pg enum — validated at the service layer by `robofleet.foundation.policy.forge.validate_project_forge`) — Phase 0 of the forge-providers spec (GitHub + Gitea + GitLab). Null = auto-detect from the `git_url` host (github.com → github; anything else is a registration-time rejection unless the operator sets this column explicitly — the GitHub Enterprise / self-hosted escape hatch). Additive: every existing project keeps resolving to GitHub behavior until GitLab/Gitea providers are set. See `docs/map/worksession-git.md`. |
 | 077 | 077_github_app.py | `github_app_credentials` (singleton Fernet-encrypted App id + private key) + `projects.github_installation_id` (BigInteger, nullable) — a project can bind to a GitHub App installation instead of a bare PAT, with PAT fallback on any mint failure. See `docs/map/worksession-git.md`. |
-| 078 | 078_project_codegen_command.py | `projects.codegen_command` (String(500), nullable) — per-project command run in the task's worktree right before every push, auto-committing any codegen drift into the same push (RoboCo itself sets `make codegen`). See `docs/map/worksession-git.md`. |
+| 078 | 078_project_codegen_command.py | `projects.codegen_command` (String(500), nullable) — per-project command run in the task's worktree right before every push, auto-committing any codegen drift into the same push (RoboFleet itself sets `make codegen`). See `docs/map/worksession-git.md`. |
 | 079 | 079_notification_backoff.py | `notifications.reescalation_count` / `.last_reescalated_at` / `.reescalation_delivered_count` — the per-notification exponential re-escalation backoff schedule, replacing the prior every-sweep-tick-forever re-escalation. See `docs/map/notification.md`. |
 | 080 | 080_task_project_budgets.py | `tasks.budget_usd` (Float, nullable) + `projects.monthly_budget_usd` (Float, nullable) — per-task and per-project cost budgets (`ROBOFLEET_TASK_BUDGETS_ENABLED`, default off). See `docs/map/orchestrator.md` / `docs/map/gateway-support.md`. |
 | 081 | 081_doctrine_version.py | `agent_spawn_sessions.doctrine_version` (String(32), nullable) — stamped at spawn-session finalize from the composed prompt layers, so a golden-task eval cohort's model+doctrine combination (e.g. Fable-mode on vs. off) is durably identifiable after the fact. See `docs/map/tests.md`. |
@@ -127,7 +127,7 @@ The DB layer is async SQLAlchemy 2.0 over PostgreSQL+asyncpg, with pgvector for 
 | 086 | 086_enable_gemini_provider.py | `UPDATE provider_configs SET enabled = true` for the Gemini row 085 seeded `enabled=false` — Grok gets force-enabled via its `apply_mode="grok"` write path, but `apply_mode` grew no `"gemini"` case until this same change, so without this migration a Mix-mode assignment to a Gemini model would resolve against a permanently-disabled row and silently fall back to Anthropic (wired end-to-end everywhere except reachable). Codex (083) sidesteps this by seeding `enabled=true` directly. See `docs/map/runtime-providers.md`. |
 
 ## Data Flow
-On boot, `init_db()` probes for application tables and `alembic_version`; if a pre-Alembic DB exists it stamps it at revision 001, then always runs `run_migrations()` → `alembic upgrade head` (in a thread via `asyncio.to_thread`). `env.py` imports `roboco.db.tables` so `Base.metadata` is fully populated, overrides `sqlalchemy.url` from `settings.database_url`, and runs online with an async NullPool engine. `compare_type` + `compare_server_default` are on so autogenerate drift is detectable. `tables.py` classes are the ORM mapping the migrations build; the domain layer reads them through `roboco/models/` dataclasses, not the tables directly.
+On boot, `init_db()` probes for application tables and `alembic_version`; if a pre-Alembic DB exists it stamps it at revision 001, then always runs `run_migrations()` → `alembic upgrade head` (in a thread via `asyncio.to_thread`). `env.py` imports `robofleet.db.tables` so `Base.metadata` is fully populated, overrides `sqlalchemy.url` from `settings.database_url`, and runs online with an async NullPool engine. `compare_type` + `compare_server_default` are on so autogenerate drift is detectable. `tables.py` classes are the ORM mapping the migrations build; the domain layer reads them through `robofleet/models/` dataclasses, not the tables directly.
 
 ## Mermaid
 
@@ -251,8 +251,8 @@ Migration chain 001..059
 - Alembic; migrations run on every orchestrator boot.
 
 ## Entry Points
-- `init_db()` / `run_migrations()` in `roboco/db/base.py` — boot-time `alembic upgrade head`.
-- `bootstrap_database()` in `roboco/db/seed.py` — init + seed.
+- `init_db()` / `run_migrations()` in `robofleet/db/base.py` — boot-time `alembic upgrade head`.
+- `bootstrap_database()` in `robofleet/db/seed.py` — init + seed.
 - `alembic upgrade head` (manual, in orchestrator container).
 - `conftest` (tests) — ephemeral DB per test; runs migrations or `create_all` depending on PG availability.
 
@@ -263,7 +263,7 @@ Migration chain 001..059
 
 ## Gotchas
 - **`sa.Enum(create_type=False)` is silently ignored** — the flag only works on `postgresql.ENUM`, not generic `sa.Enum`. Using `sa.Enum` re-emits CREATE TYPE and fails with "type already exists". 001/016/052 carry the live gotcha comment; 004/016 use the correct `postgresql.ENUM(create_type=False)`. 001 itself uses `sa.Enum(..., create_type=False)` in spots — latent on a clean re-apply.
-- **Enum-parity gate can false-green** — `make quality` runs `scripts/verify_postgres_enums.py` only against a migrated DB; an empty `roboco` DB (conftest ephemeral) or `|| echo` masking hides drift. Fixed in 957fb522 but the gate is only as good as the DB it points at.
+- **Enum-parity gate can false-green** — `make quality` runs `scripts/verify_postgres_enums.py` only against a migrated DB; an empty `robo-fleet` DB (conftest ephemeral) or `|| echo` masking hides drift. Fixed in 957fb522 but the gate is only as good as the DB it points at.
 - **016 latent** — the `team` enum member list under create_type=False is the *original* set, not the later-widened set; inert but misleading.
 - **Two files numbered 026** — not a collision: `026_token_usage_tables` chains off `026_completed_dependency_ids`. Renaming is risky (breaks down_revision refs).
 - **052 reuses the `team` enum** with `create_type=False` correctly — no new enum added; safe.
@@ -275,7 +275,7 @@ Migration chain 001..059
 - No factual drift found in the DB layer description.
 
 ## Changes Since Baseline
-`git log fd10cc862c2020b3f639cdb686d427b0198a2441..HEAD -- alembic/ roboco/db/`:
+`git log fd10cc862c2020b3f639cdb686d427b0198a2441..HEAD -- alembic/ robofleet/db/`:
 - `15effce0` Chore: 141 Gaps fill-in (#283) — adds migration 052 (`task_cell_projects`) + `TaskCellProjectTable`; logic-touching.
 
 (Only one commit in range touches these paths.)
@@ -284,7 +284,7 @@ Migration chain 001..059
 >
 > Delta 2026-07-03 (v0.17.0, 5 features): `055_spawn_session_turns_tool_calls` (`agent_spawn_sessions.turns`/`.tool_calls`) + `056_member_perf_daily` (`member_performance_daily`) predate this wave but were never appended to this doc; `057_project_sandbox_services` adds `projects.sandbox_services` (sandboxed dev DB/Redis/Mongo, `ROBOFLEET_SANDBOX_DB_ENABLED`); `058_cloud_auth_users` adds `users` (`UserTable`, cloud auth, `ROBOFLEET_CLOUD_AUTH_ENABLED`); `059_x_credentials` adds `x_credentials` (`XCredentialsTable`) + `x_seen_mentions` (`XSeenMentionTable`) (X engine, `ROBOFLEET_X_ENGINE_ENABLED`). Chain head is now 059. Mongo rides existing 057 (no new migration) — it's just another entry in the `SANDBOX_ENGINES` registry.
 >
-> Delta 2026-07-04 (v0.18.0): `060_drop_messaging` (the comms-teardown migration — drops `messages`/`session_tasks`/`sessions`/`groups`/`channels` + 4 enum types + `journal_entries.session_id`; A2A is now the sole directed-message channel; one-way, `downgrade()` raises `NotImplementedError`) had already landed on master but was never appended to this doc; `061_x_feature_spotlight` adds `x_seen_features` (`XSeenFeatureTable`) + `company_goals.brand_voice` (X feature-spotlight, `ROBOFLEET_X_FEATURE_SPOTLIGHT_ENABLED`, sub-switch of `x_engine_enabled`). Chain head is now 061. ORM table count is now 38 (verified via `grep -c '^class .*Table' roboco/db/tables.py`), up from this doc's previously-stated 37 (that figure predates 055-061 and was never recomputed).
+> Delta 2026-07-04 (v0.18.0): `060_drop_messaging` (the comms-teardown migration — drops `messages`/`session_tasks`/`sessions`/`groups`/`channels` + 4 enum types + `journal_entries.session_id`; A2A is now the sole directed-message channel; one-way, `downgrade()` raises `NotImplementedError`) had already landed on master but was never appended to this doc; `061_x_feature_spotlight` adds `x_seen_features` (`XSeenFeatureTable`) + `company_goals.brand_voice` (X feature-spotlight, `ROBOFLEET_X_FEATURE_SPOTLIGHT_ENABLED`, sub-switch of `x_engine_enabled`). Chain head is now 061. ORM table count is now 38 (verified via `grep -c '^class .*Table' robofleet/db/tables.py`), up from this doc's previously-stated 37 (that figure predates 055-061 and was never recomputed).
 >
 > Delta 2026-07-18/19: `075_company_goals_company_name` adds `company_goals.company_name` (X/video product-branding fallback) and `076_project_git_provider` adds `projects.git_provider` (forge-providers Phase 0 — GitHub/Gitea/GitLab). Chain head is now 076 (062-072 remain the pre-existing table gap noted above — this delta only closes 073-076).
 >
@@ -295,9 +295,9 @@ Migration chain 001..059
 | Title | File:Line | Claim | Severity |
 |-------|-----------|-------|----------|
 | sa.Enum create_type silently dropped | alembic/versions/001_initial_schema.py:127,312 | 001 uses `sa.Enum(..., create_type=False)` which is a no-op on the generic Enum; a fresh re-apply on a clean DB can double-emit CREATE TYPE. | High |
-| Enum-parity gate false-green | Makefile:540 + scripts/verify_postgres_enums.py | Gate skips on no-migrated-DB; an empty/mismatched `roboco` DB hides postgres-enum drift until a smoke run. | High |
+| Enum-parity gate false-green | Makefile:540 + scripts/verify_postgres_enums.py | Gate skips on no-migrated-DB; an empty/mismatched `robo-fleet` DB hides postgres-enum drift until a smoke run. | High |
 | 016 team enum stale member list | alembic/versions/016_add_products_and_task_product_id.py:38 | `postgresql.ENUM(create_type=False)` member list is frozen at the original set; inert but masks later widening. | Medium |
-| Missing pgvector extension blocks RAG | roboco/db/tables.py (chunks_*/indexed_documents) | Migrations assume pgvector installed; on a plain PG the vector columns fail and init_db aborts. | High |
+| Missing pgvector extension blocks RAG | robofleet/db/tables.py (chunks_*/indexed_documents) | Migrations assume pgvector installed; on a plain PG the vector columns fail and init_db aborts. | High |
 | Two 026 files — rename hazard | alembic/versions/026_*.py | Renaming either 026 file breaks `down_revision` chain; autogenerate may mis-order. | Medium |
 | 047 partial-unique index assumes single-active | alembic/versions/047_ws_single_active.py | A duplicate ACTIVE session raises on the partial-unique index; service-layer guard must run first or claim crashes. | Medium |
 | 052 reuses team enum — order-dependent | alembic/versions/052_task_cell_projects.py:44 | Depends on `team` enum already existing (from 001/016); a partial chain replay to 052 without 016 would fail. | Low |

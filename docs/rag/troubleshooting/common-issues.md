@@ -68,7 +68,7 @@ Cannot skip levels or choose target. (Only Main PM / Board call `escalate_to_ceo
 # Backend
 uv run pytest           # Tests
 uv run ruff check .     # Linting
-uv run mypy roboco/     # Type check
+uv run mypy robofleet/     # Type check
 
 # Frontend
 pnpm test
@@ -85,16 +85,16 @@ Fix all issues before submitting.
 **Solutions**:
 - Read `quick_context` field on task
 - Read your journal for this task
-- Get proactive context: `roboco_get_proactive_context(task_id)`
+- Get proactive context: `robofleet_get_proactive_context(task_id)`
 
 ## Documentation Path Confusion
 
 **Problem**: Unsure where to write documentation
 
-**Solution**: Use `roboco_docs_write()` - system handles paths automatically
+**Solution**: Use `robofleet_docs_write()` - system handles paths automatically
 
 ```python
-roboco_docs_write(
+robofleet_docs_write(
     {
         "task_id": "your-task-uuid",
         "filename": "feature.md",
@@ -117,10 +117,10 @@ roboco_docs_write(
 
 **Solution**:
 - Ensure content covers the same topic
-- Or delete duplicate: `roboco_docs_delete(path)`
-- Check existing: `roboco_docs_list(task_id)` or `roboco_kb_search("topic")`
+- Or delete duplicate: `robofleet_docs_delete(path)`
+- Check existing: `robofleet_docs_list(task_id)` or `robofleet_kb_search("topic")`
 
-**Note**: `roboco_docs_write()` auto-deduplicates via RAG by **content similarity**. If content is semantically similar (~75%+), it updates instead of creating new.
+**Note**: `robofleet_docs_write()` auto-deduplicates via RAG by **content similarity**. If content is semantically similar (~75%+), it updates instead of creating new.
 
 ## A2A Message Not Delivered
 

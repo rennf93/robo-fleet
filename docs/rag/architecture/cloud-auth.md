@@ -2,7 +2,7 @@
 
 ## What It Is
 
-A cookie-session login for the **single human CEO user**, built on FastAPI Users, that lets the panel/API be safely exposed beyond localhost. Implemented in `roboco/api/auth/` (`backend.py`, `session.py`, `manager.py`, `seed.py`, `routes.py`). It is **not a panel feature flag** — it is env-only, deliberately absent from `roboco/services/settings.py`'s `FEATURE_FLAGS` tuple, so it can't be toggled on for a deployment that isn't already behind TLS.
+A cookie-session login for the **single human CEO user**, built on FastAPI Users, that lets the panel/API be safely exposed beyond localhost. Implemented in `robofleet/api/auth/` (`backend.py`, `session.py`, `manager.py`, `seed.py`, `routes.py`). It is **not a panel feature flag** — it is env-only, deliberately absent from `robofleet/services/settings.py`'s `FEATURE_FLAGS` tuple, so it can't be toggled on for a deployment that isn't already behind TLS.
 
 ## Enable/Disable
 
@@ -20,13 +20,13 @@ A cookie-session login for the **single human CEO user**, built on FastAPI Users
 
 ## Sliding session, password-fingerprint JWT
 
-The session cookie (`roboco_session`, `SESSION_COOKIE_NAME` in `backend.py`) is **secure-only** (`cookie_secure=True`), `httponly`, `samesite=lax` — **arm this only behind TLS**, or browsers silently refuse to send the cookie and login appears to fail with no clear error.
+The session cookie (`robofleet_session`, `SESSION_COOKIE_NAME` in `backend.py`) is **secure-only** (`cookie_secure=True`), `httponly`, `samesite=lax` — **arm this only behind TLS**, or browsers silently refuse to send the cookie and login appears to fail with no clear error.
 
-Every authenticated request re-mints and re-sets the cookie (`_slide_session_cookie` in `roboco/api/deps.py`), so an in-use session never lapses — only genuine inactivity past `cloud_auth_cookie_max_age` logs out. The JWT itself binds a **password fingerprint** (`_password_fingerprint` — first 16 hex chars of a SHA-256 of the current `hashed_password`) as a `pwd_fp` claim; `_SlidingSessionStrategy.read_token` rejects any token whose fingerprint no longer matches. A JWT is otherwise stateless and can't be revoked by user id alone — this makes rotating the seeded password (env change + restart) invalidate every previously-issued cookie.
+Every authenticated request re-mints and re-sets the cookie (`_slide_session_cookie` in `robofleet/api/deps.py`), so an in-use session never lapses — only genuine inactivity past `cloud_auth_cookie_max_age` logs out. The JWT itself binds a **password fingerprint** (`_password_fingerprint` — first 16 hex chars of a SHA-256 of the current `hashed_password`) as a `pwd_fp` claim; `_SlidingSessionStrategy.read_token` rejects any token whose fingerprint no longer matches. A JWT is otherwise stateless and can't be revoked by user id alone — this makes rotating the seeded password (env change + restart) invalidate every previously-issued cookie.
 
 ## Dual-path `get_agent_context`
 
-`roboco/api/deps.py`'s `get_agent_context` is the single dependency every route resolves its caller through, and it branches on the flag:
+`robofleet/api/deps.py`'s `get_agent_context` is the single dependency every route resolves its caller through, and it branches on the flag:
 
 - **Off** (default): delegates straight to `_header_trust_agent_context` — the historical `X-Agent-ID` / `X-Agent-Role` / `X-Agent-Team` / `X-Agent-Token` header path, unchanged.
 - **On**: `_cloud_auth_agent_context` enforces dual-path. A caller presenting a **valid HMAC `X-Agent-Token`** (the agent fleet, and the orchestrator's `system` self-PATCH) is accepted exactly like today — delegated to the header-trust path once the token verifies. Without a valid token, any agent-role claim in the headers is treated as an unauthenticated spoof and rejected **regardless of role** — this closes the LAN header-spoof hole on the published API port for every privileged role, not just `ceo` (the pre-cloud-auth surface only ever worried about spoofing the CEO). The sole remaining legitimate caller without a token is the human CEO with a **valid session cookie**, resolved via `resolve_session_user`.
@@ -35,7 +35,7 @@ Agent HMAC auth and the orchestrator's `system` self-PATCH are untouched in both
 
 ## Panel wiring
 
-`panel/src/proxy.ts` (the Next.js middleware entry) probes `GET /api/auth/status` on every non-API, non-static request; if `cloud_auth_enabled` is true and the `roboco_session` cookie is absent, it redirects to `/login`. The probe fails open (treats a slow/unreachable backend as "cloud auth off") within a 1.5s timeout — a stuck backend must never turn into a stuck redirect loop.
+`panel/src/proxy.ts` (the Next.js middleware entry) probes `GET /api/auth/status` on every non-API, non-static request; if `cloud_auth_enabled` is true and the `robofleet_session` cookie is absent, it redirects to `/login`. The probe fails open (treats a slow/unreachable backend as "cloud auth off") within a 1.5s timeout — a stuck backend must never turn into a stuck redirect loop.
 
 A second route mints this same session cookie without a password: `POST /api/telegram/webapp-auth` validates a Telegram Mini App's signed `initData` instead, gated by its own `ROBOFLEET_TELEGRAM_MINIAPP_ENABLED` (which itself requires `cloud_auth_enabled`) — see `docs/map/api-routes-schemas.md`.
 

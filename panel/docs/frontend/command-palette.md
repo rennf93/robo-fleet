@@ -1,6 +1,6 @@
 # Command Palette Reference
 
-The global command palette enables keyboard-driven navigation across the entire RoboCo panel. Press **Cmd+K** (Mac) or **Ctrl+K** (Windows/Linux) from any page to open it, then fuzzy-search tasks, agents, projects, and navigation pages. When the input is empty, recently visited items appear instead.
+The global command palette enables keyboard-driven navigation across the entire RoboFleet panel. Press **Cmd+K** (Mac) or **Ctrl+K** (Windows/Linux) from any page to open it, then fuzzy-search tasks, agents, projects, and navigation pages. When the input is empty, recently visited items appear instead.
 
 ## Usage
 
@@ -36,7 +36,7 @@ Each category shows up to 6 results. Enter navigates to the entity's detail page
 
 ### Recents
 
-When the input is empty (before or after clearing a search), the palette shows **Recent** items — up to 10 entries pulled from localStorage under the key `roboco-cmd-recents`. These are ordered by most recent first.
+When the input is empty (before or after clearing a search), the palette shows **Recent** items — up to 10 entries pulled from localStorage under the key `robofleet-cmd-recents`. These are ordered by most recent first.
 
 **Recents are populated on navigation**: whenever you press Enter or click a result, that item is added to recents (or moved to the front if already there). The recents list is capped at 10 items; older entries are automatically dropped.
 
@@ -111,7 +111,7 @@ Pure function that scores a label against a fuzzy query. Returns a score (lower 
 
 localStorage-backed functions for managing recent items.
 
-- `loadRecents()`: Returns the current recent items array (up to 10) from localStorage key `roboco-cmd-recents`, or `[]` if empty/missing
+- `loadRecents()`: Returns the current recent items array (up to 10) from localStorage key `robofleet-cmd-recents`, or `[]` if empty/missing
 - `addRecent(item)`: Adds or moves `item` to the front of recents, caps the array at 10, and saves back to localStorage
 
 **Item shape**: `{ type: CommandRecentType, id: string, title: string }`

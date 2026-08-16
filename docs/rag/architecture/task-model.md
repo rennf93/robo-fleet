@@ -67,7 +67,7 @@ When a parent task is decomposed, each subtask declares which parent criteria it
 
 Each role's handoff note is stored as a validated structured model in `notes_structured`. The legacy text columns (`dev_notes`, `qa_notes`, `doc_notes`, `pr_reviewer_notes`, `quick_context`) are DERIVED mirrors regenerated from it through a single chokepoint — never hand-authored.
 
-When toolchain matching is enabled, the agent's workspace clone carries a `.git/.roboco-toolchain` marker recording the resolved Python and a status (`ok` / `broken` / `unknown`), and the WorkSession records the toolchain columns. A `broken` status blocks the delivery gates.
+When toolchain matching is enabled, the agent's workspace clone carries a `.git/.robofleet-toolchain` marker recording the resolved Python and a status (`ok` / `broken` / `unknown`), and the WorkSession records the toolchain columns. A `broken` status blocks the delivery gates.
 
 ## Timestamps
 

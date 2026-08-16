@@ -7,7 +7,7 @@ name: hyperframes-creative description: Non-animation creative direction for Hyp
 
 # HyperFrames Creative
 
-<!-- RoboCo: house-style.md, video-composition.md, beat-direction.md, and motion-principles.md are vendored under motion/skills/references/ (see motion/README.md's Visual design bar section for the RoboCo-kit-specific reading of them). Every other `references/`, `palettes/`, `frame-presets/`, and `scripts/` path mentioned below is upstream-only and NOT vendored in this repo — treat this file's own row description as the guidance when a linked file doesn't exist here. -->
+<!-- RoboFleet: house-style.md, video-composition.md, beat-direction.md, and motion-principles.md are vendored under motion/skills/references/ (see motion/README.md's Visual design bar section for the RoboFleet-kit-specific reading of them). Every other `references/`, `palettes/`, `frame-presets/`, and `scripts/` path mentioned below is upstream-only and NOT vendored in this repo — treat this file's own row description as the guidance when a linked file doesn't exist here. -->
 
 Brand, pacing, style, narration, and composition direction. Use after the technical contract from `hyperframes-core` is in place.
 

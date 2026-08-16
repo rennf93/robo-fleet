@@ -41,8 +41,8 @@ If your task has `dependency_ids` in the same repo, the fresh branch cut also ba
 
 ## After Claiming
 
-1. Get proactive context: `roboco_get_proactive_context(task_id)`
-2. Search the KB for similar work: `roboco_kb_search(query="...")`
+1. Get proactive context: `robofleet_get_proactive_context(task_id)`
+2. Search the KB for similar work: `robofleet_kb_search(query="...")`
 
 ## Claiming Rules
 

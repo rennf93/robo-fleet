@@ -32,7 +32,7 @@ What each role can do in the system.
 | Fail QA (`fail`) | - | - | - | - | - | - | Yes | - |
 | Docs Complete (`i_documented`) | - | - | - | - | - | - | - | Yes |
 
-Notes (verified against `roboco/foundation/policy/lifecycle.py`):
+Notes (verified against `robofleet/foundation/policy/lifecycle.py`):
 - **Create / Assign** (`create_subtask`, `delegate`) are PM-only: `cell_pm` and `main_pm`. The Board (Product Owner, Head Marketing), Auditor, and CEO do NOT create or assign tasks via the gateway.
 - **Cancel** is allowed to PM roles + CEO (`cell_pm`, `main_pm`, `ceo`) for all non-terminal states **except** `awaiting_ceo_approval → cancelled`, which is **CEO-only** (a PM cannot cancel a task already in the CEO's approval queue — that would bypass the human gate). The Board and Auditor CANNOT cancel.
 - **Complete** (final approve/merge) is PM-only (`cell_pm`, `main_pm`). The CEO acts only on tasks escalated to `awaiting_ceo_approval`.
@@ -53,7 +53,7 @@ Note: Board (Product Owner, Head Marketing) can only index docs, not code.
 
 ## Notification Permissions
 
-Sending notifications means calling the `notify(target, text, priority)` content tool. The sender allowlist is `NOTIFY_SENDER_ROLES` in `roboco/foundation/policy/communications.py`.
+Sending notifications means calling the `notify(target, text, priority)` content tool. The sender allowlist is `NOTIFY_SENDER_ROLES` in `robofleet/foundation/policy/communications.py`.
 
 | Role | Can Send (`notify`) | Scope |
 |------|---------------------|-------|

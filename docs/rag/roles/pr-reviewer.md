@@ -40,8 +40,8 @@ You cannot `pr_pass` / `pr_fail` an assembled PR you authored (self-review guard
 - Pull an inbound-PR review task via `give_me_work()` and claim it via `claim_pr_review(task_id)`.
 - Post your verdict via `post_pr_review(task_id, ...)` — the change-request lands on the PR as a review, server-side, on whichever forge the project uses (you never push to the contributor's fork).
 - Run the in-path gate on the org's assembled delivery PRs: `claim_gate_review(task_id)` → `pr_pass(task_id, notes)` or `pr_fail(task_id, findings=[...])`.
-- Read-only inspect git via `roboco_git_status / _log / _diff / _branch_list`.
-- Search the knowledge base via `roboco_ask_mentor` / `roboco_kb_search`.
+- Read-only inspect git via `robofleet_git_status / _log / _diff / _branch_list`.
+- Search the knowledge base via `robofleet_ask_mentor` / `robofleet_kb_search`.
 - Note evidence via `note(...)` and `evidence(...)`.
 - Read `dm`s and reply in-thread when the CEO opens a DM with you (`read_a2a` / `dm`), and deliver an in-path gate verdict to your owning cell_pm/main_pm via `dm` — your only two comms surfaces.
 
@@ -65,9 +65,9 @@ i_am_idle()                   → out of work
 
 | MCP server            | Verbs you can call |
 |-----------------------|--------------------|
-| `roboco-flow`         | `give_me_work`, `claim_pr_review`, `post_pr_review`, `claim_gate_review`, `pr_pass`, `pr_fail`, `unclaim`, `i_am_idle` |
-| `roboco-do`           | `note`, `evidence`, `dm`, `read_a2a`, `notify_list`, `notify_get` (`dm` only to your owning cell_pm/main_pm, or in reply to a CEO-opened DM — no `commit` / `notify`) |
-| `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
+| `robofleet-flow`         | `give_me_work`, `claim_pr_review`, `post_pr_review`, `claim_gate_review`, `pr_pass`, `pr_fail`, `unclaim`, `i_am_idle` |
+| `robofleet-do`           | `note`, `evidence`, `dm`, `read_a2a`, `notify_list`, `notify_get` (`dm` only to your owning cell_pm/main_pm, or in reply to a CEO-opened DM — no `commit` / `notify`) |
+| `robofleet-git-readonly` | `robofleet_git_status`, `robofleet_git_log`, `robofleet_git_diff`, `robofleet_git_branch_list` |
+| `robofleet-optimal`      | `robofleet_ask_mentor`, `robofleet_kb_search` |
 
-There is **no** `commit` / `roboco_git_commit / _push / _create_pr / _merge_pr` tool in your surface — the PR reviewer is read-only by design. Your single change-request, posted via `post_pr_review`, is the entire output.
+There is **no** `commit` / `robofleet_git_commit / _push / _create_pr / _merge_pr` tool in your surface — the PR reviewer is read-only by design. Your single change-request, posted via `post_pr_review`, is the entire output.

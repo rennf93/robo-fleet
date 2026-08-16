@@ -4,7 +4,7 @@ Interaction spec for the pattern that makes a live conversation the primary surf
 
 ## Scope and where this lives
 
-This is a **pattern spec**, not a new page proposal. It extends the one conversation surface RoboCo already ships, `panel/src/app/(dashboard)/a2a/page.tsx`, plus its sub-components:
+This is a **pattern spec**, not a new page proposal. It extends the one conversation surface RoboFleet already ships, `panel/src/app/(dashboard)/a2a/page.tsx`, plus its sub-components:
 
 | Piece | Existing file it extends |
 |---|---|
@@ -14,7 +14,7 @@ This is a **pattern spec**, not a new page proposal. It extends the one conversa
 | Agent identity | `panel/src/lib/agent-utils.ts` (`getAgentInitials`, `getAgentDisplayName`) |
 | Connection state | `panel/src/hooks/use-websocket.ts` (`ConnectionState` = `"connecting" \| "connected" \| "reconnecting" \| "disconnected"`), `panel/src/components/layout/connection-status.tsx` |
 
-Nothing here replaces the `/a2a` page's existing behavior (message fetch, reply composer, switchboard/list toggle) — every section below is additive: a third pane, a color layer on an existing avatar, a refined connection badge, an entrance transition for new rows, and the states around the stream when it has nothing (yet) to show. The same three-region composition and identity/connection/arrival treatment apply to any future conversation surface RoboCo adds (e.g. a unified agent-activity inbox) without re-deriving the pattern.
+Nothing here replaces the `/a2a` page's existing behavior (message fetch, reply composer, switchboard/list toggle) — every section below is additive: a third pane, a color layer on an existing avatar, a refined connection badge, an entrance transition for new rows, and the states around the stream when it has nothing (yet) to show. The same three-region composition and identity/connection/arrival treatment apply to any future conversation surface RoboFleet adds (e.g. a unified agent-activity inbox) without re-deriving the pattern.
 
 **Design bar dial read:** dense product UI (a data-heavy live-ops surface inside existing panel chrome), not a landing page — variance 2, motion 2-3, density 7, the UX/UI cell's dashboard default. No new radius or shadow tokens; color additions are a bounded, named palette (below), not ad hoc hex values.
 
@@ -49,7 +49,7 @@ Extends the existing `grid grid-cols-12 gap-4 lg:gap-6` container (`a2a/page.tsx
 | `lg` – `< xl` | Roster + Stream (today's behavior, unchanged) | Roster `col-span-4`, Stream `col-span-8` |
 | `xl`+ | Roster + Stream + Context | Roster `col-span-3`, Stream `col-span-6`, Context `col-span-3` |
 
-The context pane is the new addition and is the one that collapses first — it never appears below `xl`, and even at `xl`+ it is dismissible via a header toggle (a `PanelRightClose`/`PanelRightOpen` icon button, `size="sm" variant="ghost"`, matching the existing switchboard/list toggle buttons at `a2a/page.tsx:275-296`) so a user who wants the stream at full width above `xl` can still get it. Collapsed state persists in `localStorage` (`roboco:conversation-context-open`, boolean), read once at mount — the same persistence idiom already used for panel-width/theme preferences (avoids a new state-management dependency).
+The context pane is the new addition and is the one that collapses first — it never appears below `xl`, and even at `xl`+ it is dismissible via a header toggle (a `PanelRightClose`/`PanelRightOpen` icon button, `size="sm" variant="ghost"`, matching the existing switchboard/list toggle buttons at `a2a/page.tsx:275-296`) so a user who wants the stream at full width above `xl` can still get it. Collapsed state persists in `localStorage` (`robo-fleet:conversation-context-open`, boolean), read once at mount — the same persistence idiom already used for panel-width/theme preferences (avoids a new state-management dependency).
 
 ### Context pane content
 

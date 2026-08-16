@@ -1,7 +1,7 @@
 ---
 
 name: Bug report
-about: Create a report to help us improve RoboCo
+about: Create a report to help us improve RoboFleet
 title: '[BUG] '
 labels: bug
 assignees: ''
@@ -42,16 +42,16 @@ ___
 Affected Subsystem
 ------------------
 
-Which part of RoboCo is involved (check all that apply):
+Which part of RoboFleet is involved (check all that apply):
 
-- [ ] api (`roboco/api`)
-- [ ] services (`roboco/services`)
-- [ ] gateway (`roboco/services/gateway`)
-- [ ] orchestrator (`roboco/runtime`)
-- [ ] enforcement (`roboco/enforcement`)
-- [ ] db / models (`roboco/db`, `roboco/models`)
+- [ ] api (`robofleet/api`)
+- [ ] services (`robofleet/services`)
+- [ ] gateway (`robofleet/services/gateway`)
+- [ ] orchestrator (`robofleet/runtime`)
+- [ ] enforcement (`robofleet/enforcement`)
+- [ ] db / models (`robofleet/db`, `robofleet/models`)
 - [ ] agents (`agents/`)
-- [ ] mcp (`roboco/mcp`)
+- [ ] mcp (`robofleet/mcp`)
 - [ ] panel (`panel/`)
 - [ ] alembic (`alembic/`)
 - [ ] Not sure
@@ -61,7 +61,7 @@ ___
 Environment
 -----------
 
-- RoboCo version / image tag: [e.g. 0.1.0]
+- RoboFleet version / image tag: [e.g. 0.1.0]
 - Python version: [e.g. 3.13.1]
 - Node version (panel issues): [e.g. 20.x]
 - Docker / Docker Compose version: [e.g. 27.x / v2.x]

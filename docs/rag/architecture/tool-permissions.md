@@ -6,24 +6,24 @@ Agents call gateway verbs through up to five MCP servers, scoped per role:
 
 | MCP server | Provides |
 |------------|----------|
-| `roboco-flow` | Lifecycle verbs (give_me_work, i_will_work_on, open_pr, complete, …) |
-| `roboco-do` | Content/write verbs (commit, note, dm, notify, evidence) |
-| `roboco-git-readonly` | Read-only git inspection (status, log, diff, branch_list) |
-| `roboco-search` | Web research (`web_search`, `web_fetch`) — `cell_pm`/`main_pm`/`product_owner`/`head_marketing` only, and only when `ROBOFLEET_RESEARCH_ENABLED` (default on) |
-| `roboco-optimal` | RAG (`roboco_ask_mentor`, `roboco_kb_search`) |
-| `roboco-docs` | Project docs file management (selected roles) |
+| `robofleet-flow` | Lifecycle verbs (give_me_work, i_will_work_on, open_pr, complete, …) |
+| `robofleet-do` | Content/write verbs (commit, note, dm, notify, evidence) |
+| `robofleet-git-readonly` | Read-only git inspection (status, log, diff, branch_list) |
+| `robofleet-search` | Web research (`web_search`, `web_fetch`) — `cell_pm`/`main_pm`/`product_owner`/`head_marketing` only, and only when `ROBOFLEET_RESEARCH_ENABLED` (default on) |
+| `robofleet-optimal` | RAG (`robofleet_ask_mentor`, `robofleet_kb_search`) |
+| `robofleet-docs` | Project docs file management (selected roles) |
 
-Native shell git is blocked by the bash-guard hook for everyone. There is **no** `roboco_git_commit / _push / _create_pr / _merge_pr / _checkout` tool — write operations happen through the lifecycle verbs and the choreographer handles git as a side-effect.
+Native shell git is blocked by the bash-guard hook for everyone. There is **no** `robofleet_git_commit / _push / _create_pr / _merge_pr / _checkout` tool — write operations happen through the lifecycle verbs and the choreographer handles git as a side-effect.
 
-The canonical source of role → verb mapping is `roboco/services/gateway/role_config.py`. The tables below summarise it.
+The canonical source of role → verb mapping is `robofleet/services/gateway/role_config.py`. The tables below summarise it.
 
 ## Developer
 
-**Flow verbs (roboco-flow):** `give_me_work`, `i_will_work_on`, `open_pr`, `i_am_done`, `i_am_blocked`, `unclaim`, `resume`, `i_am_idle`
+**Flow verbs (robofleet-flow):** `give_me_work`, `i_will_work_on`, `open_pr`, `i_am_done`, `i_am_blocked`, `unclaim`, `resume`, `i_am_idle`
 
-**Content verbs (roboco-do):** `commit`, `note`, `dm`, `evidence`
+**Content verbs (robofleet-do):** `commit`, `note`, `dm`, `evidence`
 
-**Read-only git (roboco-git-readonly):** all 4 (`status`, `log`, `diff`, `branch_list`)
+**Read-only git (robofleet-git-readonly):** all 4 (`status`, `log`, `diff`, `branch_list`)
 
 **Workspace writes:** `Write` / `Edit` in `/data/workspaces/{project}/{team}/{agent-id}/` only.
 
@@ -55,7 +55,7 @@ The canonical source of role → verb mapping is `roboco/services/gateway/role_c
 
 **Read-only git:** all 4
 
-**Web research (conditional):** `roboco-search`'s `web_search` / `web_fetch`, when `ROBOFLEET_RESEARCH_ENABLED` (default on).
+**Web research (conditional):** `robofleet-search`'s `web_search` / `web_fetch`, when `ROBOFLEET_RESEARCH_ENABLED` (default on).
 
 **Workspace writes:** none.
 
@@ -67,7 +67,7 @@ The canonical source of role → verb mapping is `roboco/services/gateway/role_c
 
 **Read-only git:** all 4
 
-**Web research (conditional):** `roboco-search`'s `web_search` / `web_fetch`, when `ROBOFLEET_RESEARCH_ENABLED` (default on).
+**Web research (conditional):** `robofleet-search`'s `web_search` / `web_fetch`, when `ROBOFLEET_RESEARCH_ENABLED` (default on).
 
 **Workspace writes:** none. `submit_root` on a root parent task opens the root→master PR (entering the `awaiting_pr_review` gate); after the main reviewer `pr_pass`es it, `complete` escalates to the CEO. The Main PM never merges to master — only the CEO does.
 
@@ -83,7 +83,7 @@ Both share the same flow verbs and read-only git (none), but their content verbs
 
 **Read-only git (both):** none.
 
-**Web research (both, conditional):** `roboco-search`'s `web_search` / `web_fetch`, mounted only when `ROBOFLEET_RESEARCH_ENABLED` (default on).
+**Web research (both, conditional):** `robofleet-search`'s `web_search` / `web_fetch`, mounted only when `ROBOFLEET_RESEARCH_ENABLED` (default on).
 
 ## Auditor
 
@@ -127,7 +127,7 @@ Both are human-only roles — they chat with the CEO, not other agents.
 | `notify` (ack-required) | — | — | — | ✓ | ✓ | ✓ | — |
 | `dm` (A2A) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | `note` (journal entry) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (reflect) |
-| `roboco_git_*` (read-only) | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
+| `robofleet_git_*` (read-only) | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
 | `Write` / `Edit` (own workspace) | ✓ | ✓ | — | — | — | — | — |
 
 **CEO** is human and never inside an agent container; the panel runs as the CEO via `X-Agent-Role: ceo` against the orchestrator API directly.

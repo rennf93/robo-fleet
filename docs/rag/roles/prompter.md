@@ -50,7 +50,7 @@ When the spec is ready, call `propose_draft` with the structured draft. The huma
 
 ## Ambient Task History (auto-injected, no tool call)
 
-Every intake conversation scoped to a project is automatically given a **task-history digest** — a chronological "## Task History" block listing that project's most recent tasks (short id, title, status, date), one section per project for a MegaTask's multi-project scope. It's rendered by `history_digest_layer` (`roboco/services/prompter.py`, backed by `TaskService.list_recent_for_project`) and injected ambiently at session start; you don't call anything for it. Use `search_past_tasks` (above) when you need a keyword hit the digest's recency window doesn't cover.
+Every intake conversation scoped to a project is automatically given a **task-history digest** — a chronological "## Task History" block listing that project's most recent tasks (short id, title, status, date), one section per project for a MegaTask's multi-project scope. It's rendered by `history_digest_layer` (`robofleet/services/prompter.py`, backed by `TaskService.list_recent_for_project`) and injected ambiently at session start; you don't call anything for it. Use `search_past_tasks` (above) when you need a keyword hit the digest's recency window doesn't cover.
 
 ## Tool Surface (locked-down SDK session)
 
@@ -58,7 +58,7 @@ Every intake conversation scoped to a project is automatically given a **task-hi
 |--------|-------|
 | Base (read-only) | `Read`, `Grep`, `Glob`, `Task` |
 | Intake MCP | `propose_draft` (emit the reviewable draft), `search_past_tasks` (prior-art search), `propose_batch` (MegaTask — several sequenced drafts at once) |
-| `roboco-do` (gateway) | `note`, `evidence` |
+| `robofleet-do` (gateway) | `note`, `evidence` |
 
 The session is isolated: a hard tool allowlist (no host settings, no extra MCP servers), `permission_mode="dontAsk"`, and no outward-comms surface. Anything not listed above is denied.
 

@@ -71,13 +71,13 @@ A panel-demo clip is a FILM of software being used, not a screenshot with captio
 
 `kit/` is a second register alongside the release-announcement's text-card style: reusable `pk-`-namespaced CSS/HTML that recreates the control panel's look (dark chrome, task cards, status pills, toasts, a typing reveal, a cursor) so a composition can simulate the product actually being used, instead of announcing it over a headline. Use the **text-card register** (release-announcement's pattern) for version/feature announcements with no product visuals; use the **demo register** (`kit/`) whenever the story is "watch this happen in the app" — a task moving through the panel, a feature being triggered, an agent doing something visible.
 
-`compositions/panel-demo/` is the reference composition: a task title types into an intake field, a card materializes in a column, a cursor clicks it done, a toast confirms, out on "roboco.tech". Start a new demo-register composition from its structure and `kit.css`'s classes rather than reinventing the panel's chrome per clip. See `kit/README.md` for the full piece-by-piece reference.
+`compositions/panel-demo/` is the reference composition: a task title types into an intake field, a card materializes in a column, a cursor clicks it done, a toast confirms, out on "robo-fleet.tech". Start a new demo-register composition from its structure and `kit.css`'s classes rather than reinventing the panel's chrome per clip. See `kit/README.md` for the full piece-by-piece reference.
 
 ## Release-specific example: `release-recap` (0.18.0 - 0.20.0)
 
 `compositions/release-recap/` is a demo-register clip built on `kit/`, not the release-announcement text-card style — the CEO rejected an earlier text-card cut of this same occasion ("Build this in the panel-demo register... the video must show the product moving... Do not invent a new visual language"). It ships the same two orientations as every other composition — `vertical.html` (1080×1920) and `square.html` (1080×1080) — sharing `props.js` and the offline-render constraints, but no `theme.css` of its own since `kit/kit.css` owns the look.
 
-The story is "three releases shipped in six days": a single intake types "3 releases in 6 days", then three release cards (v0.18.0, v0.19.0, v0.20.0) cycle through **the same kanban slot** — each card is absolutely positioned at the same spot inside the column and painted after the previous, so the later card's solid background fully covers the one before it, a beat swap that reuses `panel-demo`'s exact single-card geometry per orientation instead of stacking three cards' worth of height (which would collide with the toast in the square cut). Each beat gets its own status-pill flip (`in progress` -> `completed`) and its own cursor click at the same parked position (only the first click glides in; the other two are click-only, `x0==x1`/`y0==y1`), then one toast and the "roboco.tech" outro once all three land.
+The story is "three releases shipped in six days": a single intake types "3 releases in 6 days", then three release cards (v0.18.0, v0.19.0, v0.20.0) cycle through **the same kanban slot** — each card is absolutely positioned at the same spot inside the column and painted after the previous, so the later card's solid background fully covers the one before it, a beat swap that reuses `panel-demo`'s exact single-card geometry per orientation instead of stacking three cards' worth of height (which would collide with the toast in the square cut). Each beat gets its own status-pill flip (`in progress` -> `completed`) and its own cursor click at the same parked position (only the first click glides in; the other two are click-only, `x0==x1`/`y0==y1`), then one toast and the "robo-fleet.tech" outro once all three land.
 
 ### Preview / test this composition
 
@@ -105,7 +105,7 @@ The smoke test (`release-recap.test.js`) asserts this schema, checks the counts,
 
 ## Release-specific example: `release-0.25.0`
 
-`compositions/release-0.25.0/` is a panel-demo kit clip for the RoboCo v0.25.0 release. It builds on the `kit/` register instead of the text-card style, so it has no `theme.css` of its own.
+`compositions/release-0.25.0/` is a panel-demo kit clip for the RoboFleet v0.25.0 release. It builds on the `kit/` register instead of the text-card style, so it has no `theme.css` of its own.
 
 The current revision runs **40 seconds** total (up from an earlier 14s cut) so every feature card is fully visible before the next one enters. The story is still "governance gets a better UI": the CEO types "Governance gets a better UI" into the panel intake at 3.6s, then four shipped feature cards enter the kanban column one per scene and flip from `in progress` to `completed`:
 
@@ -114,7 +114,7 @@ The current revision runs **40 seconds** total (up from an earlier 14s cut) so e
 3. **Metrics donut** — enters at 15.0s, completes at 16.6s ("90 days of real task flow.").
 4. **Notification bell** — enters at 20.0s, completes at 21.6s ("Real read/ack actions on every alert.").
 
-Each card gets roughly five seconds of fully visible time before the next card enters. A cursor clicks the column at 22.0s, the stats overlay shows "1 release / 25 agents / 1 human" from 24.0s to 32.0s, the toast "v0.25.0 shipped / I approved once. 25 agents did the rest." runs from 30.0s to 38.0s, and the "roboco.tech" outro lands at 36.0s and holds through the end.
+Each card gets roughly five seconds of fully visible time before the next card enters. A cursor clicks the column at 22.0s, the stats overlay shows "1 release / 25 agents / 1 human" from 24.0s to 32.0s, the toast "v0.25.0 shipped / I approved once. 25 agents did the rest." runs from 30.0s to 38.0s, and the "robo-fleet.tech" outro lands at 36.0s and holds through the end.
 
 The composition reuses the same `pk-frame` chrome, `pk-column`/`pk-card`, `pk-pill`, `pk-cursor`, `pk-toast`, and `pk-outro` pieces from `kit/`, plus the typing reveal wired through `props.js`. Each feature card uses the `pk-pill--swap-out` / `pk-pill--swap-in` pattern from `panel-demo` and `release-recap` to replace the `in progress` pill with `completed` on the same beat.
 
@@ -144,7 +144,7 @@ Same schema as `release-recap`: one `captions.json` next to the HTML with self-v
 ```json
 {
   "composition_id": "release-0.25.0",
-  "occasion": "release: RoboCo v0.25.0",
+  "occasion": "release: RoboFleet v0.25.0",
   "platforms": {
     "x":      { "caption": "...", "char_count": 216, "limit": 280,  "within_limit": true },
     "tiktok": { "caption": "...", "char_count": 347, "limit": 2200, "within_limit": true }
@@ -154,11 +154,11 @@ Same schema as `release-recap`: one `captions.json` next to the HTML with self-v
 
 ### Smoke-test invariants
 
-`release-0.25.0.test.js` extends the panel-demo register checks: both `vertical.html` (1080×1920) and `square.html` (1080×1080) parse with `data-duration="40"` and the HyperFrames params, the kit CSS/JS wiring is present, **four** feature cards each carry a progress-to-completed pill swap and include the "Notification bell" text, the cursor and toast appear, the outro shows "roboco.tech", no external scripts are loaded, and no em dashes slip into on-screen copy or captions.
+`release-0.25.0.test.js` extends the panel-demo register checks: both `vertical.html` (1080×1920) and `square.html` (1080×1080) parse with `data-duration="40"` and the HyperFrames params, the kit CSS/JS wiring is present, **four** feature cards each carry a progress-to-completed pill swap and include the "Notification bell" text, the cursor and toast appear, the outro shows "robo-fleet.tech", no external scripts are loaded, and no em dashes slip into on-screen copy or captions.
 
 ## Release-specific example: `release-0.26.0`
 
-`compositions/release-0.26.0/` is a panel-demo kit clip for the RoboCo v0.26.0 release, mirroring the structure and pacing of release-0.25.0. It builds on the `kit/` register instead of the text-card style, so it has no `theme.css` of its own.
+`compositions/release-0.26.0/` is a panel-demo kit clip for the RoboFleet v0.26.0 release, mirroring the structure and pacing of release-0.25.0. It builds on the `kit/` register instead of the text-card style, so it has no `theme.css` of its own.
 
 The composition runs **40 seconds** total. The story is "the control plane gets a lock" (the hero tagline): the CEO types "The control plane gets a lock" into the panel intake at 3.6s, then four shipped security/feature cards enter the kanban column one per scene and flip from `in progress` to `completed`:
 
@@ -167,7 +167,7 @@ The composition runs **40 seconds** total. The story is "the control plane gets 
 3. **Telegram cockpit** — enters at 15.0s, completes at 16.6s ("Today brief, approvals, chat. One socket."). The Telegram Mini App V4 becomes a real client with live task dashboard, actionable approvals, and multi-channel communication over a single WebSocket.
 4. **Guard mode: active** — enters at 20.0s, completes at 21.6s ("fastapi-guard stops watching, starts blocking."). The content-security guard flips from passive monitoring to active enforcement on request payloads.
 
-Each card gets roughly five seconds of fully visible time before the next card enters. A cursor clicks the intake at 4.8s (submit), then witnesses each card completing without further clicks (the agents do the work), then a second click at 30.8s (acknowledge the toast). The stats overlay shows "1 release / 3 forges / 0 leaks" from 24.0s to 32.0s, the toast "v0.26.0 shipped / I approved once. 25 agents shipped it." runs from 30.0s to 38.0s, and the "roboco.tech" outro lands at 36.0s and holds through the end.
+Each card gets roughly five seconds of fully visible time before the next card enters. A cursor clicks the intake at 4.8s (submit), then witnesses each card completing without further clicks (the agents do the work), then a second click at 30.8s (acknowledge the toast). The stats overlay shows "1 release / 3 forges / 0 leaks" from 24.0s to 32.0s, the toast "v0.26.0 shipped / I approved once. 25 agents shipped it." runs from 30.0s to 38.0s, and the "robo-fleet.tech" outro lands at 36.0s and holds through the end.
 
 The composition reuses the same `pk-frame` chrome, `pk-column`/`pk-card`, `pk-pill`, `pk-cursor`, `pk-toast`, and `pk-outro` pieces from `kit/`, plus the typing reveal wired through `props.js`. Each feature card uses the `pk-pill--swap-out` / `pk-pill--swap-in` pattern to replace the `in progress` pill with `completed` on the same beat. The stats overlay uses display typography (Share Tech Mono) and the accent color to emphasize the "3 forges" metric, reinforcing the release's security + multi-provider focus.
 
@@ -197,21 +197,21 @@ Same schema as prior releases: one `captions.json` next to the HTML with self-ve
 ```json
 {
   "composition_id": "release-0.26.0",
-  "occasion": "release: RoboCo v0.26.0",
+  "occasion": "release: RoboFleet v0.26.0",
   "platforms": {
-    "x":      { "caption": "v0.26.0 is out.\nOrchestrator API is off the public internet now.\nGitHub, Gitea, GitLab: one API.\nTelegram cockpit is a real client.\nI approved once. 25 agents shipped it.\nroboco.tech", "char_count": 182, "limit": 280,  "within_limit": true },
-    "tiktok": { "caption": "v0.26.0 is out.\n\nThe orchestrator API is off the public internet. No more raw access to the control plane.\n\nThree forges are first class now: GitHub, Gitea, GitLab. One API, one review flow, pick your forge.\n\nThe Telegram Mini App is a real client now: today brief, approvals, chat, all live off one socket.\n\nfastapi-guard is active enforcement. Not passive anymore.\n\nI approved once. 25 agents shipped it.\n\nroboco.tech", "char_count": 419, "limit": 2200, "within_limit": true }
+    "x":      { "caption": "v0.26.0 is out.\nOrchestrator API is off the public internet now.\nGitHub, Gitea, GitLab: one API.\nTelegram cockpit is a real client.\nI approved once. 25 agents shipped it.\nrobo-fleet.tech", "char_count": 182, "limit": 280,  "within_limit": true },
+    "tiktok": { "caption": "v0.26.0 is out.\n\nThe orchestrator API is off the public internet. No more raw access to the control plane.\n\nThree forges are first class now: GitHub, Gitea, GitLab. One API, one review flow, pick your forge.\n\nThe Telegram Mini App is a real client now: today brief, approvals, chat, all live off one socket.\n\nfastapi-guard is active enforcement. Not passive anymore.\n\nI approved once. 25 agents shipped it.\n\nrobo-fleet.tech", "char_count": 419, "limit": 2200, "within_limit": true }
   }
 }
 ```
 
 ### Smoke-test invariants
 
-`release-0.26.0.test.js` extends the panel-demo register checks: both `vertical.html` (1080×1920) and `square.html` (1080×1080) parse with `data-duration="40"` and the HyperFrames params, the kit CSS/JS wiring is present, **four** feature cards each carry a progress-to-completed pill swap and include the exact titles ("Off the public net", "3 forges, 1 API", "Telegram cockpit", "Guard mode: active"), the stats overlay renders the three-line receipt (1 release / 3 forges / 0 leaks), the cursor and toast appear, the outro shows "roboco.tech", no external scripts are loaded, and no em dashes slip into on-screen copy or captions.
+`release-0.26.0.test.js` extends the panel-demo register checks: both `vertical.html` (1080×1920) and `square.html` (1080×1080) parse with `data-duration="40"` and the HyperFrames params, the kit CSS/JS wiring is present, **four** feature cards each carry a progress-to-completed pill swap and include the exact titles ("Off the public net", "3 forges, 1 API", "Telegram cockpit", "Guard mode: active"), the stats overlay renders the three-line receipt (1 release / 3 forges / 0 leaks), the cursor and toast appear, the outro shows "robo-fleet.tech", no external scripts are loaded, and no em dashes slip into on-screen copy or captions.
 
 ## Release-specific example: `release-0.27.0`
 
-`compositions/release-0.27.0/` is a panel-demo kit clip for the RoboCo v0.27.0 release, mirroring the structure and pacing of `release-0.25.0`/`release-0.26.0`. It builds on the `kit/` register instead of the text-card style, so it has no `theme.css` of its own.
+`compositions/release-0.27.0/` is a panel-demo kit clip for the RoboFleet v0.27.0 release, mirroring the structure and pacing of `release-0.25.0`/`release-0.26.0`. It builds on the `kit/` register instead of the text-card style, so it has no `theme.css` of its own.
 
 The composition runs **40 seconds** total. The story is "four brains, zero bans" (the hero tagline and the panel intake text): the CEO types "Four brains, zero bans" into the panel intake at 3.6s, then four shipped feature cards enter the kanban column one per scene and flip from `in progress` to `completed`:
 
@@ -220,7 +220,7 @@ The composition runs **40 seconds** total. The story is "four brains, zero bans"
 3. **Codex and Gemini join** — enters at 16.9s, completes at 18.5s ("Four model providers, one gateway now."). `ModelProvider.OPENAI` (Codex CLI) and `ModelProvider.GEMINI` (Gemini CLI) join Anthropic and Grok on the agent-provider roster.
 4. **Cost-tiered routing** — enters at 22.2s, completes at 23.8s ("Save a routing mix, restore it anytime."). Cost-tiered model routing plus saved routing presets let an operator snapshot and restore a full routing configuration.
 
-Unlike `release-0.25.0`/`release-0.26.0`'s uniform 5.0s card-beat gaps, this composition deliberately varies the spacing (5.5s/6.4s/5.3s between successive card entrances — delays 5.0/10.5/16.9/22.2s) per the craft bar's anti-metronome rule in "Beat density and pacing variation" above; the camera shots, cursor waypoints, and the stats/toast/outro tail are all re-warped with a shared piecewise-linear time function so nothing desyncs against the shifted beats. A cursor clicks the intake at 4.8s (submit), then witnesses each card completing without further clicks, the stats overlay shows "1 release / 4 providers / 0 bans" from 25.7s to 33.0s, the toast "v0.27.0 shipped / I approved once. 25 agents shipped it." runs from 31.0s, and the "roboco.tech" outro lands at 36.3s and holds through the end.
+Unlike `release-0.25.0`/`release-0.26.0`'s uniform 5.0s card-beat gaps, this composition deliberately varies the spacing (5.5s/6.4s/5.3s between successive card entrances — delays 5.0/10.5/16.9/22.2s) per the craft bar's anti-metronome rule in "Beat density and pacing variation" above; the camera shots, cursor waypoints, and the stats/toast/outro tail are all re-warped with a shared piecewise-linear time function so nothing desyncs against the shifted beats. A cursor clicks the intake at 4.8s (submit), then witnesses each card completing without further clicks, the stats overlay shows "1 release / 4 providers / 0 bans" from 25.7s to 33.0s, the toast "v0.27.0 shipped / I approved once. 25 agents shipped it." runs from 31.0s, and the "robo-fleet.tech" outro lands at 36.3s and holds through the end.
 
 The composition reuses the same `pk-frame` chrome, `pk-column`/`pk-card`, `pk-pill`, `pk-cursor`, `pk-toast`, and `pk-outro` pieces from `kit/`, plus the typing reveal wired through `props.js`. Each feature card uses the `pk-pill--swap-out` / `pk-pill--swap-in` pattern to replace the `in progress` pill with `completed` on the same beat.
 
@@ -251,29 +251,29 @@ Same schema as prior releases: one `captions.json` next to the HTML with self-ve
 ```json
 {
   "composition_id": "release-0.27.0",
-  "occasion": "release: RoboCo v0.27.0",
+  "occasion": "release: RoboFleet v0.27.0",
   "platforms": {
-    "x":      { "caption": "v0.27.0 is out.\nThe WAF used to ban my own phone behind Tailscale. Now it knows the real client.\nTelegram Mini App V6, Codex and Gemini joined the roster, cost-tiered routing shipped.\nI approved once. 25 agents shipped it.\nroboco.tech", "char_count": 234, "limit": 280,  "within_limit": true },
-    "tiktok": { "caption": "v0.27.0 is out.\n\nThe WAF used to ban my own phone behind a Tailscale hop. Now it resolves the real client. Zero false bans.\n\nTelegram Mini App V6 shipped: real chat scopes, wallet-style metrics, a live Board sheet.\n\nCodex and Gemini just joined Claude and Grok on the model roster. Four providers, one gateway.\n\nCost-tiered routing plus saved presets: snapshot a routing mix, restore it whenever.\n\nI approved once. 25 agents shipped it.\n\nroboco.tech\n\n#buildinpublic #aiagents #devtools #indiehackers", "char_count": 499, "limit": 2200, "within_limit": true }
+    "x":      { "caption": "v0.27.0 is out.\nThe WAF used to ban my own phone behind Tailscale. Now it knows the real client.\nTelegram Mini App V6, Codex and Gemini joined the roster, cost-tiered routing shipped.\nI approved once. 25 agents shipped it.\nrobo-fleet.tech", "char_count": 234, "limit": 280,  "within_limit": true },
+    "tiktok": { "caption": "v0.27.0 is out.\n\nThe WAF used to ban my own phone behind a Tailscale hop. Now it resolves the real client. Zero false bans.\n\nTelegram Mini App V6 shipped: real chat scopes, wallet-style metrics, a live Board sheet.\n\nCodex and Gemini just joined Claude and Grok on the model roster. Four providers, one gateway.\n\nCost-tiered routing plus saved presets: snapshot a routing mix, restore it whenever.\n\nI approved once. 25 agents shipped it.\n\nrobo-fleet.tech\n\n#buildinpublic #aiagents #devtools #indiehackers", "char_count": 499, "limit": 2200, "within_limit": true }
   }
 }
 ```
 
 ### Smoke-test invariants
 
-`release-0.27.0.test.js` extends the panel-demo register checks: both `vertical.html` (1080×1920) and `square.html` (1080×1080) parse with `data-duration="40"` and the HyperFrames params, the kit CSS/JS wiring is present, **four** feature cards each carry a progress-to-completed pill swap and include the exact titles ("WAF knows the real IP", "Telegram Mini App V6", "Codex and Gemini join", "Cost-tiered routing"), the stats overlay renders the three-line receipt (1 release / 4 providers / 0 bans), the cursor and toast appear, the outro shows "roboco.tech", no external scripts are loaded, no em dashes slip into on-screen copy or captions, and — the finding a prior revision cycle on this composition caught — the four card-beat gaps are asserted non-uniform (`new Set(gaps).size > 1`), regression-guarding against silently reusing `release-0.26.0`'s identical 5.0s/5.0s/5.0s spacing.
+`release-0.27.0.test.js` extends the panel-demo register checks: both `vertical.html` (1080×1920) and `square.html` (1080×1080) parse with `data-duration="40"` and the HyperFrames params, the kit CSS/JS wiring is present, **four** feature cards each carry a progress-to-completed pill swap and include the exact titles ("WAF knows the real IP", "Telegram Mini App V6", "Codex and Gemini join", "Cost-tiered routing"), the stats overlay renders the three-line receipt (1 release / 4 providers / 0 bans), the cursor and toast appear, the outro shows "robo-fleet.tech", no external scripts are loaded, no em dashes slip into on-screen copy or captions, and — the finding a prior revision cycle on this composition caught — the four card-beat gaps are asserted non-uniform (`new Set(gaps).size > 1`), regression-guarding against silently reusing `release-0.26.0`'s identical 5.0s/5.0s/5.0s spacing.
 
 ## Release-specific example: `release-0.28.0`
 
-`compositions/release-0.28.0/` is a panel-demo kit clip for the RoboCo v0.28.0 release, mirroring the structure and pacing of `release-0.25.0` through `release-0.27.0`. It builds on the `kit/` register instead of the text-card style, so it has no `theme.css` of its own.
+`compositions/release-0.28.0/` is a panel-demo kit clip for the RoboFleet v0.28.0 release, mirroring the structure and pacing of `release-0.25.0` through `release-0.27.0`. It builds on the `kit/` register instead of the text-card style, so it has no `theme.css` of its own.
 
 The composition runs **36 seconds** total — shorter than the prior three 40s cuts because this release names three shipped highlights, not four, and the tail (receipt, toast, outro) gets more breathing room rather than a fourth card padded in to match the usual count. The story is "the board finally works" (the release notes' own bolded phrase, and the hero tagline / panel intake text): the CEO types "The board finally works" into the panel intake at 3.6s, then three shipped feature cards enter the kanban column one per scene and flip from `in progress` to `completed`:
 
-1. **Eval harness goes real** — enters at 5.0s, completes at 6.6s ("Real Docker spawns per turn now, no more mocks."). `python -m roboco.eval run` now drives a real `AgentOrchestrator.spawn_agent` per turn instead of the injectable scripted stub, with `_generate_mcp_config` guaranteeing spawned containers never reach production.
+1. **Eval harness goes real** — enters at 5.0s, completes at 6.6s ("Real Docker spawns per turn now, no more mocks."). `python -m robofleet.eval run` now drives a real `AgentOrchestrator.spawn_agent` per turn instead of the injectable scripted stub, with `_generate_mcp_config` guaranteeing spawned containers never reach production.
 2. **12 programs, one board** — enters at 10.5s, completes at 12.1s ("Pest Control to Sentinel. The board finally ships."). The `BoardProgram` registry replaces the bespoke roadmap/spotlight loops with twelve named programs (Pest Control, Spackle, Scales, Dogfood, Periscope, Megaphone, Mirror, Barfly, War Room, Coroner, Librarian, Sentinel), every artifact still held for the CEO.
 3. **Release posts stop parroting** — enters at 16.9s, completes at 18.5s ("Features lead the copy now, not security plumbing."). The X announcement drafter no longer quotes the changelog's first bold bullet verbatim; highlights reorder to marketing order and the fallback template can never quote a bullet.
 
-Each card gets roughly five to six seconds of fully visible time before the next enters, with card-beat gaps varied (5.5s / 6.4s) per the craft bar's anti-metronome rule rather than a uniform interval. A cursor clicks the intake at 4.8s (submit), then witnesses each card completing without further clicks, the stats overlay shows "1 release / 12 programs / 0 copied bullets" (the third line calling back to the release-post fix) from 21.0s to 28.0s, the toast "v0.28.0 shipped / I approved once. 25 agents shipped it." runs from 28.5s, and the "roboco.tech" outro lands at 33.0s and holds through the end.
+Each card gets roughly five to six seconds of fully visible time before the next enters, with card-beat gaps varied (5.5s / 6.4s) per the craft bar's anti-metronome rule rather than a uniform interval. A cursor clicks the intake at 4.8s (submit), then witnesses each card completing without further clicks, the stats overlay shows "1 release / 12 programs / 0 copied bullets" (the third line calling back to the release-post fix) from 21.0s to 28.0s, the toast "v0.28.0 shipped / I approved once. 25 agents shipped it." runs from 28.5s, and the "robo-fleet.tech" outro lands at 33.0s and holds through the end.
 
 The composition reuses the same `pk-frame` chrome, `pk-column`/`pk-card`, `pk-pill`, `pk-cursor`, `pk-toast`, and `pk-outro` pieces from `kit/`, plus the typing reveal wired through `props.js`. Each feature card uses the `pk-pill--swap-out` / `pk-pill--swap-in` pattern to replace the `in progress` pill with `completed` on the same beat.
 
@@ -304,14 +304,14 @@ Same schema as prior releases: one `captions.json` next to the HTML with self-ve
 ```json
 {
   "composition_id": "release-0.28.0",
-  "occasion": "release: RoboCo v0.28.0",
+  "occasion": "release: RoboFleet v0.28.0",
   "platforms": {
-    "x":      { "caption": "v0.28.0 is out.\nThe eval harness spawns real agents in real containers now. No more mocks.\nThe board finally works: 12 programs, from Pest Control to Sentinel.\nI approved once. 25 agents shipped it.\nroboco.tech", "char_count": 210, "limit": 280,  "within_limit": true },
-    "tiktok": { "caption": "v0.28.0 is out.\n\nThe eval harness spawns real agents in real containers now. Docker required, no more mocks.\n\nThe board finally works. Twelve programs: Pest Control hunts bugs, Sentinel watches for drift, ten more in between.\n\nRelease announcements stopped copying the changelog word for word.\n\nI approved once. 25 agents shipped it.\n\nroboco.tech\n\n#buildinpublic #aiagents #devtools #indiehackers", "char_count": 396, "limit": 2200, "within_limit": true }
+    "x":      { "caption": "v0.28.0 is out.\nThe eval harness spawns real agents in real containers now. No more mocks.\nThe board finally works: 12 programs, from Pest Control to Sentinel.\nI approved once. 25 agents shipped it.\nrobo-fleet.tech", "char_count": 210, "limit": 280,  "within_limit": true },
+    "tiktok": { "caption": "v0.28.0 is out.\n\nThe eval harness spawns real agents in real containers now. Docker required, no more mocks.\n\nThe board finally works. Twelve programs: Pest Control hunts bugs, Sentinel watches for drift, ten more in between.\n\nRelease announcements stopped copying the changelog word for word.\n\nI approved once. 25 agents shipped it.\n\nrobo-fleet.tech\n\n#buildinpublic #aiagents #devtools #indiehackers", "char_count": 396, "limit": 2200, "within_limit": true }
   }
 }
 ```
 
 ### Smoke-test invariants
 
-`release-0.28.0.test.js` extends the panel-demo register checks: both `vertical.html` (1080×1920) and `square.html` (1080×1080) parse with `data-duration="36"` and the HyperFrames params, the kit CSS/JS wiring is present, **three** feature cards each carry a progress-to-completed pill swap and include the exact titles ("Eval harness goes real", "12 programs, one board", "Release posts stop parroting"), the stats overlay renders the three-line receipt (1 release / 12 programs / 0 copied bullets), the cursor and toast appear, the outro shows "roboco.tech", no external scripts are loaded, no em dashes slip into on-screen copy or captions, and the three card-beat gaps are asserted non-uniform (`new Set(gaps).size > 1`).
+`release-0.28.0.test.js` extends the panel-demo register checks: both `vertical.html` (1080×1920) and `square.html` (1080×1080) parse with `data-duration="36"` and the HyperFrames params, the kit CSS/JS wiring is present, **three** feature cards each carry a progress-to-completed pill swap and include the exact titles ("Eval harness goes real", "12 programs, one board", "Release posts stop parroting"), the stats overlay renders the three-line receipt (1 release / 12 programs / 0 copied bullets), the cursor and toast appear, the outro shows "robo-fleet.tech", no external scripts are loaded, no em dashes slip into on-screen copy or captions, and the three card-beat gaps are asserted non-uniform (`new Set(gaps).size > 1`).

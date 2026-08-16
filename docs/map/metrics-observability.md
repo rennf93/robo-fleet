@@ -1,22 +1,22 @@
-# RoboCo Map — `metrics-observability` slice
+# RoboFleet Map — `metrics-observability` slice
 
 ## Purpose
 
-The metrics & observability slice is the read-only measurement layer of RoboCo: it turns task/audit-log/spawn-session state into the numbers the panel renders and the CEO/Auditor act on. `MetricsService` reconstructs delivery flow (cycle-time, bottlenecks, rework, scorecards) from the audit-log transition journey plus `tasks.revision_count`; `UsageService` aggregates per-agent/per-team/per-model token spend and projections from `agent_spawn_sessions` / `daily_usage_rollups`; `DashboardService` adds auditor flags/reports (in-memory) and CEO overview aggregations; `CockpitService` fuses goals + delivery + spend + strategy signals into one CEO summary; `telemetry/source.py` reads CI health for self-heal / multi-repo CI-watch; `billing/pricing.py` is the provider-aware per-token cost function every cost field is derived from.
+The metrics & observability slice is the read-only measurement layer of RoboFleet: it turns task/audit-log/spawn-session state into the numbers the panel renders and the CEO/Auditor act on. `MetricsService` reconstructs delivery flow (cycle-time, bottlenecks, rework, scorecards) from the audit-log transition journey plus `tasks.revision_count`; `UsageService` aggregates per-agent/per-team/per-model token spend and projections from `agent_spawn_sessions` / `daily_usage_rollups`; `DashboardService` adds auditor flags/reports (in-memory) and CEO overview aggregations; `CockpitService` fuses goals + delivery + spend + strategy signals into one CEO summary; `telemetry/source.py` reads CI health for self-heal / multi-repo CI-watch; `billing/pricing.py` is the provider-aware per-token cost function every cost field is derived from.
 
 ## Files
 
 | Path | Role | approx LOC |
 |---|---|---|
-| `roboco/services/metrics.py` | `MetricsService` — velocity, blockers, team/agent metrics, health, cycle-time/bottleneck/rework/scorecard/spawn-waste observability | 1521 |
-| `roboco/services/dashboard.py` | `DashboardService` — auditor flags/reports (in-memory singleton), CEO overview, audit queue, agent status, recent activity | 457 |
-| `roboco/services/cockpit.py` | `CockpitService` — read-only CEO "is the business winning?" summary (goals+delivery+spend+signals), delivery block now carries the 3 charter-objective metrics (`median_lead_time_hours`, `first_pass_yield`, `escaped_defects`) | 104 |
-| `roboco/services/usage.py` | `UsageService` — token usage summary, time-series, by-agent/team/model, projection, cache efficiency, today summary, recent sessions | 478 |
-| `roboco/services/usage_events.py` | `UsageSnapshot` dataclass + `publish_usage_snapshot` — publishes USAGE_SNAPSHOT to the StreamEventBus | 52 |
-| `roboco/services/telemetry/__init__.py` | Re-export of CI telemetry source symbols | 18 |
-| `roboco/services/telemetry/source.py` | `TelemetrySample` + `TelemetrySource` protocol + `GitHubCITelemetrySource` (self-heal) + `MultiProjectCITelemetrySource` (CI-watch) | 212 |
-| `roboco/billing/__init__.py` | Re-export `calculate_cost`, `CostResult`, `calculate_cost_result` | 8 |
-| `roboco/billing/pricing.py` | `calculate_cost` / `calculate_cost_result` / `CostResult` — provider-aware per-token USD pricing (Anthropic + Grok priced; local/Ollama $0); `CostResult` exposes `unpriced` flag for unpriced-Anthropic detection | 199 |
+| `robofleet/services/metrics.py` | `MetricsService` — velocity, blockers, team/agent metrics, health, cycle-time/bottleneck/rework/scorecard/spawn-waste observability | 1521 |
+| `robofleet/services/dashboard.py` | `DashboardService` — auditor flags/reports (in-memory singleton), CEO overview, audit queue, agent status, recent activity | 457 |
+| `robofleet/services/cockpit.py` | `CockpitService` — read-only CEO "is the business winning?" summary (goals+delivery+spend+signals), delivery block now carries the 3 charter-objective metrics (`median_lead_time_hours`, `first_pass_yield`, `escaped_defects`) | 104 |
+| `robofleet/services/usage.py` | `UsageService` — token usage summary, time-series, by-agent/team/model, projection, cache efficiency, today summary, recent sessions | 478 |
+| `robofleet/services/usage_events.py` | `UsageSnapshot` dataclass + `publish_usage_snapshot` — publishes USAGE_SNAPSHOT to the StreamEventBus | 52 |
+| `robofleet/services/telemetry/__init__.py` | Re-export of CI telemetry source symbols | 18 |
+| `robofleet/services/telemetry/source.py` | `TelemetrySample` + `TelemetrySource` protocol + `GitHubCITelemetrySource` (self-heal) + `MultiProjectCITelemetrySource` (CI-watch) | 212 |
+| `robofleet/billing/__init__.py` | Re-export `calculate_cost`, `CostResult`, `calculate_cost_result` | 8 |
+| `robofleet/billing/pricing.py` | `calculate_cost` / `calculate_cost_result` / `CostResult` — provider-aware per-token USD pricing (Anthropic + Grok priced; local/Ollama $0); `CostResult` exposes `unpriced` flag for unpriced-Anthropic detection | 199 |
 
 ## Key Symbols
 
@@ -46,7 +46,7 @@ The metrics & observability slice is the read-only measurement layer of RoboCo: 
 | `MetricsService._tokens_cost_for` | method | metrics.py:768 | Sum tokens+cost from spawn sessions for an agent slug or team |
 | `MetricsService.get_spawn_waste_metrics` | method | metrics.py:~1420 | Prices "zero-progress" spawn sessions — an ended, task-scoped `agent_spawn_sessions` row whose task shows none of a genuine status-ADVANCE audit event, a commit, a `progress_updates` entry, or a journal entry inside the session's own `[started_at, ended_at]` window — with `by_agent`/`by_team`/`by_task` breakdowns (the `by_task` field, PR #846/#849, closes F-36130d5b: the parent objective explicitly asked for per-agent/per-team/per-task pricing). Backs `GET /api/dashboard/metrics/spawn-waste` — a DIFFERENT metric from `UsageService.get_spawn_waste` (zero output tokens), see the Gotchas entry below. |
 | `MetricsService._merge_audit_advance_times` | method | metrics.py:~1528 | Merges in `audit_log` status-ADVANCE timestamps for spawn-waste's progress check — filters `event_type == 'task.' + details.to_status` (mirrors `get_cycle_time_by_stage`'s narrowing), so a named non-transition event (`task.qa_fail`, `task.request_changes`, `task.scales_rebalance`, `task.coverage_declared`, ...) is never mistaken for forward progress (PR #849, F-fdb144df — the prior `event_type.like('task.%')` filter over-matched). |
-| `MetricsService.get_provenance_metrics` | method | metrics.py:1513 | Human- vs agent-originated task counts over a trailing window: one recursive `WITH RECURSIVE` CTE walks every task created in the window up its `parent_task_id` chain to its ROOT ancestor, then classifies on the ROOT's `source` (not the task's own) against `HUMAN_AUTHORED_SOURCES` (`roboco.services.task`, `{"manual", "prompter"}`). Fixes `tasks.source` misreporting a delegated subtask's origin as "manual" regardless of what actually kicked off the work higher up the tree. Backs `GET /api/dashboard/metrics/provenance`. |
+| `MetricsService.get_provenance_metrics` | method | metrics.py:1513 | Human- vs agent-originated task counts over a trailing window: one recursive `WITH RECURSIVE` CTE walks every task created in the window up its `parent_task_id` chain to its ROOT ancestor, then classifies on the ROOT's `source` (not the task's own) against `HUMAN_AUTHORED_SOURCES` (`robofleet.services.task`, `{"manual", "prompter"}`). Fixes `tasks.source` misreporting a delegated subtask's origin as "manual" regardless of what actually kicked off the work higher up the tree. Backs `GET /api/dashboard/metrics/provenance`. |
 | `ProvenanceReport` | dataclass | models/metrics.py | `{total, human_authored, agent_authored}` + a `to_dict()`-derived `human_rate` (0.0 on an empty window, never a division error). |
 | `MetricsService._json_entry_timestamps` | method | metrics.py:~1580 | Parses each commit/progress-update entry's ISO `timestamp`, `try`/`except`ing `ValueError`/`TypeError` (a malformed string or non-string value) instead of raising, and normalizing a parsed-but-naive datetime to UTC before it reaches the tz-aware window comparison (PR #849, F-82f97d7c — both failure modes previously 500'd the endpoint despite the docstring claiming they were skipped). |
 | `TaskSpawnWaste` / `SpawnWasteReport` | dataclass | models/metrics.py | Per-task (`task_id`, `sessions`, `zero_progress_sessions`, `zero_progress_cost_usd`, `rate`) and overall report (`total_sessions`, `zero_progress_sessions`, `zero_progress_cost_usd`, `total_cost_usd`, `by_agent`, `by_team`, `by_task`) shapes for `get_spawn_waste_metrics`'s `to_dict()`. |
@@ -152,10 +152,10 @@ graph LR
 
 ```
 metrics-observability
-├── roboco/billing/
+├── robofleet/billing/
 │   ├── __init__.py            # re-export calculate_cost
 │   └── pricing.py             # _PRICING table, _lookup_prices, calculate_cost, _is_anthropic_model
-├── roboco/services/
+├── robofleet/services/
 │   ├── metrics.py             # MetricsService (velocity/blockers/team/agent/comm/health/observability)
 │   ├── dashboard.py           # DashboardService + _DashboardStorageHolder (flags/reports/CEO/queue)
 │   ├── cockpit.py             # CockpitService (summary/signals)
@@ -168,19 +168,19 @@ metrics-observability
 
 ## Dependencies
 
-**Internal (roboco):**
-- `roboco.db.tables` — `AgentSpawnSessionTable`, `DailyUsageRollupTable`, `AgentTable`, `AuditLogTable`, `TaskTable`, `NotificationTable`
-- `roboco.models.base` — `TaskStatus`, `Team`, `AgentStatus`
-- `roboco.models.metrics` — all metric result schemas (VelocityMetrics, StageTiming, ReworkReport, Scorecard, …)
-- `roboco.models.dashboard` — `FlagData`, `ReportData`, `DashboardStorage`, `CreateFlagParams`, …
-- `roboco.models.events` — `Event`, `EventType` (lazy import in usage_events)
-- `roboco.events.stream_bus` — `StreamEventBus` (TYPE_CHECKING only)
-- `roboco.services.base` — `BaseService`
-- `roboco.services.git` — `GitService.get_latest_ci_conclusion` (telemetry)
-- `roboco.services.company_goals`, `pitch`, `strategy_engine`, `task`, `metrics` (`get_metrics_service`), `repositories.review_findings` (`ReviewFindingsRepository`) (cockpit)
-- `roboco.config` — `settings` (telemetry)
-- `roboco.logging` — `get_logger` (telemetry)
-- `roboco.utils.converters` — `to_python_uuid`, `require_uuid`
+**Internal (robo-fleet):**
+- `robofleet.db.tables` — `AgentSpawnSessionTable`, `DailyUsageRollupTable`, `AgentTable`, `AuditLogTable`, `TaskTable`, `NotificationTable`
+- `robofleet.models.base` — `TaskStatus`, `Team`, `AgentStatus`
+- `robofleet.models.metrics` — all metric result schemas (VelocityMetrics, StageTiming, ReworkReport, Scorecard, …)
+- `robofleet.models.dashboard` — `FlagData`, `ReportData`, `DashboardStorage`, `CreateFlagParams`, …
+- `robofleet.models.events` — `Event`, `EventType` (lazy import in usage_events)
+- `robofleet.events.stream_bus` — `StreamEventBus` (TYPE_CHECKING only)
+- `robofleet.services.base` — `BaseService`
+- `robofleet.services.git` — `GitService.get_latest_ci_conclusion` (telemetry)
+- `robofleet.services.company_goals`, `pitch`, `strategy_engine`, `task`, `metrics` (`get_metrics_service`), `repositories.review_findings` (`ReviewFindingsRepository`) (cockpit)
+- `robofleet.config` — `settings` (telemetry)
+- `robofleet.logging` — `get_logger` (telemetry)
+- `robofleet.utils.converters` — `to_python_uuid`, `require_uuid`
 
 **External:**
 - `sqlalchemy` (func, select, and_, text, func.extract/date_trunc/percentile_cont)
@@ -190,10 +190,10 @@ metrics-observability
 
 ## Entry Points
 
-- **HTTP routes** (`roboco/api/routes/usage.py`): `/api/usage/{summary,time-series,by-agent,by-team,by-model,projection,cache-efficiency,sessions,spawn-waste}` → `get_usage_service`.
-- **HTTP routes** (`roboco/api/routes/dashboard.py`): `/api/dashboard/auditor*`, `/api/dashboard/ceo*`, `/api/dashboard/kanban/*`, `/api/dashboard/agents/status`, `/api/dashboard/activity/recent`, `/api/dashboard/metrics/{velocity,blockers,team/{team},communication,health,agent/{id},cycle-time,bottlenecks,rework,spawn-waste,provenance,scorecard/agent/{id},scorecard/team/{team}}` → `get_dashboard_service` + `get_metrics_service`. `GET /api/dashboard/metrics/spawn-waste` (dashboard.py:~559, `get_spawn_waste_metrics`) is distinct from `GET /api/usage/spawn-waste` below, see Gotchas. `GET /api/dashboard/metrics/provenance?days=` (dashboard.py, `get_provenance_metrics`) is the newest of these: same shape as its `/metrics/*` siblings (bounded `days` query param, no `response_model`, `report.to_dict()`), and like them carries no extra role check beyond the router-level `require_panel_token` dependency (this router has no per-route CEO gate anywhere, `/ceo/*` included, so "CEO-gated" here means exactly that panel-token gate its neighbours already rely on). Auditor/CEO routes gated by `_require_auditor_or_ceo`. `GET /api/dashboard/metrics/member/{agent_id}` (dashboard.py:617, `get_member_scorecard`) and `GET /api/dashboard/metrics/member/ceo` (dashboard.py:606, declared first, route-order matters: a literal path segment must win over the `{agent_id}` path param) back the panel Members tab's per-row card. `GET /api/dashboard/metrics/members` (dashboard.py:634, `get_all_member_scorecards`, optional `team`/`days` query params) is the new batch fetch replacing N per-row calls, see `MetricsService.get_all_member_scorecards` above.
+- **HTTP routes** (`robofleet/api/routes/usage.py`): `/api/usage/{summary,time-series,by-agent,by-team,by-model,projection,cache-efficiency,sessions,spawn-waste}` → `get_usage_service`.
+- **HTTP routes** (`robofleet/api/routes/dashboard.py`): `/api/dashboard/auditor*`, `/api/dashboard/ceo*`, `/api/dashboard/kanban/*`, `/api/dashboard/agents/status`, `/api/dashboard/activity/recent`, `/api/dashboard/metrics/{velocity,blockers,team/{team},communication,health,agent/{id},cycle-time,bottlenecks,rework,spawn-waste,provenance,scorecard/agent/{id},scorecard/team/{team}}` → `get_dashboard_service` + `get_metrics_service`. `GET /api/dashboard/metrics/spawn-waste` (dashboard.py:~559, `get_spawn_waste_metrics`) is distinct from `GET /api/usage/spawn-waste` below, see Gotchas. `GET /api/dashboard/metrics/provenance?days=` (dashboard.py, `get_provenance_metrics`) is the newest of these: same shape as its `/metrics/*` siblings (bounded `days` query param, no `response_model`, `report.to_dict()`), and like them carries no extra role check beyond the router-level `require_panel_token` dependency (this router has no per-route CEO gate anywhere, `/ceo/*` included, so "CEO-gated" here means exactly that panel-token gate its neighbours already rely on). Auditor/CEO routes gated by `_require_auditor_or_ceo`. `GET /api/dashboard/metrics/member/{agent_id}` (dashboard.py:617, `get_member_scorecard`) and `GET /api/dashboard/metrics/member/ceo` (dashboard.py:606, declared first, route-order matters: a literal path segment must win over the `{agent_id}` path param) back the panel Members tab's per-row card. `GET /api/dashboard/metrics/members` (dashboard.py:634, `get_all_member_scorecards`, optional `team`/`days` query params) is the new batch fetch replacing N per-row calls, see `MetricsService.get_all_member_scorecards` above.
 - **Panel surface**: `panel/src/components/metrics/delivery-tab.tsx`'s `ProvenanceCard` (Metrics page → Delivery tab, alongside `ReworkCard`): human-rate percentage plus the raw `human_authored`/`agent_authored`/`total` counts, distinct loading/error/empty states. Client wiring: `observabilityApi.getProvenance` (`panel/src/lib/api/observability.ts`) → `useProvenance` (`panel/src/hooks/use-observability.ts`, 60s poll, same as its `useRework`/`useBottlenecks` siblings) → `ProvenanceReport` (`panel/src/types/index.ts`). Placed on the Delivery tab, not the Business page's Company Scorecard, because it is a `MetricsService`-computed rolling-window aggregate parallel to rework/cycle-time/bottlenecks, not a `CockpitService`/charter-objective figure.
-- **HTTP routes** (`roboco/api/routes/cockpit.py`): `/api/cockpit/{summary,signals}` → `get_cockpit_service`.
+- **HTTP routes** (`robofleet/api/routes/cockpit.py`): `/api/cockpit/{summary,signals}` → `get_cockpit_service`.
 - **Orchestrator loop tick**: `runtime/orchestrator.py` token sweep (~line 5270) → `calculate_cost` + `publish_usage_snapshot`; runs per dispatch tick on active agents.
 - **Self-heal / CI-watch loop ticks**: `services/self_heal_engine.py` and `services/ci_watch_engine.py` construct their telemetry source and call `fetch()` each cycle; armed by their respective ROBOFLEET_* flags.
 - **Grok usage path**: `llm/providers/grok_cli_usage.py` calls `calculate_cost` per grok session (line 110).
@@ -201,7 +201,7 @@ metrics-observability
 
 ## Config Flags
 
-No flags live *inside* this slice's files, but the slice's behavior is gated/parameterized by flags held in `roboco/config.py` and consumed here:
+No flags live *inside* this slice's files, but the slice's behavior is gated/parameterized by flags held in `robofleet/config.py` and consumed here:
 
 - `settings.self_heal_project_slug` (`ROBOFLEET_SELF_HEAL_PROJECT_SLUG`) — empty → `GitHubCITelemetrySource.fetch` returns no samples (telemetry/source.py:83).
 - `settings.self_heal_ci_workflow` (`ROBOFLEET_SELF_HEAL_CI_WORKFLOW`) — workflow filter for self-heal CI lookup (source.py:86).
@@ -238,8 +238,8 @@ No flags live *inside* this slice's files, but the slice's behavior is gated/par
 
 ## Drift from CLAUDE.md
 
-- **billing/pricing.py: Grok is priced, not just "Anthropic priced; local/Ollama $0".** CLAUDE.md "Cost uses provider-aware pricing in `roboco/billing/pricing.py` (Anthropic priced; local/Ollama intentionally `$0`)." omits that xAI Grok (`grok-build`) is now in the pricing table (pricing.py:63) as a priced non-Anthropic model. Minor incompleteness; behavior is a superset of the claim.
-- **`CockpitService` is undocumented in CLAUDE.md.** `roboco/services/cockpit.py` and `/api/cockpit/{summary,signals}` are a real CEO-facing read-only aggregation surface not mentioned anywhere in CLAUDE.md's Services table or route inventory.
+- **billing/pricing.py: Grok is priced, not just "Anthropic priced; local/Ollama $0".** CLAUDE.md "Cost uses provider-aware pricing in `robofleet/billing/pricing.py` (Anthropic priced; local/Ollama intentionally `$0`)." omits that xAI Grok (`grok-build`) is now in the pricing table (pricing.py:63) as a priced non-Anthropic model. Minor incompleteness; behavior is a superset of the claim.
+- **`CockpitService` is undocumented in CLAUDE.md.** `robofleet/services/cockpit.py` and `/api/cockpit/{summary,signals}` are a real CEO-facing read-only aggregation surface not mentioned anywhere in CLAUDE.md's Services table or route inventory.
 - **`UsageService.get_today_summary` / `daily_usage_rollups` rollup path** is not described in CLAUDE.md (which only mentions `agent_spawn_sessions` → `daily_usage_rollups` → dashboard at a high level). The old docstring-level claim that `get_summary` used rollups was fixed in 536bbb64 (#66) — CLAUDE.md doesn't assert that, so no direct contradiction.
 - **`usage_events.py` / `USAGE_SNAPSHOT`** matches CLAUDE.md's "token sweep also publishes `USAGE_SNAPSHOT` to `/ws/system`" — no drift.
 - **`telemetry/source.py` `MultiProjectCITelemetrySource`** matches CLAUDE.md's "Multi-repo CI-watch" section — no drift.
@@ -247,7 +247,7 @@ No flags live *inside* this slice's files, but the slice's behavior is gated/par
 
 ## Changes Since Baseline
 
-`git log --oneline fd10cc862c2020b3f639cdb686d427b0198a2441..HEAD -- <scope>` and `git diff --stat` over `roboco/services/metrics.py roboco/services/dashboard.py roboco/services/cockpit.py roboco/services/usage.py roboco/services/usage_events.py roboco/services/telemetry/ roboco/billing/` both return **empty** — no logic-touching commits to this slice since the baseline. The slice is unchanged at HEAD relative to fd10cc86 (see the post-snapshot entry below for the one uncommitted change since).
+`git log --oneline fd10cc862c2020b3f639cdb686d427b0198a2441..HEAD -- <scope>` and `git diff --stat` over `robofleet/services/metrics.py robofleet/services/dashboard.py robofleet/services/cockpit.py robofleet/services/usage.py robofleet/services/usage_events.py robofleet/services/telemetry/ robofleet/billing/` both return **empty** — no logic-touching commits to this slice since the baseline. The slice is unchanged at HEAD relative to fd10cc86 (see the post-snapshot entry below for the one uncommitted change since).
 
 > Post-snapshot updates (since 2026-06-29): commit **536bbb64** ("Chore/all/logical gaps sweep #286") touched `billing/pricing.py`, `billing/__init__.py`, `services/metrics.py`, and `services/usage.py`. Changes: (1) `CostResult` dataclass + `calculate_cost_result` function added to `pricing.py`; `calculate_cost` refactored to a thin wrapper; `__init__.py` now re-exports all three. (2) `_blocked_since_map` helper added to `MetricsService` — reads `task.blocked` audit row as authoritative "blocked since" (#67); `get_blocker_metrics` uses it with `updated_at` fallback. (3) `get_summary` docstring corrected — no longer falsely claims rollup reads (#66). (4) `metrics._blocked_since_map` extracted as a xenon complexity refactor (no behavior change beyond the audit-row fix).
 >

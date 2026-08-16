@@ -1,4 +1,4 @@
-# RoboCo Map — `review-findings` slice
+# RoboFleet Map — `review-findings` slice
 
 ## Purpose
 
@@ -9,28 +9,28 @@ The revision-findings ledger: the structured replacement for prose-only QA/PR-ga
 | Path | Role | LOC |
 |---|---|---|
 | `alembic/versions/071_review_findings.py` | Migration: `task_review_findings` table + `tasks.pm_notes` column | 81 |
-| `roboco/db/tables.py` | `TaskReviewFindingTable` ORM class + `TaskTable.pm_notes` column | (slice ~60 lines within a shared file) |
-| `roboco/services/repositories/review_findings.py` | `ReviewFindingsRepository` — insert/list/aggregate/mark_addressed/mark_verified/mark_waived | 164 |
-| `roboco/foundation/policy/content/enums.py` | `Severity` StrEnum (`blocker`/`major`/`minor`/`nit`) | 35 |
-| `roboco/foundation/policy/content/models.py` | `Finding` (extended: `fix`/`evidence`, caps, repo-relative `file`), `QaNote.findings`, new `PmReviewContent` ("pm_review"), `validate_findings` | 614 (whole content-model file) |
-| `roboco/services/content_notes.py` | `_MIRROR_COLUMN["pm_review"] = "pm_notes"` | (1-line addition within a shared file) |
-| `roboco/services/gateway/choreographer/findings.py` | Shared producer helpers: shim, count guard, criterion check, ledger insert/render, verify-stamp | 256 |
-| `roboco/services/gateway/choreographer/qa.py` | `fail_review` — QA-origin producer | (slice within a shared file) |
-| `roboco/services/gateway/choreographer/pr_gate.py` | `pr_fail` — pr_gate-origin producer; `pr_pass` — verify-stamp | (slice within a shared file) |
-| `roboco/services/gateway/choreographer/_impl.py` | `request_changes` — pm-origin producer; `i_am_done`/`submit_up`/`submit_root` — `resolved_findings` resolution; `complete` — verify-stamp | (slice within a shared file) |
-| `roboco/services/task.py` | `ceo_reject` — ceo-origin producer + reason validation; `ceo_approve` — best-effort verify-stamp; `_audit_events_for` — `task.request_changes`/`task.ceo_reject`; `qa_fail`/`request_changes` dev_notes-append removal | (slice within an 8.7k-line file) |
-| `roboco/foundation/policy/tracing.py` | `Requirement.FINDINGS_ADDRESSED`, `GateContext.open_finding_ids`, `_check_findings_addressed` | (slice within a shared file) |
-| `roboco/services/gateway/evidence_builder.py` | `EvidencePayload.revision_findings`/`.prior_findings`, `build_task_handoff` findings, `render_findings`, `_extract_qa_review`/`_extract_pm_review` | 393 |
-| `roboco/services/gateway/remediation.py` | `hint_for_open_findings` | 111 |
-| `roboco/runtime/orchestrator.py` | `REVISION_REQUIRED` prompt findings block, PM triage "bounced" block, `_open_findings_prompt_block`/`_revision_bounced_block` | (slice within a shared file) |
-| `roboco/mcp/flow_server.py` | MCP param wiring: `findings`/`resolved_findings` on the 6 affected tools | (slice within a shared file) |
-| `roboco/api/schemas/v1/flow.py` | `ResolvedFindingInput`; `findings`/`resolved_findings` fields on the flow request schemas | (slice within a shared file) |
-| `roboco/api/routes/tasks.py` | `GET /{task_id}/findings` route | (slice within a shared file) |
-| `roboco/api/schemas/tasks.py` | `TaskFindingResponse`/`TaskFindingsSummaryRow`/`TaskFindingsResponse`; `TaskResponse.revision_count`/`.pm_notes` | 1035 (whole schema file) |
-| `roboco/services/metrics.py` | `_REWORK_EVENT_TYPES`/`_REWORK_EVENT_TO_FIELD`, `pm_rejects`/`ceo_rejects` on `AgentReworkRate`, `findings_open`/`findings_total` on `get_task_metrics` | (slice within a shared file) |
-| `roboco/models/metrics.py` | `AgentReworkRate`/`TaskMetrics` gain `pm_rejects`/`ceo_rejects`(/`findings_open`/`findings_total`) | (slice within a shared file) |
-| `roboco/services/vault_assembly.py` | `_resolve_findings` — fail-open findings fetch for `TaskNoteData` | (slice within a shared file) |
-| `roboco/services/vault_writer.py` | `FindingRow`, `_FINDINGS_CAP=20`, `_findings_section` — task note `## Findings` | (slice within a shared file) |
+| `robofleet/db/tables.py` | `TaskReviewFindingTable` ORM class + `TaskTable.pm_notes` column | (slice ~60 lines within a shared file) |
+| `robofleet/services/repositories/review_findings.py` | `ReviewFindingsRepository` — insert/list/aggregate/mark_addressed/mark_verified/mark_waived | 164 |
+| `robofleet/foundation/policy/content/enums.py` | `Severity` StrEnum (`blocker`/`major`/`minor`/`nit`) | 35 |
+| `robofleet/foundation/policy/content/models.py` | `Finding` (extended: `fix`/`evidence`, caps, repo-relative `file`), `QaNote.findings`, new `PmReviewContent` ("pm_review"), `validate_findings` | 614 (whole content-model file) |
+| `robofleet/services/content_notes.py` | `_MIRROR_COLUMN["pm_review"] = "pm_notes"` | (1-line addition within a shared file) |
+| `robofleet/services/gateway/choreographer/findings.py` | Shared producer helpers: shim, count guard, criterion check, ledger insert/render, verify-stamp | 256 |
+| `robofleet/services/gateway/choreographer/qa.py` | `fail_review` — QA-origin producer | (slice within a shared file) |
+| `robofleet/services/gateway/choreographer/pr_gate.py` | `pr_fail` — pr_gate-origin producer; `pr_pass` — verify-stamp | (slice within a shared file) |
+| `robofleet/services/gateway/choreographer/_impl.py` | `request_changes` — pm-origin producer; `i_am_done`/`submit_up`/`submit_root` — `resolved_findings` resolution; `complete` — verify-stamp | (slice within a shared file) |
+| `robofleet/services/task.py` | `ceo_reject` — ceo-origin producer + reason validation; `ceo_approve` — best-effort verify-stamp; `_audit_events_for` — `task.request_changes`/`task.ceo_reject`; `qa_fail`/`request_changes` dev_notes-append removal | (slice within an 8.7k-line file) |
+| `robofleet/foundation/policy/tracing.py` | `Requirement.FINDINGS_ADDRESSED`, `GateContext.open_finding_ids`, `_check_findings_addressed` | (slice within a shared file) |
+| `robofleet/services/gateway/evidence_builder.py` | `EvidencePayload.revision_findings`/`.prior_findings`, `build_task_handoff` findings, `render_findings`, `_extract_qa_review`/`_extract_pm_review` | 393 |
+| `robofleet/services/gateway/remediation.py` | `hint_for_open_findings` | 111 |
+| `robofleet/runtime/orchestrator.py` | `REVISION_REQUIRED` prompt findings block, PM triage "bounced" block, `_open_findings_prompt_block`/`_revision_bounced_block` | (slice within a shared file) |
+| `robofleet/mcp/flow_server.py` | MCP param wiring: `findings`/`resolved_findings` on the 6 affected tools | (slice within a shared file) |
+| `robofleet/api/schemas/v1/flow.py` | `ResolvedFindingInput`; `findings`/`resolved_findings` fields on the flow request schemas | (slice within a shared file) |
+| `robofleet/api/routes/tasks.py` | `GET /{task_id}/findings` route | (slice within a shared file) |
+| `robofleet/api/schemas/tasks.py` | `TaskFindingResponse`/`TaskFindingsSummaryRow`/`TaskFindingsResponse`; `TaskResponse.revision_count`/`.pm_notes` | 1035 (whole schema file) |
+| `robofleet/services/metrics.py` | `_REWORK_EVENT_TYPES`/`_REWORK_EVENT_TO_FIELD`, `pm_rejects`/`ceo_rejects` on `AgentReworkRate`, `findings_open`/`findings_total` on `get_task_metrics` | (slice within a shared file) |
+| `robofleet/models/metrics.py` | `AgentReworkRate`/`TaskMetrics` gain `pm_rejects`/`ceo_rejects`(/`findings_open`/`findings_total`) | (slice within a shared file) |
+| `robofleet/services/vault_assembly.py` | `_resolve_findings` — fail-open findings fetch for `TaskNoteData` | (slice within a shared file) |
+| `robofleet/services/vault_writer.py` | `FindingRow`, `_FINDINGS_CAP=20`, `_findings_section` — task note `## Findings` | (slice within a shared file) |
 | `panel/src/components/tasks/task-detail/tab-findings.tsx` | `TabFindings` — per-round findings view | 169 |
 | `panel/src/components/tasks/task-detail/task-header.tsx` | `bounced xN` chip (`revision_count`) | (slice within a shared file) |
 | `panel/src/components/tasks/task-detail/task-tabs.tsx` | "Findings" tab wiring | (slice within a shared file) |
@@ -41,28 +41,28 @@ The revision-findings ledger: the structured replacement for prose-only QA/PR-ga
 
 | Name | Kind | File:Line | Responsibility |
 |---|---|---|---|
-| `TaskReviewFindingTable` | ORM class | `roboco/db/tables.py` | The append-only ledger row: `task_id`, `origin`, `round`, `author_slug`, `file`/`line`/`severity`/`criterion`/`expected`/`actual`/`fix`/`evidence`, `status`, `addressed_by_commit`, `resolution_note`. `origin`/`severity`/`status` are plain `String` columns, not a native Postgres enum. |
-| `Finding` | Pydantic model | `roboco/foundation/policy/content/models.py:92` | One structured finding, shared by `post_pr_review` (external PRs) and the four internal producers. Caps: `file` ≤300 (repo-relative, no `..`), `line` ≥1, `expected`/`actual` ≤300, `fix` ≤500, `evidence` ≤2000. `criterion` has **no Pydantic `max_length`** despite the DB column being `String(500)` — see Regression Risks. `file` is additionally shape-gated (`_PATH_SHAPE_RE`, #687): a value that doesn't look like a repo-relative path (prose like a PR reference, which used to validate and then doomed the panel's code-snippet fetch) is rejected with a remediate naming the file-less option for cross-cutting findings; the class admits `+`/`@` (SvelteKit route files, `@types` dirs, `@2x` assets) but excludes spaces, the prose signal. `file` remains OPTIONAL for the `issues` shim's file-less findings. |
-| `PmReviewContent` | Pydantic model | `roboco/foundation/policy/content/models.py` | New content type `"pm_review"` (`summary` + `findings`, no separate `verdict` — the transition to `needs_revision` IS the verdict); mirrors to the new `tasks.pm_notes` column via `_MIRROR_COLUMN`. |
-| `ReviewFindingsRepository` | class | `roboco/services/repositories/review_findings.py:32` | `insert_many` (append rows, one flush, no independent commit), `list_for_task` (default cap 500, newest round first), `status_counts_for_task` (SQL `GROUP BY (origin, status)`, whole ledger — independent of the 500 cap), `mark_addressed` (8-char-prefix match against OPEN rows, no-op on 0 or >1 matches, never raises), `mark_verified` (bulk, by full id), `mark_waived` (exists, unwired — no verb calls it), `escaped_defects_since` (`(task_id, origin)` for blocker findings still `addressed`, never `verified`, on a task that has since gone `COMPLETED` within a window — the Company Scorecard's `escaped_defects` metric; see `docs/map/metrics-observability.md`). |
-| `findings_count_guard` / `findings_count_hint` | functions | `roboco/services/gateway/choreographer/findings.py:98,115` | Hard-reject `Envelope` above `FINDINGS_HARD_CAP=10`; non-blocking hint above `FINDINGS_NUDGE_COUNT=5`. |
-| `issues_to_findings` / `merge_findings_and_issues` | functions | `roboco/services/gateway/choreographer/findings.py:57,81` | Legacy `issues: list[str]` shim → file-less `severity=major` findings (deprecation-logged); merges with any `findings` sent in the same call rather than one silently dropping the other. |
-| `next_round` | function | `roboco/services/gateway/choreographer/findings.py:43` | `(task.revision_count or 0) + 1`, read BEFORE the transition — the round a finding written during this call belongs to. |
-| `unknown_finding_criteria` / `criterion_mismatch_rejection` | functions | `roboco/services/gateway/choreographer/findings.py:127,147` | A supplied `criterion` must match an `acceptance_criteria_ids` entry or exact AC text, or the call is rejected. |
-| `insert_and_render` / `render_findings_summary` / `render_finding_line` | functions | `roboco/services/gateway/choreographer/findings.py:186,176,163` | Ledger insert chokepoint (all 3 choreographer producers share it) + the deterministic `[F-id8] file:line (severity) — expected → actual → fix` rendering used for both the structured note's `summary` and the A2A body. |
-| `stamp_addressed_verified` | function | `roboco/services/gateway/choreographer/findings.py:243` | Bulk-promotes `addressed→verified` for one `origin` on a task; not best-effort except at the `ceo_approve` call site. |
-| `fail_review` | async verb | `roboco/services/gateway/choreographer/qa.py` | QA-origin producer: `(qa_agent_id, task_id, issues=None, findings=None)`. |
-| `pr_fail` | async verb | `roboco/services/gateway/choreographer/pr_gate.py` | pr_gate-origin producer, same shape; findings insert happens before `_record_gate_verdict_for` so the verdict note reads real ledger ids. |
-| `request_changes` | async verb | `roboco/services/gateway/choreographer/_impl.py` | pm-origin producer, same shape; writes `PmReviewContent` → `pm_notes`. |
-| `ceo_reject` | method | `roboco/services/task.py` | ceo-origin producer — NOT a choreographer verb (no gateway wrapper; the CEO-approval route calls `TaskService.ceo_reject` directly). Validates `reason` via `reject_trivial` (previously an uncaught Pydantic `ValidationError` → 500 on empty/trivial input) and converts it into one `severity=blocker` Finding. |
-| `_bump_coordination_ceo_reject` | method | `roboco/services/task.py` | Manually bumps `revision_count` + inserts a `task.ceo_reject` audit row for a branchless-coordination reject, since that path routes to `PENDING` via `admin_set_status` and never reaches the normal `_emit_status_transition_audit` chokepoint. |
-| `_audit_events_for` | staticmethod | `roboco/services/task.py:997` | Gains `task.request_changes` (agent_role `cell_pm`/`main_pm`) and `task.ceo_reject` (agent_role `ceo`) branches alongside the existing `task.qa_fail`/`task.pr_fail`. |
-| `Requirement.FINDINGS_ADDRESSED` / `_check_findings_addressed` | enum + checker | `roboco/foundation/policy/tracing.py` | `VERB_REQUIREMENTS["i_am_done"/"submit_up"/"submit_root"]` gain this — every still-OPEN finding id (computed by the choreographer AFTER applying this call's `resolved_findings`) must be resolved or the call rejects. |
-| `EvidencePayload.revision_findings` / `.prior_findings` | fields | `roboco/services/gateway/evidence_builder.py` | Open findings (any consumer) vs the FULL ledger (`claim_review`/`claim_gate_review` only, for round-2+ review). Both omitted from `as_dict()` when empty. |
-| `build_task_handoff` / `_extract_qa_review` / `_extract_pm_review` | functions | `roboco/services/gateway/evidence_builder.py` | `open_findings` param renders into `handoff["revision_findings"]`; `_extract_qa_review`/`_extract_pm_review` are new siblings of `_extract_pr_review`, each surfacing `{findings_count, verdict?, summary?}` from `notes_structured`. |
-| `hint_for_open_findings` | function | `roboco/services/gateway/remediation.py:36` | Builds the `i_am_done(resolved_findings=[...])` remediation string naming every still-open `[F-id8]`. |
-| `_open_findings_prompt_block` / `_revision_bounced_block` | functions | `roboco/runtime/orchestrator.py` | Capped-10 open-findings render for the `REVISION_REQUIRED` dev prompt and the PM triage "bounced" block; fails open to `""` on any DB error. |
-| `GET /{task_id}/findings` | route | `roboco/api/routes/tasks.py` | `list_for_task` (cap 500) + `status_counts_for_task` (SQL aggregate, whole ledger) → `TaskFindingsResponse{findings, summary, total, truncated}`. No role restriction beyond an authenticated agent context. |
+| `TaskReviewFindingTable` | ORM class | `robofleet/db/tables.py` | The append-only ledger row: `task_id`, `origin`, `round`, `author_slug`, `file`/`line`/`severity`/`criterion`/`expected`/`actual`/`fix`/`evidence`, `status`, `addressed_by_commit`, `resolution_note`. `origin`/`severity`/`status` are plain `String` columns, not a native Postgres enum. |
+| `Finding` | Pydantic model | `robofleet/foundation/policy/content/models.py:92` | One structured finding, shared by `post_pr_review` (external PRs) and the four internal producers. Caps: `file` ≤300 (repo-relative, no `..`), `line` ≥1, `expected`/`actual` ≤300, `fix` ≤500, `evidence` ≤2000. `criterion` has **no Pydantic `max_length`** despite the DB column being `String(500)` — see Regression Risks. `file` is additionally shape-gated (`_PATH_SHAPE_RE`, #687): a value that doesn't look like a repo-relative path (prose like a PR reference, which used to validate and then doomed the panel's code-snippet fetch) is rejected with a remediate naming the file-less option for cross-cutting findings; the class admits `+`/`@` (SvelteKit route files, `@types` dirs, `@2x` assets) but excludes spaces, the prose signal. `file` remains OPTIONAL for the `issues` shim's file-less findings. |
+| `PmReviewContent` | Pydantic model | `robofleet/foundation/policy/content/models.py` | New content type `"pm_review"` (`summary` + `findings`, no separate `verdict` — the transition to `needs_revision` IS the verdict); mirrors to the new `tasks.pm_notes` column via `_MIRROR_COLUMN`. |
+| `ReviewFindingsRepository` | class | `robofleet/services/repositories/review_findings.py:32` | `insert_many` (append rows, one flush, no independent commit), `list_for_task` (default cap 500, newest round first), `status_counts_for_task` (SQL `GROUP BY (origin, status)`, whole ledger — independent of the 500 cap), `mark_addressed` (8-char-prefix match against OPEN rows, no-op on 0 or >1 matches, never raises), `mark_verified` (bulk, by full id), `mark_waived` (exists, unwired — no verb calls it), `escaped_defects_since` (`(task_id, origin)` for blocker findings still `addressed`, never `verified`, on a task that has since gone `COMPLETED` within a window — the Company Scorecard's `escaped_defects` metric; see `docs/map/metrics-observability.md`). |
+| `findings_count_guard` / `findings_count_hint` | functions | `robofleet/services/gateway/choreographer/findings.py:98,115` | Hard-reject `Envelope` above `FINDINGS_HARD_CAP=10`; non-blocking hint above `FINDINGS_NUDGE_COUNT=5`. |
+| `issues_to_findings` / `merge_findings_and_issues` | functions | `robofleet/services/gateway/choreographer/findings.py:57,81` | Legacy `issues: list[str]` shim → file-less `severity=major` findings (deprecation-logged); merges with any `findings` sent in the same call rather than one silently dropping the other. |
+| `next_round` | function | `robofleet/services/gateway/choreographer/findings.py:43` | `(task.revision_count or 0) + 1`, read BEFORE the transition — the round a finding written during this call belongs to. |
+| `unknown_finding_criteria` / `criterion_mismatch_rejection` | functions | `robofleet/services/gateway/choreographer/findings.py:127,147` | A supplied `criterion` must match an `acceptance_criteria_ids` entry or exact AC text, or the call is rejected. |
+| `insert_and_render` / `render_findings_summary` / `render_finding_line` | functions | `robofleet/services/gateway/choreographer/findings.py:186,176,163` | Ledger insert chokepoint (all 3 choreographer producers share it) + the deterministic `[F-id8] file:line (severity) — expected → actual → fix` rendering used for both the structured note's `summary` and the A2A body. |
+| `stamp_addressed_verified` | function | `robofleet/services/gateway/choreographer/findings.py:243` | Bulk-promotes `addressed→verified` for one `origin` on a task; not best-effort except at the `ceo_approve` call site. |
+| `fail_review` | async verb | `robofleet/services/gateway/choreographer/qa.py` | QA-origin producer: `(qa_agent_id, task_id, issues=None, findings=None)`. |
+| `pr_fail` | async verb | `robofleet/services/gateway/choreographer/pr_gate.py` | pr_gate-origin producer, same shape; findings insert happens before `_record_gate_verdict_for` so the verdict note reads real ledger ids. |
+| `request_changes` | async verb | `robofleet/services/gateway/choreographer/_impl.py` | pm-origin producer, same shape; writes `PmReviewContent` → `pm_notes`. |
+| `ceo_reject` | method | `robofleet/services/task.py` | ceo-origin producer — NOT a choreographer verb (no gateway wrapper; the CEO-approval route calls `TaskService.ceo_reject` directly). Validates `reason` via `reject_trivial` (previously an uncaught Pydantic `ValidationError` → 500 on empty/trivial input) and converts it into one `severity=blocker` Finding. |
+| `_bump_coordination_ceo_reject` | method | `robofleet/services/task.py` | Manually bumps `revision_count` + inserts a `task.ceo_reject` audit row for a branchless-coordination reject, since that path routes to `PENDING` via `admin_set_status` and never reaches the normal `_emit_status_transition_audit` chokepoint. |
+| `_audit_events_for` | staticmethod | `robofleet/services/task.py:997` | Gains `task.request_changes` (agent_role `cell_pm`/`main_pm`) and `task.ceo_reject` (agent_role `ceo`) branches alongside the existing `task.qa_fail`/`task.pr_fail`. |
+| `Requirement.FINDINGS_ADDRESSED` / `_check_findings_addressed` | enum + checker | `robofleet/foundation/policy/tracing.py` | `VERB_REQUIREMENTS["i_am_done"/"submit_up"/"submit_root"]` gain this — every still-OPEN finding id (computed by the choreographer AFTER applying this call's `resolved_findings`) must be resolved or the call rejects. |
+| `EvidencePayload.revision_findings` / `.prior_findings` | fields | `robofleet/services/gateway/evidence_builder.py` | Open findings (any consumer) vs the FULL ledger (`claim_review`/`claim_gate_review` only, for round-2+ review). Both omitted from `as_dict()` when empty. |
+| `build_task_handoff` / `_extract_qa_review` / `_extract_pm_review` | functions | `robofleet/services/gateway/evidence_builder.py` | `open_findings` param renders into `handoff["revision_findings"]`; `_extract_qa_review`/`_extract_pm_review` are new siblings of `_extract_pr_review`, each surfacing `{findings_count, verdict?, summary?}` from `notes_structured`. |
+| `hint_for_open_findings` | function | `robofleet/services/gateway/remediation.py:36` | Builds the `i_am_done(resolved_findings=[...])` remediation string naming every still-open `[F-id8]`. |
+| `_open_findings_prompt_block` / `_revision_bounced_block` | functions | `robofleet/runtime/orchestrator.py` | Capped-10 open-findings render for the `REVISION_REQUIRED` dev prompt and the PM triage "bounced" block; fails open to `""` on any DB error. |
+| `GET /{task_id}/findings` | route | `robofleet/api/routes/tasks.py` | `list_for_task` (cap 500) + `status_counts_for_task` (SQL aggregate, whole ledger) → `TaskFindingsResponse{findings, summary, total, truncated}`. No role restriction beyond an authenticated agent context. |
 | `TabFindings` | React component | `panel/src/components/tasks/task-detail/tab-findings.tsx` | Per-round **collapsible** sections (newest expanded, #687), origin summary badges, severity/status badges, file:line, collapsible evidence, truncation footer; only attempts a code-snippet fetch for a path-shaped `file` — a historical prose ref (pre-#687 data) renders as plain metadata instead of a doomed loader. |
 
 ## Data Flow
@@ -129,25 +129,25 @@ review-findings slice
 
 ## Dependencies
 
-- `roboco.foundation.policy.content` — `Finding`, `Severity`, `QaNote`, `PrReviewContent`, `PmReviewContent`, `validate_findings`, `CONTENT_MODELS`
-- `roboco.services.content_notes` — `apply_structured_note` + `_MIRROR_COLUMN`
-- `roboco.services.repositories.base` — `BaseRepository`
-- `roboco.foundation.policy.tracing` — `Requirement`, `GateContext`, `VERB_REQUIREMENTS`
-- `roboco.services.gateway.envelope` — `Envelope`
-- `roboco.services.gateway.evidence_builder` — `BRIEFING_LIST_CAP`
-- `roboco.db.tables` — `TaskReviewFindingTable`, `TaskTable.pm_notes`
-- Consumed by: `roboco.services.metrics` (`MetricsService`), `roboco.services.cockpit` (`CockpitService.summary`'s `escaped_defects` field), `roboco.services.vault_assembly`/`vault_writer`, `roboco.runtime.orchestrator`, `roboco.mcp.flow_server`, `roboco.api.routes.tasks`/`v1.flow_*`, the panel's `task-detail`/`metrics` components
+- `robofleet.foundation.policy.content` — `Finding`, `Severity`, `QaNote`, `PrReviewContent`, `PmReviewContent`, `validate_findings`, `CONTENT_MODELS`
+- `robofleet.services.content_notes` — `apply_structured_note` + `_MIRROR_COLUMN`
+- `robofleet.services.repositories.base` — `BaseRepository`
+- `robofleet.foundation.policy.tracing` — `Requirement`, `GateContext`, `VERB_REQUIREMENTS`
+- `robofleet.services.gateway.envelope` — `Envelope`
+- `robofleet.services.gateway.evidence_builder` — `BRIEFING_LIST_CAP`
+- `robofleet.db.tables` — `TaskReviewFindingTable`, `TaskTable.pm_notes`
+- Consumed by: `robofleet.services.metrics` (`MetricsService`), `robofleet.services.cockpit` (`CockpitService.summary`'s `escaped_defects` field), `robofleet.services.vault_assembly`/`vault_writer`, `robofleet.runtime.orchestrator`, `robofleet.mcp.flow_server`, `robofleet.api.routes.tasks`/`v1.flow_*`, the panel's `task-detail`/`metrics` components
 
 ## Entry Points
 
 | Name | File | Trigger |
 |---|---|---|
-| `fail_review` | `choreographer/qa.py` | QA calls `fail(task_id, findings=[...])` via `roboco-flow` MCP / HTTP |
+| `fail_review` | `choreographer/qa.py` | QA calls `fail(task_id, findings=[...])` via `robofleet-flow` MCP / HTTP |
 | `pr_fail` | `choreographer/pr_gate.py` | PR reviewer calls `pr_fail(task_id, findings=[...])` on a claimed gate review |
 | `request_changes` | `choreographer/_impl.py` | Cell/Main PM calls `request_changes(task_id, findings=[...])` on an `awaiting_pm_review` task |
-| `ceo_reject` (`TaskService` method, no verb) | `roboco/services/task.py` | CEO-approval-chain route on `awaiting_ceo_approval` |
+| `ceo_reject` (`TaskService` method, no verb) | `robofleet/services/task.py` | CEO-approval-chain route on `awaiting_ceo_approval` |
 | `i_am_done` / `submit_up` / `submit_root` | `choreographer/_impl.py` | Dev/PM resolves findings via `resolved_findings=[...]` on resubmit |
-| `GET /api/tasks/{id}/findings` | `roboco/api/routes/tasks.py` | Panel's `useTaskFindings` hook, any authenticated agent context |
+| `GET /api/tasks/{id}/findings` | `robofleet/api/routes/tasks.py` | Panel's `useTaskFindings` hook, any authenticated agent context |
 
 ## Config Flags
 
@@ -159,7 +159,7 @@ None — always-on, core lifecycle (no `ROBOFLEET_*` gate). The only tunables ar
 - `mark_waived` is a fully-implemented repository method with no caller anywhere in the tree — the `waived` status is unreachable through any verb or route today. A deliberate release-scoped gap (per the design spec), not an oversight, but worth remembering before assuming a finding can ever leave `open`/`addressed`/`verified` in production.
 - The `issues=[...]` shim and `findings=[...]` are **merged**, not mutually exclusive — a caller sending both gets every concern from both lists (subject to the same combined count guard), not one silently dropping the other (an explicit fix over the naive "prefer findings" approach).
 - `round` is computed as `revision_count + 1` and read BEFORE the transition, because `_emit_status_transition_audit` only bumps `revision_count` on ENTRY into `needs_revision` — computing it after the transition would read the wrong (already-bumped) value on a second bounce. `ceo_reject`'s branchless-coordination path computes this manually since it never crosses that chokepoint.
-- `ceo_reject` is not a choreographer verb — it has no `roboco-flow` MCP wrapper; it's called directly by the CEO-approval-chain route against `TaskService`. Searching `choreographer/_impl.py` for it will find nothing.
+- `ceo_reject` is not a choreographer verb — it has no `robofleet-flow` MCP wrapper; it's called directly by the CEO-approval-chain route against `TaskService`. Searching `choreographer/_impl.py` for it will find nothing.
 - `stamp_addressed_verified` is NOT best-effort at three of its four call sites (`pass_review`, `pr_pass`, `complete`) — a repository error there fails the whole verb before the transition runs. Only the `ceo_approve` call site wraps it in try/except (logged, swallowed) since CEO approval shouldn't hinge on a cosmetic ledger-stamp failure.
 - `_open_finding_ids` (the choreographer helper feeding `GateContext.open_finding_ids`) fails open — a DB lookup error returns `()` (nothing open), never blocking the resubmit on an infrastructure hiccup, but also indistinguishable from "no findings were ever filed."
 

@@ -16,7 +16,7 @@ Each agent gets their own git clone:
 
 ```
 /data/workspaces/
-└── roboco/
+└── robofleet/
     ├── backend/
     │   ├── be-dev-1/    # be-dev-1's workspace
     │   ├── be-dev-2/    # be-dev-2's workspace
@@ -85,7 +85,7 @@ You do not manage any of this. The verbs do. The only thing you must know: **you
 Two venv classes exist in the container:
 
 - **Workspace venvs** — per-project, agent-owned, under `/data/workspaces/.../{agent}/.venv`. These are yours.
-- **`/app/.venv`** — the image-baked MCP-gateway venv. The MCP servers (`roboco-flow`, `roboco-do`, the git-readonly server) import from here. **It is sacred. If it breaks, every tool you have stops spawning.**
+- **`/app/.venv`** — the image-baked MCP-gateway venv. The MCP servers (`robofleet-flow`, `robofleet-do`, the git-readonly server) import from here. **It is sacred. If it breaks, every tool you have stops spawning.**
 
 A past live incident: an agent hit a permission error on its workspace venv, followed uv's hint to run `uv run --active`, and that retargeted onto `VIRTUAL_ENV=/app/.venv` (baked globally) — uv rebuilt `/app/.venv` from a drifted lock and deleted its `bin/`, bricking every MCP server spawn fleet-wide.
 

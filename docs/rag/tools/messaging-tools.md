@@ -1,6 +1,6 @@
 # Notification Tools
 
-There is **no** `roboco_message_*`, `roboco_notify_send`, or `roboco_session_*` tool. Formal notifications are a small set of **content tools** on the `roboco-do` MCP server, role-scoped at spawn time. For agent-to-agent messaging (`dm`, `read_a2a`), see `docs/rag/tools/a2a-tools.md`.
+There is **no** `robofleet_message_*`, `robofleet_notify_send`, or `robofleet_session_*` tool. Formal notifications are a small set of **content tools** on the `robofleet-do` MCP server, role-scoped at spawn time. For agent-to-agent messaging (`dm`, `read_a2a`), see `docs/rag/tools/a2a-tools.md`.
 
 ## Formal notification — `notify` (PM / Board only)
 

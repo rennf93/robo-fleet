@@ -1,7 +1,7 @@
 ---
 
 name: Feature request
-about: Suggest an idea for RoboCo
+about: Suggest an idea for RoboFleet
 title: '[FEATURE] '
 labels: enhancement
 assignees: ''
@@ -31,16 +31,16 @@ ___
 Affected Subsystem
 ------------------
 
-Which part of RoboCo would this touch (check all that apply):
+Which part of RoboFleet would this touch (check all that apply):
 
-- [ ] api (`roboco/api`)
-- [ ] services (`roboco/services`)
-- [ ] gateway (`roboco/services/gateway`)
-- [ ] orchestrator (`roboco/runtime`)
-- [ ] enforcement (`roboco/enforcement`)
-- [ ] db / models (`roboco/db`, `roboco/models`)
+- [ ] api (`robofleet/api`)
+- [ ] services (`robofleet/services`)
+- [ ] gateway (`robofleet/services/gateway`)
+- [ ] orchestrator (`robofleet/runtime`)
+- [ ] enforcement (`robofleet/enforcement`)
+- [ ] db / models (`robofleet/db`, `robofleet/models`)
 - [ ] agents (`agents/`)
-- [ ] mcp (`roboco/mcp`)
+- [ ] mcp (`robofleet/mcp`)
 - [ ] panel (`panel/`)
 - [ ] alembic (`alembic/`)
 

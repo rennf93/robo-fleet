@@ -16,7 +16,7 @@
 
 ## How the CEO Acts
 
-The CEO is a **human** and acts through the **panel/UI**, not through the agent gateway. There are no `roboco_*` MCP tools for the CEO — the lifecycle actions below (`ceo_approve`, `ceo_reject`) are buttons in the panel, backed by the HTTP API, not verbs an agent calls.
+The CEO is a **human** and acts through the **panel/UI**, not through the agent gateway. There are no `robofleet_*` MCP tools for the CEO — the lifecycle actions below (`ceo_approve`, `ceo_reject`) are buttons in the panel, backed by the HTTP API, not verbs an agent calls.
 
 ## What the CEO CAN Do
 

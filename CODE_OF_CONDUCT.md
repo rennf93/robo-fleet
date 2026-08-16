@@ -1,12 +1,12 @@
 # Code of Conduct
 
-RoboCo has adopted the **[Contributor Covenant](https://www.contributor-covenant.org), version 2.1** as its Code of Conduct. The full, canonical text is published at:
+RoboFleet has adopted the **[Contributor Covenant](https://www.contributor-covenant.org), version 2.1** as its Code of Conduct. The full, canonical text is published at:
 
 > https://www.contributor-covenant.org/version/2/1/code_of_conduct/
 
 ## Summary
 
-Everyone taking part in the RoboCo community — issues, pull requests, code review, discussions, and any other project channels — is expected to be respectful, welcoming, and collaborative, and to assume good faith. Conduct that harasses, demeans, intimidates, or excludes others is not acceptable. Project maintainers are responsible for clarifying and enforcing these standards fairly and consistently.
+Everyone taking part in the RoboFleet community — issues, pull requests, code review, discussions, and any other project channels — is expected to be respectful, welcoming, and collaborative, and to assume good faith. Conduct that harasses, demeans, intimidates, or excludes others is not acceptable. Project maintainers are responsible for clarifying and enforcing these standards fairly and consistently.
 
 ## Reporting
 

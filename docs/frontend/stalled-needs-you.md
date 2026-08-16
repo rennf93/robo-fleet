@@ -12,7 +12,7 @@ A task is stalled when the dispatcher's respawn breaker has given up reviving it
 
 ## The dedicated endpoint: `GET /dashboard/stalled-tasks`
 
-Backed by `TaskService.list_stalled_tasks`, returning every task with a live `stalled_reason`, oldest-stalled-first. Response is `list[StalledTaskResponse]` (`roboco/api/schemas/dashboard.py`):
+Backed by `TaskService.list_stalled_tasks`, returning every task with a live `stalled_reason`, oldest-stalled-first. Response is `list[StalledTaskResponse]` (`robofleet/api/schemas/dashboard.py`):
 
 | Field | Type | Notes |
 |-------|------|-------|

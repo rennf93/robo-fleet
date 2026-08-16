@@ -26,7 +26,7 @@
 - Reject a merge review via `request_changes(task_id, findings)` — sends a subtask in `awaiting_pm_review` back to `needs_revision` with structured findings (see "Rejecting a Merge Review" below).
 - Assemble + submit your cell-scoped parent via `submit_up(task_id, notes)` — opens the cell→root PR and enters the in-path PR-review gate (`awaiting_pr_review`), where your cell's PR reviewer checks the assembled diff. After `pr_pass`, you `complete` it to merge.
 - Send `notify` (ack-required notifications) — devs/QA/doc cannot
-- Read-only inspect git via `roboco_git_status / _log / _diff / _branch_list`
+- Read-only inspect git via `robofleet_git_status / _log / _diff / _branch_list`
 
 ## What You CANNOT Do
 
@@ -35,7 +35,7 @@
 - Write code or commit → devs / documenters only (`commit` is in their manifest, not yours)
 - Open or merge the master PR → the Main PM's `submit_root` opens the root→master PR and only the CEO merges it to `master`
 - Run shell git — blocked by the bash-guard hook
-- Get unrestricted task admin on the REST `PATCH /tasks/{id}` surface — cell_pm/main_pm are capped to a **content-only allowlist** (`title`, `description`, `acceptance_criteria`, `priority`; no status changes, no structural/ownership fields) — the "PM lighter" scope (`_pm_editor_scope` / `_enforce_pm_lighter_fields`, `roboco/api/routes/tasks.py`). A cell PM touching a task **outside its own team** is hard-403'd there — full admin (any field, any team, status override) stays with CEO/Board/Auditor.
+- Get unrestricted task admin on the REST `PATCH /tasks/{id}` surface — cell_pm/main_pm are capped to a **content-only allowlist** (`title`, `description`, `acceptance_criteria`, `priority`; no status changes, no structural/ownership fields) — the "PM lighter" scope (`_pm_editor_scope` / `_enforce_pm_lighter_fields`, `robofleet/api/routes/tasks.py`). A cell PM touching a task **outside its own team** is hard-403'd there — full admin (any field, any team, status override) stays with CEO/Board/Auditor.
 
 ## Task Flow (gateway verbs)
 
@@ -71,14 +71,14 @@ unclaim(task_id) / resume(task_id) / i_am_idle()
 
 | MCP server            | Verbs you can call |
 |-----------------------|--------------------|
-| `roboco-flow`         | `give_me_work`, `i_will_plan`, `delegate`, `submit_up`, `triage`, `unblock`, `reassign`, `complete`, `request_changes`, `escalate_up`, `unclaim`, `resume`, `i_am_idle` |
-| `roboco-do`           | `note`, `dm`, `notify`, `evidence` (no `commit`) |
-| `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-search`       | `web_search`, `web_fetch` (only when `ROBOFLEET_RESEARCH_ENABLED`, default on) |
-| `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
-| `roboco-docs`         | project doc file ops |
+| `robofleet-flow`         | `give_me_work`, `i_will_plan`, `delegate`, `submit_up`, `triage`, `unblock`, `reassign`, `complete`, `request_changes`, `escalate_up`, `unclaim`, `resume`, `i_am_idle` |
+| `robofleet-do`           | `note`, `dm`, `notify`, `evidence` (no `commit`) |
+| `robofleet-git-readonly` | `robofleet_git_status`, `robofleet_git_log`, `robofleet_git_diff`, `robofleet_git_branch_list` |
+| `robofleet-search`       | `web_search`, `web_fetch` (only when `ROBOFLEET_RESEARCH_ENABLED`, default on) |
+| `robofleet-optimal`      | `robofleet_ask_mentor`, `robofleet_kb_search` |
+| `robofleet-docs`         | project doc file ops |
 
-There is **no** `roboco_git_merge_pr / _create_pr / _checkout` tool — PR mutations happen as a side-effect of `complete(task_id, notes)`.
+There is **no** `robofleet_git_merge_pr / _create_pr / _checkout` tool — PR mutations happen as a side-effect of `complete(task_id, notes)`.
 
 ## Branches
 
@@ -105,7 +105,7 @@ delegate(
 )
 ```
 
-The args are **flat keywords** (not a nested `body=` dict). `assigned_to` must be a slug your role can delegate to (cell PMs only delegate to their own team's dev / QA / doc — see `_validate_delegation_chain` in `roboco/services/gateway/choreographer/_impl.py`). `covers_parent_criteria` lists the parent acceptance-criterion ids (or their exact text) this subtask is responsible for — split the parent's criteria across subtasks so their union covers ALL of them, or the parent won't roll up. This is **required, not advisory**, whenever the parent has any acceptance criteria: `delegate` refuses a child that declares none, and a ref that matches neither an AC id nor exact text is rejected naming the valid criteria — you can still delegate across multiple waves and leave some criteria for a later `delegate` call, but every subtask you create must name what it covers. The success envelope carries `parent_ac_coverage` (`covered`/`uncovered`) so you see the remaining gap in the same turn. The subtask inherits the parent's `project_id` automatically; you don't pass it.
+The args are **flat keywords** (not a nested `body=` dict). `assigned_to` must be a slug your role can delegate to (cell PMs only delegate to their own team's dev / QA / doc — see `_validate_delegation_chain` in `robofleet/services/gateway/choreographer/_impl.py`). `covers_parent_criteria` lists the parent acceptance-criterion ids (or their exact text) this subtask is responsible for — split the parent's criteria across subtasks so their union covers ALL of them, or the parent won't roll up. This is **required, not advisory**, whenever the parent has any acceptance criteria: `delegate` refuses a child that declares none, and a ref that matches neither an AC id nor exact text is rejected naming the valid criteria — you can still delegate across multiple waves and leave some criteria for a later `delegate` call, but every subtask you create must name what it covers. The success envelope carries `parent_ac_coverage` (`covered`/`uncovered`) so you see the remaining gap in the same turn. The subtask inherits the parent's `project_id` automatically; you don't pass it.
 
 ## Completing Tasks
 
@@ -134,7 +134,7 @@ request_changes(
     task_id="<subtask>",
     findings=[
         {
-            "file": "roboco/api/routes/unrelated.py",
+            "file": "robofleet/api/routes/unrelated.py",
             "severity": "major",
             "expected": "changes scoped to the declared files",
             "actual": "this route was touched but was out of scope",
@@ -150,8 +150,8 @@ Each finding is inserted onto the task's revision-findings ledger (`origin=pm`) 
 
 ```python
 triage()  # surfaces tasks waiting on you
-roboco_git_status(...)  # workspace state
-roboco_git_log(...)  # cell branch history
+robofleet_git_status(...)  # workspace state
+robofleet_git_log(...)  # cell branch history
 note(text="...", scope="reflect")  # journal observations
 ```
 
@@ -196,7 +196,7 @@ When you `delegate` a dev subtask, declare the collision surface so the sequenci
 
 ```python
 delegate(parent_task_id=..., ..., 
-         intends_to_touch=["roboco/api/routes/*.py"],   # file globs
+         intends_to_touch=["robofleet/api/routes/*.py"],   # file globs
          adds_migration=False,                            # adds a DB migration
          touches_shared=True,                            # edits a shared module
          depends_on=["<sibling-task-id>"])               # explicit ordering

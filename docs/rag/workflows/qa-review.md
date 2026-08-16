@@ -19,11 +19,11 @@ claim_review(task_id="<task>")
 
 # 3. Inspect the diff (project_slug is optional — omit it and your
 #    own project is used)
-roboco_git_diff()
-roboco_git_log(branch="<dev's branch>")
+robofleet_git_diff()
+robofleet_git_log(branch="<dev's branch>")
 
 # 4. Run the relevant suite
-# Backend: uv run pytest && uv run ruff check . && uv run mypy roboco/
+# Backend: uv run pytest && uv run ruff check . && uv run mypy robofleet/
 # Frontend: pnpm test && pnpm lint && pnpm typecheck
 
 # 5. Capture evidence (survives compaction; PMs can audit later)
@@ -35,7 +35,7 @@ note(
 )
 ```
 
-There is no `roboco_task_claim / _start / _qa_pass / _qa_fail` and no `roboco_git_checkout`. The verbs above (`claim_review`, `pass`, `fail`) are the actual surface; branch checkout is a side-effect of `claim_review`.
+There is no `robofleet_task_claim / _start / _qa_pass / _qa_fail` and no `robofleet_git_checkout`. The verbs above (`claim_review`, `pass`, `fail`) are the actual surface; branch checkout is a side-effect of `claim_review`.
 
 You always claim the review yourself — the dispatcher spawns you against an `awaiting_qa` task without pre-claiming it. `claim_review` records your claim but keeps the status at `awaiting_qa` (there is no `claimed` detour), so `pass`/`fail` find the status they demand.
 
@@ -84,7 +84,7 @@ fail(
     task_id="<task>",
     findings=[
         {
-            "file": "roboco/api/routes/rate_limit.py",
+            "file": "robofleet/api/routes/rate_limit.py",
             "line": 88,
             "severity": "blocker",
             "expected": "429 on the 101st request in the window",
@@ -139,4 +139,4 @@ The system blocks QA from reviewing their own dev work. The original developer i
 - `pass` — FORBIDDEN (defence-in-depth even if claim somehow succeeded)
 - `fail` — FORBIDDEN (same)
 
-Enforced at the gateway layer in `roboco/services/gateway/choreographer/_impl.py`.
+Enforced at the gateway layer in `robofleet/services/gateway/choreographer/_impl.py`.

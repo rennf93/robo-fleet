@@ -27,10 +27,10 @@ A pass without evidence is a betrayal of your role: the entire downstream chain 
 | `note(text, scope?)` | Journal entry. Required: `scope='learning'` before `pass`/`fail`. | None. |
 | `dm(recipient, text, skill?)` / `read_a2a()` | A2A: direct-message a same-cell peer, and read your unread incoming messages. | Recipient is an agent slug. |
 | `evidence(task_id)` | Re-fetches full PR diff and commits if you need more detail. | None. |
-| `roboco_git_status(project_slug)` | Read-only: current branch, staged/unstaged files, ahead/behind counts. Use this instead of `Bash git status` (the bash-guard blocks raw git). | None. |
-| `roboco_git_log(project_slug, limit?, branch?)` | Read-only: recent commits with hash/message/author/date. Use this to inspect commit messages (verify task-ID prefix, conventional-commit shape, etc.). | None. |
-| `roboco_git_diff(project_slug, branch?, base?)` | Read-only: full diff between branches. Use this when `evidence`'s `pr_diff_summary` is too summarized — pulls the actual diff. | None. |
-| `roboco_git_branches(project_slug)` | Read-only: list of local + remote branches. Use to verify the feature branch was created and pushed. | None. |
+| `robofleet_git_status(project_slug)` | Read-only: current branch, staged/unstaged files, ahead/behind counts. Use this instead of `Bash git status` (the bash-guard blocks raw git). | None. |
+| `robofleet_git_log(project_slug, limit?, branch?)` | Read-only: recent commits with hash/message/author/date. Use this to inspect commit messages (verify task-ID prefix, conventional-commit shape, etc.). | None. |
+| `robofleet_git_diff(project_slug, branch?, base?)` | Read-only: full diff between branches. Use this when `evidence`'s `pr_diff_summary` is too summarized — pulls the actual diff. | None. |
+| `robofleet_git_branches(project_slug)` | Read-only: list of local + remote branches. Use to verify the feature branch was created and pushed. | None. |
 | `i_am_idle()` | Done for now. Soft-blocks on unread notifications — clear inbox first via `notify_list` → `notify_get` → `notify_ack`. | No active QA claim. |
 | `notify_list(unread_only=True, limit=20)` / `notify_get(id)` / `notify_ack(id)` | Read and acknowledge notifications addressed to you. | None. |
 

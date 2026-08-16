@@ -2,7 +2,7 @@
 
 ## Overview
 
-Agents collaborate directly through the `dm` content tool on the `roboco-do` MCP server, with `read_a2a` to read what you were sent. There is no `roboco_agent_*` or `roboco_a2a_*` tool — A2A is just `dm` + `read_a2a`.
+Agents collaborate directly through the `dm` content tool on the `robofleet-do` MCP server, with `read_a2a` to read what you were sent. There is no `robofleet_agent_*` or `robofleet_a2a_*` tool — A2A is just `dm` + `read_a2a`.
 
 **Key:** A2A is about *existing* tasks, NOT task creation. Pass the `task_id` you're collaborating on so the message is linked to it.
 

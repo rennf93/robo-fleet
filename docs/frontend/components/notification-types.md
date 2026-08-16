@@ -1,6 +1,6 @@
 # Notification Types Reference
 
-The RoboCo panel renders five core **coordination-event notification types** — formal signals between agents tied to task lifecycle events. Each type has a visual identity (icon + color) and a semantic meaning. All types carry optional deep-links to related tasks.
+The RoboFleet panel renders five core **coordination-event notification types** — formal signals between agents tied to task lifecycle events. Each type has a visual identity (icon + color) and a semantic meaning. All types carry optional deep-links to related tasks.
 
 ## The 5 Coordination-Event Types
 
@@ -17,7 +17,7 @@ The RoboCo panel renders five core **coordination-event notification types** —
 **Icon:** Info (blue) **Use case:** A documenter has been asked to write docs for a code change. **When sent:** Via `NotificationService.send_docs_ready` when QA passes a task. **Related task:** Links to the task whose code needs documenting.
 
 ### 5. APPROVAL *(New in this release)*
-**Icon:** ShieldCheck (emerald) **Use case:** A Board member (Product Owner, Head of Marketing, or Main PM) is requested to approve or provide feedback on escalated work. **When sent:** Via `NotificationDeliveryService.notify_ceo_of_escalation` when a task escalates to the Board. **Related task:** Links to the task awaiting approval. **Backend reference:** Matches `roboco/models/base.py` `NotificationType.APPROVAL`.
+**Icon:** ShieldCheck (emerald) **Use case:** A Board member (Product Owner, Head of Marketing, or Main PM) is requested to approve or provide feedback on escalated work. **When sent:** Via `NotificationDeliveryService.notify_ceo_of_escalation` when a task escalates to the Board. **Related task:** Links to the task awaiting approval. **Backend reference:** Matches `robofleet/models/base.py` `NotificationType.APPROVAL`.
 
 ## Implementation Details
 
@@ -77,7 +77,7 @@ To add a new coordination-event notification type:
 1. Add the enum member to `NotificationType` in `panel/src/types/index.ts`
 2. Add a corresponding icon entry to the `typeIcons` Record in `notifications/page.tsx`
 3. Add a test case to the component test file
-4. Update backend `roboco/models/base.py` `NotificationType` to match
+4. Update backend `robofleet/models/base.py` `NotificationType` to match
 5. Wire the notification send/delivery method in the backend service
 
 The TypeScript exhaustiveness check will catch any missing icon entry at build time.

@@ -51,7 +51,7 @@ All create fields above, **plus:**
 
 When adding a new project field to the backend ProjectCreateRequest or ProjectUpdateRequest:
 
-1. Update the backend schema (`roboco/api/schemas/project.py`)
+1. Update the backend schema (`robofleet/api/schemas/project.py`)
 2. Update both frontend types (`panel/src/types/index.ts`)
 3. Add to **both** dialogs (unless explicitly create-only or edit-only by design)
 4. Mirror help text and validation between dialogs where fields overlap

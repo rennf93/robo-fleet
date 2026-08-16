@@ -9,7 +9,7 @@
 
 ## The Tool
 
-Journaling is a single content tool: `note(text, scope, ...)` on the `roboco-do` MCP server. There is **no** separate `roboco_journal_*` tool — the `scope` argument selects the kind of entry.
+Journaling is a single content tool: `note(text, scope, ...)` on the `robofleet-do` MCP server. There is **no** separate `robofleet_journal_*` tool — the `scope` argument selects the kind of entry.
 
 | `scope` | Use For |
 |---------|---------|
@@ -73,14 +73,14 @@ note(
 
 ## Searching Journals
 
-Journal entries are indexed into the knowledge base. Search them through the `roboco-optimal` RAG tools (there is no dedicated journal-search verb):
+Journal entries are indexed into the knowledge base. Search them through the `robofleet-optimal` RAG tools (there is no dedicated journal-search verb):
 
 ```python
 # Semantic search across the KB, filtered to journal entries
-roboco_kb_search(query="rate limiting patterns", index_types=["journals"])
+robofleet_kb_search(query="rate limiting patterns", index_types=["journals"])
 
 # Or ask the mentor, which searches all sources including journals
-roboco_ask_mentor(question="What did we decide about rate limiting?")
+robofleet_ask_mentor(question="What did we decide about rate limiting?")
 ```
 
 ## Best Practices

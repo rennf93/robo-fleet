@@ -2,7 +2,7 @@
 
 ## Empty Search Results
 
-**Problem**: `roboco_kb_search()` returns nothing
+**Problem**: `robofleet_kb_search()` returns nothing
 
 **Causes**:
 1. Content not indexed yet
@@ -10,14 +10,14 @@
 3. Wrong index type filter
 
 **Solutions**:
-- Check what's indexed: `roboco_kb_stats()`
+- Check what's indexed: `robofleet_kb_stats()`
 - Broaden query terms
 - Remove index_types filter
-- Trigger reindex: `roboco_reindex_all()`
+- Trigger reindex: `robofleet_reindex_all()`
 
 ## Empty RAG Response
 
-**Problem**: `roboco_rag_query()` returns empty answer
+**Problem**: `robofleet_rag_query()` returns empty answer
 
 **Causes**:
 1. No relevant context found
@@ -27,11 +27,11 @@
 **Solutions**:
 - Check KB has relevant content
 - Rephrase query to be more specific
-- Use `roboco_kb_search()` first to verify content exists
+- Use `robofleet_kb_search()` first to verify content exists
 
 ## Mentor Not Responding
 
-**Problem**: `roboco_ask_mentor()` fails or empty
+**Problem**: `robofleet_ask_mentor()` fails or empty
 
 **Causes**:
 1. LLM timeout
@@ -41,11 +41,11 @@
 **Solutions**:
 - Retry the query
 - Check KB stats
-- Use `roboco_kb_search()` as fallback
+- Use `robofleet_kb_search()` as fallback
 
 ## Index Failed
 
-**Problem**: `roboco_kb_index_code()` or `roboco_kb_index_docs()` fails
+**Problem**: `robofleet_kb_index_code()` or `robofleet_kb_index_docs()` fails
 
 **Causes**:
 1. Invalid file patterns
@@ -59,7 +59,7 @@
 
 ## Documentation Write Failed
 
-**Problem**: `roboco_docs_write()` fails
+**Problem**: `robofleet_docs_write()` fails
 
 **Causes**:
 1. Invalid doc_type (must be: api, qa, guide, readme, changelog, architecture, design)
@@ -84,11 +84,11 @@
 
 **Solutions**:
 - Ensure content covers same topic as existing doc
-- Check existing docs first: `roboco_docs_list(task_id)`
-- Search KB: `roboco_kb_search("topic keywords")`
-- Delete duplicate if needed: `roboco_docs_delete(path)`
+- Check existing docs first: `robofleet_docs_list(task_id)`
+- Search KB: `robofleet_kb_search("topic keywords")`
+- Delete duplicate if needed: `robofleet_docs_delete(path)`
 
-**Note**: `roboco_docs_write()` uses RAG to auto-deduplicate by **content similarity** (not just title). If content is semantically similar (>75% similarity), it updates instead of creating new.
+**Note**: `robofleet_docs_write()` uses RAG to auto-deduplicate by **content similarity** (not just title). If content is semantically similar (>75% similarity), it updates instead of creating new.
 
 ## Cannot Clear Index
 
@@ -100,8 +100,8 @@
 
 ## Proactive Context Empty
 
-**Problem**: `roboco_get_proactive_context()` returns empty
+**Problem**: `robofleet_get_proactive_context()` returns empty
 
 **Cause**: No relevant context found for task
 
-**Solution**: Manual search with `roboco_kb_search()` using task keywords
+**Solution**: Manual search with `robofleet_kb_search()` using task keywords

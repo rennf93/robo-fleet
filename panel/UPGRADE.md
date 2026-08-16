@@ -2,7 +2,7 @@
 
 ## Next.js Version Bumps
 
-The RoboCo control panel runs on **Next.js 16** with **TypeScript** and **Tailwind CSS**. Upgrading Next.js requires careful attention to dependency alignment.
+The RoboFleet control panel runs on **Next.js 16** with **TypeScript** and **Tailwind CSS**. Upgrading Next.js requires careful attention to dependency alignment.
 
 ### Critical: eslint-config-next must track the same version as next
 

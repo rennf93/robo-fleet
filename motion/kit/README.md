@@ -1,6 +1,6 @@
 # kit
 
-Reusable plain-CSS/HTML building blocks that recreate the RoboCo control panel's look, for compositions that want to simulate the product rather than run a text card. Hand-rolled (no React, no Tailwind, no bundler) — this is a recreation of the panel's design language, not a port of its components. Load `kit.css` (and `kit.js` if you use the typing helper); no composition-level `theme.css` is needed, kit.css owns the reset + fonts.
+Reusable plain-CSS/HTML building blocks that recreate the RoboFleet control panel's look, for compositions that want to simulate the product rather than run a text card. Hand-rolled (no React, no Tailwind, no bundler) — this is a recreation of the panel's design language, not a port of its components. Load `kit.css` (and `kit.js` if you use the typing helper); no composition-level `theme.css` is needed, kit.css owns the reset + fonts.
 
 ```html
 <link rel="stylesheet" href="../../kit/kit.css" />

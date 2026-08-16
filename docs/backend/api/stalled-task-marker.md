@@ -2,7 +2,7 @@
 
 ## Overview
 
-When the dispatcher's respawn breaker (`_pm_respawn_should_gate` in `roboco/runtime/orchestrator.py`) gives up on a task, the per-agent strike count exceeds `_PM_RESPAWN_MAX_UNPRODUCTIVE`, and the only prior signal was a log line plus one one-shot CEO notification that ages out of the bell. The task row itself kept its healthy status (`in_progress`, `awaiting_qa`, ...), so a wedged task was indistinguishable from a working one anywhere else in the system.
+When the dispatcher's respawn breaker (`_pm_respawn_should_gate` in `robofleet/runtime/orchestrator.py`) gives up on a task, the per-agent strike count exceeds `_PM_RESPAWN_MAX_UNPRODUCTIVE`, and the only prior signal was a log line plus one one-shot CEO notification that ages out of the bell. The task row itself kept its healthy status (`in_progress`, `awaiting_qa`, ...), so a wedged task was indistinguishable from a working one anywhere else in the system.
 
 Migration `092_task_stalled_marker` adds two columns to `tasks`, `stalled_reason` and `stalled_since`, so the give-up decision is durable and readable directly off the task row, without reading container logs. A new `GET /api/dashboard/stalled-tasks` endpoint exposes the current stalled set.
 
@@ -12,7 +12,7 @@ This covers the `breaker_tripped` reason only (`_pm_respawn_should_gate`'s strik
 
 ## Data model
 
-### `roboco.models.base.StalledReason`
+### `robofleet.models.base.StalledReason`
 
 ```python
 class StalledReason(StrEnum):
@@ -29,7 +29,7 @@ class StalledReason(StrEnum):
 
 `stalled_reason` is a plain string column, not a Postgres enum, so adding `notification_cap` (or any future reason) later needs no `ALTER TYPE` migration. A partial index (`ix_tasks_stalled_reason`, `WHERE stalled_reason IS NOT NULL`) backs the read endpoint's query without indexing the common (not-stalled) case.
 
-Both columns are mirrored on the `Task` pydantic model (`roboco/models/task.py`) and on `TaskResponse` (`roboco/api/schemas/tasks.py`), so any existing task-read API surface picks them up for free.
+Both columns are mirrored on the `Task` pydantic model (`robofleet/models/task.py`) and on `TaskResponse` (`robofleet/api/schemas/tasks.py`), so any existing task-read API surface picks them up for free.
 
 ## Set / clear lifecycle
 
@@ -97,7 +97,7 @@ Returns the current stalled set, every task with a non-null `stalled_reason`, or
 
 The query excludes terminal (`COMPLETED`/`CANCELLED`) tasks. Since the #866 fix's unconditional `TaskService`-level clear (see "Clearing the marker" above) now guarantees a task's marker is gone by the time it reaches a terminal status through the normal transition chokepoint, this filter is a defensive backstop rather than the primary safeguard — kept in case some future path ever sets a terminal status without going through `_emit_status_transition_audit`.
 
-**Response** (`list[StalledTaskResponse]`, `roboco/api/schemas/dashboard.py`):
+**Response** (`list[StalledTaskResponse]`, `robofleet/api/schemas/dashboard.py`):
 
 ```json
 [
@@ -123,7 +123,7 @@ The query excludes terminal (`COMPLETED`/`CANCELLED`) tasks. Since the #866 fix'
 | `stalled_since` | Timestamp the marker was (most recently) set. |
 | `stalled_seconds` | `now - stalled_since` in seconds, computed at query time: "how long" the task has been stalled. |
 
-This endpoint sits on the existing `/api/dashboard` router, which is router-level panel-gated (auth required) like the rest of the dashboard surface; see `roboco/api/routes/dashboard.py`.
+This endpoint sits on the existing `/api/dashboard` router, which is router-level panel-gated (auth required) like the rest of the dashboard surface; see `robofleet/api/routes/dashboard.py`.
 
 ## Testing
 
@@ -138,6 +138,6 @@ Together these cover the acceptance-critical behaviors: a trip sets the marker, 
 ## Related
 
 - `_notification_spawn_over_cap` (no `task_id` path) notifies the CEO on trip but sets no task marker — there is no task to mark. `NOTIFICATION_CAP` stays unused on `StalledReason`, reserved for a future task-keyed variant.
-- `roboco/runtime/orchestrator.py`: `_pm_respawn_should_gate` (breaker trip), `_respawn_status_change_resets` (secondary same-key progress-based reset), `_pm_cooldown_gate` (cooldown self-heal / re-notify eligibility).
-- `roboco/services/task.py`: `TaskService._emit_status_transition_audit` / `_clear_stale_stalled_marker` (primary, unconditional clear on any status transition, added in the #866 fix-forward revision, task `cbc0666d`), `TaskService.mark_stalled` / `clear_stalled_marker` / `list_stalled_tasks` / `reassign_active_claim` (calls `_clear_stale_stalled_marker` directly since it changes no status).
+- `robofleet/runtime/orchestrator.py`: `_pm_respawn_should_gate` (breaker trip), `_respawn_status_change_resets` (secondary same-key progress-based reset), `_pm_cooldown_gate` (cooldown self-heal / re-notify eligibility).
+- `robofleet/services/task.py`: `TaskService._emit_status_transition_audit` / `_clear_stale_stalled_marker` (primary, unconditional clear on any status transition, added in the #866 fix-forward revision, task `cbc0666d`), `TaskService.mark_stalled` / `clear_stalled_marker` / `list_stalled_tasks` / `reassign_active_claim` (calls `_clear_stale_stalled_marker` directly since it changes no status).
 - CHANGELOG.md's Unreleased `### Added` section also gained an entry for this feature (durable stalled marker + read endpoint, referencing PR #866) as part of the #866 fix-forward revision — the original delivery's diff had omitted it.

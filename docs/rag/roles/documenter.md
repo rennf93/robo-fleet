@@ -19,8 +19,8 @@
 - Claim tasks in `awaiting_documentation` status via `claim_doc_task(task_id)`
 - Claim `pending` documentation tasks via `give_me_work()`
 - Signal docs complete via `i_documented(task_id, notes, files)`
-- Write documentation: `roboco_docs_write()` (auto-indexes in RAG)
-- Search the knowledge base via `roboco_ask_mentor` / `roboco_kb_search`
+- Write documentation: `robofleet_docs_write()` (auto-indexes in RAG)
+- Search the knowledge base via `robofleet_ask_mentor` / `robofleet_kb_search`
 
 ## What You CANNOT Do
 
@@ -44,13 +44,13 @@ awaiting_documentation → claim_doc_task → write docs → i_documented
 
 | MCP server            | Verbs you can call |
 |-----------------------|--------------------|
-| `roboco-flow`         | `give_me_work`, `claim_doc_task`, `i_documented`, `i_am_blocked`, `unclaim`, `resume`, `i_am_idle` |
-| `roboco-do`           | `commit`, `note`, `dm`, `evidence`, `progress` (no `notify`) |
-| `roboco-docs`         | `roboco_docs_write`, `roboco_docs_read`, `roboco_docs_list` |
-| `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
+| `robofleet-flow`         | `give_me_work`, `claim_doc_task`, `i_documented`, `i_am_blocked`, `unclaim`, `resume`, `i_am_idle` |
+| `robofleet-do`           | `commit`, `note`, `dm`, `evidence`, `progress` (no `notify`) |
+| `robofleet-docs`         | `robofleet_docs_write`, `robofleet_docs_read`, `robofleet_docs_list` |
+| `robofleet-git-readonly` | `robofleet_git_status`, `robofleet_git_log`, `robofleet_git_diff`, `robofleet_git_branch_list` |
+| `robofleet-optimal`      | `robofleet_ask_mentor`, `robofleet_kb_search` |
 
-**Write access limited to docs.** `roboco_docs_*` writes go to the panel docs store (auto-indexed); native git commands are blocked, and source code modification is out of scope.
+**Write access limited to docs.** `robofleet_docs_*` writes go to the panel docs store (auto-indexed); native git commands are blocked, and source code modification is out of scope.
 
 ## Gather Context First
 
@@ -60,15 +60,15 @@ Before writing documentation:
 # Read the developer's reasoning trail — their notes / decisions are on
 # the task evidence and in the KB
 evidence(task_id="...")
-roboco_kb_search("similar documentation")
+robofleet_kb_search("similar documentation")
 ```
 
 ## Writing Documentation
 
-Use `roboco_docs_write()` — handles paths and deduplication automatically:
+Use `robofleet_docs_write()` — handles paths and deduplication automatically:
 
 ```python
-roboco_docs_write(
+robofleet_docs_write(
     {
         "task_id": "your-task-uuid",
         "filename": "feature-api.md",
@@ -107,7 +107,7 @@ System enforces: Documenter cannot document tasks they originally developed. If 
 
 ## Before Completing
 
-1. Verify docs indexed: `roboco_docs_list(task_id)` (auto-indexed when written)
+1. Verify docs indexed: `robofleet_docs_list(task_id)` (auto-indexed when written)
 2. Reflect on your work: `note(text="...", scope="learning")`
 3. Record any decisions you made: `note(text="...", scope="decision")`
 

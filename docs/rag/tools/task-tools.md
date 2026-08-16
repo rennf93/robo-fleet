@@ -1,6 +1,6 @@
 # Task Management Tools
 
-There is **no** `roboco_task_*` tool surface. Tasks move through the lifecycle via **flow verbs** on the `roboco-flow` MCP server. Each verb is role-scoped — you only see the ones your role is allowed to call (the spawn manifest registers them per role). Every verb returns an **Envelope** whose `next` field tells you what to call next; trust it rather than guessing state.
+There is **no** `robofleet_task_*` tool surface. Tasks move through the lifecycle via **flow verbs** on the `robofleet-flow` MCP server. Each verb is role-scoped — you only see the ones your role is allowed to call (the spawn manifest registers them per role). Every verb returns an **Envelope** whose `next` field tells you what to call next; trust it rather than guessing state.
 
 The verbs below are grouped by who calls them.
 
@@ -130,7 +130,7 @@ i_am_idle()
 
 The Board **cannot** claim, create, complete, or cancel tasks. Strategic decisions are escalated to the CEO.
 
-The Product Owner additionally has `propose_roadmap(cycle_goal, items)` — a **content tool** on `roboco-do`, not a flow verb, so it doesn't appear above. It authors the weekly board-roadmap-engine exploration cycle (a themed goal + 3-7 item drafts); the CEO approves or rejects each item individually into BACKLOG. See `docs/rag/roles/product-owner.md`.
+The Product Owner additionally has `propose_roadmap(cycle_goal, items)` — a **content tool** on `robofleet-do`, not a flow verb, so it doesn't appear above. It authors the weekly board-roadmap-engine exploration cycle (a themed goal + 3-7 item drafts); the CEO approves or rejects each item individually into BACKLOG. See `docs/rag/roles/product-owner.md`.
 
 ## Auditor flow
 
@@ -175,7 +175,7 @@ Cancelling a task (any non-terminal status -> `cancelled`) is restricted to **PM
 
 ## Progress
 
-Record progress against your plan with the `progress` content tool (on `roboco-do`), not a task verb:
+Record progress against your plan with the `progress` content tool (on `robofleet-do`), not a task verb:
 
 ```python
 progress(task_id, message="API skeleton landed", plan_step="2")
@@ -185,8 +185,8 @@ Your plan's steps are the progress checklist; the percentage is derived from com
 
 ## Sandbox DB/Redis/Mongo (Developer + QA)
 
-`request_sandbox(services=None, extensions=None)` — a **content tool** on `roboco-do`, not a flow verb — provisions a throwaway sandbox Postgres/Redis/Mongo on demand, for a project that opted in (`projects.sandbox_services`). Only `developer` and `qa` carry it. Omit `services` for the project's whole opted-in set; requesting one outside it is rejected naming the allowed set. `extensions` is an optional per-service map of extensions/modules to activate (e.g. `{"postgres": ["vector"]}`), unioned with the project's standing `sandbox_extensions` set and bounded by a fixed allowlist (pg: vector/postgis/pg_trgm/citext/uuid-ossp; redis: search/json/bloom — no `plpython3u`); an unallowed feature or a feature for a non-opted service is rejected naming the allowed set. Creds come back in the envelope's `evidence`, one entry per service, including ready-to-`export` `ROBOFLEET_TEST_*` values for gate tooling and an `available_extensions` list of what was activated. Calling it again is a cheap no-op (same creds) as long as the requested features are a subset of the cached set. See `docs/rag/architecture/sandbox-db.md`.
+`request_sandbox(services=None, extensions=None)` — a **content tool** on `robofleet-do`, not a flow verb — provisions a throwaway sandbox Postgres/Redis/Mongo on demand, for a project that opted in (`projects.sandbox_services`). Only `developer` and `qa` carry it. Omit `services` for the project's whole opted-in set; requesting one outside it is rejected naming the allowed set. `extensions` is an optional per-service map of extensions/modules to activate (e.g. `{"postgres": ["vector"]}`), unioned with the project's standing `sandbox_extensions` set and bounded by a fixed allowlist (pg: vector/postgis/pg_trgm/citext/uuid-ossp; redis: search/json/bloom — no `plpython3u`); an unallowed feature or a feature for a non-opted service is rejected naming the allowed set. Creds come back in the envelope's `evidence`, one entry per service, including ready-to-`export` `ROBOFLEET_TEST_*` values for gate tooling and an `available_extensions` list of what was activated. Calling it again is a cheap no-op (same creds) as long as the requested features are a subset of the cached set. See `docs/rag/architecture/sandbox-db.md`.
 
 ## Video render preview (Developer + QA, video-authoring tasks)
 
-`request_render(composition_id=None, orientation="vertical", frame_count=8, input_props=None)` — a **content tool** on `roboco-do` — renders your ACTUAL HyperFrames composition through the video-renderer sidecar and returns evenly spaced keyframe PNGs. Only valid on a `source=video` authoring task. Omit `composition_id` to use the one you already proposed via `propose_video`. The envelope's `evidence.frames` lists absolute paths (readable from your container): **Read every frame** and verify each scene/feature from the brief appears fully and legibly — the composition source looking right is NOT evidence the rendered clip is right. A developer renders their own working tree; QA renders a read-only export of the assembled branch. A successful render stamps the task's `render_preview` marker — `i_am_done` on a video task refuses without it. If a scene is missing, clipped, or rushed, fix the composition and call it again. See `docs/rag/architecture/video-engine.md`.
+`request_render(composition_id=None, orientation="vertical", frame_count=8, input_props=None)` — a **content tool** on `robofleet-do` — renders your ACTUAL HyperFrames composition through the video-renderer sidecar and returns evenly spaced keyframe PNGs. Only valid on a `source=video` authoring task. Omit `composition_id` to use the one you already proposed via `propose_video`. The envelope's `evidence.frames` lists absolute paths (readable from your container): **Read every frame** and verify each scene/feature from the brief appears fully and legibly — the composition source looking right is NOT evidence the rendered clip is right. A developer renders their own working tree; QA renders a read-only export of the assembled branch. A successful render stamps the task's `render_preview` marker — `i_am_done` on a video task refuses without it. If a scene is missing, clipped, or rushed, fix the composition and call it again. See `docs/rag/architecture/video-engine.md`.

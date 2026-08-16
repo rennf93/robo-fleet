@@ -24,12 +24,12 @@ Links:
 
 ## How to commit
 
-Use the **`commit`** verb on the roboco-do MCP — devs and documenters only. There is no `roboco_git_commit` tool.
+Use the **`commit`** verb on the robofleet-do MCP — devs and documenters only. There is no `robofleet_git_commit` tool.
 
 ```python
 commit(
     message="feat(api): add Redis rate limiter",
-    files=["roboco/api/routes/rate.py", "tests/integration/test_rate.py"],
+    files=["robofleet/api/routes/rate.py", "tests/integration/test_rate.py"],
     # files is optional; defaults to all staged + modified tracked files
 )
 ```
@@ -44,4 +44,4 @@ The choreographer:
 6. Pushes to the agent's branch on origin
 7. Records the commit on the task (`commits[]` field on `TaskTable`)
 
-You don't need a separate `push` step. There is no `roboco_git_push` tool.
+You don't need a separate `push` step. There is no `robofleet_git_push` tool.

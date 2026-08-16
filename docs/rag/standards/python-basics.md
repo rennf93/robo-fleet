@@ -23,7 +23,7 @@ uv run pytest
 ```bash
 uv run ruff format .      # Format code
 uv run ruff check .       # Lint
-uv run mypy roboco/       # Type check
+uv run mypy robofleet/       # Type check
 uv run pytest             # Tests
 ```
 
@@ -65,8 +65,8 @@ from pathlib import Path
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from roboco.models import Task
-from roboco.services import TaskService
+from robofleet.models import Task
+from robofleet.services import TaskService
 ```
 
 ## Async by Default

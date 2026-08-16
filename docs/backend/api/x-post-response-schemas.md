@@ -1,10 +1,10 @@
 # X Post Response Schemas
 
-**Date:** 2026-08-12 **Task:** 2133f5ef **Files:** `roboco/api/schemas/x.py`, `roboco/api/utils/x.py`
+**Date:** 2026-08-12 **Task:** 2133f5ef **Files:** `robofleet/api/schemas/x.py`, `robofleet/api/utils/x.py`
 
 ## What
 
-The CEO's X (Twitter) post queue and history view are served by two Pydantic response models: `XPostResponse` (held drafts awaiting decision, `GET /api/x/posts`) and `XPostHistoryResponse` (acted-on drafts — posted or rejected — the CEO's history view). Both live in `roboco/api/schemas/x.py` and are built by `to_response` / `to_history_response` in `roboco/api/utils/x.py`.
+The CEO's X (Twitter) post queue and history view are served by two Pydantic response models: `XPostResponse` (held drafts awaiting decision, `GET /api/x/posts`) and `XPostHistoryResponse` (acted-on drafts — posted or rejected — the CEO's history view). Both live in `robofleet/api/schemas/x.py` and are built by `to_response` / `to_history_response` in `robofleet/api/utils/x.py`.
 
 Each draft carries a `source` string (`x_post`, `x_reply`, `x_feature`, `x_editorial`, `x_campaign`, `x_barfly`) and zero or one source-specific reference fields. The API reads each ref from the task's `orchestration_markers` via the matching `markers.get_x_*_ref` helper and serializes it into a typed Pydantic model, or `None` when the marker is absent. The serialization pattern is identical for every source: `XRefModel(**ref) if ref else None`.
 
@@ -35,7 +35,7 @@ class XEditorialRefModel(BaseModel):
     rationale: str
 ```
 
-The marker dict stored by `markers.set_x_editorial_ref` has exactly `{angle, rationale}` keys (set in `roboco/services/x_engine.py` when `XEngine.materialize_editorial_post` originates a draft from the `propose_editorial_post` Board Program verb). `markers.get_x_editorial_ref` returns `dict[str, Any] | None` — the same shape as `get_x_campaign_ref` — so the serialization is a direct parallel: `editorial = markers.get_x_editorial_ref(task)` then `editorial=XEditorialRefModel(**editorial) if editorial else None` in both `to_response` and `to_history_response`.
+The marker dict stored by `markers.set_x_editorial_ref` has exactly `{angle, rationale}` keys (set in `robofleet/services/x_engine.py` when `XEngine.materialize_editorial_post` originates a draft from the `propose_editorial_post` Board Program verb). `markers.get_x_editorial_ref` returns `dict[str, Any] | None` — the same shape as `get_x_campaign_ref` — so the serialization is a direct parallel: `editorial = markers.get_x_editorial_ref(task)` then `editorial=XEditorialRefModel(**editorial) if editorial else None` in both `to_response` and `to_history_response`.
 
 When the `x_editorial_ref` marker is absent (any non-editorial source), `editorial` is `None`. The field is placed after `campaign` on both response models, matching the source-registration order in the engine.
 

@@ -17,7 +17,7 @@ Each takes `findings: list[dict]` — a list of structured findings. The legacy 
 
 ```python
 {
-    "file": "roboco/api/routes/rate_limit.py",  # optional; repo-relative, no ".."
+    "file": "robofleet/api/routes/rate_limit.py",  # optional; repo-relative, no ".."
     "line": 88,  # optional; >= 1
     "severity": "blocker",  # required: blocker | major | minor | nit
     "criterion": "<acceptance-criterion id or exact text>",  # optional

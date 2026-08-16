@@ -1,8 +1,8 @@
 # Web Research Tools
 
-Two tools on the `roboco-search` MCP server: `web_search` and `web_fetch`. Mounted only for **Board + PM roles** — `cell_pm`, `main_pm`, `product_owner`, `head_marketing` — and only when `ROBOFLEET_RESEARCH_ENABLED` is true (default **on**; see `docs/rag/architecture/config-reference.md`). Every other role has no access.
+Two tools on the `robofleet-search` MCP server: `web_search` and `web_fetch`. Mounted only for **Board + PM roles** — `cell_pm`, `main_pm`, `product_owner`, `head_marketing` — and only when `ROBOFLEET_RESEARCH_ENABLED` is true (default **on**; see `docs/rag/architecture/config-reference.md`). Every other role has no access.
 
-Calls flow agent → `roboco-search` MCP → `/api/research/search` or `/api/research/fetch` → `ResearchService` → the configured provider. The provider API key lives only in the server-side orchestrator process — it is never injected into an agent container, and the agent itself never egresses; the provider's own API does.
+Calls flow agent → `robofleet-search` MCP → `/api/research/search` or `/api/research/fetch` → `ResearchService` → the configured provider. The provider API key lives only in the server-side orchestrator process — it is never injected into an agent container, and the agent itself never egresses; the provider's own API does.
 
 ## `web_search`
 
@@ -36,7 +36,7 @@ Web research is external, unverified-by-the-org information — treat it accordi
 
 1. **Always cite the URL** for any fact you rely on in a decision, a `delegate` description, or a `dm` message.
 2. **Persist key findings** with `note(scope="reflect", ...)` so the source survives beyond your own context window and the team keeps it, not just you.
-3. Do not treat a search `answer` or a fetched page as ground truth about RoboCo itself — it is about the outside world (competitors, libraries, market trends), not this codebase.
+3. Do not treat a search `answer` or a fetched page as ground truth about RoboFleet itself — it is about the outside world (competitors, libraries, market trends), not this codebase.
 
 ## Daily quota
 

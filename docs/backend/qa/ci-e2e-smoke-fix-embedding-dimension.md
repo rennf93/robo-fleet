@@ -38,7 +38,7 @@ Now the seeded placeholder vector always matches the table's actual column width
 For future e2e smoke tests that seed placeholder data into a schema initialized at app startup, source placeholder dimensions from the runtime settings, not hardcoded constants:
 
 ```python
-from roboco.config import settings
+from robofleet.config import settings
 
 # Correct: placeholder always matches runtime schema
 placeholder_dim = settings.embedding_dimensions

@@ -2,7 +2,7 @@
 
 ## What It Is
 
-Fourteen periodic/event-driven origination cycles — the Board actually doing strategic work instead of only reviewing it — ride one generic registry + engine instead of bespoke per-engine loops. `BoardProgram` (`roboco/foundation/policy/board_programs.py`) is a frozen registry entry; `PROGRAMS` holds all fourteen. `BoardProgramEngine` (`roboco/services/board_programs.py`) is the shared trigger/dedup/originate/LEARN machinery every entry rides. Every artifact any program produces is HELD — the CEO is the only path to materialization. Nothing auto-starts, auto-posts, or auto-merges.
+Fourteen periodic/event-driven origination cycles — the Board actually doing strategic work instead of only reviewing it — ride one generic registry + engine instead of bespoke per-engine loops. `BoardProgram` (`robofleet/foundation/policy/board_programs.py`) is a frozen registry entry; `PROGRAMS` holds all fourteen. `BoardProgramEngine` (`robofleet/services/board_programs.py`) is the shared trigger/dedup/originate/LEARN machinery every entry rides. Every artifact any program produces is HELD — the CEO is the only path to materialization. Nothing auto-starts, auto-posts, or auto-merges.
 
 The lifecycle is uniform across every program:
 
@@ -81,7 +81,7 @@ Pest Control, Spackle, Mirror, and Dogfood share one round-robin picker, `pick_r
 
 ## Panel and API
 
-`GET /api/board-programs` and `POST /api/board-programs/{key}/run-now` (`roboco/api/routes/board_programs.py`, CEO-only, `require_ceo_role`) back the Board Programs page (Business section, `board-programs-card.tsx`): each program's live enablement, trigger kind, scope, opted-in project slugs, last-run timestamp, whether a cycle is currently open, and the most recent closed cycle's summary — plus a `Switch` that writes `board_program.{key}.enabled` through the generic feature-flag settings endpoint and a "Run now" button (disabled while a cycle is already open) that calls `open_program_cycle` off-schedule. `run-now` 404s on an unregistered key and 409s when the program is disabled, already has an open cycle, or (a project-scoped program) has no opted-in project — the three collapse into one `None` result with no finer-grained distinction available to the caller.
+`GET /api/board-programs` and `POST /api/board-programs/{key}/run-now` (`robofleet/api/routes/board_programs.py`, CEO-only, `require_ceo_role`) back the Board Programs page (Business section, `board-programs-card.tsx`): each program's live enablement, trigger kind, scope, opted-in project slugs, last-run timestamp, whether a cycle is currently open, and the most recent closed cycle's summary — plus a `Switch` that writes `board_program.{key}.enabled` through the generic feature-flag settings endpoint and a "Run now" button (disabled while a cycle is already open) that calls `open_program_cycle` off-schedule. `run-now` 404s on an unregistered key and 409s when the program is disabled, already has an open cycle, or (a project-scoped program) has no opted-in project — the three collapse into one `None` result with no finer-grained distinction available to the caller.
 
 Per-program held artifacts reuse existing queues where the shape matches — the roadmap review queue, the X post queue (Megaphone/Barfly/War Room/spotlight all land there) — rather than growing a new panel surface per program; reports (Periscope, Sentinel) and process-change items (Coroner) and the playbook curation queue (Librarian) are the only genuinely distinct surfaces.
 

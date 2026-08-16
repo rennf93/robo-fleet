@@ -40,7 +40,7 @@ Those observations are the "needs your attention" signals shown on the Dashboard
 
 ## Board Program Registry (Printer and thirteen siblings)
 
-The **roadmap engine** described here is now `roadmap` ("Printer") — one entry in a fourteen-program registry (`roboco/foundation/policy/board_programs.py`) that also covers Pest Control, Spackle, Scales, Dogfood (Product Owner), Periscope, Megaphone, Mirror, Barfly, War Room, x_feature spotlight (Head of Marketing), and Coroner, Librarian, Sentinel (Auditor). See `docs/rag/architecture/board-programs.md` for the full catalog and each program's exact verb call shape; this section keeps Printer's own mechanics as the worked example, since every cron/metric program follows the identical shape.
+The **roadmap engine** described here is now `roadmap` ("Printer") — one entry in a fourteen-program registry (`robofleet/foundation/policy/board_programs.py`) that also covers Pest Control, Spackle, Scales, Dogfood (Product Owner), Periscope, Megaphone, Mirror, Barfly, War Room, x_feature spotlight (Head of Marketing), and Coroner, Librarian, Sentinel (Auditor). See `docs/rag/architecture/board-programs.md` for the full catalog and each program's exact verb call shape; this section keeps Printer's own mechanics as the worked example, since every cron/metric program follows the identical shape.
 
 Printer is a weekly counterpart to the pitch pipeline: instead of a one-off product proposal, the Product Owner explores the company's projects, charter, recent releases, and metrics, then proposes one themed **cycle** of 3-7 roadmap item drafts.
 

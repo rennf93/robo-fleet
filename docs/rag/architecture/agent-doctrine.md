@@ -1,6 +1,6 @@
 # Agent Doctrine Layers
 
-How `compose_prompt` (`roboco/agents/factories/_base.py`) assembles an agent's system prompt at spawn, and where the optional doctrine layers sit. Doctrine is prompt-only — no hooks, no grok-path changes — and gated by a single flag.
+How `compose_prompt` (`robofleet/agents/factories/_base.py`) assembles an agent's system prompt at spawn, and where the optional doctrine layers sit. Doctrine is prompt-only — no hooks, no grok-path changes — and gated by a single flag.
 
 ## Layer order
 
@@ -27,7 +27,7 @@ The order is load-bearing: lifecycle precedes base so the agent reads its allowe
 
 `ponytail_doctrine_layer(prompts_path, role)` returns the vendored Ponytail build-laziness doctrine, gated on the **same** `fable_mode_enabled` flag (no separate flag — ponytail is Fable's complementary build-doctrine). Slotted into `compose_prompt` immediately after `fable_doctrine_layer`. Role-scoped:
 
-- **Developers** (`AgentRole.DEVELOPER`) → `agents/prompts/doctrine/ponytail.md`: the full ladder (YAGNI → reuse-in-this-codebase → stdlib → native-platform → installed-dep → one-line → minimal), the rules, the `ponytail:` comment convention, an Intensity table, and a 5-point RoboCo preamble that makes the ladder yield to the Architectural Conventions Standard (placement), the 80% coverage gate + QA review + self-verification, the per-team design bar, task hygiene, and reviewer feedback. The layer appends a one-line `**Operative intensity: {settings.ponytail_intensity}.**` directive that the Intensity table resolves into concrete behavior.
+- **Developers** (`AgentRole.DEVELOPER`) → `agents/prompts/doctrine/ponytail.md`: the full ladder (YAGNI → reuse-in-this-codebase → stdlib → native-platform → installed-dep → one-line → minimal), the rules, the `ponytail:` comment convention, an Intensity table, and a 5-point RoboFleet preamble that makes the ladder yield to the Architectural Conventions Standard (placement), the 80% coverage gate + QA review + self-verification, the per-team design bar, task hygiene, and reviewer feedback. The layer appends a one-line `**Operative intensity: {settings.ponytail_intensity}.**` directive that the Intensity table resolves into concrete behavior.
 - **Every other role** → `agents/prompts/doctrine/ponytail-ethos.md`: the ethos-only cut — the code-mechanics rungs (the ladder) and the Intensity table are removed so they can't leak into prose artifacts (task plans, review notes, docs). The 6th preamble point guards free-text field obligations (`ac_verdicts`, `findings`, `dev_notes`, `qa_notes`). No intensity directive (ethos runs a fixed restrained stance regardless of `ponytail_intensity`).
 
 Source: ponytail plugin (MIT, Copyright (c) 2026 DietrichGebert), vendored trimmed, YAML frontmatter stripped. Both doctrine files are static markdown with no DB/project dependency — the layer resolves synchronously inside `compose_prompt`, like `fable_doctrine_layer`.
@@ -36,7 +36,7 @@ Source: ponytail plugin (MIT, Copyright (c) 2026 DietrichGebert), vendored trimm
 
 ## Intensity knob
 
-`ROBOFLEET_PONYTAIL_INTENSITY` (env) / `settings.ponytail_intensity` (`roboco/config.py`, `Literal["lite","full","ultra"]`, default `full`). A **string value**, not a feature flag — no `FEATURE_FLAGS` entry, no panel toggle. pydantic validates the `Literal` at Settings instantiation, so an invalid env value raises at startup.
+`ROBOFLEET_PONYTAIL_INTENSITY` (env) / `settings.ponytail_intensity` (`robofleet/config.py`, `Literal["lite","full","ultra"]`, default `full`). A **string value**, not a feature flag — no `FEATURE_FLAGS` entry, no panel toggle. pydantic validates the `Literal` at Settings instantiation, so an invalid env value raises at startup.
 
 | Level | Developer behavior |
 |-------|--------------------|
@@ -53,5 +53,5 @@ Non-developers get no dial — `ultra` is wrong for prose artifacts, so the etho
 | `agents/prompts/doctrine/fable.md` | Fable behavioral doctrine (0.18.0). |
 | `agents/prompts/doctrine/ponytail.md` | Ponytail full doctrine — developers (0.19.0). |
 | `agents/prompts/doctrine/ponytail-ethos.md` | Ponytail ethos-only — non-developers (0.19.0). |
-| `roboco/agents/factories/_base.py` | `compose_prompt`, `fable_doctrine_layer`, `ponytail_doctrine_layer`. |
-| `roboco/config.py` | `fable_mode_enabled` (gates both), `ponytail_intensity` (string value). |
+| `robofleet/agents/factories/_base.py` | `compose_prompt`, `fable_doctrine_layer`, `ponytail_doctrine_layer`. |
+| `robofleet/config.py` | `fable_mode_enabled` (gates both), `ponytail_intensity` (string value). |

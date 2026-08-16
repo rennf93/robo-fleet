@@ -1,60 +1,60 @@
 # Slice: api-routes-schemas
 
 ## Purpose
-The FastAPI surface of RoboCo: every HTTP route under `roboco/api/routes/` (the operator/panel `api/*` CRUD + dashboard/orchestrator/a2a/live bridges) and the agent-gateway `api/v1/flow/*` (intent verbs) + `api/v1/do/*` (content tools), with Pydantic request/response schemas under `roboco/api/schemas/`. Routes are thin handlers that resolve services via `Depends` and return typed responses; all agent-gateway verbs funnel through the Choreographer.
+The FastAPI surface of RoboFleet: every HTTP route under `robofleet/api/routes/` (the operator/panel `api/*` CRUD + dashboard/orchestrator/a2a/live bridges) and the agent-gateway `api/v1/flow/*` (intent verbs) + `api/v1/do/*` (content tools), with Pydantic request/response schemas under `robofleet/api/schemas/`. Routes are thin handlers that resolve services via `Depends` and return typed responses; all agent-gateway verbs funnel through the Choreographer.
 
 ## Files
 
 | Path | Role |
 |------|------|
-| roboco/api/routes/health.py | Liveness/readiness (DB + Redis probes). |
-| roboco/api/routes/agents.py | List/get agents. |
-| roboco/api/routes/notifications.py | Notification list/ack/send. |
-| roboco/api/routes/stream.py | Agent stream chunk/complete/extract + permissions. |
-| roboco/api/routes/journals.py | Journal entries, search, growth stats. |
-| roboco/api/routes/kanban.py | Per-team kanban boards + main-pm/board/stats. |
-| roboco/api/routes/cockpit.py | Cockpit summary/signals. |
-| roboco/api/routes/company_goals.py | Company goals get/put. |
-| roboco/api/routes/settings.py | Settings + feature-flags get/set. |
-| roboco/api/routes/dashboard.py | CEO/auditor/kanban/metrics/agents/activity dashboards. |
-| roboco/api/routes/tasks.py | Task CRUD + lifecycle transitions (claim/start/verify/qa/complete...). |
-| roboco/api/routes/work_session.py | Work-session list/commit/files/PR/merge/complete/abandon. |
-| roboco/api/routes/git.py | Per-project git status/log/diff/commit/push/PR/rebase/branch-cleanup sweep. |
-| roboco/api/routes/project.py | Project CRUD + workspace/sync/access + conventions. |
-| roboco/api/routes/product.py | Product CRUD. |
-| roboco/api/routes/optimal.py | RAG: kb/search, rag/query, mentor/ask, learnings, decisions, review. |
-| roboco/api/routes/research.py | Web search/fetch. |
-| roboco/api/routes/orchestrator.py | CEO-gated spawn/stop/resolve-wait/mark-waiting + status. |
-| roboco/api/routes/a2a.py | Agent-to-agent inbox/conversations/tasks + SSE streams. |
-| roboco/api/routes/prompter_live.py | Live Intake chat (start/stream/messages/confirm/confirm-batch). |
-| roboco/api/routes/secretary.py | Company state + CEO directives confirm/reject. |
-| roboco/api/routes/secretary_live.py | Live Secretary chat (start/stream/messages/stop/events). |
-| roboco/api/routes/release.py | CEO-only release proposal approve/reject. |
-| roboco/api/routes/playbooks.py | Playbook approve/reject/archive (Auditor/CEO). |
-| roboco/api/routes/pitch.py | Pitch create/list/approve/reject. |
-| roboco/api/routes/provider.py | Provider catalog + ollama/grok/self-hosted key + mode + routing presets (`/presets` list/save/apply/delete). |
-| roboco/api/routes/github_app.py | GitHub App credentials CRUD (App id + private key) + installation/installation-repo listing (backs the create/edit-project repo picker). |
-| roboco/api/routes/usage.py | Token usage summary/time-series/by-agent/team/model/role/sessions, cache-efficiency, spawn-waste (per-role unproductive-spawn rate + respawn strikes). |
-| roboco/api/routes/system.py | System-wide info. |
-| roboco/api/routes/docs.py | Project docs write/read/list/delete. |
-| roboco/api/routes/x.py | X (Twitter) engine — CEO-only: list/approve/reject held draft posts + set/status OAuth 1.0a credentials. |
-| roboco/api/routes/roadmap.py | Board roadmap engine — CEO-only: list open cycles + per-item approve/reject. |
-| roboco/api/routes/telegram.py | Telegram credentials CRUD (CEO-only, write-only) + `webapp_auth_router` — a separate public, pre-auth `POST /webapp-auth` object, conditionally mounted (`telegram_miniapp_enabled` AND `cloud_auth_enabled`) directly inline in `app.py`'s `create_app()` (not by a helper function in this module or in `utils/telegram.py` — see the 2026-08-08 correction below); validates a Mini App's `initData` and mints the cloud-auth session cookie; the mount also installs its own unconditional `LoginRateLimiter`. |
-| roboco/api/auth/ | Cloud auth (FastAPI Users, default off): `backend.py` (cookie transport + password-fingerprint-bound JWT strategy), `manager.py` (`UserManager` + DI chain), `session.py` (`resolve_session_user`, shared by the HTTP dual-path and the WS panel-token gate), `seed.py` (idempotent single seeded CEO login upsert), `routes.py` (always-public `/auth/status` + conditional login/logout mount), `login_limit.py` (`LoginRateLimiter` — per-IP POST rate limit, path-keyed via a `paths: tuple[str, ...]` set so `/login` and `telegram.py`'s `/webapp-auth` get independent buckets). |
-| roboco/api/routes/v1/_role_dep.py | Thin: builds the module-level per-role guard instances (`require_dev`, `require_qa`, ...) from `_require_roles` + `require_any_authenticated_agent` from `_require_authenticated_agent()` — both re-imported, along with `envelope_to_response`/`_log_rejection`/`_require_authenticated_agent`, from `roboco/api/utils/v1_role_dep.py` (extracted 2026-08-08, see below). |
-| roboco/api/routes/v1/do.py | Content verbs `/api/v1/do/*` (commit/note/say/dm/evidence/playbook...). |
-| roboco/api/routes/v1/flow_dev.py | Developer flow verbs. |
-| roboco/api/routes/v1/flow_qa.py | QA flow verbs (claim/pass/fail_review). |
-| roboco/api/routes/v1/flow_doc.py | Documenter flow verbs. |
-| roboco/api/routes/v1/flow_cell_pm.py | Cell-PM flow verbs (delegate/submit_up/triage/complete...). |
-| roboco/api/routes/v1/flow_main_pm.py | Main-PM flow verbs (submit_root/triage_all/escalate_to_ceo...). |
-| roboco/api/routes/v1/flow_board.py | Board (product_owner/head_marketing) triage/escalate_to_ceo. |
-| roboco/api/routes/v1/flow_auditor.py | Auditor triage/i_am_idle. |
-| roboco/api/routes/v1/flow_pr_reviewer.py | PR-reviewer verbs incl. gate pr_pass/pr_fail. |
-| roboco/api/utils/*.py | Per-route-file non-`@router` helper modules (guards, response/status mappers, error translation) extracted out of `roboco/api/routes/` in the 2026-08-08 `no_helpers_in_routes` cleanup (batches A + B) — see `docs/map/_complete_map.md`'s "Route-helper extraction" entries for the full file-by-file breakdown. `utils/telegram.py` holds only the side-effect-free `_require_ceo` helper (its earlier tenant `mount_telegram_miniapp_auth` was app-wiring, not a helper, and was relocated inline into `app.py` in the round-2 fix below — not restored to `routes/telegram.py` either, since a plain function there still trips `no_helpers_in_routes`). `utils/v1_role_dep.py` (new, PR #846) holds the 4 helpers extracted out of `routes/v1/_role_dep.py`, a file left untouched by both prior batches. |
-| roboco/api/schemas/*.py | Per-domain Pydantic request/response models (one per route file). |
-| roboco/api/schemas/v1/flow.py | All flow-verb request bodies + `StrList` coercion validator. |
-| roboco/api/schemas/v1/do.py | All do-verb request bodies. |
+| robofleet/api/routes/health.py | Liveness/readiness (DB + Redis probes). |
+| robofleet/api/routes/agents.py | List/get agents. |
+| robofleet/api/routes/notifications.py | Notification list/ack/send. |
+| robofleet/api/routes/stream.py | Agent stream chunk/complete/extract + permissions. |
+| robofleet/api/routes/journals.py | Journal entries, search, growth stats. |
+| robofleet/api/routes/kanban.py | Per-team kanban boards + main-pm/board/stats. |
+| robofleet/api/routes/cockpit.py | Cockpit summary/signals. |
+| robofleet/api/routes/company_goals.py | Company goals get/put. |
+| robofleet/api/routes/settings.py | Settings + feature-flags get/set. |
+| robofleet/api/routes/dashboard.py | CEO/auditor/kanban/metrics/agents/activity dashboards. |
+| robofleet/api/routes/tasks.py | Task CRUD + lifecycle transitions (claim/start/verify/qa/complete...). |
+| robofleet/api/routes/work_session.py | Work-session list/commit/files/PR/merge/complete/abandon. |
+| robofleet/api/routes/git.py | Per-project git status/log/diff/commit/push/PR/rebase/branch-cleanup sweep. |
+| robofleet/api/routes/project.py | Project CRUD + workspace/sync/access + conventions. |
+| robofleet/api/routes/product.py | Product CRUD. |
+| robofleet/api/routes/optimal.py | RAG: kb/search, rag/query, mentor/ask, learnings, decisions, review. |
+| robofleet/api/routes/research.py | Web search/fetch. |
+| robofleet/api/routes/orchestrator.py | CEO-gated spawn/stop/resolve-wait/mark-waiting + status. |
+| robofleet/api/routes/a2a.py | Agent-to-agent inbox/conversations/tasks + SSE streams. |
+| robofleet/api/routes/prompter_live.py | Live Intake chat (start/stream/messages/confirm/confirm-batch). |
+| robofleet/api/routes/secretary.py | Company state + CEO directives confirm/reject. |
+| robofleet/api/routes/secretary_live.py | Live Secretary chat (start/stream/messages/stop/events). |
+| robofleet/api/routes/release.py | CEO-only release proposal approve/reject. |
+| robofleet/api/routes/playbooks.py | Playbook approve/reject/archive (Auditor/CEO). |
+| robofleet/api/routes/pitch.py | Pitch create/list/approve/reject. |
+| robofleet/api/routes/provider.py | Provider catalog + ollama/grok/self-hosted key + mode + routing presets (`/presets` list/save/apply/delete). |
+| robofleet/api/routes/github_app.py | GitHub App credentials CRUD (App id + private key) + installation/installation-repo listing (backs the create/edit-project repo picker). |
+| robofleet/api/routes/usage.py | Token usage summary/time-series/by-agent/team/model/role/sessions, cache-efficiency, spawn-waste (per-role unproductive-spawn rate + respawn strikes). |
+| robofleet/api/routes/system.py | System-wide info. |
+| robofleet/api/routes/docs.py | Project docs write/read/list/delete. |
+| robofleet/api/routes/x.py | X (Twitter) engine — CEO-only: list/approve/reject held draft posts + set/status OAuth 1.0a credentials. |
+| robofleet/api/routes/roadmap.py | Board roadmap engine — CEO-only: list open cycles + per-item approve/reject. |
+| robofleet/api/routes/telegram.py | Telegram credentials CRUD (CEO-only, write-only) + `webapp_auth_router` — a separate public, pre-auth `POST /webapp-auth` object, conditionally mounted (`telegram_miniapp_enabled` AND `cloud_auth_enabled`) directly inline in `app.py`'s `create_app()` (not by a helper function in this module or in `utils/telegram.py` — see the 2026-08-08 correction below); validates a Mini App's `initData` and mints the cloud-auth session cookie; the mount also installs its own unconditional `LoginRateLimiter`. |
+| robofleet/api/auth/ | Cloud auth (FastAPI Users, default off): `backend.py` (cookie transport + password-fingerprint-bound JWT strategy), `manager.py` (`UserManager` + DI chain), `session.py` (`resolve_session_user`, shared by the HTTP dual-path and the WS panel-token gate), `seed.py` (idempotent single seeded CEO login upsert), `routes.py` (always-public `/auth/status` + conditional login/logout mount), `login_limit.py` (`LoginRateLimiter` — per-IP POST rate limit, path-keyed via a `paths: tuple[str, ...]` set so `/login` and `telegram.py`'s `/webapp-auth` get independent buckets). |
+| robofleet/api/routes/v1/_role_dep.py | Thin: builds the module-level per-role guard instances (`require_dev`, `require_qa`, ...) from `_require_roles` + `require_any_authenticated_agent` from `_require_authenticated_agent()` — both re-imported, along with `envelope_to_response`/`_log_rejection`/`_require_authenticated_agent`, from `robofleet/api/utils/v1_role_dep.py` (extracted 2026-08-08, see below). |
+| robofleet/api/routes/v1/do.py | Content verbs `/api/v1/do/*` (commit/note/say/dm/evidence/playbook...). |
+| robofleet/api/routes/v1/flow_dev.py | Developer flow verbs. |
+| robofleet/api/routes/v1/flow_qa.py | QA flow verbs (claim/pass/fail_review). |
+| robofleet/api/routes/v1/flow_doc.py | Documenter flow verbs. |
+| robofleet/api/routes/v1/flow_cell_pm.py | Cell-PM flow verbs (delegate/submit_up/triage/complete...). |
+| robofleet/api/routes/v1/flow_main_pm.py | Main-PM flow verbs (submit_root/triage_all/escalate_to_ceo...). |
+| robofleet/api/routes/v1/flow_board.py | Board (product_owner/head_marketing) triage/escalate_to_ceo. |
+| robofleet/api/routes/v1/flow_auditor.py | Auditor triage/i_am_idle. |
+| robofleet/api/routes/v1/flow_pr_reviewer.py | PR-reviewer verbs incl. gate pr_pass/pr_fail. |
+| robofleet/api/utils/*.py | Per-route-file non-`@router` helper modules (guards, response/status mappers, error translation) extracted out of `robofleet/api/routes/` in the 2026-08-08 `no_helpers_in_routes` cleanup (batches A + B) — see `docs/map/_complete_map.md`'s "Route-helper extraction" entries for the full file-by-file breakdown. `utils/telegram.py` holds only the side-effect-free `_require_ceo` helper (its earlier tenant `mount_telegram_miniapp_auth` was app-wiring, not a helper, and was relocated inline into `app.py` in the round-2 fix below — not restored to `routes/telegram.py` either, since a plain function there still trips `no_helpers_in_routes`). `utils/v1_role_dep.py` (new, PR #846) holds the 4 helpers extracted out of `routes/v1/_role_dep.py`, a file left untouched by both prior batches. |
+| robofleet/api/schemas/*.py | Per-domain Pydantic request/response models (one per route file). |
+| robofleet/api/schemas/v1/flow.py | All flow-verb request bodies + `StrList` coercion validator. |
+| robofleet/api/schemas/v1/do.py | All do-verb request bodies. |
 
 ## Key Endpoints
 
@@ -149,7 +149,7 @@ graph TD
 
 ## Logical Tree
 ```
-roboco/api/
+robofleet/api/
 ├── routes/
 │   ├── operator-panel (api/*)
 │   │   ├── health.py            liveness/readiness
@@ -212,17 +212,17 @@ roboco/api/
 
 ## Dependencies
 - FastAPI + sse-starlette (SSE), pydantic v2.
-- `roboco/api/deps.py` — shared deps (DbSession, agent context, HMAC, orchestrator).
-- `roboco/api/middleware.py` — exception handlers + correlation/log middleware.
-- `roboco/services/*` — TaskService, GitService, OptimalService, AgentOrchestrator, Choreographer, ContentActions, ReleaseProposalService, PrompterService, SecretaryService, MetricsService, XPostService, XCredentialsService, RoadmapService, etc.
-- `roboco/api/auth/*` (`auth_backend`, `get_user_manager`, `resolve_session_user`, `mount_cloud_auth`) — cloud auth, consumed by `deps.get_agent_context`'s dual-path and the WS panel-token gate.
-- `roboco/foundation/identity.py` (`Role`) + `roboco/agents_config.py` (`verify_agent_token`, `CEO_AGENT_ID`).
-- `roboco/api/websocket.py` + `websocket_bridge.py` (WS event forwarding).
+- `robofleet/api/deps.py` — shared deps (DbSession, agent context, HMAC, orchestrator).
+- `robofleet/api/middleware.py` — exception handlers + correlation/log middleware.
+- `robofleet/services/*` — TaskService, GitService, OptimalService, AgentOrchestrator, Choreographer, ContentActions, ReleaseProposalService, PrompterService, SecretaryService, MetricsService, XPostService, XCredentialsService, RoadmapService, etc.
+- `robofleet/api/auth/*` (`auth_backend`, `get_user_manager`, `resolve_session_user`, `mount_cloud_auth`) — cloud auth, consumed by `deps.get_agent_context`'s dual-path and the WS panel-token gate.
+- `robofleet/foundation/identity.py` (`Role`) + `robofleet/agents_config.py` (`verify_agent_token`, `CEO_AGENT_ID`).
+- `robofleet/api/websocket.py` + `websocket_bridge.py` (WS event forwarding).
 
 ## Entry Points
-- `roboco/api/app.py` `create_app()` builds the FastAPI app, mounts all routers under `/api` (prefix) + `/ws` (WS router).
-- `roboco/api/routes/v1/_role_dep.py` is imported by every flow router + do + a2a for HMAC/role guards and `envelope_to_response`.
-- `roboco/api/routes/orchestrator.py` router constructed with `dependencies=[Depends(_require_ceo)]` (router-wide CEO gate).
+- `robofleet/api/app.py` `create_app()` builds the FastAPI app, mounts all routers under `/api` (prefix) + `/ws` (WS router).
+- `robofleet/api/routes/v1/_role_dep.py` is imported by every flow router + do + a2a for HMAC/role guards and `envelope_to_response`.
+- `robofleet/api/routes/orchestrator.py` router constructed with `dependencies=[Depends(_require_ceo)]` (router-wide CEO gate).
 
 ## Config Flags
 - Auth-gate mode: `_auth_required()` (env-driven; HMAC mandatory in prod-ish, optional in dev) — `api/deps.py`.
@@ -247,18 +247,18 @@ roboco/api/
 - None material.
 
 ## Changes Since Baseline
-`git log fd10cc86..HEAD -- roboco/api/routes/ roboco/api/schemas/`:
+`git log fd10cc86..HEAD -- robofleet/api/routes/ robofleet/api/schemas/`:
 - `15effce0` Chore: 141 Gaps fill-in (#283) — broad route/schema hardening pass (the only logic-touching commit in range at the time this section was last refreshed).
 
 > Post-snapshot: many further commits touch this slice (536bbb64, df87fcf0, a8cb2470, 0ca9d91b, cfde4369, 0f1ed3cc, 1c87a4e4, and the three below) — only the wave-1/2/2c ones relevant to this pass are itemized; a full re-audit of the intervening route/schema history is still owed.
 > - `d1cf6ecb` Wave 1 (#295) — adds `GET /api/tasks/summary?q=` search (`TaskService.search_tasks`), `GET /api/prompter/live/{id}/search-tasks` (intake memory), `GET /api/secretary/tasks?q=` (Secretary task-by-name lookup), and the Secretary `edit` directive action.
 > - `da563487` Wave 2 (#297) — adds the CEO-only `/api/a2a/chat/admin/{conversations,conversations/{id}/messages,conversations/{id}/reply}` routes (`_require_ceo`) for the A2A live view + reply-as-CEO.
-> - `876e19b3` Wave 2c (#298) — adds `/api/a2a/chat/admin/pairs` (the switchboard, same `_require_ceo` gate); tightens `/api/tasks` PATCH so cell/main PM roles get a content-only field allowlist instead of the unrestricted CEO/Board/Auditor admin bypass (`_pm_editor_scope` / `_enforce_pm_lighter_fields`, `roboco/api/routes/tasks.py:256,278`) — closes an over-permission hole where PM identities could edit any-team tasks via the ASSIGN-holding bypass.
+> - `876e19b3` Wave 2c (#298) — adds `/api/a2a/chat/admin/pairs` (the switchboard, same `_require_ceo` gate); tightens `/api/tasks` PATCH so cell/main PM roles get a content-only field allowlist instead of the unrestricted CEO/Board/Auditor admin bypass (`_pm_editor_scope` / `_enforce_pm_lighter_fields`, `robofleet/api/routes/tasks.py:256,278`) — closes an over-permission hole where PM identities could edit any-team tasks via the ASSIGN-holding bypass.
 > - `637c75dc` (2026-07-17, PR #546, "wave-1 quick wins") fix(api): normalize agent UUID to slug at the orchestrator route boundary — `_validated_agent_id` now also calls `_resolve_to_slug` after its path-injection checks, so a caller-supplied DB UUID (e.g. from the panel) resolves to the canonical slug before spawn/stop/status/resolve-wait/mark-waiting address the runtime, fixing UUID-named containers and registry misses.
 > - `496c24d1` (PR #548, "git hygiene", 2026-07-17) adds `POST /api/git/branches/cleanup` (PM/CEO role-gated like `/rebase`, rate-limit 5/60) + `GitBranchCleanupRequest`/`GitBranchCleanupResponse` schemas — cursor-resumable sweep of terminal tasks' remote+local branches, backing a confirm-dialog button on the panel Git page.
-> - `82642bea`+`e16fb634`+`8d727785` (2026-07-18, PR #554, Telegram V3 Mini App) adds `POST /api/telegram/webapp-auth` (`webapp_auth_router`, mounted only when `telegram_miniapp_enabled` AND `cloud_auth_enabled` via `mount_telegram_miniapp_auth`) + `TelegramWebAppAuthRequest` schema, exchanging a validated Telegram `initData` payload for the same cloud-auth session cookie `/api/auth/login` mints (binds to the CEO's stored `chat_id`, audits `telegram.webapp.login`); generalizes `LoginRateLimiter` from a single `prefix` to a `paths: tuple[str, ...]` set (`roboco/api/auth/login_limit.py`) so `/webapp-auth` gets its own unconditional per-IP bucket, independent of the guard middleware's `rate_limit` decorator; the fix commit also rejects a far-future `initData.auth_date` (only ±60s clock-skew tolerated) and anchors the panel's `/tg` matcher exclusion.
+> - `82642bea`+`e16fb634`+`8d727785` (2026-07-18, PR #554, Telegram V3 Mini App) adds `POST /api/telegram/webapp-auth` (`webapp_auth_router`, mounted only when `telegram_miniapp_enabled` AND `cloud_auth_enabled` via `mount_telegram_miniapp_auth`) + `TelegramWebAppAuthRequest` schema, exchanging a validated Telegram `initData` payload for the same cloud-auth session cookie `/api/auth/login` mints (binds to the CEO's stored `chat_id`, audits `telegram.webapp.login`); generalizes `LoginRateLimiter` from a single `prefix` to a `paths: tuple[str, ...]` set (`robofleet/api/auth/login_limit.py`) so `/webapp-auth` gets its own unconditional per-IP bucket, independent of the guard middleware's `rate_limit` decorator; the fix commit also rejects a far-future `initData.auth_date` (only ±60s clock-skew tolerated) and anchors the panel's `/tg` matcher exclusion.
 > - `baa87d58` (2026-07-19, PR #576, Telegram Mini App V4) adds `GET /api/telegram/today` (`require_ceo_role` + 30/60s rate limit) backed by new `TgCockpitService` + the `TelegramTodayResponse`/`TodayNeedsYou`/`TodayFleet`/`TodaySpend`/`TodayVelocity`/`TodayShip` schema family in `api/schemas/telegram.py` — see `docs/map/notification.md` for the service, `docs/map/panel.md` for the cockpit's Today tab.
-> - `461a6e1a`+`96401f4c`+`5f32d876` (2026-07-18/19, forge Phases 1-4, #571/#575/#581) — no new HTTP routes (the forge routing is internal to `GitService`), but `roboco/api/schemas/project.py`/`project_fields.py` gain `git_provider` (project CRUD schemas) and the shared `task_project_fields` helper the X/video routes now call — see `docs/map/worksession-git.md` and `docs/map/product-strategy-research-pitch.md`.
+> - `461a6e1a`+`96401f4c`+`5f32d876` (2026-07-18/19, forge Phases 1-4, #571/#575/#581) — no new HTTP routes (the forge routing is internal to `GitService`), but `robofleet/api/schemas/project.py`/`project_fields.py` gain `git_provider` (project CRUD schemas) and the shared `task_project_fields` helper the X/video routes now call — see `docs/map/worksession-git.md` and `docs/map/product-strategy-research-pitch.md`.
 > - ("panel-perf-p3-p4") adds `GET /api/dashboard/metrics/members` (batch scorecard fetch) — see `docs/map/metrics-observability.md`.
 > - `6c1a3b18`+`95114553` (2026-08-08, PR #846, `no_helpers_in_routes` placement fix) resolves two pr_gate findings the 2026-08-08 route-helper-extraction cleanup left open: (1) `mount_telegram_miniapp_auth` — app/route wiring, not a helper — is removed from both `utils/telegram.py` (where it forced a lazy back-import of `webapp_auth_router`) and, after a QA-caught round-2 relocation attempt into `routes/telegram.py` (still helper-forbidden), inlined directly into `app.py`'s `create_app()` at the existing mount call site; `utils/telegram.py` now holds only `_require_ceo`. (2) `routes/v1/_role_dep.py`'s 4 module-level helpers (`_require_roles`, `_require_authenticated_agent`, `envelope_to_response`, `_log_rejection`) — untouched by the prior batch-A/B cleanup — are extracted verbatim into new `utils/v1_role_dep.py`; `_role_dep.py` now only re-imports them and builds the per-role guard instances. No `@router` handler, path, or response schema changed in either fix.
 

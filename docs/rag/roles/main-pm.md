@@ -75,18 +75,18 @@ triage_all()  # actionable tasks across all teams (Main PM only)
 
 | MCP server            | Verbs you can call |
 |-----------------------|--------------------|
-| `roboco-flow`         | `triage`, `triage_all`, `give_me_work`, `i_will_plan`, `delegate`, `unblock`, `submit_root`, `complete`, `request_changes`, `escalate_up`, `escalate_to_ceo`, `resume`, `unclaim`, `i_am_idle` |
-| `roboco-do`           | `note`, `dm`, `notify`, `evidence`, `pr_update` |
-| `roboco-docs`         | `roboco_docs_write`, `roboco_docs_read`, `roboco_docs_list` |
-| `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-search`       | `web_search`, `web_fetch` (only when `ROBOFLEET_RESEARCH_ENABLED`, default on) |
-| `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
+| `robofleet-flow`         | `triage`, `triage_all`, `give_me_work`, `i_will_plan`, `delegate`, `unblock`, `submit_root`, `complete`, `request_changes`, `escalate_up`, `escalate_to_ceo`, `resume`, `unclaim`, `i_am_idle` |
+| `robofleet-do`           | `note`, `dm`, `notify`, `evidence`, `pr_update` |
+| `robofleet-docs`         | `robofleet_docs_write`, `robofleet_docs_read`, `robofleet_docs_list` |
+| `robofleet-git-readonly` | `robofleet_git_status`, `robofleet_git_log`, `robofleet_git_diff`, `robofleet_git_branch_list` |
+| `robofleet-search`       | `web_search`, `web_fetch` (only when `ROBOFLEET_RESEARCH_ENABLED`, default on) |
+| `robofleet-optimal`      | `robofleet_ask_mentor`, `robofleet_kb_search` |
 
 Native `git` commands are blocked by the bash-guard hook — use the read-only git views and let the choreographer handle PR merges on `complete`.
 
 ## Task-Edit Scope (PM lighter)
 
-Like the Cell PM, you do **not** get unrestricted task admin on the REST `PATCH /tasks/{id}` surface. `main_pm` is capped to the same content-only allowlist — `title`, `description`, `acceptance_criteria`, `priority` — with no status changes and no structural/ownership fields (`assigned_to`, `team`, `parent_task_id`, `dependency_ids`, `blocker_ids`, `plan`, `project_id`); those ride the gateway verbs (`delegate`, `reassign`, `unblock`, ...), not this PATCH surface. Full admin (any field, any team, status override) stays with CEO/Board/Auditor (`_pm_editor_scope` / `_enforce_pm_lighter_fields`, `roboco/api/routes/tasks.py`).
+Like the Cell PM, you do **not** get unrestricted task admin on the REST `PATCH /tasks/{id}` surface. `main_pm` is capped to the same content-only allowlist — `title`, `description`, `acceptance_criteria`, `priority` — with no status changes and no structural/ownership fields (`assigned_to`, `team`, `parent_task_id`, `dependency_ids`, `blocker_ids`, `plan`, `project_id`); those ride the gateway verbs (`delegate`, `reassign`, `unblock`, ...), not this PATCH surface. Full admin (any field, any team, status override) stays with CEO/Board/Auditor (`_pm_editor_scope` / `_enforce_pm_lighter_fields`, `robofleet/api/routes/tasks.py`).
 
 ## Projects and Git Tokens
 
@@ -110,7 +110,7 @@ head rung  ←  feature/main_pm/{root}   ←  feature/{cell}/{root}/{cell-pm}  �
 (CEO)            (you, via gate)              (cell PM, via gate)               (devs)
 ```
 
-"head rung" is the project's env-ladder head (`roboco.models.env_branches.head_branch`) — typically `master`, but never assume the literal string: a project with no declared environment ladder resolves this from `projects.default_branch`, so this is unchanged for most projects. See `CLAUDE.md` "Env-branches ladder".
+"head rung" is the project's env-ladder head (`robofleet.models.env_branches.head_branch`) — typically `master`, but never assume the literal string: a project with no declared environment ladder resolves this from `projects.default_branch`, so this is unchanged for most projects. See `CLAUDE.md` "Env-branches ladder".
 
 - A cell PM's `complete` merges a leaf PR into its cell branch; after the cell gate, its `complete` merges the cell→root PR into your root branch. You do not merge cell branches.
 - Once every cell's parent is terminal, **`submit_root(root_task_id, notes)`** opens the root→master PR and enters the in-path gate (`awaiting_pr_review`). The **main PR reviewer** checks the assembled root diff: `pr_pass` → `awaiting_pm_review`; `pr_fail` → `needs_revision` (owned by you, fix + re-`submit_root`). The reviewer's verdict + structured findings are carried in your task handoff (`revision_findings`), and re-`submit_root` is refused if the root PR is **unchanged** since the last `pr_fail` — fix and commit before re-submitting. If a still-open finding remains unresolved, `submit_root` itself refuses (name it via `resolved_findings=[...]` first — see `docs/rag/architecture/review-findings.md`).

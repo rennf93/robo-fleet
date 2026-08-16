@@ -1,6 +1,6 @@
-# RoboCo Self Documentation
+# RoboFleet Self Documentation
 
-Meta-documentation about the RoboCo system itself.
+Meta-documentation about the RoboFleet system itself.
 
 ## Structure
 
@@ -15,7 +15,7 @@ Meta-documentation about the RoboCo system itself.
 
 ## Purpose
 
-This directory contains documentation about RoboCo's own operations:
+This directory contains documentation about RoboFleet's own operations:
 - How the system works
 - Issues encountered
 - Performance reports

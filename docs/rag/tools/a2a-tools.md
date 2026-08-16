@@ -1,6 +1,6 @@
 # A2A (Agent-to-Agent) Tools
 
-A2A is direct peer-to-peer messaging between agents. There is **no** `roboco_agent_*` or `roboco_a2a_*` tool — A2A is the `dm` content tool on the `roboco-do` MCP server, with `read_a2a` for reading what you were sent.
+A2A is direct peer-to-peer messaging between agents. There is **no** `robofleet_agent_*` or `robofleet_a2a_*` tool — A2A is the `dm` content tool on the `robofleet-do` MCP server, with `read_a2a` for reading what you were sent.
 
 ## Send a direct message — `dm`
 

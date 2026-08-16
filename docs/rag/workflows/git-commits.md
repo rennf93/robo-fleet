@@ -14,16 +14,16 @@ You write the message — the prefix is added for you. Don't include `[task-id]`
 
 ## Who Can Commit
 
-`commit` is in the **roboco-do** MCP and is mounted only for **developers** and **documenters**. PMs delegate code work and call `complete` to merge.
+`commit` is in the **robofleet-do** MCP and is mounted only for **developers** and **documenters**. PMs delegate code work and call `complete` to merge.
 
-There is **no** `roboco_git_commit / _push / _create_pr` MCP tool. The single `commit` verb covers commit + push + PR-trigger via the choreographer.
+There is **no** `robofleet_git_commit / _push / _create_pr` MCP tool. The single `commit` verb covers commit + push + PR-trigger via the choreographer.
 
 ## Creating Commits
 
 ```python
 commit(
     message="Add rate limiting endpoint",
-    files=["roboco/api/routes/rate.py"],  # optional; defaults to all staged
+    files=["robofleet/api/routes/rate.py"],  # optional; defaults to all staged
 )
 ```
 
@@ -41,7 +41,7 @@ This automatically:
 
 1. Run tests: `uv run pytest` or `pnpm test`
 2. Run linter: `uv run ruff check .` or `pnpm lint`
-3. Run type check: `uv run mypy roboco/` or `pnpm typecheck`
+3. Run type check: `uv run mypy robofleet/` or `pnpm typecheck`
 4. Format code: `uv run ruff format .` or `pnpm format`
 
 **Never use `uv run --active` or point uv at `/app`.** Bare `uv run` is cwd-relative and resolves your workspace venv (symlinked into the worktree) — that's always what you want. `--active` retargets onto the image-baked `/app/.venv` (the MCP-gateway venv) and rebuilds it, bricking every tool you have. The bash-guard blocks it; if you ever feel pushed toward `--active`, call `i_am_blocked(reason='workspace venv broken')` instead. See `docs/rag/architecture/workspaces.md`.
@@ -56,10 +56,10 @@ You don't push or create a PR yourself. The choreographer pushed the commit duri
 ## Viewing Commits and History
 
 ```python
-# Read-only inspection (any role) — roboco-git-readonly MCP
+# Read-only inspection (any role) — robofleet-git-readonly MCP
 # project_slug is optional — omit it and your own project is used.
-status = roboco_git_status()
-log = roboco_git_log(branch="feature/backend/a1b2c3d4--def67890")
-diff = roboco_git_diff()
-branches = roboco_git_branch_list()
+status = robofleet_git_status()
+log = robofleet_git_log(branch="feature/backend/a1b2c3d4--def67890")
+diff = robofleet_git_diff()
+branches = robofleet_git_branch_list()
 ```

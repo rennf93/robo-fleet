@@ -1,36 +1,36 @@
 ## Purpose
-This slice is the packaging, build, and runtime-tooling layer of RoboCo: the Docker compose topologies (build-from-source and pre-built registry), per-service Dockerfiles (orchestrator + a family of agent role images extending a shared agent-base, plus the Next.js panel and nginx proxy), the uv/pnpm dependency manifests, the Makefile quality-gate and ops targets, the Pydantic-settings config (roboco/config.py) that every service reads, the bootstrap/CLI entrypoints that start the orchestrator, the structured-logging + exception hierarchy wired across the app, and the ops/CI helper scripts (lifecycle-artifact regeneration, postgres enum-parity verification, markdown reflow, runtime-state reset) and per-agent Claude/Grok hook scripts.
+This slice is the packaging, build, and runtime-tooling layer of RoboFleet: the Docker compose topologies (build-from-source and pre-built registry), per-service Dockerfiles (orchestrator + a family of agent role images extending a shared agent-base, plus the Next.js panel and nginx proxy), the uv/pnpm dependency manifests, the Makefile quality-gate and ops targets, the Pydantic-settings config (robofleet/config.py) that every service reads, the bootstrap/CLI entrypoints that start the orchestrator, the structured-logging + exception hierarchy wired across the app, and the ops/CI helper scripts (lifecycle-artifact regeneration, postgres enum-parity verification, markdown reflow, runtime-state reset) and per-agent Claude/Grok hook scripts.
 
 ## Files
 
 | Path | Role | LOC |
 |---|---|---|
-| docker-compose.yaml | Build-from-source compose: postgres/redis/ollama/ollama-init, 14 agent-*-image builders, orchestrator, panel, nginx, `backup` pg_dump sidecar on the `roboco_data` DB-isolation network; NAS prod env vars + volume mounts, `ROBOFLEET_OBSIDIAN_VAULT_ENABLED`/`ROBOFLEET_VAULT_INTAKE_ENABLED` default `true` | 556 |
+| docker-compose.yaml | Build-from-source compose: postgres/redis/ollama/ollama-init, 14 agent-*-image builders, orchestrator, panel, nginx, `backup` pg_dump sidecar on the `robofleet_data` DB-isolation network; NAS prod env vars + volume mounts, `ROBOFLEET_OBSIDIAN_VAULT_ENABLED`/`ROBOFLEET_VAULT_INTAKE_ENABLED` default `true` | 556 |
 | docker-compose.yml | Byte-identical copy of docker-compose.yaml (kept for the canonical name compose picks up by default) | 556 |
-| docker-compose.registry.yml | Pull-and-run compose using pre-built GHCR/Docker Hub images (ROBOFLEET_REGISTRY + ROBOFLEET_VERSION); infra services byte-identical to build compose (incl. `backup` + vault defaults), agent-* services are one-shot pre-pulls, own `roboco_data` network | 334 |
+| docker-compose.registry.yml | Pull-and-run compose using pre-built GHCR/Docker Hub images (ROBOFLEET_REGISTRY + ROBOFLEET_VERSION); infra services byte-identical to build compose (incl. `backup` + vault defaults), agent-* services are one-shot pre-pulls, own `robofleet_data` network | 334 |
 | Makefile | Ops + quality targets: infra, dev/run/orchestrator, quality gate (ruff/mypy/pytest/xenon/radon/vulture/bandit/pip-audit/deptry/lint-imports/alembic/foundation-check), fast pre-submit `gate` target (ruff format/check, mypy, xenon, lint-imports), per-Python test matrix, docs, lifecycle regen | 599 |
 | pyproject.toml | Project + dependency manifest: requires-python >=3.13,<3.15, deps, dev/docs extras, console scripts, ruff/mypy/pytest/coverage/vulture/bandit/radon/xenon/deptry/importlinter config | 451 |
-| roboco/config.py | Pydantic Settings (env prefix ROBOFLEET_, cached via lru_cache); every tunable: DB, Redis, RAG, LLM/Ollama, workspaces, agent guardrails, gateway thresholds, autonomy-engine flags | 1022 |
-| roboco/__init__.py | Package root: __version__ + re-exports settings, exceptions, logging helpers | 39 |
-| roboco/bootstrap.py | Async bootstrap: DB init, Redis event bus, websocket bridge, orchestrator construction, uvicorn API server task, wait-for-ready poll, optional agent spawn, graceful shutdown | 161 |
-| roboco/cli.py | argparse CLI wrapper around bootstrap.main / db-only; the ENTRYPOINT invoked by `python -m roboco.cli` | 59 |
-| roboco/logging.py | structlog setup (dev ConsoleRenderer / prod JSONRenderer), secret-redaction processor, rotating file handler under /data/logs, LogContext context-manager | 252 |
-| roboco/exceptions.py | Exception hierarchy (RobocoError base + NotFound/Validation/InvalidState/Permission/Auth/Task/TaskLifecycle/Agent/Notification/Service/Database/Git/MergeConflict/GitCommand/GitTimeout); includes TaskLifecycle transition hints and git-secret scrubbing | 497 |
-| docker/orchestrator.Dockerfile | Multi-stage build: uv venv builder (python:3.13-slim) + runner with docker-cli/git/make/node/npm/pnpm, ENTRYPOINT python -m roboco.cli | 99 |
+| robofleet/config.py | Pydantic Settings (env prefix ROBOFLEET_, cached via lru_cache); every tunable: DB, Redis, RAG, LLM/Ollama, workspaces, agent guardrails, gateway thresholds, autonomy-engine flags | 1022 |
+| robofleet/__init__.py | Package root: __version__ + re-exports settings, exceptions, logging helpers | 39 |
+| robofleet/bootstrap.py | Async bootstrap: DB init, Redis event bus, websocket bridge, orchestrator construction, uvicorn API server task, wait-for-ready poll, optional agent spawn, graceful shutdown | 161 |
+| robofleet/cli.py | argparse CLI wrapper around bootstrap.main / db-only; the ENTRYPOINT invoked by `python -m robofleet.cli` | 59 |
+| robofleet/logging.py | structlog setup (dev ConsoleRenderer / prod JSONRenderer), secret-redaction processor, rotating file handler under /data/logs, LogContext context-manager | 252 |
+| robofleet/exceptions.py | Exception hierarchy (RobocoError base + NotFound/Validation/InvalidState/Permission/Auth/Task/TaskLifecycle/Agent/Notification/Service/Database/Git/MergeConflict/GitCommand/GitTimeout); includes TaskLifecycle transition hints and git-secret scrubbing | 497 |
+| docker/orchestrator.Dockerfile | Multi-stage build: uv venv builder (python:3.13-slim) + runner with docker-cli/git/make/node/npm/pnpm, ENTRYPOINT python -m robofleet.cli | 99 |
 | docker/agent-base.Dockerfile | Shared agent runtime: uv venv + Node 22 + @anthropic-ai/claude-code, agent user, hook scripts, safe.directory *, ENTRYPOINT claude | 108 |
-| docker/agent-pm.Dockerfile | PM agent — FROM roboco-agent-base, no extra tools (MCP-only) | 11 |
+| docker/agent-pm.Dockerfile | PM agent — FROM robofleet-agent-base, no extra tools (MCP-only) | 11 |
 | docker/agent-dev-be.Dockerfile | Backend dev — adds postgresql-client + redis-tools on top of base | 18 |
 | docker/agent-dev-fe.Dockerfile | Frontend dev — adds Playwright system deps + pnpm + chromium browser | 37 |
 | docker/agent-qa-be.Dockerfile | Backend QA — adds postgresql-client on top of base | 18 |
 | docker/agent-qa-fe.Dockerfile | Frontend QA — pnpm + `chromium-headless-shell` (not full chromium, under `/app/.playwright`) + `@playwright/mcp` for browser-based verification, wrapped by `playwright-mcp-entrypoint.sh` | 36 |
 | docker/agent-ux.Dockerfile | UX/UI agent (shared by ux-dev + ux-qa) — FROM base + the same `chromium-headless-shell` + `@playwright/mcp` as agent-qa-fe (role-gated at registration, not image-gated, so ux-dev never sees the MCP server despite sharing the image) | 13 |
 | docker/agent-doc.Dockerfile | Documenter — FROM base, no extra tools | 12 |
-| docker/agent-prompter.Dockerfile | Intake (Prompter) — persistent Claude Agent SDK session, ENTRYPOINT python -m roboco.agent_sdk.intake_main | 17 |
-| docker/agent-secretary.Dockerfile | Secretary — persistent Claude Agent SDK session with gated CEO-authority tools, ENTRYPOINT python -m roboco.agent_sdk.secretary_main | 19 |
+| docker/agent-prompter.Dockerfile | Intake (Prompter) — persistent Claude Agent SDK session, ENTRYPOINT python -m robofleet.agent_sdk.intake_main | 17 |
+| docker/agent-secretary.Dockerfile | Secretary — persistent Claude Agent SDK session with gated CEO-authority tools, ENTRYPOINT python -m robofleet.agent_sdk.secretary_main | 19 |
 | docker/agent-pr-reviewer.Dockerfile | PR Reviewer — FROM base, keeps claude entrypoint; read-only reviewer dispatched per review task | 16 |
 | docker/agent-grok.Dockerfile | Grok runtime — base + official grok CLI install (NO version pin since 2026-07-28, latest-at-build), ENTRYPOINT grok-cli-agent-entrypoint.sh | 48 |
-| docker/agent-grok-prompter.Dockerfile | Grok intake — FROM grok, ENTRYPOINT python -m roboco.agent_sdk.grok_intake_main, EXPOSE 9000 | 23 |
-| docker/agent-grok-secretary.Dockerfile | Grok secretary — FROM grok, ENTRYPOINT python -m roboco.agent_sdk.grok_secretary_main, EXPOSE 9000 | 23 |
+| docker/agent-grok-prompter.Dockerfile | Grok intake — FROM grok, ENTRYPOINT python -m robofleet.agent_sdk.grok_intake_main, EXPOSE 9000 | 23 |
+| docker/agent-grok-secretary.Dockerfile | Grok secretary — FROM grok, ENTRYPOINT python -m robofleet.agent_sdk.grok_secretary_main, EXPOSE 9000 | 23 |
 | docker/agent-kimi.Dockerfile | Kimi (Moonshot) runtime — base + official kimi-code CLI install (NO version pin, latest-at-build, resolved version stamped to /etc/kimi-cli-version), ENTRYPOINT kimi-cli-agent-entrypoint.sh | 71 |
 | docker/panel.Dockerfile | Multi-stage Next.js build (node:22-alpine, pnpm, shamefully-hoist), non-root nextjs runtime serving server.js on :3000 | 76 |
 | docker/postgres-pgvector.Dockerfile | Example custom pgvector build (pg17) — currently unused; compose uses pgvector/pgvector:pg16 image directly | 15 |
@@ -45,7 +45,7 @@ This slice is the packaging, build, and runtime-tooling layer of RoboCo: the Doc
 | docker/scripts/usage-report-hook.sh | PostToolUse+Stop: fire-and-forget POST /usage/sync with the transcript_path so the SDK parses token usage | 36 |
 | docker/scripts/stop-hook.sh | Stop hook: block ungraceful exits (exit 2 first time, role-specific terminal-verb reminder); auto-substitute after exceeding allowance | 71 |
 | docker/scripts/user-prompt-hook.sh | UserPromptSubmit: prompt-injection guard (deny classic jailbreak patterns, exit 2) + budget nudge | 72 |
-| docker/scripts/pre-compact-hook.sh | PreCompact: snapshot budget + terminal status to /tmp/roboco-precompact-<agent>.md for session resume | 48 |
+| docker/scripts/pre-compact-hook.sh | PreCompact: snapshot budget + terminal status to /tmp/robofleet-precompact-<agent>.md for session resume | 48 |
 | docker/scripts/session-end-hook.sh | SessionEnd: post a reflective journal post-mortem (tool count, halt/loop, last terminal tool) to the SDK | 49 |
 | docker/scripts/fable-{stop-gate,bash-discipline,honesty-nudge,prompt-nudge,precompact}-hook.sh | 5 vendored fable-mode hook scripts (from `opus-fable-playbook` v0.1.3), installed only when `fable_mode_enabled`: Stop/SubagentStop turn-discipline gate, PreToolUse[Bash] read-tool discipline, PostToolUse[Bash] honesty nudge (the one also ported to grok), UserPromptSubmit shape-matched reminder, PreCompact survival-list injection; all fail-open | ~200 |
 | docker/scripts/grok-cli-agent-entrypoint.sh | Grok runtime entrypoint: render ~/.grok/config.toml, prompt-guard, symlink auth.json from RO mount, grok_auth --check (exit 78 on stale), run grok -p streaming-json, capture usage, exit 75 on 429/quota | 112 |
@@ -64,43 +64,43 @@ This slice is the packaging, build, and runtime-tooling layer of RoboCo: the Doc
 
 | Name | Kind | File:Line | Responsibility |
 |---|---|---|---|
-| Settings | class | roboco/config.py:13 | Pydantic BaseSettings; all ROBOFLEET_ env-backed tunables + computed fields (database_url, redis_url, internal_api_url, rag_store_url) |
-| get_settings | function | roboco/config.py:1015 | lru_cache-backed singleton factory returning the cached Settings instance |
-| internal_api_url | property | roboco/config.py:57 | computed_field: service-to-service API base URL (api_url override or http://host:port/api, maps 0.0.0.0 to 127.0.0.1) |
-| database_url | property | roboco/config.py:85 | computed_field: asyncpg connection URL |
-| database_url_sync | property | roboco/config.py:93 | computed_field: sync psycopg URL for Alembic |
-| redis_url | property | roboco/config.py:110 | computed_field: Redis connection URL (optional password) |
-| _BootstrapHolder | class | roboco/bootstrap.py:27 | Module-level holder for the singleton AgentOrchestrator instance |
-| _run_api_server | function | roboco/bootstrap.py:33 | Build a uvicorn.Config for roboco.api.app:app and serve it (no reload in prod/container) |
-| _wait_for_api_ready | function | roboco/bootstrap.py:46 | Poll http://127.0.0.1:port/health until 200 (up to max_wait) so the orchestrator starts only after lifespan indexing completes |
-| main | function | roboco/bootstrap.py:69 | Async entrypoint: bootstrap_database, init Redis event bus + handlers, websocket bridge, orchestrator, DI wiring, API task, ready poll, optional spawns, graceful shutdown |
-| parse_args | function | roboco/cli.py:15 | argparse: --skip-db, --skip-orchestrator, --spawn, --db-only |
-| cli | function | roboco/cli.py:41 | Console-script entry: dispatch db-only or full bootstrap via asyncio.run |
-| add_app_context | function | roboco/logging.py:25 | structlog processor injecting app/version/environment into every event dict |
-| _redact_secrets | function | roboco/logging.py:60 | Regex-replace GitHub PAT / bearer / embedded-URL-credential shapes with <REDACTED> |
-| redact_event_dict | function | roboco/logging.py:70 | structlog processor running last; redacts every value in the event dict |
-| setup_logging | function | roboco/logging.py:86 | Configure structlog (dev ConsoleRenderer / prod JSONRenderer), stdlib root logger, rotating file handler under /data/logs, quiet noisy libs |
-| _resolve_log_dir | function | roboco/logging.py:169 | Resolve log dir: ROBOFLEET_LOG_DIR > /data/logs > ${ROBOFLEET_DATA_DIR:-./data}/logs > None |
-| get_logger | function | roboco/logging.py:192 | Return a configured structlog BoundLogger |
-| LogContext | class | roboco/logging.py:210 | Context manager binding/unbinding contextvars for scoped log context |
-| log_operation | function | roboco/logging.py:231 | Build a structured-log context dict for an operation |
-| RobocoError | class | roboco/exceptions.py:13 | Base exception with message/code/details and to_dict() for API responses |
-| NotFoundError | class | roboco/exceptions.py:50 | Resource not found (code NOT_FOUND) |
-| ValidationError | class | roboco/exceptions.py:77 | Input validation failure (code VALIDATION_ERROR) |
-| InvalidStateError | class | roboco/exceptions.py:98 | Operation not allowed in current state (code INVALID_STATE) |
-| PermissionDeniedError | class | roboco/exceptions.py:128 | Agent lacks permission (code PERMISSION_DENIED) |
-| AuthenticationError | class | roboco/exceptions.py:151 | Auth required (code AUTHENTICATION_REQUIRED) |
-| TaskError | class | roboco/exceptions.py:171 | Base task error (code TASK_ERROR), carries task_id |
-| TaskLifecycleError | class | roboco/exceptions.py:191 | Invalid transition; _TRANSITION_HINTS table appends procedural tool-call hints for common footguns |
-| AgentError | class | roboco/exceptions.py:273 | Base agent error carrying agent_id |
-| NotificationError | class | roboco/exceptions.py:364 | Notification error base |
-| ServiceError | class | roboco/exceptions.py:381 | External service error carrying service name |
-| DatabaseError | class | roboco/exceptions.py:400 | Database operation failed |
-| GitError | class | roboco/exceptions.py:424 | Base git operation error |
-| _scrub_git_secrets | function | roboco/exceptions.py:439 | Redact creds a git command may echo into stderr (URL creds, Authorization basic, PATs) |
-| MergeConflictError | class | roboco/exceptions.py:456 | PR merge refused for conflict; routes completion to conflict resolution |
-| GitCommandError | class | roboco/exceptions.py:467 | git command failed; surfaces a secret-free stderr tail in .message |
-| GitTimeoutError | class | roboco/exceptions.py:487 | git command timed out after Ns |
+| Settings | class | robofleet/config.py:13 | Pydantic BaseSettings; all ROBOFLEET_ env-backed tunables + computed fields (database_url, redis_url, internal_api_url, rag_store_url) |
+| get_settings | function | robofleet/config.py:1015 | lru_cache-backed singleton factory returning the cached Settings instance |
+| internal_api_url | property | robofleet/config.py:57 | computed_field: service-to-service API base URL (api_url override or http://host:port/api, maps 0.0.0.0 to 127.0.0.1) |
+| database_url | property | robofleet/config.py:85 | computed_field: asyncpg connection URL |
+| database_url_sync | property | robofleet/config.py:93 | computed_field: sync psycopg URL for Alembic |
+| redis_url | property | robofleet/config.py:110 | computed_field: Redis connection URL (optional password) |
+| _BootstrapHolder | class | robofleet/bootstrap.py:27 | Module-level holder for the singleton AgentOrchestrator instance |
+| _run_api_server | function | robofleet/bootstrap.py:33 | Build a uvicorn.Config for robofleet.api.app:app and serve it (no reload in prod/container) |
+| _wait_for_api_ready | function | robofleet/bootstrap.py:46 | Poll http://127.0.0.1:port/health until 200 (up to max_wait) so the orchestrator starts only after lifespan indexing completes |
+| main | function | robofleet/bootstrap.py:69 | Async entrypoint: bootstrap_database, init Redis event bus + handlers, websocket bridge, orchestrator, DI wiring, API task, ready poll, optional spawns, graceful shutdown |
+| parse_args | function | robofleet/cli.py:15 | argparse: --skip-db, --skip-orchestrator, --spawn, --db-only |
+| cli | function | robofleet/cli.py:41 | Console-script entry: dispatch db-only or full bootstrap via asyncio.run |
+| add_app_context | function | robofleet/logging.py:25 | structlog processor injecting app/version/environment into every event dict |
+| _redact_secrets | function | robofleet/logging.py:60 | Regex-replace GitHub PAT / bearer / embedded-URL-credential shapes with <REDACTED> |
+| redact_event_dict | function | robofleet/logging.py:70 | structlog processor running last; redacts every value in the event dict |
+| setup_logging | function | robofleet/logging.py:86 | Configure structlog (dev ConsoleRenderer / prod JSONRenderer), stdlib root logger, rotating file handler under /data/logs, quiet noisy libs |
+| _resolve_log_dir | function | robofleet/logging.py:169 | Resolve log dir: ROBOFLEET_LOG_DIR > /data/logs > ${ROBOFLEET_DATA_DIR:-./data}/logs > None |
+| get_logger | function | robofleet/logging.py:192 | Return a configured structlog BoundLogger |
+| LogContext | class | robofleet/logging.py:210 | Context manager binding/unbinding contextvars for scoped log context |
+| log_operation | function | robofleet/logging.py:231 | Build a structured-log context dict for an operation |
+| RobocoError | class | robofleet/exceptions.py:13 | Base exception with message/code/details and to_dict() for API responses |
+| NotFoundError | class | robofleet/exceptions.py:50 | Resource not found (code NOT_FOUND) |
+| ValidationError | class | robofleet/exceptions.py:77 | Input validation failure (code VALIDATION_ERROR) |
+| InvalidStateError | class | robofleet/exceptions.py:98 | Operation not allowed in current state (code INVALID_STATE) |
+| PermissionDeniedError | class | robofleet/exceptions.py:128 | Agent lacks permission (code PERMISSION_DENIED) |
+| AuthenticationError | class | robofleet/exceptions.py:151 | Auth required (code AUTHENTICATION_REQUIRED) |
+| TaskError | class | robofleet/exceptions.py:171 | Base task error (code TASK_ERROR), carries task_id |
+| TaskLifecycleError | class | robofleet/exceptions.py:191 | Invalid transition; _TRANSITION_HINTS table appends procedural tool-call hints for common footguns |
+| AgentError | class | robofleet/exceptions.py:273 | Base agent error carrying agent_id |
+| NotificationError | class | robofleet/exceptions.py:364 | Notification error base |
+| ServiceError | class | robofleet/exceptions.py:381 | External service error carrying service name |
+| DatabaseError | class | robofleet/exceptions.py:400 | Database operation failed |
+| GitError | class | robofleet/exceptions.py:424 | Base git operation error |
+| _scrub_git_secrets | function | robofleet/exceptions.py:439 | Redact creds a git command may echo into stderr (URL creds, Authorization basic, PATs) |
+| MergeConflictError | class | robofleet/exceptions.py:456 | PR merge refused for conflict; routes completion to conflict resolution |
+| GitCommandError | class | robofleet/exceptions.py:467 | git command failed; surfaces a secret-free stderr tail in .message |
+| GitTimeoutError | class | robofleet/exceptions.py:487 | git command timed out after Ns |
 | write | function | scripts/build_lifecycle_artifacts.py:24 | mkdir -p + write_text, print relative path |
 | main | function | scripts/build_lifecycle_artifacts.py:30 | Render intent-verbs.md, status-transitions.md, panel/lib/lifecycle.json, per-role lifecycle-{role}.md via foundation._generators |
 | fetch_enum_values | function | scripts/verify_postgres_enums.py:26 | Query pg_enum for a type's labels |
@@ -114,10 +114,10 @@ This slice is the packaging, build, and runtime-tooling layer of RoboCo: the Doc
 | _render_role_section | function | scripts/regenerate_verb_tables.py:138 | Render one role's flow + do verb tables from role_config + schemas |
 | main | function | scripts/regenerate_verb_tables.py:181 | Write agents/prompts/_generated/verbs.md + per-role {role}.md, skipping driver-based prompter/secretary |
 | _reset_workspace | function | scripts/reset_runtime_state.sh:177 | Per-clone git hard-reset to default branch + clean -fdx + delete stray feature branches (as owner) |
-| _resolve_workspaces_root | function | scripts/reset_runtime_state.sh:154 | Resolve WORKSPACES_ROOT from env, then NAS /volume1/roboco/data/workspaces, then /data/workspaces |
+| _resolve_workspaces_root | function | scripts/reset_runtime_state.sh:154 | Resolve WORKSPACES_ROOT from env, then NAS /volume1/robofleet/data/workspaces, then /data/workspaces |
 
 ## Data Flow
-Compose brings up infra (postgres/redis/ollama + ollama-init verifying models) then the orchestrator image, whose ENTRYPOINT `python -m roboco.cli` calls `roboco.cli.cli` -> `asyncio.run(bootstrap.main(...))`. bootstrap.main reads `roboco.config.settings` (env-injected by compose), runs `bootstrap_database()` (Alembic/migrations via the sync URL), inits the Redis event bus, starts the websocket bridge, constructs `AgentOrchestrator`, sets it on the API deps, launches uvicorn on `roboco.api.app:app`, polls `/health`, then `orchestrator.start()`. The orchestrator spawns per-role agent containers from the agent-*-image family (or registry pre-builts when ROBOFLEET_AGENT_IMAGE_REGISTRY set); each agent container runs `claude` (or the grok-cli entrypoint / agent_sdk driver for prompter/secretary/grok-*), with host volumes (workspaces, manifests, briefings, grok-usage, logs, ~/.claude, ~/.grok) bind-mounted in. Inside an agent container, Claude Code's hook system calls the docker/scripts/* hooks, which POST to the in-container SDK server on :9000 (budget/terminal/usage/inbox); the usage-report + post-tool-budget hooks feed token/loop state back to the SDK, and stop-hook forces a terminal verb before exit. nginx (port 3000) proxies /api and /ws to the orchestrator with the CEO panel token injected, and everything else to the Next.js panel. The Makefile `quality`/`foundation-check` gates run offline (ruff/mypy/pytest/xenon/.../verify_postgres_enums/build_lifecycle_artifacts) and are the merge barrier. reset_runtime_state.sh/.sql wipe runtime rows between smoke runs while preserving org scaffolding.
+Compose brings up infra (postgres/redis/ollama + ollama-init verifying models) then the orchestrator image, whose ENTRYPOINT `python -m robofleet.cli` calls `robofleet.cli.cli` -> `asyncio.run(bootstrap.main(...))`. bootstrap.main reads `robofleet.config.settings` (env-injected by compose), runs `bootstrap_database()` (Alembic/migrations via the sync URL), inits the Redis event bus, starts the websocket bridge, constructs `AgentOrchestrator`, sets it on the API deps, launches uvicorn on `robofleet.api.app:app`, polls `/health`, then `orchestrator.start()`. The orchestrator spawns per-role agent containers from the agent-*-image family (or registry pre-builts when ROBOFLEET_AGENT_IMAGE_REGISTRY set); each agent container runs `claude` (or the grok-cli entrypoint / agent_sdk driver for prompter/secretary/grok-*), with host volumes (workspaces, manifests, briefings, grok-usage, logs, ~/.claude, ~/.grok) bind-mounted in. Inside an agent container, Claude Code's hook system calls the docker/scripts/* hooks, which POST to the in-container SDK server on :9000 (budget/terminal/usage/inbox); the usage-report + post-tool-budget hooks feed token/loop state back to the SDK, and stop-hook forces a terminal verb before exit. nginx (port 3000) proxies /api and /ws to the orchestrator with the CEO panel token injected, and everything else to the Next.js panel. The Makefile `quality`/`foundation-check` gates run offline (ruff/mypy/pytest/xenon/.../verify_postgres_enums/build_lifecycle_artifacts) and are the merge barrier. reset_runtime_state.sh/.sql wipe runtime rows between smoke runs while preserving org scaffolding.
 
 ## Mermaid
 ```mermaid
@@ -127,7 +127,7 @@ graph TD
         REDIS["redis:8-alpine"]
         OLL["ollama:latest"]
         OLLI["ollama-init (curl pull+verify models)"]
-        ORC["orchestrator (python -m roboco.cli)"]
+        ORC["orchestrator (python -m robofleet.cli)"]
         PN["panel (node server.js)"]
         NG["nginx :3000"]
     end
@@ -144,13 +144,13 @@ graph TD
     AGENT -->|hooks POST :9000| SDK["in-container SDK server"]
     SDK -->|usage/budget/terminal| AGENT
 
-    subgraph Bootstrap["roboco/bootstrap.py + cli.py"]
+    subgraph Bootstrap["robofleet/bootstrap.py + cli.py"]
         CLI["cli.cli (argparse)"] --> MAIN["bootstrap.main (async)"]
         MAIN --> BD["bootstrap_database()"]
         MAIN --> EB["init_event_bus (Redis Streams)"]
         MAIN --> WSB["start_websocket_bridge()"]
         MAIN --> ORCH["AgentOrchestrator()"]
-        MAIN --> UV["uvicorn roboco.api.app:app"]
+        MAIN --> UV["uvicorn robofleet.api.app:app"]
         MAIN --> READY["_wait_for_api_ready (/health poll)"]
         READY --> START["orchestrator.start()"]
     end
@@ -188,14 +188,14 @@ deployment-tooling
 │  ├─ nginx.conf (proxy template)
 │  └─ postgres-init/01-create-extensions.sql
 ├─ Python runtime core
-│  ├─ roboco/config.py (Settings + computed fields + get_settings lru_cache)
-│  ├─ roboco/__init__.py (version + re-exports)
-│  ├─ roboco/cli.py (argparse -> bootstrap.main / db-only)
-│  ├─ roboco/bootstrap.py (DB+bus+orchestrator+uvicorn+ready-poll)
-│  ├─ roboco/logging.py (structlog + secret redaction + file rotation + LogContext)
-│  └─ roboco/exceptions.py (hierarchy + transition hints + git secret scrub)
+│  ├─ robofleet/config.py (Settings + computed fields + get_settings lru_cache)
+│  ├─ robofleet/__init__.py (version + re-exports)
+│  ├─ robofleet/cli.py (argparse -> bootstrap.main / db-only)
+│  ├─ robofleet/bootstrap.py (DB+bus+orchestrator+uvicorn+ready-poll)
+│  ├─ robofleet/logging.py (structlog + secret redaction + file rotation + LogContext)
+│  └─ robofleet/exceptions.py (hierarchy + transition hints + git secret scrub)
 ├─ Build/quality manifest
-│  └─ pyproject.toml (deps, dev/docs extras, ruff/mypy/pytest/coverage/vulture/bandit/radon/xenon/deptry/importlinter/roboco.commits)
+│  └─ pyproject.toml (deps, dev/docs extras, ruff/mypy/pytest/coverage/vulture/bandit/radon/xenon/deptry/importlinter/robofleet.commits)
 ├─ Makefile (infra, run, quality gate, per-Python test matrix, docs, lifecycle, foundation-check)
 └─ Ops/CI scripts (scripts/)
    ├─ build_lifecycle_artifacts.py (render lifecycle artifacts)
@@ -207,16 +207,16 @@ deployment-tooling
 ```
 
 ## Dependencies
-- Internal: roboco.api.app, roboco.api.deps, roboco.api.websocket, roboco.api.websocket_bridge, roboco.db (bootstrap_database), roboco.events (init_event_bus, register_default_handlers, set_event_context), roboco.runtime (AgentOrchestrator, set_reasoning_stream_callback), roboco.services.notification.NotificationService, roboco.foundation._generators, roboco.foundation.policy.lifecycle.Role, roboco.foundation.identity (Role, Team), roboco.foundation._validate, roboco.foundation.policy.lifecycle, roboco.api.schemas.v1.flow / .do, roboco.services.gateway.role_config.ROLE_CONFIGS, roboco.agent_sdk (intake_main/secretary_main/grok_*_main referenced by Dockerfiles), roboco.llm.providers.grok_cli_config / grok_auth / grok_cli_usage (referenced by grok entrypoint), roboco.agent_sdk.prompt_guard, roboco.agents_config.issue_panel_token (Makefile panel-token)
+- Internal: robofleet.api.app, robofleet.api.deps, robofleet.api.websocket, robofleet.api.websocket_bridge, robofleet.db (bootstrap_database), robofleet.events (init_event_bus, register_default_handlers, set_event_context), robofleet.runtime (AgentOrchestrator, set_reasoning_stream_callback), robofleet.services.notification.NotificationService, robofleet.foundation._generators, robofleet.foundation.policy.lifecycle.Role, robofleet.foundation.identity (Role, Team), robofleet.foundation._validate, robofleet.foundation.policy.lifecycle, robofleet.api.schemas.v1.flow / .do, robofleet.services.gateway.role_config.ROLE_CONFIGS, robofleet.agent_sdk (intake_main/secretary_main/grok_*_main referenced by Dockerfiles), robofleet.llm.providers.grok_cli_config / grok_auth / grok_cli_usage (referenced by grok entrypoint), robofleet.agent_sdk.prompt_guard, robofleet.agents_config.issue_panel_token (Makefile panel-token)
 - External: python>=3.13,<3.15, pydantic / pydantic-settings, fastapi / uvicorn[standard] / websockets / sse-starlette, sqlalchemy[asyncio] / asyncpg / alembic, redis / hiredis, anthropic / openai / tiktoken / claude-agent-sdk, mcp / tomli-w, httpx / python-multipart / python-jose[cryptography] / passlib[bcrypt] / tenacity / structlog, cryptography / packaging / pyyaml / tree-sitter(-python/-typescript), docker (compose, cli, daemon socket mount), nginx:alpine, pgvector/pgvector:pg16, ollama/ollama:latest, curlimages/curl:latest, redis:8-alpine, node:22-alpine (panel), python:3.13-slim-bookworm (orchestrator + agent-base), @anthropic-ai/claude-code, pnpm, Playwright, chromium, xAI grok CLI (latest-at-build), uv (astral), ruff, mypy, pytest(-asyncio/-cov/-xdist), vulture, bandit, pip-audit, radon, xenon, deptry, import-linter, mkdocs-material, pymarkdownlnt, make, git, jq
 
 ## Entry Points
 
 | Name | File | Trigger |
 |---|---|---|
-| python -m roboco.cli / roboco console script | roboco/cli.py | orchestrator container ENTRYPOINT (docker/orchestrator.Dockerfile:98); `make orchestrator`; `make dev`; `make db-init` (--db-only) |
-| roboco-bootstrap console script | roboco/bootstrap.py | pyproject [project.scripts] alias (points at roboco.bootstrap:cli which does not exist — see drift) |
-| uvicorn roboco.api.app:app | roboco/bootstrap.py | spawned as asyncio task inside bootstrap.main (make api / make run run it directly) |
+| python -m robofleet.cli / robo-fleet console script | robofleet/cli.py | orchestrator container ENTRYPOINT (docker/orchestrator.Dockerfile:98); `make orchestrator`; `make dev`; `make db-init` (--db-only) |
+| robofleet-bootstrap console script | robofleet/bootstrap.py | pyproject [project.scripts] alias (points at robofleet.bootstrap:cli which does not exist — see drift) |
+| uvicorn robofleet.api.app:app | robofleet/bootstrap.py | spawned as asyncio task inside bootstrap.main (make api / make run run it directly) |
 | make quality / foundation-check / lifecycle | Makefile | CI merge gate |
 | make gate | Makefile | Fast local pre-submit (`quality_command`, runs at dev `i_am_done`): ruff format/check, mypy, xenon, lint-imports — no tests |
 | scripts/build_lifecycle_artifacts.py | scripts/build_lifecycle_artifacts.py | make lifecycle (foundation-check runs it) |
@@ -248,7 +248,7 @@ deployment-tooling
 - ROBOFLEET_OVERLOAD_BREAK_ENABLED
 - ROBOFLEET_GATEWAY_HEALTH_ENABLED / ROBOFLEET_GATEWAY_HEALTH_GRACE_SECONDS
 - ROBOFLEET_CONVENTIONS_ENABLED
-- ROBOFLEET_GUARD_ENABLED / _PASSIVE_MODE / _FAIL_SECURE / _TELEMETRY_ENABLED / _AGENT_API_KEY / _PROJECT_ID / _EMERGENCY / _EMERGENCY_WHITELIST / _TRUSTED_CHAIN_PEERS / _SCAN_RESPONSE_BODY (fastapi-guard HTTP security layer, `roboco/security.py`, fastapi-guard 7.6.0 / guard-core 3.12.0)
+- ROBOFLEET_GUARD_ENABLED / _PASSIVE_MODE / _FAIL_SECURE / _TELEMETRY_ENABLED / _AGENT_API_KEY / _PROJECT_ID / _EMERGENCY / _EMERGENCY_WHITELIST / _TRUSTED_CHAIN_PEERS / _SCAN_RESPONSE_BODY (fastapi-guard HTTP security layer, `robofleet/security.py`, fastapi-guard 7.6.0 / guard-core 3.12.0)
 - ROBOFLEET_RESEARCH_ENABLED / ROBOFLEET_RESEARCH_PROVIDER / ROBOFLEET_RESEARCH_API_KEY / ROBOFLEET_RESEARCH_*_QUOTA
 - ROBOFLEET_PROVISIONING_ENABLED / ROBOFLEET_PROVISIONING_TOKEN / ROBOFLEET_PROVISIONING_ORG / ROBOFLEET_GITHUB_API_BASE_URL
 - ROBOFLEET_STRATEGY_ENGINE_ENABLED / _INTERVAL_SECONDS / _STRANDED_BLOCKED_MINUTES
@@ -259,14 +259,14 @@ deployment-tooling
 - ROBOFLEET_DEP_UPDATE_ENABLED / _INTERVAL_SECONDS / _MAX_OPEN_TASKS / _MAX_PER_CYCLE
 - ROBOFLEET_RELEASE_MANAGER_ENABLED / _MIN_COMMITS / _INTERVAL_SECONDS / _CI_WORKFLOW
 - ROBOFLEET_ORG_MEMORY_ENABLED / _TOP_K / _MIN_SCORE
-- ROBOFLEET_SANDBOX_DB_ENABLED — sandboxed per-agent-spawn engine provisioner (`roboco/runtime/sandbox.py` + registry in `roboco/models/sandbox.py`); a project also needs its `sandbox_services` column set
-- ROBOFLEET_DB_NETWORK_ISOLATED — set true only by the compose topology carrying the `roboco_data` data-only network; suppresses the legacy prod-creds gate-env injection
+- ROBOFLEET_SANDBOX_DB_ENABLED — sandboxed per-agent-spawn engine provisioner (`robofleet/runtime/sandbox.py` + registry in `robofleet/models/sandbox.py`); a project also needs its `sandbox_services` column set
+- ROBOFLEET_DB_NETWORK_ISOLATED — set true only by the compose topology carrying the `robofleet_data` data-only network; suppresses the legacy prod-creds gate-env injection
 - ROBOFLEET_CLOUD_AUTH_ENABLED / _EMAIL / _PASSWORD / _SECRET / _COOKIE_MAX_AGE — FastAPI Users cookie login for the single seeded CEO; `Settings` fails loud at startup if armed with no secret
 - ROBOFLEET_X_ENGINE_ENABLED / _MENTIONS_INTERVAL_SECONDS / _MENTIONS_MAX_PER_CYCLE / _MENTIONS_MIN_ENGAGEMENT / _MAX_OPEN_POSTS / ROBOFLEET_X_ACCOUNT_USER_ID / _REQUEST_TIMEOUT_SECONDS — the X (Twitter) engine; inert without stored OAuth 1.0a credentials regardless of the flag
 - ROBOFLEET_ROADMAP_ENGINE_ENABLED / _INTERVAL_SECONDS (default 604800) / _MIN_ITEMS_PER_CYCLE / _MAX_ITEMS_PER_CYCLE — the board roadmap engine
 - ROBOFLEET_X_FEATURE_SPOTLIGHT_ENABLED / _INTERVAL_SECONDS (default 259200/3d) — X-engine feature-spotlight sub-switch (requires ROBOFLEET_X_ENGINE_ENABLED also on), default off
 - ROBOFLEET_PEST_REWORK_THRESHOLD (default 0.3, config.py ~1432) — the only compose-settable knob for any of the twelve new Board Programs (Pest Control's off-schedule rework-rate-spike accelerator); every other new program is armed exclusively via its per-program settings-store row (`board_program.{key}.enabled`, toggled from the Board Programs panel page), not an env flag — see `docs/rag/architecture/board-programs.md` / CLAUDE.md's "Board Program registry"
-- ROBOFLEET_OBSIDIAN_VAULT_ENABLED / ROBOFLEET_VAULT_PATH (default `/data/vault`) — Obsidian vault V1 projection master switch, config-default off but both compose files set it `true`; ROBOFLEET_VAULT_INTAKE_ENABLED / _INTERVAL_SECONDS / _DIR / _MAX_PER_CYCLE / _MAX_OPEN_DRAFTS — the independently-gated `#roboco`-tag inbox watcher
+- ROBOFLEET_OBSIDIAN_VAULT_ENABLED / ROBOFLEET_VAULT_PATH (default `/data/vault`) — Obsidian vault V1 projection master switch, config-default off but both compose files set it `true`; ROBOFLEET_VAULT_INTAKE_ENABLED / _INTERVAL_SECONDS / _DIR / _MAX_PER_CYCLE / _MAX_OPEN_DRAFTS — the independently-gated `#robo-fleet`-tag inbox watcher
 - ROBOFLEET_FABLE_MODE_ENABLED — opus-fable-playbook adoption (doctrine layer in the composed prompt + 5 Claude-path hook scripts + 1 grok-path hook), default off; off = byte-for-byte unchanged spawn path
 - `ROBOFLEET_BACKUP_MIRROR_DIR` (unset by default) — arms the `backup` sidecar's off-disk mirror step; the host path should live on a DIFFERENT disk (external/remote mount) — a same-disk mirror protects nothing. Compose only sets the container env when the `.env` variable is set.
 - ROBOFLEET_MINIO_ENDPOINT / _ACCESS_KEY / _SECRET_KEY / _BUCKET / _REGION — MinIO object storage (default-off; empty endpoint = disabled, media route falls back to `FileResponse`; when set, `video_renderer_client._save` PUTs each render to MinIO after the local write and `GET /api/video/posts/{id}/media` streams it via `StreamingResponse` over `minio_client.get_object_stream`, key = basename, `_require_ceo` kept so auth stays end-to-end — no presigned URLs; `S3Error` falls back to `FileResponse`); NAS compose runs `minio` + `minio-init` on the `data` network with a named `minio-data` volume, registry compose omits MinIO; see `docs/rag/architecture/minio-storage.md`
@@ -300,19 +300,19 @@ deployment-tooling
 - reset_runtime_state.sh deletes every local branch except the resolved default (main/master/fallback) per workspace; if a workspace's default can't be resolved (no origin, no main, no master) it SKIPs rather than nukes — safe, but leaves stale branches that can collide with next-run branch creation.
 - TaskLifecycleError._TRANSITION_HINTS is a hand-maintained (current_status,target_status)->hint map; adding a new lifecycle state/transition without a matching hint means weak models fall back to guessing the tool sequence (the exact failure the hints exist to prevent).
 - ROBOFLEET_CLAIM_STALE_SECONDS and ROBOFLEET_STALE_CLAIM_REAP_SECONDS are intentionally distinct fields — claim_stale_seconds drives trigger_filter spawn queueing, stale_claim_reap_seconds drives the reaper's release. Splitting them opens a duplicate-spawn window; merging them delays spawn decisions. NAS compose raises both to 1800.
-- pyproject [project.scripts] declares `roboco-bootstrap = roboco.bootstrap:cli` but roboco/bootstrap.py defines NO `cli` symbol (only `main`); the canonical entry is `roboco = roboco.cli:cli`. The bootstrap-script entry is dead/broken (see drift).
+- pyproject [project.scripts] declares `robofleet-bootstrap = robofleet.bootstrap:cli` but robofleet/bootstrap.py defines NO `cli` symbol (only `main`); the canonical entry is `robo-fleet = robofleet.cli:cli`. The bootstrap-script entry is dead/broken (see drift).
 - The Dockerfiles COPY pyproject.toml uv.lock README.md into /app for the uv sync layer; a missing/stale uv.lock at build time breaks the --frozen sync. The Makefile's `make upgrade` re-locks but does not rebuild images.
 - Both NAS composes (`docker-compose.yml`/`.yaml`) set `ROBOFLEET_GUARD_ENABLED=true` / `ROBOFLEET_GUARD_PASSIVE_MODE=true` / `ROBOFLEET_GUARD_FAIL_SECURE=false` — the fastapi-guard HTTP security layer runs in detect-and-log calibration mode on the NAS, never blocking; `docker-compose.registry.yml` does not set these three and stays off (`guard_enabled` default `false`). Flipping `_PASSIVE_MODE` to `false` to enforce is a deliberate later step, not part of this arming.
-- Both NAS composes now also arm `ROBOFLEET_SANDBOX_DB_ENABLED` / `ROBOFLEET_DB_NETWORK_ISOLATED` / `ROBOFLEET_CLOUD_AUTH_ENABLED` / `ROBOFLEET_X_ENGINE_ENABLED` / `ROBOFLEET_ROADMAP_ENGINE_ENABLED` all `${VAR:-true}` (config default is `false` for every one), alongside the pre-existing `${VAR:-true}` flips for `ROBOFLEET_SELF_HEAL_ENABLED`, `ROBOFLEET_PROVISIONING_ENABLED`, `ROBOFLEET_TRANSCRIPT_PRUNE_ENABLED`, and `ROBOFLEET_ROUTING_STRICT` — this is a personal-deploy posture (override any via `.env`), not the published conservative default. `docker-compose.registry.yml` keeps `ROBOFLEET_SELF_HEAL_ENABLED:-false` (and does not set `SANDBOX_DB`/`CLOUD_AUTH`/`X_ENGINE`/`ROADMAP_ENGINE` at all, so they fall through to the config `False` default) — it arms only `ROBOFLEET_DB_NETWORK_ISOLATED:-true`, with its own `roboco_data` network in the `networks:` stanza, so the registry compose ships DB-isolated but otherwise conservative.
-- Surface N (scanner honeytrap) is two-layered because nginx only proxies `/api|/ws|/health|/ready` to the orchestrator: `docker/nginx.conf` has a `location ~*` block that `return 444`s the classic root scanner paths (`/.env`, `/.git`, `/wp-login.php`, `/phpmyadmin`, `actuator`, `cgi-bin`, `vendor/`, …) at the edge before they reach the panel (anchored to scanner fingerprints; `/.well-known` + real routes untouched; always on), while `roboco/security.py`'s `_THREAT_BAN_CONFIG` gained `recon`/`sensitive_file`/`cms_probing` so `/api`-path probes that DO reach guard trip an adaptive per-IP redis auto-ban (active mode only; passive logs).
-- `.github/workflows/release.yml` must build every image `docker-compose.registry.yml` pulls: `roboco-agent-base` and `roboco-agent-grok` build first (outside the loop — the Grok-family images and two interactive Grok roles `FROM` them respectively, so they must exist in the daemon before the loop runs), then a 15-entry `IMAGES` associative array covers the rest — 17 images total. The two Grok sub-images (`roboco-agent-grok-prompter` / `roboco-agent-grok-secretary`) were previously missing from the loop and were never published, so a fresh registry-compose pull 404'd on them; adding an image anywhere in the compose files without a matching `IMAGES` entry (or the two pre-loop builds) silently re-breaks a cold registry pull.
+- Both NAS composes now also arm `ROBOFLEET_SANDBOX_DB_ENABLED` / `ROBOFLEET_DB_NETWORK_ISOLATED` / `ROBOFLEET_CLOUD_AUTH_ENABLED` / `ROBOFLEET_X_ENGINE_ENABLED` / `ROBOFLEET_ROADMAP_ENGINE_ENABLED` all `${VAR:-true}` (config default is `false` for every one), alongside the pre-existing `${VAR:-true}` flips for `ROBOFLEET_SELF_HEAL_ENABLED`, `ROBOFLEET_PROVISIONING_ENABLED`, `ROBOFLEET_TRANSCRIPT_PRUNE_ENABLED`, and `ROBOFLEET_ROUTING_STRICT` — this is a personal-deploy posture (override any via `.env`), not the published conservative default. `docker-compose.registry.yml` keeps `ROBOFLEET_SELF_HEAL_ENABLED:-false` (and does not set `SANDBOX_DB`/`CLOUD_AUTH`/`X_ENGINE`/`ROADMAP_ENGINE` at all, so they fall through to the config `False` default) — it arms only `ROBOFLEET_DB_NETWORK_ISOLATED:-true`, with its own `robofleet_data` network in the `networks:` stanza, so the registry compose ships DB-isolated but otherwise conservative.
+- Surface N (scanner honeytrap) is two-layered because nginx only proxies `/api|/ws|/health|/ready` to the orchestrator: `docker/nginx.conf` has a `location ~*` block that `return 444`s the classic root scanner paths (`/.env`, `/.git`, `/wp-login.php`, `/phpmyadmin`, `actuator`, `cgi-bin`, `vendor/`, …) at the edge before they reach the panel (anchored to scanner fingerprints; `/.well-known` + real routes untouched; always on), while `robofleet/security.py`'s `_THREAT_BAN_CONFIG` gained `recon`/`sensitive_file`/`cms_probing` so `/api`-path probes that DO reach guard trip an adaptive per-IP redis auto-ban (active mode only; passive logs).
+- `.github/workflows/release.yml` must build every image `docker-compose.registry.yml` pulls: `robofleet-agent-base` and `robofleet-agent-grok` build first (outside the loop — the Grok-family images and two interactive Grok roles `FROM` them respectively, so they must exist in the daemon before the loop runs), then a 15-entry `IMAGES` associative array covers the rest — 17 images total. The two Grok sub-images (`robofleet-agent-grok-prompter` / `robofleet-agent-grok-secretary`) were previously missing from the loop and were never published, so a fresh registry-compose pull 404'd on them; adding an image anywhere in the compose files without a matching `IMAGES` entry (or the two pre-loop builds) silently re-breaks a cold registry pull.
 
 
 ## Drift from CLAUDE.md
 - CLAUDE.md lists `agent-base-image / agent-*-image` as 'Pre-built images spawned per agent' under the services table, but the build compose defines them as one-shot build-and-exit builder services (entrypoint echo) that merely tag the image; the orchestrator spawns containers FROM those images later. The 'Pre-built images spawned per agent' phrasing conflates the build step with the spawn step.
 - CLAUDE.md's Docker compose services table omits the panel and nginx services that are present in both compose files (it only lists postgres/redis/ollama/ollama-init/agent images/orchestrator).
 - CLAUDE.md states the orchestrator container 'Depends on all above' and the startup sequence shows `orchestrator -> panel -> nginx`, but compose has panel depend_on orchestrator and nginx depend_on panel+orchestrator — the panel/orchestrator build order is reversed in the prose vs the compose depends_on graph (orchestrator does NOT depend on panel/nginx).
-- pyproject.toml [project.scripts] declares `roboco-bootstrap = "roboco.bootstrap:cli"` but roboco/bootstrap.py has no `cli` callable (only `main` and `__main__` that imports roboco.cli.cli). The documented console script would fail to resolve; only `roboco = "roboco.cli:cli"` is valid.
+- pyproject.toml [project.scripts] declares `robofleet-bootstrap = "robofleet.bootstrap:cli"` but robofleet/bootstrap.py has no `cli` callable (only `main` and `__main__` that imports robofleet.cli.cli). The documented console script would fail to resolve; only `robo-fleet = "robofleet.cli:cli"` is valid.
 - CLAUDE.md (Configuration section) still documents `ROBOFLEET_LOCAL_LLM_MODEL=glm-5:cloud` while config.py and all three compose files now default to `glm-5.2:cloud` (changed in 15effce0). The doc and code are out of sync on the model name.
 - CLAUDE.md lists the agent image family but not the grok-prompter / grok-secretary images or the pr-reviewer image that exist in compose; the documented image set is incomplete vs the 14 builder services actually declared.
 - CLAUDE.md says healthcheck for the orchestrator is not listed (table shows '—' for agent images and panel), which matches compose (no healthcheck on orchestrator/panel/nginx), but the startup-sequence prose implies an orchestrator healthcheck-driven dependency that does not exist — depends_on uses postgres/redis/ollama/ollama-init/agent-base-image conditions, not the orchestrator's own /health (that is polled in-process by bootstrap._wait_for_api_ready).
@@ -322,11 +322,11 @@ deployment-tooling
 
 | SHA | Subject | Impact |
 |---|---|---|
-| 15effce0 | Chore: 141 Gaps fill-in (#283) — squash of megatask per-cell project map + multi-fix | Bumped version 0.13.0 -> 0.14.0 in pyproject.toml, roboco/__init__.py, config.app_version, and the agent_image_tag doc example; renamed the local LLM model glm-5:cloud -> glm-5.2:cloud in config.py default and in all three compose files' ollama-init pull/verify + ROBOFLEET_LOCAL_LLM_MODEL env; rewrote verify_postgres_enums.py to embed skip semantics (exit 0 on unreachable/unmigrated, 1 on drift) with new type_exists/should_skip_for_unmigrated/enum_drift helpers and removed the Makefile's masking `// echo skipped`; added two bash-guard-hook deny rules for `uv run --active` and any uv run/uvx targeting /app/.venv (with matching bash-guard-tests cases) to prevent the be-dev-1 venv-brick; updated grok-cli-agent-entrypoint.sh to symlink ~/.grok/auth.json from a read-only host directory mount (F005) so the atomic auth refresh reaches running containers. |
+| 15effce0 | Chore: 141 Gaps fill-in (#283) — squash of megatask per-cell project map + multi-fix | Bumped version 0.13.0 -> 0.14.0 in pyproject.toml, robofleet/__init__.py, config.app_version, and the agent_image_tag doc example; renamed the local LLM model glm-5:cloud -> glm-5.2:cloud in config.py default and in all three compose files' ollama-init pull/verify + ROBOFLEET_LOCAL_LLM_MODEL env; rewrote verify_postgres_enums.py to embed skip semantics (exit 0 on unreachable/unmigrated, 1 on drift) with new type_exists/should_skip_for_unmigrated/enum_drift helpers and removed the Makefile's masking `// echo skipped`; added two bash-guard-hook deny rules for `uv run --active` and any uv run/uvx targeting /app/.venv (with matching bash-guard-tests cases) to prevent the be-dev-1 venv-brick; updated grok-cli-agent-entrypoint.sh to symlink ~/.grok/auth.json from a read-only host directory mount (F005) so the atomic auth refresh reaches running containers. |
 
 > Post-snapshot updates (since 2026-06-29): 7be10057 `[bug] agent image: stop baking VIRTUAL_ENV=/app/.venv` — removed `VIRTUAL_ENV=/app/.venv` from the global ENV in agent-base.Dockerfile; updated bash-guard-hook.sh comment/deny message to reflect that `--active` now errors (no active env) rather than retargeting /app/.venv. 536bbb64 `Chore/all/logical gaps sweep (#286)` — added `routing_strict` (ROBOFLEET_ROUTING_STRICT), `self_heal_notify_dedupe_seconds` (ROBOFLEET_SELF_HEAL_NOTIFY_DEDUPE_SECONDS), and `claude_stuck_kill_seconds` (ROBOFLEET_CLAUDE_STUCK_KILL_SECONDS) to config.py; minor type-annotation strip fix in scripts/regenerate_verb_tables.py. 2759edf7 `[B-REL] release executor` — added `release_ci_workflow` (ROBOFLEET_RELEASE_CI_WORKFLOW) to config.py, decoupled from self_heal_ci_workflow.
 
-> **fastapi-guard adoption (merged).** `feature/fastapi-guard-hardening` landed `ROBOFLEET_GUARD_ENABLED` / `_PASSIVE_MODE` / `_FAIL_SECURE` / `_TELEMETRY_ENABLED` / `_AGENT_API_KEY` / `_PROJECT_ID` / `_EMERGENCY` / `_EMERGENCY_WHITELIST` in `config.py` (6 commits, `896532a3`..`99ee666e`) and set both NAS composes' `ROBOFLEET_GUARD_ENABLED=true` / `ROBOFLEET_GUARD_PASSIVE_MODE=true` / `ROBOFLEET_GUARD_FAIL_SECURE=false` (`c496b677`, Phase 5); `docker-compose.registry.yml` stays off. Now merged onto the mainline; the pinned version is fastapi-guard 7.6.0 / guard-core 3.12.0. See api-core-websocket for the `roboco/security.py` module + `create_app` wiring detail.
+> **fastapi-guard adoption (merged).** `feature/fastapi-guard-hardening` landed `ROBOFLEET_GUARD_ENABLED` / `_PASSIVE_MODE` / `_FAIL_SECURE` / `_TELEMETRY_ENABLED` / `_AGENT_API_KEY` / `_PROJECT_ID` / `_EMERGENCY` / `_EMERGENCY_WHITELIST` in `config.py` (6 commits, `896532a3`..`99ee666e`) and set both NAS composes' `ROBOFLEET_GUARD_ENABLED=true` / `ROBOFLEET_GUARD_PASSIVE_MODE=true` / `ROBOFLEET_GUARD_FAIL_SECURE=false` (`c496b677`, Phase 5); `docker-compose.registry.yml` stays off. Now merged onto the mainline; the pinned version is fastapi-guard 7.6.0 / guard-core 3.12.0. See api-core-websocket for the `robofleet/security.py` module + `create_app` wiring detail.
 
 > **Off-disk backup mirror (#645, `98a96bcd`).** The `backup` sidecar wrote its dumps to the same disk it protects — one disk failure lost both the live DB and the backups. `mirror_backup()` (backup-entrypoint.sh) copies the fresh dump to `BACKUP_MIRROR_DIR` (tmp+rename, same crash safety as the primary write) after every successful `pg_dump` and prunes the mirror to the same `BACKUP_KEEP`; an unmounted/unwritable mirror logs and skips without blocking the primary dump. Unset (the default) means the script never attempts a copy. `docs/backend/ops/database-backups.md` gained the mirror setup plus a quarterly restore-drill procedure (throwaway pgvector container, `pg_restore`, row-count sanity check).
 >
@@ -346,4 +346,4 @@ deployment-tooling
 | Version 0.14.0 bump without a corresponding release tag / image build | pyproject.toml:3 | pyproject, __init__.py, and config.app_version all say 0.14.0 but the branch feature/metrics-granularity is NOT deployed and memory notes say metrics-granularity was stopped mid-Phase-1. If a registry image is built from this tree it will be tagged 0.14.0 while the deployed NAS is on 0.14.0-memory-but-actually-0.13-ish. The agent_image_tag doc example ('0.14.0') could mislead an operator into pulling an unbuilt tag. | low |
 
 ## Health
-This slice is the load-bearing deployment surface and it is internally coherent: the compose topologies are kept in lockstep (with an explicit reminder), the Dockerfiles form a clean FROM-chain (agent-base -> role images -> grok variants), config.py is the single env-backed source of truth that bootstrap.py wires through, and the Makefile gate is comprehensive and deterministic. The main integrity concerns are (1) the byte-identical docker-compose.yml/.yaml pair that must be edited together or they silently drift, (2) the stale `roboco-bootstrap = roboco.bootstrap:cli` console script that points at a non-existent symbol, (3) the Makefile test matrix advertising Python 3.10-3.14 while pyproject requires >=3.13 (the 3.10/3.11/3.12 targets will fail to build), (4) the LLM model rename glm-5:cloud -> glm-5.2:cloud that will block boot on a NAS with only the old cached model, and (5) the CLAUDE.md configuration doc still referencing the old model name. The recent 15effce0 changes are well-scoped (version bump, model rename, enum-gate semantics fix, bash-guard /app venv protection, grok auth symlink) and each ships with matching tests or clear failure semantics, but the model-rename boot risk on cached deployments and the dead console-script entry are the items most likely to bite an operator. No state-machine holes or concurrency regressions were introduced in this slice by the baseline diff.
+This slice is the load-bearing deployment surface and it is internally coherent: the compose topologies are kept in lockstep (with an explicit reminder), the Dockerfiles form a clean FROM-chain (agent-base -> role images -> grok variants), config.py is the single env-backed source of truth that bootstrap.py wires through, and the Makefile gate is comprehensive and deterministic. The main integrity concerns are (1) the byte-identical docker-compose.yml/.yaml pair that must be edited together or they silently drift, (2) the stale `robofleet-bootstrap = robofleet.bootstrap:cli` console script that points at a non-existent symbol, (3) the Makefile test matrix advertising Python 3.10-3.14 while pyproject requires >=3.13 (the 3.10/3.11/3.12 targets will fail to build), (4) the LLM model rename glm-5:cloud -> glm-5.2:cloud that will block boot on a NAS with only the old cached model, and (5) the CLAUDE.md configuration doc still referencing the old model name. The recent 15effce0 changes are well-scoped (version bump, model rename, enum-gate semantics fix, bash-guard /app venv protection, grok auth symlink) and each ships with matching tests or clear failure semantics, but the model-rename boot risk on cached deployments and the dead console-script entry are the items most likely to bite an operator. No state-machine holes or concurrency regressions were introduced in this slice by the baseline diff.

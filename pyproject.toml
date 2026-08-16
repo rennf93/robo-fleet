@@ -45,8 +45,8 @@ dependencies = [
     # Direct imports (promoted from transitive)
     "cryptography",  # utils/crypto.py — Fernet-encrypted project git tokens
     "packaging",  # services/toolchain.py — PEP 440 requires-python resolution
-    "pyyaml",  # foundation/policy/conventions — .roboco/conventions.yml parse
-    # Conventions validator (roboco.conventions) — tree-sitter ASTs, Python + TS
+    "pyyaml",  # foundation/policy/conventions — .robofleet/conventions.yml parse
+    # Conventions validator (robofleet.conventions) — tree-sitter ASTs, Python + TS
     "tree-sitter",
     "tree-sitter-python",
     "tree-sitter-typescript",
@@ -56,10 +56,10 @@ dependencies = [
     "fastapi-users[sqlalchemy]",  # Cloud auth: cookie session for the seeded CEO login
     "fastapi-users-db-sqlalchemy",  # imported directly (SQLAlchemyUserDatabase); declare it
     "pyjwt",  # imported directly as `jwt` in the cloud-auth JWT strategy
-    # GCP — Cloud Run Jobs spawn backend (roboco.llm.providers.cloudrun_jobs)
+    # GCP — Cloud Run Jobs spawn backend (robofleet.llm.providers.cloudrun_jobs)
     "google-cloud-run",
     "google-cloud-storage",
-    # ADK agent runtime (roboco.agent) — LlmAgent + Runner on Gemini
+    # ADK agent runtime (robofleet.agent) — LlmAgent + Runner on Gemini
     "google-adk",
     "google-genai",
     "cloud-sql-python-connector[asyncpg]",  # PyPI pkg name; import is google.cloud.sql.connector; asyncpg extra matches existing async stack
@@ -102,9 +102,9 @@ robofleet = "robofleet.cli:cli"
 robofleet-bootstrap = "robofleet.bootstrap:cli"
 
 [project.urls]
-Homepage = "https://github.com/rennf93/roboco"
-Documentation = "https://docs.roboco.tech"
-Repository = "https://github.com/rennf93/roboco"
+Homepage = "https://github.com/rennf93/robo-fleet"
+Documentation = "https://docs.robo-fleet.tech"
+Repository = "https://github.com/rennf93/robo-fleet"
 
 [build-system]
 requires = ["hatchling"]
@@ -157,8 +157,8 @@ select = [
 # method-assign check rejects `BehavioralProcessor.process_usage_rules = ...`
 # outright, and a `# type: ignore` is not allowed in this codebase.
 "robofleet/security.py" = ["B010"]
-# roboco/infra/* adapters lazy-import google clients inside methods so a bare
-# `from roboco.infra import ...` never requires GCP credentials at load time.
+# robofleet/infra/* adapters lazy-import google clients inside methods so a bare
+# `from robofleet.infra import ...` never requires GCP credentials at load time.
 "robofleet/infra/*.py" = ["PLC0415"]
 # tests/unit/infra/* - pytest fixtures (tmp_path/monkeypatch) and lambdas are
 # standard test shape; pytest is imported for type hints only; lazy imports
@@ -206,16 +206,16 @@ select = [
 # verb contract (task title, description, acceptance criteria, assignee, etc.). Bundling
 # into a dataclass hides the field-by-field schema the LLM needs at the
 # tool layer; we accept the >5 kwarg signatures here for the same reason
-# they're accepted in `roboco/mcp/**`.
+# they're accepted in `robofleet/mcp/**`.
 "robofleet/services/gateway/**/*.py" = ["PLC0415", "PLR0913"]
 # The forge provider ABC/transport mirror REST endpoint parameter contracts
 # (e.g. list_pulls' head/base/state/per_page, create_release's tag/name/body/
 # target_commitish) — a bundle dataclass would just relocate the same named
-# fields behind one hop, same rationale as roboco/mcp/** and gateway/** above.
+# fields behind one hop, same rationale as robofleet/mcp/** and gateway/** above.
 "robofleet/services/forge/*.py" = ["PLR0913"]
 # Route signatures ARE the HTTP contract — each FastAPI query/path/body
 # param must be a discrete typed argument for OpenAPI + validation, so the
-# >5-arg rule doesn't fit them (same rationale as roboco/mcp/**). TC001/TC003:
+# >5-arg rule doesn't fit them (same rationale as robofleet/mcp/**). TC001/TC003:
 # FastAPI resolves path/query/dependency param annotations at runtime via
 # get_type_hints(), even under `from __future__ import annotations` — a
 # stdlib OR first-party type used only in a route param (e.g. `task_id: UUID`,
@@ -228,32 +228,32 @@ select = [
 # as the routes above (X-Agent-* + the session cookie), hence PLR0913 too.
 "robofleet/api/deps.py" = ["PLC0415", "PLR0913"]
 # tasks.py/telegram.py hold route-layer helpers extracted verbatim from
-# roboco/api/routes/*.py (no_helpers_in_routes cleanup) — they keep the same
+# robofleet/api/routes/*.py (no_helpers_in_routes cleanup) — they keep the same
 # lazy, call-time service imports the originals used to dodge import cycles
-# with the modules they wire (same rationale as roboco/api/deps.py above).
+# with the modules they wire (same rationale as robofleet/api/deps.py above).
 "robofleet/api/utils/tasks.py" = ["PLC0415"]
 "robofleet/api/utils/telegram.py" = ["PLC0415"]
 # v1_role_dep.py holds the role-guard/envelope helpers extracted verbatim from
-# roboco/api/routes/v1/_role_dep.py (no_helpers_in_routes cleanup) — same
-# lazy, call-time roboco.api.deps import the original used to dodge the
-# import cycle with deps.py, same rationale as roboco/api/deps.py above.
+# robofleet/api/routes/v1/_role_dep.py (no_helpers_in_routes cleanup) — same
+# lazy, call-time robofleet.api.deps import the original used to dodge the
+# import cycle with deps.py, same rationale as robofleet/api/deps.py above.
 "robofleet/api/utils/v1_role_dep.py" = ["PLC0415"]
 # board_programs.py's to_response() defers importing BoardProgramResponse
 # from its route module — a genuine circular import (the route module
 # imports this module for its extracted helpers), not dodgeable by hoisting.
 "robofleet/api/utils/board_programs.py" = ["PLC0415"]
 "robofleet/runtime/*.py" = ["PLC0415"]
-# The e2e smoke harness defers every roboco import until the stack fixture
+# The e2e smoke harness defers every robo-fleet import until the stack fixture
 # runs, so the default (skipped) suite never pays the app-surface import
 # cost; ARG001 covers FastAPI path params the fake-GitHub handlers must
 # name but not read.
 "tests/e2e_smoke/*.py" = ["PLC0415", "ARG001"]
 # The eval bench (offline CLI, not part of the served app) defers heavy/
-# optional imports — tests.e2e_smoke.harness, roboco.runtime.orchestrator,
-# roboco.services.task, asyncpg — to call time for the same reason
-# tests/e2e_smoke and roboco/services do; PLR0913 covers the stage-driving
+# optional imports — tests.e2e_smoke.harness, robofleet.runtime.orchestrator,
+# robofleet.services.task, asyncpg — to call time for the same reason
+# tests/e2e_smoke and robofleet/services do; PLR0913 covers the stage-driving
 # and scoring call surfaces (task/spawner/role/timeout tuples), same
-# rationale as roboco/services/gateway/**.
+# rationale as robofleet/services/gateway/**.
 "robofleet/eval/*.py" = ["PLC0415", "PLR0913"]
 # PTH119: _grok_usage_json sanitizes the agent id with os.path.basename — the
 # path-injection sanitizer CodeQL's query models; the pathlib equivalent
@@ -278,7 +278,7 @@ select = [
 # imports so the prompt-composition utility stays decoupled from the heavy
 # service graph (it loads at every agent spawn).
 "robofleet/agents/factories/_base.py" = ["PLC0415"]
-# roboco/vault.py's cheap ensure_vault_assets() is imported at orchestrator
+# robofleet/vault.py's cheap ensure_vault_assets() is imported at orchestrator
 # startup; _rebuild()'s full service graph (Task/Journal/A2A/Agent services)
 # stays deferred so that startup path never pays for it.
 "robofleet/vault.py" = ["PLC0415"]
@@ -302,7 +302,7 @@ select = [
 # _upload_manifest lazy-imports google.cloud.storage (a heavy optional dep)
 # behind a config/bucket guard, so environments without GCS configured never
 # pay the import cost, the same intentional-lazy-import sanction applied to
-# roboco/services/*.py.
+# robofleet/services/*.py.
 "robofleet/llm/providers/cloudrun_jobs.py" = ["ARG002", "PLC0415"]
 # AgentProvider.execution_outcome default returns None without reading its
 # instance_id arg (only the Cloud Run Jobs override uses it); renaming to
@@ -542,7 +542,7 @@ DEP002 = [
     "types-PyYAML",
 ]
 # DEP003: Starlette is a transitive dep of FastAPI, but BaseHTTPMiddleware is needed.
-# "tests": roboco/eval/runner.py deliberately imports tests.e2e_smoke.harness/arcs
+# "tests": robofleet/eval/runner.py deliberately imports tests.e2e_smoke.harness/arcs
 # (the offline eval bench's disposable-project machinery — see that module's
 # docstring) — deptry sees the local `tests` package as an unresolvable
 # transitive import since it isn't a PyPI dependency at all. The runtime side

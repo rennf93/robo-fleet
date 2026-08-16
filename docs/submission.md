@@ -40,14 +40,14 @@ The fleet architecture maps the seven fleet properties onto the Google stack: a 
 
 - **Social post (+0.2):** TBD - a public X/LinkedIn post linking the demo video. Filed once the video is public.
 - **Blog (+0.2):** TBD - a public blog post (Medium or the project docs site) walking through the fleet architecture and the Google-stack port. Filed before the deadline.
-- **Veo (+0.2):** stretch, pending CEO decision on the video engine. The RoboCo video engine (HyperFrames craft program + motion design bar) can be wired to the Veo API as the generator backend, but the CEO has not yet confirmed keeping the video engine in the robo-fleet scope. If confirmed, the wiring is a generator-side swap (video engine -> Veo API) and a demo clip; if not, this bonus is dropped.
+- **Veo (+0.2):** stretch, pending CEO decision on the video engine. The RoboFleet video engine (HyperFrames craft program + motion design bar) can be wired to the Veo API as the generator backend, but the CEO has not yet confirmed keeping the video engine in the robo-fleet scope. If confirmed, the wiring is a generator-side swap (video engine -> Veo API) and a demo clip; if not, this bonus is dropped.
 
 ## Compliance proof
 
 The repo ships a compliance test at `tests/compliance/test_hackathon_stack.py` that asserts the three mandatory stack items and fails (not skips) if ADK or the Gemini 3.5 model is missing:
 
 1. `google.adk.runners.Runner` is importable (ADK is the agent framework).
-2. `roboco.agent.adk_entry._MODEL` resolves to a `gemini-3.5-*` id (Gemini 3.5+ via Gemini API/Vertex).
-3. `roboco.infra.cloudsql.async_engine_for_cloudsql` is callable and `get_engine` routes through it when `gcp_cloudsql_instance` is armed (>=1 Google Cloud infra service wired).
+2. `robofleet.agent.adk_entry._MODEL` resolves to a `gemini-3.5-*` id (Gemini 3.5+ via Gemini API/Vertex).
+3. `robofleet.infra.cloudsql.async_engine_for_cloudsql` is callable and `get_engine` routes through it when `gcp_cloudsql_instance` is armed (>=1 Google Cloud infra service wired).
 
 Run it with `uv run pytest tests/compliance/ -v`. The live-GCP assertion (`test_live_gcp_cloudsql_instance_configured`) skips unless `ROBOFLEET_GCP_E2E=1` is set against the deployed stack.

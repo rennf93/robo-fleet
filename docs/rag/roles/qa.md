@@ -19,8 +19,8 @@
 - Pull awaiting-QA tasks via `give_me_work()` / `claim_review(task_id)`
 - Pass via `pass(task_id, notes, criteria_verified=[{criterion, evidence}, ...])` (transitions to `awaiting_documentation`) — one entry per task acceptance criterion, see "Passing QA" below
 - Fail via `fail(task_id, findings=[{file?, line?, severity, criterion?, expected, actual, fix?, evidence?}])` (returns to `needs_revision`) — see "Failing QA" below. The old `issues=[...]` (plain strings) form still works this release but is deprecated.
-- Read-only inspect git via `roboco_git_status / _log / _diff / _branch_list`
-- Search the knowledge base via `roboco_ask_mentor` / `roboco_kb_search`
+- Read-only inspect git via `robofleet_git_status / _log / _diff / _branch_list`
+- Search the knowledge base via `robofleet_ask_mentor` / `robofleet_kb_search`
 - Note evidence via `note(text=..., scope="...")` and `evidence(...)`
 - Block your own review on an external dependency via `i_am_blocked(task_id, reason="...")` (Cell PM unblocks)
 
@@ -53,12 +53,12 @@ unclaim(task_id) / resume(task_id) / i_am_idle()
 
 | MCP server            | Verbs you can call |
 |-----------------------|--------------------|
-| `roboco-flow`         | `give_me_work`, `claim_review`, `pass`, `fail`, `i_am_blocked`, `unclaim`, `resume`, `i_am_idle` |
-| `roboco-do`           | `note`, `dm`, `evidence` (no `commit`, no `notify`) |
-| `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
+| `robofleet-flow`         | `give_me_work`, `claim_review`, `pass`, `fail`, `i_am_blocked`, `unclaim`, `resume`, `i_am_idle` |
+| `robofleet-do`           | `note`, `dm`, `evidence` (no `commit`, no `notify`) |
+| `robofleet-git-readonly` | `robofleet_git_status`, `robofleet_git_log`, `robofleet_git_diff`, `robofleet_git_branch_list` |
+| `robofleet-optimal`      | `robofleet_ask_mentor`, `robofleet_kb_search` |
 
-There is **no** `commit` / `roboco_git_commit / _push / _create_pr` tool in your surface — QA is read-only by design. Branches are auto-checked- out on `claim_review`; you don't run `git checkout` either.
+There is **no** `commit` / `robofleet_git_commit / _push / _create_pr` tool in your surface — QA is read-only by design. Branches are auto-checked- out on `claim_review`; you don't run `git checkout` either.
 
 ## Review Checklist
 
@@ -66,9 +66,9 @@ Before deciding, gather evidence:
 
 1. Read the task: criteria + dev's notes are on the task object.
 2. Read the dev's journal: filter on the developer's slug + this task.
-3. Inspect the diff: `roboco_git_diff(project_slug=...)` against the PR head.
+3. Inspect the diff: `robofleet_git_diff(project_slug=...)` against the PR head.
 4. Run the suite if relevant:
-   - Backend: `uv run pytest`, `uv run ruff check .`, `uv run mypy roboco/`
+   - Backend: `uv run pytest`, `uv run ruff check .`, `uv run mypy robofleet/`
    - Frontend: `pnpm test`, `pnpm lint`, `pnpm typecheck`
 5. Verify the acceptance criteria *line by line* — that's what `pass` is asserting.
 6. `note(text="<what you checked>", scope="evidence")` so the trail survives compaction.
@@ -105,7 +105,7 @@ On a round ≥2 review (a task that has bounced before), `claim_review` also car
 
 ## Collision Context in Review Evidence
 
-`claim_review` evidence also carries `collision_context` when this task has same-parent siblings that would collide with it — overlapping declared `intends_to_touch` globs, or both siblings adding a migration. Each entry names the sibling, the overlapping globs, and (when the diff's actual touched files are known) an `undeclared` list flagging files touched but never declared — a drift signal worth a second look, not an automatic fail. `collision_context` is `None` when the task has no parent or no colliding siblings. This is the same collision map the PR-gate reviewer and the delegating PM see (`docs/rag/architecture/review-findings.md` covers findings; the collision builder itself is `roboco/services/gateway/choreographer/collision.py`).
+`claim_review` evidence also carries `collision_context` when this task has same-parent siblings that would collide with it — overlapping declared `intends_to_touch` globs, or both siblings adding a migration. Each entry names the sibling, the overlapping globs, and (when the diff's actual touched files are known) an `undeclared` list flagging files touched but never declared — a drift signal worth a second look, not an automatic fail. `collision_context` is `None` when the task has no parent or no colliding siblings. This is the same collision map the PR-gate reviewer and the delegating PM see (`docs/rag/architecture/review-findings.md` covers findings; the collision builder itself is `robofleet/services/gateway/choreographer/collision.py`).
 
 ## Failing QA
 
@@ -114,7 +114,7 @@ fail(
     task_id="<task>",
     findings=[
         {
-            "file": "roboco/api/routes/rate_limit.py",
+            "file": "robofleet/api/routes/rate_limit.py",
             "line": 88,
             "severity": "blocker",
             "criterion": "429 fires at the 101st request",
@@ -132,7 +132,7 @@ fail(
 )
 ```
 
-Each finding is validated and inserted onto the task's append-only `task_review_findings` ledger (`origin=qa`, `round=revision_count+1`), then rendered into `qa_notes` as `[F-xxxxxxxx] file:line (severity) — expected → actual → fix`. A soft nudge appears above 5 findings in one call, a hard reject above 10 — split or prioritize. The task goes back to `needs_revision`. The original developer is re-assigned automatically (see `extract_original_developer` in `roboco/services/task.py`) and receives the open findings inline via `evidence()`'s `revision_findings` and the respawn prompt. See `docs/rag/architecture/review-findings.md` for the full Finding shape and caps.
+Each finding is validated and inserted onto the task's append-only `task_review_findings` ledger (`origin=qa`, `round=revision_count+1`), then rendered into `qa_notes` as `[F-xxxxxxxx] file:line (severity) — expected → actual → fix`. A soft nudge appears above 5 findings in one call, a hard reject above 10 — split or prioritize. The task goes back to `needs_revision`. The original developer is re-assigned automatically (see `extract_original_developer` in `robofleet/services/task.py`) and receives the open findings inline via `evidence()`'s `revision_findings` and the respawn prompt. See `docs/rag/architecture/review-findings.md` for the full Finding shape and caps.
 
 ## Self-Review Prevention
 

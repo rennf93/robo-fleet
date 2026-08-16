@@ -1,24 +1,24 @@
 # Git Tools
 
-There is **no** "roboco_git_commit / _push / _create_pr / _merge_pr / _checkout" MCP tool. Anything mutating the repo goes through one of two role-scoped verbs and the choreographer handles git for you.
+There is **no** "robofleet_git_commit / _push / _create_pr / _merge_pr / _checkout" MCP tool. Anything mutating the repo goes through one of two role-scoped verbs and the choreographer handles git for you.
 
-## Read Operations (any role) — `roboco-git-readonly`
+## Read Operations (any role) — `robofleet-git-readonly`
 
 | Tool | Purpose |
 |------|---------|
-| `roboco_git_status` | View working tree status |
-| `roboco_git_log` | View commit history |
-| `roboco_git_branch_list` | List branches |
-| `roboco_git_diff` | View changes |
+| `robofleet_git_status` | View working tree status |
+| `robofleet_git_log` | View commit history |
+| `robofleet_git_branch_list` | List branches |
+| `robofleet_git_diff` | View changes |
 
 ```python
 # project_slug is optional — omit it and your own project is used
 # (from this agent's environment). Pass it explicitly only to inspect
 # a different project than the one you're assigned to.
-status = roboco_git_status()
-diff = roboco_git_diff()
-log = roboco_git_log(branch="feature/backend/a1b2c3d4")
-branches = roboco_git_branch_list()
+status = robofleet_git_status()
+diff = robofleet_git_diff()
+log = robofleet_git_log(branch="feature/backend/a1b2c3d4")
+branches = robofleet_git_branch_list()
 ```
 
 ## Branch Lifecycle — automatic
@@ -33,7 +33,7 @@ You never run `git checkout` or `git branch` yourself; calling `i_will_work_on(t
 
 ## Write Path — by role
 
-### Developers and Documenters → `commit` (roboco-do)
+### Developers and Documenters → `commit` (robofleet-do)
 
 ```python
 # Commit on your active task's branch. The choreographer:
@@ -41,14 +41,14 @@ You never run `git checkout` or `git branch` yourself; calling `i_will_work_on(t
 #  - validates against commit_validator
 #  - pushes to the remote branch
 #  - opens a PR when the task transitions out of in_progress
-commit(message="Add rate limiting endpoint", files=["roboco/api/routes/rate.py"])
+commit(message="Add rate limiting endpoint", files=["robofleet/api/routes/rate.py"])
 ```
 
 There is no separate `push` step and no separate `create_pr` step. Both are side-effects of the lifecycle transitions the verbs already drive.
 
 On a project that checks in generated artifacts, the push step also regenerates them: right before your branch is pushed, the project's codegen command runs in your worktree, and any drift it produces is committed into the SAME push automatically — you don't need to run it yourself, and a broken/timing-out codegen command never blocks your push (it just logs and lets you proceed; a real drift then surfaces on CI's own drift gate instead).
 
-### PMs → `complete` (roboco-flow)
+### PMs → `complete` (robofleet-flow)
 
 ```python
 # Cell PM completing a leaf task: merges the leaf PR.

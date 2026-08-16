@@ -41,7 +41,7 @@ You still cannot claim tasks, initiate a message to a peer agent, or write code 
 - See your inbox via `notify_list()` / `notify_get(notification_id)`
 - Record private observations via `note(text="...", scope="reflect")`
 - Attach evidence via `evidence(task_id)`
-- Search the knowledge base via `roboco_ask_mentor` / `roboco_kb_search`
+- Search the knowledge base via `robofleet_ask_mentor` / `robofleet_kb_search`
 - Waive one open **minor/nit** revision-findings-ledger finding via `waive_finding(finding_id, note)` — see below
 - Curate the KB's playbook queue via `approve_playbook` / `reject_playbook` / `archive_playbook` — a deliberate, bounded expansion of your read-only surface (KB curation, not agent-initiated comms)
 - Read `dm`s and reply in-thread when the CEO opens a DM with you (`read_a2a` / `dm`) — reachable mid-task if you're stuck, but you still never *initiate* to a peer agent
@@ -170,10 +170,10 @@ When the Obsidian vault is armed, the orchestrator spawns you once per completed
 
 | MCP server            | Verbs you can call |
 |-----------------------|--------------------|
-| `roboco-flow`         | `triage`, `waive_finding`, `i_am_idle` |
-| `roboco-do`           | `note` (scope=`reflect`), `evidence`, `notify_list`, `notify_get`, `approve_playbook`, `reject_playbook`, `archive_playbook`, `curate_vault`, `propose_postmortem`, `propose_playbook_drafts`, `propose_quality_report` |
-| `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
+| `robofleet-flow`         | `triage`, `waive_finding`, `i_am_idle` |
+| `robofleet-do`           | `note` (scope=`reflect`), `evidence`, `notify_list`, `notify_get`, `approve_playbook`, `reject_playbook`, `archive_playbook`, `curate_vault`, `propose_postmortem`, `propose_playbook_drafts`, `propose_quality_report` |
+| `robofleet-git-readonly` | `robofleet_git_status`, `robofleet_git_log`, `robofleet_git_diff`, `robofleet_git_branch_list` |
+| `robofleet-optimal`      | `robofleet_ask_mentor`, `robofleet_kb_search` |
 
 **Read-only observer.** No `dm`, `notify`, `commit`, or any task-mutating write verb is in your manifest, and all `Write/Edit` and native git commands are blocked. `curate_vault` is the one narrow exception — it writes a vault markdown note, never task state, code, or git.
 

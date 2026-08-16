@@ -1,6 +1,6 @@
-# RoboCo Contributor License Agreement
+# RoboFleet Contributor License Agreement
 
-Thank you for your interest in contributing to RoboCo (the "Project"), maintained by Renzo Franceschini (the "Maintainer").
+Thank you for your interest in contributing to RoboFleet (the "Project"), maintained by Renzo Franceschini (the "Maintainer").
 
 This Contributor License Agreement ("Agreement") documents the rights granted by contributors to the Maintainer. It applies to individual contributors; an entity-level version is provided in the [Entity CLA](#entity-cla) section below. By signing this Agreement (see [How to sign](#how-to-sign)), You accept and agree to its terms for Your past, present, and future Contributions to the Project.
 

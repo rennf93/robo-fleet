@@ -1,6 +1,6 @@
-# RoboCo Control Panel
+# RoboFleet Control Panel
 
-Next.js 16 control panel for the RoboCo AI agent system. Formerly a separate repository (`rennf93/roboco-panel`), now vendored under `panel/` in this monorepo so `docker compose up -d` brings up the whole stack from one place.
+Next.js 16 control panel for the RoboFleet AI agent system. Formerly a separate repository (`rennf93/robofleet-panel`), now vendored under `panel/` in this monorepo so `docker compose up -d` brings up the whole stack from one place.
 
 ## Stack
 

@@ -53,7 +53,7 @@ Low-risk relays go through immediately. The four high-impact kinds are **queued 
 
 `edit` applies a content edit + optional reassignment on the CEO's confirmed command, via `fields={...}`:
 
-- Editable fields (`_EDITABLE_TASK_FIELDS` in `roboco/services/secretary.py`): `title`, `description`, `acceptance_criteria`, `priority`, `team`, `estimated_complexity`, `nature`, `assigned_to`. Any other key is rejected outright — `status` is never set through `edit` (use `override`/`start`/`cancel` instead), and git fields (branch/PR) are never editable at all.
+- Editable fields (`_EDITABLE_TASK_FIELDS` in `robofleet/services/secretary.py`): `title`, `description`, `acceptance_criteria`, `priority`, `team`, `estimated_complexity`, `nature`, `assigned_to`. Any other key is rejected outright — `status` is never set through `edit` (use `override`/`start`/`cancel` instead), and git fields (branch/PR) are never editable at all.
 - `assigned_to` may be a UUID or an agent slug (e.g. `"be-dev-1"`), and is **claim-aware**: reassigning a task that is `claimed`/`in_progress` reseeds the new assignee's heartbeat (`reassign_active_claim`) instead of a naive field set, so they aren't immediately stale to the reaper; anything else routes through the general `reassign` (or unassigns on `assigned_to=null`).
 
 ```python
@@ -77,7 +77,7 @@ The CEO refers to tasks by **name**, not UUID. Use **`search_tasks(q, limit=20)`
 |--------|-------|
 | Base (read-only) | `Read`, `Grep`, `Glob` |
 | Secretary MCP | `read_company_state`, `search_tasks`, `read_task`, `submit_directive` |
-| `roboco-do` (gateway) | `note`, `evidence` |
+| `robofleet-do` (gateway) | `note`, `evidence` |
 
 Same isolation as Intake: a hard tool allowlist, no host settings, no outward agent comms. Everything else is denied.
 

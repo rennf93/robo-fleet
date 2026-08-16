@@ -1,10 +1,10 @@
 # LLM provider security posture
 
-RoboCo routes each agent to one of several LLM providers (the **Routing** card in the control panel). This note states — truthfully — what protections an agent gets on each provider. The short version: **Grok now reaches effective security parity** — the command/secret-exfiltration guard, the budget/cost cap, and the prompt-injection guard all apply to Grok agents. The only Claude hook without a Grok equivalent is the stop-guard (terminal-verb enforcement), which is a workflow nicety, not a safety control. Any agent — including the delivery roles — can be routed to Grok.
+RoboFleet routes each agent to one of several LLM providers (the **Routing** card in the control panel). This note states — truthfully — what protections an agent gets on each provider. The short version: **Grok now reaches effective security parity** — the command/secret-exfiltration guard, the budget/cost cap, and the prompt-injection guard all apply to Grok agents. The only Claude hook without a Grok equivalent is the stop-guard (terminal-verb enforcement), which is a workflow nicety, not a safety control. Any agent — including the delivery roles — can be routed to Grok.
 
 ## Two runtimes, not five
 
-An agent has two layers: the **model** (the brain) and the **runtime** (the agent program that drives it — reads files, calls tools, loops). RoboCo's guardrails are implemented as runtime hooks, so they only exist when the runtime provides them.
+An agent has two layers: the **model** (the brain) and the **runtime** (the agent program that drives it — reads files, calls tools, loops). RoboFleet's guardrails are implemented as runtime hooks, so they only exist when the runtime provides them.
 
 | Provider (routing mode) | Runtime | Model |
 |---|---|---|
@@ -13,16 +13,16 @@ An agent has two layers: the **model** (the brain) and the **runtime** (the agen
 | Self-Hosted | Claude Code (via `ANTHROPIC_BASE_URL` injection) | your endpoint's model |
 | **Grok (xAI)** | **grok CLI** (Grok Build) | **grok-build** |
 
-Anthropic, Ollama, and Self-Hosted all run on **Claude Code** and therefore keep the **full guard set**. Only **Grok** runs on a different runtime — xAI's official **grok CLI** — because the `claude` binary rejects any non-Claude model id, so Grok cannot run inside Claude Code. The grok CLI is to Grok what Claude Code is to Claude, and (being Claude-Code-compatible) it supports the same blocking `PreToolUse` hook mechanism RoboCo's command guard relies on.
+Anthropic, Ollama, and Self-Hosted all run on **Claude Code** and therefore keep the **full guard set**. Only **Grok** runs on a different runtime — xAI's official **grok CLI** — because the `claude` binary rejects any non-Claude model id, so Grok cannot run inside Claude Code. The grok CLI is to Grok what Claude Code is to Claude, and (being Claude-Code-compatible) it supports the same blocking `PreToolUse` hook mechanism RoboFleet's command guard relies on.
 
 ## Guardrail parity matrix
 
 | Guardrail | Claude Code runtime (Anthropic / Ollama / Self-Hosted) | Grok (grok CLI) |
 |---|---|---|
 | MCP gateway + role tool-manifest | yes | yes (mounted by construction) |
-| Command / secret-exfiltration guard (bash, credential files, internal-host calls, PAT exfil) | yes (`bash-guard-hook.sh`, PreToolUse) | **yes** — the SAME `bash-guard-hook.sh` installed as a grok blocking `PreToolUse` hook (`~/.grok/hooks/roboco-bash-guard.json`) for the exfil/credential/identity-forgery patterns, plus native `--deny` rules for git network/branch/history ops |
+| Command / secret-exfiltration guard (bash, credential files, internal-host calls, PAT exfil) | yes (`bash-guard-hook.sh`, PreToolUse) | **yes** — the SAME `bash-guard-hook.sh` installed as a grok blocking `PreToolUse` hook (`~/.grok/hooks/robofleet-bash-guard.json`) for the exfil/credential/identity-forgery patterns, plus native `--deny` rules for git network/branch/history ops |
 | Budget / runaway-cost kill-switch | yes (`post-tool-budget` hook against the SDK server) | **yes** — orchestrator-side cost watchdog (`ROBOFLEET_GROK_MAX_COST_USD`) reading the captured `usage.json` |
-| Prompt-injection guard (rejects "ignore previous instructions", role-override, fake escalations in incoming A2A / task / notification content) | yes (`user-prompt-hook.sh`, UserPromptSubmit, denies the turn) | **yes** — recreated at RoboCo's input boundary (`prompt_guard.detect_injection`): the interactive driver scans every turn, the one-shot grok entrypoint scans the task prompt. Same patterns as the bash hook, kept in sync — independent of any runtime pre-prompt hook |
+| Prompt-injection guard (rejects "ignore previous instructions", role-override, fake escalations in incoming A2A / task / notification content) | yes (`user-prompt-hook.sh`, UserPromptSubmit, denies the turn) | **yes** — recreated at RoboFleet's input boundary (`prompt_guard.detect_injection`): the interactive driver scans every turn, the one-shot grok entrypoint scans the task prompt. Same patterns as the bash hook, kept in sync — independent of any runtime pre-prompt hook |
 | Stop-guard (terminal-verb enforcement before a run ends) | yes (`stop-hook.sh`, Stop) | **no** — the grok CLI's `Stop` event is observe-only / non-blocking (workflow nicety, not a security control) |
 
 ### Why the command guard splits git from exfil on Grok

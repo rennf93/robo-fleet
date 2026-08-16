@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Pydantic/dataclass domain surface of RoboCo — the typed contract the API, services, orchestrator, and agent runtimes all speak. These are **not** the ORM tables (`roboco/db/tables.py` owns persistence); models here are request/response schemas, domain aggregates, runtime DTOs, and enums that get crossed into SQLAlchemy rows by the service layer. Validation (`RobocoBase`: `extra="forbid"`, `validate_assignment`, `use_enum_values`) lives here, and several files (`agents.py`, `runtime.py`, `optimal.py`, `metrics.py`, `llm.py`, `audit.py`, `dashboard.py`, `transcription.py`, `extraction.py`, `permissions.py`) are pure dataclasses/StrEnums with no Pydantic model at all — runtime value types the orchestrator and services pass around.
+The Pydantic/dataclass domain surface of RoboFleet — the typed contract the API, services, orchestrator, and agent runtimes all speak. These are **not** the ORM tables (`robofleet/db/tables.py` owns persistence); models here are request/response schemas, domain aggregates, runtime DTOs, and enums that get crossed into SQLAlchemy rows by the service layer. Validation (`RobocoBase`: `extra="forbid"`, `validate_assignment`, `use_enum_values`) lives here, and several files (`agents.py`, `runtime.py`, `optimal.py`, `metrics.py`, `llm.py`, `audit.py`, `dashboard.py`, `transcription.py`, `extraction.py`, `permissions.py`) are pure dataclasses/StrEnums with no Pydantic model at all — runtime value types the orchestrator and services pass around.
 
 ## Files
 
@@ -84,7 +84,7 @@ The Pydantic/dataclass domain surface of RoboCo — the typed contract the API, 
 | `AgentInstance` | dataclass | runtime.py:70 | Running Claude Code container record + `usage_session_id` |
 | `SpawnGitContext` | dataclass | runtime.py:28 | Git context for spawn (project_slug, branch, `task_short_id` for worktree) |
 | `MODEL_MAP` | dict | runtime.py:106 | short-name→full Claude id (opus→claude-opus-5, sonnet→claude-sonnet-5, haiku→…) |
-| `ROLE_MODEL_MAP` | dict | runtime.py:120 | per-role default tier: developer/qa/documenter/cell_pm/main_pm→sonnet, pr_reviewer/auditor/board/ceo/prompter/secretary→opus. **Haiku retired from every delivery-lifecycle role (#680, 2026-07-24)**: qa/documenter moved haiku→sonnet — haiku can't reliably emit the structured envelopes the lifecycle runs on (`pass_review`'s per-AC `criteria_verified`, `delegate`'s `covers_parent_criteria`, the findings ledger), so a haiku QA/PM claims, gets validation-rejected, idles, respawns, and loops without progress. A structured-verb capability floor (`_below_capability_floor`/`_floor_below_capability`, `roboco/services/llm.py`) additionally upgrades ANY below-floor Anthropic assignment to sonnet at resolution time — from a pin, a plain ROLE row, or a future map edit — so the floor can't be silently reintroduced. Non-Anthropic providers are untouched (an Anthropic-tier floor, not a provider policy). |
+| `ROLE_MODEL_MAP` | dict | runtime.py:120 | per-role default tier: developer/qa/documenter/cell_pm/main_pm→sonnet, pr_reviewer/auditor/board/ceo/prompter/secretary→opus. **Haiku retired from every delivery-lifecycle role (#680, 2026-07-24)**: qa/documenter moved haiku→sonnet — haiku can't reliably emit the structured envelopes the lifecycle runs on (`pass_review`'s per-AC `criteria_verified`, `delegate`'s `covers_parent_criteria`, the findings ledger), so a haiku QA/PM claims, gets validation-rejected, idles, respawns, and loops without progress. A structured-verb capability floor (`_below_capability_floor`/`_floor_below_capability`, `robofleet/services/llm.py`) additionally upgrades ANY below-floor Anthropic assignment to sonnet at resolution time — from a pin, a plain ROLE row, or a future map edit — so the floor can't be silently reintroduced. Non-Anthropic providers are untouched (an Anthropic-tier floor, not a provider policy). |
 | `ROLE_EFFORT_MAP` | dict | runtime.py | per-role `CLAUDE_CODE_EFFORT_LEVEL` override injected at spawn; **empty/inert by default** (opt-in per role after verifying the level moves usage) |
 | `MODEL_CATALOG` | tuple | llm_catalog.py:67 | Settings-dropdown source of truth; Anthropic entries derived from `MODEL_MAP` |
 | `PermissionLevel` | IntEnum | permissions.py:15 | CEO=0/BOARD=1/MAIN_PM=2/CELL_PM=3/CELL_MEMBER=4/AUDITOR=99 |
@@ -110,7 +110,7 @@ The Pydantic/dataclass domain surface of RoboCo — the typed contract the API, 
 
 ## Data Flow
 
-API request bodies → Pydantic `*Create`/`*Update` schemas (validation boundary, `extra="forbid"`) → route handlers → services. Services translate between these models and the SQLAlchemy ORM tables in `roboco/db/tables.py` (e.g. `TaskTable`, `WorkSessionTable`, `ProjectTable`, `NotificationTable`, `JournalTable`, `JournalEntryTable`, `AgentTable`, `PlaybookTable`, `ProductTable`, `PitchTable`): the ORM row is the persistence shape; the Pydantic model is the contract shape. Several ORM tables load back into a model via `model_config = ConfigDict(from_attributes=True)` (`Playbook` at playbook.py:20, `Product`/`ProductCellMapping` via `RobocoBase`). Runtime-only DTOs (`AgentInstance`, `WaitingRecord`, `SpawnGitContext`, `Event`, `ExtractionResult`, `StreamBuffer`, the metrics/observability dataclasses, `AuditFlag`/`AuditReport`) never touch the DB directly — they are orchestrator/service in-process values. Enum parity between model and ORM is enforced by the test gate (`enum` columns in `tables.py` reference the same `StrEnum` classes from `base.py`/`foundation.identity`). `agent.py` `Agent` is the API/persistence model; `agents.py` `AgentConfig` is the runtime analogue used by the agent implementations — the comment at agents.py:7 calls this split out explicitly. Validation lives almost entirely on the Pydantic schemas (`min_length`, `ge`/`le`, `pattern`, `model_validator`); the dataclass models are intentionally validation-light.
+API request bodies → Pydantic `*Create`/`*Update` schemas (validation boundary, `extra="forbid"`) → route handlers → services. Services translate between these models and the SQLAlchemy ORM tables in `robofleet/db/tables.py` (e.g. `TaskTable`, `WorkSessionTable`, `ProjectTable`, `NotificationTable`, `JournalTable`, `JournalEntryTable`, `AgentTable`, `PlaybookTable`, `ProductTable`, `PitchTable`): the ORM row is the persistence shape; the Pydantic model is the contract shape. Several ORM tables load back into a model via `model_config = ConfigDict(from_attributes=True)` (`Playbook` at playbook.py:20, `Product`/`ProductCellMapping` via `RobocoBase`). Runtime-only DTOs (`AgentInstance`, `WaitingRecord`, `SpawnGitContext`, `Event`, `ExtractionResult`, `StreamBuffer`, the metrics/observability dataclasses, `AuditFlag`/`AuditReport`) never touch the DB directly — they are orchestrator/service in-process values. Enum parity between model and ORM is enforced by the test gate (`enum` columns in `tables.py` reference the same `StrEnum` classes from `base.py`/`foundation.identity`). `agent.py` `Agent` is the API/persistence model; `agents.py` `AgentConfig` is the runtime analogue used by the agent implementations — the comment at agents.py:7 calls this split out explicitly. Validation lives almost entirely on the Pydantic schemas (`min_length`, `ge`/`le`, `pattern`, `model_validator`); the dataclass models are intentionally validation-light.
 
 ## Mermaid
 
@@ -190,56 +190,56 @@ models/
 
 - **Pydantic** (`BaseModel`, `ConfigDict`, `Field`, `model_validator`, `field_validator`) — every `RobocoBase` subclass.
 - **stdlib** `dataclasses`, `enum.StrEnum`, `datetime`, `uuid`, `typing` — the pure-dataclass files.
-- **`roboco.foundation.identity`** — `base.py:21` imports `identity` and aliases `AgentRole = identity.Role`, `Team = identity.Team`. `product.py` and `pitch.py` import `CELL_TEAMS`/`Team` directly from `foundation.identity`.
-- **`roboco.agents_config`** — `permissions.py:11` imports `ROLE_PERMISSION_LEVELS` to build `ROLE_LEVELS` at import time.
-- **`roboco.models.runtime`** — `llm_catalog.py:22` imports `MODEL_MAP` to derive Anthropic catalog entries.
-- **`roboco.models.message`** — `extraction.py:12` imports `ExtractedMessage`.
-- **`roboco.models.product`** — `task.py:24` imports `ProductCellMapping` (the `cell_projects` field).
+- **`robofleet.foundation.identity`** — `base.py:21` imports `identity` and aliases `AgentRole = identity.Role`, `Team = identity.Team`. `product.py` and `pitch.py` import `CELL_TEAMS`/`Team` directly from `foundation.identity`.
+- **`robofleet.agents_config`** — `permissions.py:11` imports `ROLE_PERMISSION_LEVELS` to build `ROLE_LEVELS` at import time.
+- **`robofleet.models.runtime`** — `llm_catalog.py:22` imports `MODEL_MAP` to derive Anthropic catalog entries.
+- **`robofleet.models.message`** — `extraction.py:12` imports `ExtractedMessage`.
+- **`robofleet.models.product`** — `task.py:24` imports `ProductCellMapping` (the `cell_projects` field).
 - Internal cross-imports are otherwise minimal; `__init__.py` is the single aggregation point.
 
 ## Entry Points
 
-- `from roboco.models import …` — the canonical import surface (`__init__.py` re-exports the API/Pydantic models + enums + `get_column_config`).
-- Direct module imports for the dataclass-only files: `from roboco.models.runtime import AgentInstance, WaitingRecord, MODEL_MAP`, `from roboco.models.events import Event, EventType`, `from roboco.models.metrics import BottleneckReport, ReworkReport, Scorecard`, `from roboco.models.optimal import SearchResult, RAGResponse`, `from roboco.models.agents import AgentConfig, DevTaskPhase`, `from roboco.models.llm_catalog import MODEL_CATALOG, provider_type_for_model`.
-- `roboco.models.base` — import `RobocoBase`, `TimestampMixin`, and any shared enum when building a new model.
+- `from robofleet.models import …` — the canonical import surface (`__init__.py` re-exports the API/Pydantic models + enums + `get_column_config`).
+- Direct module imports for the dataclass-only files: `from robofleet.models.runtime import AgentInstance, WaitingRecord, MODEL_MAP`, `from robofleet.models.events import Event, EventType`, `from robofleet.models.metrics import BottleneckReport, ReworkReport, Scorecard`, `from robofleet.models.optimal import SearchResult, RAGResponse`, `from robofleet.models.agents import AgentConfig, DevTaskPhase`, `from robofleet.models.llm_catalog import MODEL_CATALOG, provider_type_for_model`.
+- `robofleet.models.base` — import `RobocoBase`, `TimestampMixin`, and any shared enum when building a new model.
 
 ## Config Flags
 
-None — pure models, no flags. (The `Project` model *carries* opt-in fields `ci_watch_enabled`, `dep_update_command`, `dep_update_paths`, `sandbox_services` (project.py:142, validated against `VALID_SANDBOX_SERVICES` — sandboxed dev DB/Redis/Mongo, gated by `ROBOFLEET_SANDBOX_DB_ENABLED` elsewhere) that other layers gate on, and `llm_catalog` carries the "pure Ollama" defaults, but the models package itself reads no env / toggles nothing.) `VALID_SANDBOX_SERVICES` is now derived from the `SANDBOX_ENGINES` registry in `roboco/models/sandbox.py` (was a hardcoded `{"postgres","redis"}` set) — mongo is just another registry entry, no new migration (rides existing 057) and no new feature flag.
+None — pure models, no flags. (The `Project` model *carries* opt-in fields `ci_watch_enabled`, `dep_update_command`, `dep_update_paths`, `sandbox_services` (project.py:142, validated against `VALID_SANDBOX_SERVICES` — sandboxed dev DB/Redis/Mongo, gated by `ROBOFLEET_SANDBOX_DB_ENABLED` elsewhere) that other layers gate on, and `llm_catalog` carries the "pure Ollama" defaults, but the models package itself reads no env / toggles nothing.) `VALID_SANDBOX_SERVICES` is now derived from the `SANDBOX_ENGINES` registry in `robofleet/models/sandbox.py` (was a hardcoded `{"postgres","redis"}` set) — mongo is just another registry entry, no new migration (rides existing 057) and no new feature flag.
 
 ## Gotchas
 
-- `AgentRole` and `Team` are **not defined in `models/base.py`** — they are `identity.Role` / `identity.Team` aliased at base.py:23–24. The comment says "Removed in Phase 4 housekeeping after every consumer is migrated." SQLAlchemy `sa.Enum(AgentRole, name="agentrole")` still works because Python identity is preserved. New code should import from `roboco.foundation.identity` directly.
+- `AgentRole` and `Team` are **not defined in `models/base.py`** — they are `identity.Role` / `identity.Team` aliased at base.py:23–24. The comment says "Removed in Phase 4 housekeeping after every consumer is migrated." SQLAlchemy `sa.Enum(AgentRole, name="agentrole")` still works because Python identity is preserved. New code should import from `robofleet.foundation.identity` directly.
 - `ProductCellMapping` deliberately overrides `use_enum_values=False` (product.py:22) so `team` stays a real `Team` enum for `is`-checks and the validator's `.value` error — the only model that deviates from `RobocoBase`'s `use_enum_values=True`.
 - `Task` mutations are not done on the model; `task.py:337` directs callers to `TaskService` (`claim`, `start`, `block`, `complete`, …). Same pattern for `Notification`, `Journal`, `WorkSession` — service-owned state.
 - `TaskCreate` has **no silent defaults** for `task_type` / `nature` / `estimated_complexity` (task.py:350 docstring) — mirrors `foundation.policy.task_completeness.TASK_AT_CREATE`. The 2026-05-08 trace of agents omitting `task_type` and deadlocking the lifecycle is the reason.
 - `TaskCreate._exactly_one_target` (task.py:405) enforces exactly one of `project_id` / `product_id` / `cell_projects`. Old callers passing `cell_projects` alongside either of the others now fail.
 - The "one active WorkSession per task" invariant is **not** in the model — it's a DB partial-unique index (migration 047) + service-layer guard. The model alone won't stop you constructing two active `WorkSession`s.
 - `handoff.py` is **RESERVED** (file header, handoff.py:7) — `DocumenterHandoff`/`HandoffStatus` are defined but not wired into the service layer; current flow uses `dev_notes` + `handoff_summary` on `Task`.
-- `a2a.py` has two parallel model families: the **wire/protocol** models (`AgentCard`, `A2ATask`, `A2AMessage`, parts — A2A spec) and the **persistent** models (`A2AConversation`, `A2AChatMessage`, `A2AInboxSummary` — DB storage). `A2AMessage` (wire) ≠ `A2AChatMessage` (stored). `task_status_to_a2a_state` / `a2a_state_to_task_status` bridge RoboCo `TaskStatus` ↔ `A2ATaskState` (lossy — many states collapse to `WORKING`).
+- `a2a.py` has two parallel model families: the **wire/protocol** models (`AgentCard`, `A2ATask`, `A2AMessage`, parts — A2A spec) and the **persistent** models (`A2AConversation`, `A2AChatMessage`, `A2AInboxSummary` — DB storage). `A2AMessage` (wire) ≠ `A2AChatMessage` (stored). `task_status_to_a2a_state` / `a2a_state_to_task_status` bridge RoboFleet `TaskStatus` ↔ `A2ATaskState` (lossy — many states collapse to `WORKING`).
 - `agents.py` `AgentState` (agents.py:81) is a **different** class from the API `Agent.status`/`AgentStatus` enum — runtime vs persistence. Same for `AgentConfig` vs `Agent`.
-- `events.py` carries a `TYPE_CHECKING` import of `WaitingRecord` from `roboco.runtime.orchestrator` — a rare upward reference, kept out of runtime by the `Protocol` seam.
+- `events.py` carries a `TYPE_CHECKING` import of `WaitingRecord` from `robofleet.runtime.orchestrator` — a rare upward reference, kept out of runtime by the `Protocol` seam.
 - `permissions.py` `ROLE_LEVELS` is built at import time from `agents_config.ROLE_PERMISSION_LEVELS`; entries that don't parse are silently skipped (`except (ValueError, KeyError): pass` at permissions.py:35).
 - `llm_catalog.py` Anthropic entries are **derived from `runtime.MODEL_MAP`** — bumping a Claude id there updates the catalog automatically. Ollama Cloud entries are hand-maintained.
 - `Playbook` uses `from_attributes=True` (playbook.py:20) to load from the ORM `PlaybookTable`; most other models do not (they're constructed explicitly).
 
 ## Drift from CLAUDE.md
 
-- CLAUDE.md "Agent/Role/Team/ModelProvider in agent.py+base.py" — `Role` and `Team` are no longer *defined* in `base.py`; they are aliases to `roboco/foundation/identity.py` (base.py:21–24). The CLAUDE.md note about `ModelProvider` (`ANTHROPIC`/`GROK`/`LOCAL`/`OLLAMA_CLOUD`/`OPENAI` reserved) matches base.py:197–218 exactly.
+- CLAUDE.md "Agent/Role/Team/ModelProvider in agent.py+base.py" — `Role` and `Team` are no longer *defined* in `base.py`; they are aliases to `robofleet/foundation/identity.py` (base.py:21–24). The CLAUDE.md note about `ModelProvider` (`ANTHROPIC`/`GROK`/`LOCAL`/`OLLAMA_CLOUD`/`OPENAI` reserved) matches base.py:197–218 exactly.
 - CLAUDE.md lists the `Task` model key fields (`task_type`, `project_id`, `branch_name`, `work_session_id`, `pr_number`, `pr_url`, `docs_complete`, `pr_created`, `commits: list[CommitRef]`) — all present on `Task` (task.py:163–255). CLAUDE.md does **not** mention `cell_projects` (task.py:179) or `batch_id`/`intends_to_touch`/`adds_migration`/`touches_shared` (task.py:225–236), which the MegaTask/sequencing sections elsewhere in CLAUDE.md do cover — so the model is ahead of the "Data Models" prose but consistent with the MegaTask section.
 - CLAUDE.md "A task has at most one active WorkSession" — enforced by DB partial-unique index (migration 047) + service layer, not by the `WorkSession` model itself (work_session.py has no such constraint). Consistent with CLAUDE.md's "enforced both at the service layer and by a DB partial-unique index".
 - The slice prompt named `AuditEvent` and `A2AEnvelope` as landmarks; the actual symbols are `AuditEventType` (audit.py:13, no `AuditEvent` class) and there is no `A2AEnvelope` in `a2a.py` (the gateway `Envelope` lives in `services/gateway/`, not here). Listed the real landmarks instead.
 - Otherwise: `TaskStatus` 15-state enum, `TaskType` 6 values, `NotificationType`/`JournalEntryType` all match CLAUDE.md verbatim.
-- v0.17.0 delta: the three new ORM tables backing cloud auth + the X engine (`UserTable`, `XCredentialsTable`, `XSeenMentionTable` — migrations 058/059) have **no Pydantic counterpart in this package** — cloud auth's `UserTable` is consumed directly by `fastapi_users`/`roboco.api.auth.*` and the X engine's two tables are read/written directly off the ORM row by `roboco.services.x_*`. They are documented as ORM `Key Symbols` in `db-migrations.md`, not here, consistent with this file's own Purpose statement ("these are not the ORM tables").
+- v0.17.0 delta: the three new ORM tables backing cloud auth + the X engine (`UserTable`, `XCredentialsTable`, `XSeenMentionTable` — migrations 058/059) have **no Pydantic counterpart in this package** — cloud auth's `UserTable` is consumed directly by `fastapi_users`/`robofleet.api.auth.*` and the X engine's two tables are read/written directly off the ORM row by `robofleet.services.x_*`. They are documented as ORM `Key Symbols` in `db-migrations.md`, not here, consistent with this file's own Purpose statement ("these are not the ORM tables").
 
 ## Changes Since Baseline
 
-Range `fd10cc862c2020b3f639cdb686d427b0198a2441..HEAD`, `git log -- roboco/models/` → 2 commits (both the same MegaTask per-cell project-map feature, PRs #283/#285). `git diff --stat`:
+Range `fd10cc862c2020b3f639cdb686d427b0198a2441..HEAD`, `git log -- robofleet/models/` → 2 commits (both the same MegaTask per-cell project-map feature, PRs #283/#285). `git diff --stat`:
 
 ```
- roboco/models/llm_catalog.py | 30 +++++++++++++++---------------
- roboco/models/runtime.py     |  6 ++++++
- roboco/models/task.py        | 36 ++++++++++++++++++++++++++++++------
+ robofleet/models/llm_catalog.py | 30 +++++++++++++++---------------
+ robofleet/models/runtime.py     |  6 ++++++
+ robofleet/models/task.py        | 36 ++++++++++++++++++++++++++++++------
  3 files changed, 51 insertions(+), 21 deletions(-)
 ```
 
@@ -250,7 +250,7 @@ Logic-touching commits:
   - `runtime.py`: `SpawnGitContext` gained `task_short_id: str | None = None` (runtime.py:38) — the per-task worktree id the agent must edit in; branchless coordination roots leave it `None`. Impact: additive, backward-compatible.
   - `llm_catalog.py`: `glm-5.1:cloud` → `glm-5.2:cloud` in `MODEL_CATALOG` and `OLLAMA_ROLE_DEFAULTS`; role defaults reshuffled (`developer` minimax-m3 → kimi-k2.7-code, `cell_pm`/`main_pm`/`auditor` kimi-k2.6 → kimi-k2.7-code, `product_owner`/`head_marketing`/`ceo` kimi-k2.6 → glm-5.2, `documenter` glm-5.1 → kimi-k2.7-code); `OLLAMA_DEFAULT_MODEL` minimax-m3 → kimi-k2.7-code. Impact: catalog/UI labels + "pure Ollama" mode defaults only — **persisted `model_assignments` DB rows are not touched** (spawn model = persisted DB row, per the standing memory note), so an existing fleet doesn't silently switch models; only new "pure Ollama" provisioning picks the new defaults.
 
-> Post-snapshot updates (since 2026-06-29): 4 additional commits touched `roboco/models/`.
+> Post-snapshot updates (since 2026-06-29): 4 additional commits touched `robofleet/models/`.
 > - **c71f9b3b** `[chore] logical-gaps: kanban board column coverage + status-class fixes` — `kanban.py`: `DEV_COLUMNS` expanded from 7 to 15 entries (all `TaskStatus` values now covered); `QA_COLUMNS` dropped the `VERIFYING→"In Review"` entry (VERIFYING is the dev's self-check, not a QA state); `PM_COLUMNS` widened to include all gate/revision/paused/cancelled/backlog columns. No model API surface change; internal column configs only.
 > - **d8a5bb48** `[chore] logical-gaps: a2a service hierarchy gate + persist skill on message row` — `a2a.py`: `A2AChatMessage` gained `skill: str | None` field (migration 054 adds the DB column). The `send()` verb now persists which capability the A2A is about so the receiver and inbox can surface it.
 > - **536bbb64** `[chore] logical-gaps sweep (#286)` — `task.py`: `DocRef` gained `commit_status: str | None` (whether the doc reached the project repo: `committed`/`skipped`/`failed`); this 8-line insertion shifts all subsequent task.py line numbers by +8 vs the baseline annotations above. `playbook.py`: `Playbook` gained `archived_by: UUID | None` and `archived_at: datetime | None` to support the archive curation path.
@@ -265,7 +265,7 @@ Logic-touching commits:
 | `SpawnGitContext.task_short_id` consumer parity | runtime.py:38 | The field is additive with a `None` default, but every spawn-path consumer that should route the agent into the per-task worktree must read it; a missed consumer silently falls back to the clone root (the old behavior). | Low |
 | Ollama catalog defaults vs persisted assignments | llm_catalog.py:103 | `OLLAMA_DEFAULT_MODEL` changed, but spawn reads persisted `model_assignments` rows — so the default only applies when no row exists. An operator who deletes the `model_assignments` rows (the documented "kill stale fleet model" procedure) will now get kimi-k2.7-code instead of minimax-m3. Verify the tag actually works on the Ollama Cloud plan before relying on this. (`OLLAMA_ROLE_DEFAULTS` was removed 2026-07-17 as dead code — it was never consulted by routing.) | Low |
 | `ProductCellMapping` import cycle risk | task.py:24 | `task.py` now imports from `product.py` at module load. `product.py` imports only from `foundation.identity` and `base.py` — no cycle today, but a future `product.py` → `task.py` import would create one. | Low |
-| `AgentRole`/`Team` alias removal pending | base.py:21–24 | The aliases to `foundation.identity` are a migration shim ("Removed in Phase 4 housekeeping"). Consumers still importing `AgentRole`/`Team` from `roboco.models.base` will break when the shim is removed. | Low |
+| `AgentRole`/`Team` alias removal pending | base.py:21–24 | The aliases to `foundation.identity` are a migration shim ("Removed in Phase 4 housekeeping"). Consumers still importing `AgentRole`/`Team` from `robofleet.models.base` will break when the shim is removed. | Low |
 
 ## Health
 

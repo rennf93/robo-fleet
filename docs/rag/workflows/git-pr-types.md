@@ -8,19 +8,19 @@ There is no `is_root_pr` field or shortcut — every assembled PR now passes thr
 |------|-----------|--------|----------------|-----------|
 | Leaf PR | Developer's `open_pr(task_id)` | The parent (cell) task's branch | none — QA reviews the diff directly, no PR-gate | Cell PM's `complete(task_id, notes)` |
 | Cell→root PR | Cell PM's `submit_up(task_id, notes)` | The root task's branch | The cell's PR reviewer (be/fe/ux-pr-reviewer) via `pr_pass`/`pr_fail` | Cell PM's `complete(task_id, notes)`, after `pr_pass` |
-| Root→master PR | Main PM's `submit_root(task_id, notes)` | The project's env-ladder **head rung** (`roboco.models.env_branches.head_branch`, typically `master` — never a literal string, always read through the shim) | The main PR reviewer (pr-reviewer-1) via `pr_pass`/`pr_fail` | The CEO, from the panel, after Main PM's `complete` escalates to `awaiting_ceo_approval` |
+| Root→master PR | Main PM's `submit_root(task_id, notes)` | The project's env-ladder **head rung** (`robofleet.models.env_branches.head_branch`, typically `master` — never a literal string, always read through the shim) | The main PR reviewer (pr-reviewer-1) via `pr_pass`/`pr_fail` | The CEO, from the panel, after Main PM's `complete` escalates to `awaiting_ceo_approval` |
 
 A leaf dev task and a branchless coordination root (product fan-out, MegaTask umbrella) skip the PR-review gate entirely — there's no assembled PR for a reviewer to gate.
 
 ## How PRs are created
 
-There is **no** `roboco_git_create_pr` MCP tool. PRs are side-effects of lifecycle transitions, driven by the choreographer:
+There is **no** `robofleet_git_create_pr` MCP tool. PRs are side-effects of lifecycle transitions, driven by the choreographer:
 
 - **Leaf PR**: opened automatically when the assigned developer calls `open_pr(task_id)` after their `commit(...)` calls (`verifying -> awaiting_qa`).
 - **Cell→root PR**: opened by `submit_up(task_id, notes)` — enters `awaiting_pr_review`.
 - **Root→master PR**: opened by `submit_root(task_id, notes)` — enters `awaiting_pr_review`. Targets the project's **head rung**, not literal `master` — a project with no declared environment ladder resolves this from `projects.default_branch` via the read-time shim, so nothing changes for a project that hasn't opted into a multi-rung ladder. See `CLAUDE.md` "Env-branches ladder".
 
-Title and body are generated from the task templates in `roboco/templates/git/pr_*.py`. Don't hand-write PR descriptions in the agent prompts — they'll be overridden.
+Title and body are generated from the task templates in `robofleet/templates/git/pr_*.py`. Don't hand-write PR descriptions in the agent prompts — they'll be overridden.
 
 ## The PR-review gate (assembled PRs only)
 
@@ -33,7 +33,7 @@ Title and body are generated from the task templates in `roboco/templates/git/pr
 
 ## PR labels
 
-Every fleet-opened PR is best-effort labeled with the org-structure vocabulary (`derive_pr_labels`, `roboco/foundation/policy/pr_labels.py`): `to master` (today, only the root→master PR) vs `to slave`, `root` for an assembled root PR, `MegaTask` for a batch-carrying task, and a layer label (`main-pm` / `cell/{team}` / `subtask/{team}`) — so a human triaging the PR queue on the forge sees which tree and org layer a PR belongs to at a glance.
+Every fleet-opened PR is best-effort labeled with the org-structure vocabulary (`derive_pr_labels`, `robofleet/foundation/policy/pr_labels.py`): `to master` (today, only the root→master PR) vs `to slave`, `root` for an assembled root PR, `MegaTask` for a batch-carrying task, and a layer label (`main-pm` / `cell/{team}` / `subtask/{team}`) — so a human triaging the PR queue on the forge sees which tree and org layer a PR belongs to at a glance.
 
 ## Auto-Checkout
 

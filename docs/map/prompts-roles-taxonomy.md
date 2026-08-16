@@ -5,14 +5,14 @@ This slice is the prompt-composition pipeline and the role/team/permission taxon
 
 | Path | Role | LOC |
 |---|---|---|
-| roboco/agents/factories/_base.py | Layered prompt composer: loads/concatenates tool-directive + lifecycle + base + an optional fable-mode doctrine + an optional ponytail build-laziness doctrine + role + autogen-verbs + team + identity + ambient layers; exports PROMPTS_BASE_PATH, role/team/builtin-tool maps, compose_prompt, fable_doctrine_layer, ponytail_doctrine_layer, conventions_ambient_layer, make_slug | 298 |
-| roboco/agents/factories/__init__.py | One-line re-export shim pointing to _base | 1 |
-| roboco/agents_config.py | 691-line MCP-layer permission/taxonomy module: HMAC agent-token issue/verify, role+team+cell maps derived from foundation, escalation chain, ROLE_PERMISSION_LEVELS, ROLE_SKILLS, A2A routing helpers | 691 |
-| roboco/agent_sdk/prompt_guard.py | Reusable Python port of the bash injection guard: _PATTERNS regex list, detect_injection, refusal_message, CLI main (exit 1 on injection) for the grok entrypoint | 93 |
+| robofleet/agents/factories/_base.py | Layered prompt composer: loads/concatenates tool-directive + lifecycle + base + an optional fable-mode doctrine + an optional ponytail build-laziness doctrine + role + autogen-verbs + team + identity + ambient layers; exports PROMPTS_BASE_PATH, role/team/builtin-tool maps, compose_prompt, fable_doctrine_layer, ponytail_doctrine_layer, conventions_ambient_layer, make_slug | 298 |
+| robofleet/agents/factories/__init__.py | One-line re-export shim pointing to _base | 1 |
+| robofleet/agents_config.py | 691-line MCP-layer permission/taxonomy module: HMAC agent-token issue/verify, role+team+cell maps derived from foundation, escalation chain, ROLE_PERMISSION_LEVELS, ROLE_SKILLS, A2A routing helpers | 691 |
+| robofleet/agent_sdk/prompt_guard.py | Reusable Python port of the bash injection guard: _PATTERNS regex list, detect_injection, refusal_message, CLI main (exit 1 on injection) for the grok entrypoint | 93 |
 | agents/prompts/base.md | Universal base layer: identity separation, gateway-verb-only action, envelope shapes, missing-key cheatsheet, resume-from-briefing, charter alignment, todo rules, ground rules | 93 |
 | agents/prompts/doctrine/fable.md | Vendored Fable-5 behavioral doctrine (from `github.com/rennf93/opus-fable-playbook`, MIT, YAML frontmatter stripped): communication/turn-discipline/autonomy-calibration/honesty/code-discipline/delegation/precedence sections; loaded only when `fable_mode_enabled`, injected right after base.md via `fable_doctrine_layer()` | 47 |
-| agents/prompts/doctrine/ponytail.md | Vendored Ponytail build-laziness doctrine for developers (from the ponytail plugin, MIT, Copyright (c) 2026 DietrichGebert, trimmed, YAML frontmatter stripped): the ladder (YAGNI → reuse-in-this-codebase → stdlib → native-platform → installed-dep → one-line → minimal), the rules, the Intensity table (lite/full/ultra), a 5-point RoboCo preamble that makes the ladder yield to placement / coverage gate / design bar / task hygiene / reviewer feedback, and the `ponytail:` comment convention; loaded only when `fable_mode_enabled`, injected right after the Fable doctrine via `ponytail_doctrine_layer()` for `AgentRole.DEVELOPER` only, with a trailing `**Operative intensity: {ponytail_intensity}.**` directive | 88 |
-| agents/prompts/doctrine/ponytail-ethos.md | Vendored Ponytail ethos-only doctrine for non-developer roles (same source/attribution, trimmed): the ethos rules and the RoboCo preamble (the 6th point guards free-text field obligations), with the code-mechanics rungs (the ladder) and the Intensity table removed so they can't leak into prose artifacts; loaded by `ponytail_doctrine_layer()` for every role except `DEVELOPER`; no intensity directive (ethos runs a fixed restrained stance) | 40 |
+| agents/prompts/doctrine/ponytail.md | Vendored Ponytail build-laziness doctrine for developers (from the ponytail plugin, MIT, Copyright (c) 2026 DietrichGebert, trimmed, YAML frontmatter stripped): the ladder (YAGNI → reuse-in-this-codebase → stdlib → native-platform → installed-dep → one-line → minimal), the rules, the Intensity table (lite/full/ultra), a 5-point RoboFleet preamble that makes the ladder yield to placement / coverage gate / design bar / task hygiene / reviewer feedback, and the `ponytail:` comment convention; loaded only when `fable_mode_enabled`, injected right after the Fable doctrine via `ponytail_doctrine_layer()` for `AgentRole.DEVELOPER` only, with a trailing `**Operative intensity: {ponytail_intensity}.**` directive | 88 |
+| agents/prompts/doctrine/ponytail-ethos.md | Vendored Ponytail ethos-only doctrine for non-developer roles (same source/attribution, trimmed): the ethos rules and the RoboFleet preamble (the 6th point guards free-text field obligations), with the code-mechanics rungs (the ladder) and the Intensity table removed so they can't leak into prose artifacts; loaded by `ponytail_doctrine_layer()` for every role except `DEVELOPER`; no intensity directive (ethos runs a fixed restrained stance) | 40 |
 | agents/prompts/roles/developer.md | Developer role prompt: implement-only identity, verb table (give_me_work/i_will_work_on/commit/open_pr/i_am_done/sync_branch/...), workspace path, behind-base -> sync_branch guidance, conventions waiver path, a pointer scoping frontend/ux_ui's `## Design bar` to those teams only | 25176 |
 | agents/prompts/roles/qa.md | QA role prompt: review-only identity, claim_review/pass/fail/i_am_blocked verbs, ac_verdicts per criterion, circuit-breaker guidance | 13355 |
 | agents/prompts/roles/documenter.md | Documenter role prompt: docs-on-same-branch identity, claim_doc_task/commit/i_documented/i_am_blocked verbs, circuit-breaker guidance | 10739 |
@@ -54,87 +54,87 @@ This slice is the prompt-composition pipeline and the role/team/permission taxon
 
 | Name | Kind | File:Line | Responsibility |
 |---|---|---|---|
-| _get_prompts_base_path | function | roboco/agents/factories/_base.py:17 | Resolve project_root/agents/prompts/ from this file's location with a cwd-relative fallback |
-| PROMPTS_BASE_PATH | constant | roboco/agents/factories/_base.py:37 | Module-level cached prompts base path used by default in compose_prompt |
-| _load_layer | function | roboco/agents/factories/_base.py:40 | Read a prompt layer file, return '' if missing (graceful fallback) |
-| _ROLE_LAYER_MAP | dict | roboco/agents/factories/_base.py:55 | Maps role string -> roles/*.md filename; board roles all share board.md; prompter/secretary/pr_reviewer have own files |
-| _TEAM_LAYER_MAP | dict | roboco/agents/factories/_base.py:77 | Maps team string (backend/frontend/ux_ui) -> teams/*.md filename |
-| _role_layer | function | roboco/agents/factories/_base.py:84 | Load the role-specific prompt layer or None if role unknown |
-| _team_layer | function | roboco/agents/factories/_base.py:93 | Load the team prompt layer or None if unset/unknown |
-| _autogen_verbs_layer | function | roboco/agents/factories/_base.py:104 | Load _generated/<role>.md autogenerated verb-signature table for the role |
-| _BUILTIN_TOOLS_COMMON | tuple | roboco/agents/factories/_base.py:127 | Built-in Claude Code tools every role gets: Read,Bash,Grep,Glob,TodoWrite |
-| _BUILTIN_TOOLS_AUTHORS | tuple | roboco/agents/factories/_base.py:134 | Authors set (developer/documenter) adds Edit,Write to the common set |
-| _ROLE_BUILTIN_TOOLS | dict | roboco/agents/factories/_base.py:136 | Per-role builtin-tool grant map; non-authors get common-only |
-| _tool_load_directive_layer | function | roboco/agents/factories/_base.py:149 | Build top-of-prompt 'your tools are ready' block; steers away from ToolSearch and shell-redirect rewrites |
-| _lifecycle_layer | function | roboco/agents/factories/_base.py:187 | Load _generated/lifecycle-<role>.md canonical verb-surface fragment (from lifecycle spec, CI-gated) |
-| fable_doctrine_layer | function | roboco/agents/factories/_base.py:203 | Return the vendored `doctrine/fable.md` doctrine text, or None when `fable_mode_enabled` is off / the file is missing; only caller is compose_prompt, inserted right after base.md |
-| ponytail_doctrine_layer | function | roboco/agents/factories/_base.py | Return the vendored Ponytail build-laziness doctrine, role-scoped and gated on the same `fable_mode_enabled` flag (no separate flag — ponytail is Fable's complementary build-doctrine). Developers → `doctrine/ponytail.md` (full ladder) with a trailing `**Operative intensity: {settings.ponytail_intensity}.**` directive; every other role → `doctrine/ponytail-ethos.md` (ethos-only, no dial). None when the flag is off / the file is missing; only caller is compose_prompt, inserted immediately after the Fable doctrine layer |
-| compose_prompt | function | roboco/agents/factories/_base.py:203 | Compose the full system prompt by concatenating tool-directive, lifecycle, base, role, autogen-verbs, team, identity, ambient layers with '---' separators, skipping empty layers |
-| _AMBIENT_TOTAL_CAP | constant | roboco/agents/factories/_base.py:256 | 3000-char cap on the concatenated conventions ambient block |
-| conventions_ambient_layer | async function | roboco/agents/factories/_base.py:259 | Render per-project architectural-standard ambient block(s), multi-project headed, capped; None when conventions off / no projects |
-| make_slug | function | roboco/agents/factories/_base.py:296 | Lowercase + dash slug helper |
-| _AUTH_SECRET_ENV | constant | roboco/agents_config.py:42 | Env var name ROBOFLEET_AGENT_AUTH_SECRET for the HMAC signing key |
-| _auth_secret | function | roboco/agents_config.py:45 | Return HMAC secret bytes or None when unset |
-| _signing_payload | function | roboco/agents_config.py:51 | Canonical lowercase stripped agent_id:role:team HMAC message |
-| issue_agent_token | function | roboco/agents_config.py:61 | Mint hex HMAC-SHA256 token binding agent identity to role+team; returns UNSIGNED sentinel if secret unset |
-| verify_agent_token | function | roboco/agents_config.py:79 | Constant-time HMAC verification; fail-closed on unset secret / UNSIGNED |
-| issue_panel_token | function | roboco/agents_config.py:94 | Mint the CEO-identity token the panel presents (signed for CEO_AGENT_ID/ceo/empty team) |
-| _UUID_TO_SLUG | dict | roboco/agents_config.py:109 | Reverse map UUID->slug from AGENT_UUIDS seeds |
-| _resolve_to_slug | function | roboco/agents_config.py:114 | Resolve UUID or slug input to slug |
-| AGENT_ROLE_MAP | dict | roboco/agents_config.py:127 | slug->role.value for every non-SYSTEM agent (derived from foundation.AGENTS) |
-| AGENT_TEAM_MAP | dict | roboco/agents_config.py:133 | slug->team.value derived from foundation |
-| CELL_MEMBERS | dict | roboco/agents_config.py:139 | team.value -> sorted slug list per cell |
-| ALL_AGENTS | list | roboco/agents_config.py:146 | All agent slugs |
-| BOARD_MEMBERS | list | roboco/agents_config.py:149 | product-owner, head-marketing, auditor |
-| ALL_DOCS | list | roboco/agents_config.py:152 | Cross-cell documenter slugs for docs workspace perms |
-| TASK_CREATOR_ROLES | frozenset | roboco/agents_config.py:159 | Roles that can call task.create (cell_pm, main_pm, product_owner, head_marketing, ceo) |
-| ESCALATION_CHAIN | dict | roboco/agents_config.py:170 | slug -> escalation target slug (dev/qa/doc -> cell PM -> main-pm -> product-owner -> ceo) |
-| get_agent_role | function | roboco/agents_config.py:204 | Role string for an agent (UUID or slug); 'unknown' if missing |
-| get_agent_team | function | roboco/agents_config.py:210 | Team string for an agent or None |
-| get_agent_cell | function | roboco/agents_config.py:216 | Alias of get_agent_team |
-| get_cell_members | function | roboco/agents_config.py:221 | Slugs for a cell |
-| is_pm | function | roboco/agents_config.py:226 | cell_pm or main_pm predicate |
-| is_board_member | function | roboco/agents_config.py:232 | Board membership predicate by slug |
-| is_management | function | roboco/agents_config.py:237 | PM/Board/CEO predicate |
-| is_ceo | function | roboco/agents_config.py:250 | CEO predicate (full permission bypass) |
-| can_send_notifications | function | roboco/agents_config.py:255 | Role in foundation NOTIFY_SENDER_ROLES |
-| can_create_tasks | function | roboco/agents_config.py:263 | Role in TASK_CREATOR_ROLES |
-| can_assign_tasks | function | roboco/agents_config.py:269 | Same set as can_create_tasks |
-| _CANCEL_ROLES | set | roboco/agents_config.py:276 | Roles that may cancel (cell_pm/main_pm/product_owner/head_marketing — NOT ceo/auditor) |
-| can_cancel_tasks | function | roboco/agents_config.py:284 | Role in _CANCEL_ROLES |
-| get_escalation_target | function | roboco/agents_config.py:290 | Next escalation slug from ESCALATION_CHAIN |
-| get_pm_for_team | function | roboco/agents_config.py:295 | Cell PM slug for a team |
-| get_pm_for_agent | function | roboco/agents_config.py:305 | Responsible PM: cell PM for members, main-pm for cell PMs, product-owner for main PM |
-| _slugs_for_role_set | function | roboco/agents_config.py:355 | Expand a role-set to sorted slugs honoring optional team_scope; excludes system sentinel |
-| ROLE_PERMISSION_LEVELS | dict | roboco/agents_config.py:404 | Single source of truth role->permission-level (CEO/BOARD/AUDITOR/MAIN_PM/CELL_PM/CELL_MEMBER) used by PermissionService |
-| VALID_NOTIFICATION_TYPES | frozenset | roboco/agents_config.py:425 | Valid NotificationType values |
-| VALID_NOTIFICATION_PRIORITIES | frozenset | roboco/agents_config.py:428 | Valid NotificationPriority values |
-| ROLE_SKILLS | dict | roboco/agents_config.py:438 | Role -> A2A skill descriptor list for Agent Cards |
-| get_agent_skills | function | roboco/agents_config.py:566 | A2A skills for an agent by role |
-| _BOARD_ROLES | frozenset | roboco/agents_config.py:584 | Foundation board roles (PO/HoM/Auditor; main_pm intentionally excluded) |
-| _MAIN_PM_TARGETS | frozenset | roboco/agents_config.py:585 | Roles a main PM may A2A directly |
-| _check_cell_pm_a2a | function | roboco/agents_config.py:590 | A2A permission for cell PM (own cell / other PMs / main-pm allowed; board escalated) |
-| _check_cell_member_a2a | function | roboco/agents_config.py:604 | A2A permission for cell members (same-cell allowed; cross-cell via PMs) |
-| _check_main_pm_a2a | function | roboco/agents_config.py:624 | A2A permission for main PM (_MAIN_PM_TARGETS allowed) |
-| can_a2a_direct | function | roboco/agents_config.py:632 | (allowed, error) for direct A2A from one agent to another; routes CEO via `_check_ceo_a2a`, `from_role == "auditor"` unconditionally refuses (silent peer observer — replies to a CEO-opened DM go through A2AService's stateful reply path instead, not this matrix), board/main_pm/cell-member via handlers |
-| _check_ceo_a2a | function | roboco/agents_config.py:635 | CEO-initiated A2A target check: refuses `to_role in NO_COMMS_ROLES` (prompter/secretary only — no `dm`/`read_a2a` on the manifest, so nothing on the other end could read or answer it), else allowed. auditor/pr_reviewer carry `dm`/`read_a2a` now (CEO-reachable, reply-only) so they're no longer in NO_COMMS_ROLES |
-| get_a2a_route_hint | function | roboco/agents_config.py:670 | Human-readable routing hint for an A2A message |
-| A2A_ALLOWED_PAIRS | constant | roboco/agents_config.py | Statically-derived (via `_compute_a2a_allowed_pairs()`, calling `can_a2a_direct` for every pair) set of legal A2A pairs — sized 93 (`ceo` group 23) now that auditor + the 4 pr_reviewer slugs are CEO-reachable; the panel switchboard's section matrix reads off this same computation |
-| _PATTERNS | list | roboco/agent_sdk/prompt_guard.py:28 | Five (regex, reason) injection patterns: ignore-previous, role-override, fake role prefix, control-token mimicry, fake executive-order |
-| detect_injection | function | roboco/agent_sdk/prompt_guard.py:63 | Return deny reason if text matches an injection pattern (lowercased), else None |
-| refusal_message | function | roboco/agent_sdk/prompt_guard.py:72 | Guidance string shown on denial (mirrors bash hook text) |
-| main | function | roboco/agent_sdk/prompt_guard.py:82 | CLI entry: exit 1 if argv[1] is an injection (used by grok entrypoint) |
+| _get_prompts_base_path | function | robofleet/agents/factories/_base.py:17 | Resolve project_root/agents/prompts/ from this file's location with a cwd-relative fallback |
+| PROMPTS_BASE_PATH | constant | robofleet/agents/factories/_base.py:37 | Module-level cached prompts base path used by default in compose_prompt |
+| _load_layer | function | robofleet/agents/factories/_base.py:40 | Read a prompt layer file, return '' if missing (graceful fallback) |
+| _ROLE_LAYER_MAP | dict | robofleet/agents/factories/_base.py:55 | Maps role string -> roles/*.md filename; board roles all share board.md; prompter/secretary/pr_reviewer have own files |
+| _TEAM_LAYER_MAP | dict | robofleet/agents/factories/_base.py:77 | Maps team string (backend/frontend/ux_ui) -> teams/*.md filename |
+| _role_layer | function | robofleet/agents/factories/_base.py:84 | Load the role-specific prompt layer or None if role unknown |
+| _team_layer | function | robofleet/agents/factories/_base.py:93 | Load the team prompt layer or None if unset/unknown |
+| _autogen_verbs_layer | function | robofleet/agents/factories/_base.py:104 | Load _generated/<role>.md autogenerated verb-signature table for the role |
+| _BUILTIN_TOOLS_COMMON | tuple | robofleet/agents/factories/_base.py:127 | Built-in Claude Code tools every role gets: Read,Bash,Grep,Glob,TodoWrite |
+| _BUILTIN_TOOLS_AUTHORS | tuple | robofleet/agents/factories/_base.py:134 | Authors set (developer/documenter) adds Edit,Write to the common set |
+| _ROLE_BUILTIN_TOOLS | dict | robofleet/agents/factories/_base.py:136 | Per-role builtin-tool grant map; non-authors get common-only |
+| _tool_load_directive_layer | function | robofleet/agents/factories/_base.py:149 | Build top-of-prompt 'your tools are ready' block; steers away from ToolSearch and shell-redirect rewrites |
+| _lifecycle_layer | function | robofleet/agents/factories/_base.py:187 | Load _generated/lifecycle-<role>.md canonical verb-surface fragment (from lifecycle spec, CI-gated) |
+| fable_doctrine_layer | function | robofleet/agents/factories/_base.py:203 | Return the vendored `doctrine/fable.md` doctrine text, or None when `fable_mode_enabled` is off / the file is missing; only caller is compose_prompt, inserted right after base.md |
+| ponytail_doctrine_layer | function | robofleet/agents/factories/_base.py | Return the vendored Ponytail build-laziness doctrine, role-scoped and gated on the same `fable_mode_enabled` flag (no separate flag — ponytail is Fable's complementary build-doctrine). Developers → `doctrine/ponytail.md` (full ladder) with a trailing `**Operative intensity: {settings.ponytail_intensity}.**` directive; every other role → `doctrine/ponytail-ethos.md` (ethos-only, no dial). None when the flag is off / the file is missing; only caller is compose_prompt, inserted immediately after the Fable doctrine layer |
+| compose_prompt | function | robofleet/agents/factories/_base.py:203 | Compose the full system prompt by concatenating tool-directive, lifecycle, base, role, autogen-verbs, team, identity, ambient layers with '---' separators, skipping empty layers |
+| _AMBIENT_TOTAL_CAP | constant | robofleet/agents/factories/_base.py:256 | 3000-char cap on the concatenated conventions ambient block |
+| conventions_ambient_layer | async function | robofleet/agents/factories/_base.py:259 | Render per-project architectural-standard ambient block(s), multi-project headed, capped; None when conventions off / no projects |
+| make_slug | function | robofleet/agents/factories/_base.py:296 | Lowercase + dash slug helper |
+| _AUTH_SECRET_ENV | constant | robofleet/agents_config.py:42 | Env var name ROBOFLEET_AGENT_AUTH_SECRET for the HMAC signing key |
+| _auth_secret | function | robofleet/agents_config.py:45 | Return HMAC secret bytes or None when unset |
+| _signing_payload | function | robofleet/agents_config.py:51 | Canonical lowercase stripped agent_id:role:team HMAC message |
+| issue_agent_token | function | robofleet/agents_config.py:61 | Mint hex HMAC-SHA256 token binding agent identity to role+team; returns UNSIGNED sentinel if secret unset |
+| verify_agent_token | function | robofleet/agents_config.py:79 | Constant-time HMAC verification; fail-closed on unset secret / UNSIGNED |
+| issue_panel_token | function | robofleet/agents_config.py:94 | Mint the CEO-identity token the panel presents (signed for CEO_AGENT_ID/ceo/empty team) |
+| _UUID_TO_SLUG | dict | robofleet/agents_config.py:109 | Reverse map UUID->slug from AGENT_UUIDS seeds |
+| _resolve_to_slug | function | robofleet/agents_config.py:114 | Resolve UUID or slug input to slug |
+| AGENT_ROLE_MAP | dict | robofleet/agents_config.py:127 | slug->role.value for every non-SYSTEM agent (derived from foundation.AGENTS) |
+| AGENT_TEAM_MAP | dict | robofleet/agents_config.py:133 | slug->team.value derived from foundation |
+| CELL_MEMBERS | dict | robofleet/agents_config.py:139 | team.value -> sorted slug list per cell |
+| ALL_AGENTS | list | robofleet/agents_config.py:146 | All agent slugs |
+| BOARD_MEMBERS | list | robofleet/agents_config.py:149 | product-owner, head-marketing, auditor |
+| ALL_DOCS | list | robofleet/agents_config.py:152 | Cross-cell documenter slugs for docs workspace perms |
+| TASK_CREATOR_ROLES | frozenset | robofleet/agents_config.py:159 | Roles that can call task.create (cell_pm, main_pm, product_owner, head_marketing, ceo) |
+| ESCALATION_CHAIN | dict | robofleet/agents_config.py:170 | slug -> escalation target slug (dev/qa/doc -> cell PM -> main-pm -> product-owner -> ceo) |
+| get_agent_role | function | robofleet/agents_config.py:204 | Role string for an agent (UUID or slug); 'unknown' if missing |
+| get_agent_team | function | robofleet/agents_config.py:210 | Team string for an agent or None |
+| get_agent_cell | function | robofleet/agents_config.py:216 | Alias of get_agent_team |
+| get_cell_members | function | robofleet/agents_config.py:221 | Slugs for a cell |
+| is_pm | function | robofleet/agents_config.py:226 | cell_pm or main_pm predicate |
+| is_board_member | function | robofleet/agents_config.py:232 | Board membership predicate by slug |
+| is_management | function | robofleet/agents_config.py:237 | PM/Board/CEO predicate |
+| is_ceo | function | robofleet/agents_config.py:250 | CEO predicate (full permission bypass) |
+| can_send_notifications | function | robofleet/agents_config.py:255 | Role in foundation NOTIFY_SENDER_ROLES |
+| can_create_tasks | function | robofleet/agents_config.py:263 | Role in TASK_CREATOR_ROLES |
+| can_assign_tasks | function | robofleet/agents_config.py:269 | Same set as can_create_tasks |
+| _CANCEL_ROLES | set | robofleet/agents_config.py:276 | Roles that may cancel (cell_pm/main_pm/product_owner/head_marketing — NOT ceo/auditor) |
+| can_cancel_tasks | function | robofleet/agents_config.py:284 | Role in _CANCEL_ROLES |
+| get_escalation_target | function | robofleet/agents_config.py:290 | Next escalation slug from ESCALATION_CHAIN |
+| get_pm_for_team | function | robofleet/agents_config.py:295 | Cell PM slug for a team |
+| get_pm_for_agent | function | robofleet/agents_config.py:305 | Responsible PM: cell PM for members, main-pm for cell PMs, product-owner for main PM |
+| _slugs_for_role_set | function | robofleet/agents_config.py:355 | Expand a role-set to sorted slugs honoring optional team_scope; excludes system sentinel |
+| ROLE_PERMISSION_LEVELS | dict | robofleet/agents_config.py:404 | Single source of truth role->permission-level (CEO/BOARD/AUDITOR/MAIN_PM/CELL_PM/CELL_MEMBER) used by PermissionService |
+| VALID_NOTIFICATION_TYPES | frozenset | robofleet/agents_config.py:425 | Valid NotificationType values |
+| VALID_NOTIFICATION_PRIORITIES | frozenset | robofleet/agents_config.py:428 | Valid NotificationPriority values |
+| ROLE_SKILLS | dict | robofleet/agents_config.py:438 | Role -> A2A skill descriptor list for Agent Cards |
+| get_agent_skills | function | robofleet/agents_config.py:566 | A2A skills for an agent by role |
+| _BOARD_ROLES | frozenset | robofleet/agents_config.py:584 | Foundation board roles (PO/HoM/Auditor; main_pm intentionally excluded) |
+| _MAIN_PM_TARGETS | frozenset | robofleet/agents_config.py:585 | Roles a main PM may A2A directly |
+| _check_cell_pm_a2a | function | robofleet/agents_config.py:590 | A2A permission for cell PM (own cell / other PMs / main-pm allowed; board escalated) |
+| _check_cell_member_a2a | function | robofleet/agents_config.py:604 | A2A permission for cell members (same-cell allowed; cross-cell via PMs) |
+| _check_main_pm_a2a | function | robofleet/agents_config.py:624 | A2A permission for main PM (_MAIN_PM_TARGETS allowed) |
+| can_a2a_direct | function | robofleet/agents_config.py:632 | (allowed, error) for direct A2A from one agent to another; routes CEO via `_check_ceo_a2a`, `from_role == "auditor"` unconditionally refuses (silent peer observer — replies to a CEO-opened DM go through A2AService's stateful reply path instead, not this matrix), board/main_pm/cell-member via handlers |
+| _check_ceo_a2a | function | robofleet/agents_config.py:635 | CEO-initiated A2A target check: refuses `to_role in NO_COMMS_ROLES` (prompter/secretary only — no `dm`/`read_a2a` on the manifest, so nothing on the other end could read or answer it), else allowed. auditor/pr_reviewer carry `dm`/`read_a2a` now (CEO-reachable, reply-only) so they're no longer in NO_COMMS_ROLES |
+| get_a2a_route_hint | function | robofleet/agents_config.py:670 | Human-readable routing hint for an A2A message |
+| A2A_ALLOWED_PAIRS | constant | robofleet/agents_config.py | Statically-derived (via `_compute_a2a_allowed_pairs()`, calling `can_a2a_direct` for every pair) set of legal A2A pairs — sized 93 (`ceo` group 23) now that auditor + the 4 pr_reviewer slugs are CEO-reachable; the panel switchboard's section matrix reads off this same computation |
+| _PATTERNS | list | robofleet/agent_sdk/prompt_guard.py:28 | Five (regex, reason) injection patterns: ignore-previous, role-override, fake role prefix, control-token mimicry, fake executive-order |
+| detect_injection | function | robofleet/agent_sdk/prompt_guard.py:63 | Return deny reason if text matches an injection pattern (lowercased), else None |
+| refusal_message | function | robofleet/agent_sdk/prompt_guard.py:72 | Guidance string shown on denial (mirrors bash hook text) |
+| main | function | robofleet/agent_sdk/prompt_guard.py:82 | CLI entry: exit 1 if argv[1] is an injection (used by grok entrypoint) |
 
 ## Data Flow
-Spawn-time composition (synchronous, per agent): orchestrator._generate_prompt(role/team/agent_id, ambient) calls agents_config.get_agent_role/get_agent_team to resolve the canonical strings from foundation-derived AGENT_ROLE_MAP/AGENT_TEAM_MAP, converts to AgentRole/Team enums, then calls compose_prompt. compose_prompt resolves prompts_path (PROMPTS_BASE_PATH = project_root/agents/prompts) and builds an ordered list: _tool_load_directive_layer(role) (inline), _lifecycle_layer (reads _generated/lifecycle-<role>.md), base.md, _role_layer (roles/<file>.md via _ROLE_LAYER_MAP), _autogen_verbs_layer (_generated/<role>.md), _team_layer (teams/<file>.md via _TEAM_LAYER_MAP, None for board/main-pm), identities/<agent_slug>.md, then the optional ambient string. Empty/None layers are dropped; the rest are joined with "\n\n---\n\n". The composed string is written to /app/prompts-generated/<agent_id>-prompt.md (container) or $TMPDIR/roboco-prompts/ (host) and the path returned to the spawn path that mounts it as the agent's system prompt.
+Spawn-time composition (synchronous, per agent): orchestrator._generate_prompt(role/team/agent_id, ambient) calls agents_config.get_agent_role/get_agent_team to resolve the canonical strings from foundation-derived AGENT_ROLE_MAP/AGENT_TEAM_MAP, converts to AgentRole/Team enums, then calls compose_prompt. compose_prompt resolves prompts_path (PROMPTS_BASE_PATH = project_root/agents/prompts) and builds an ordered list: _tool_load_directive_layer(role) (inline), _lifecycle_layer (reads _generated/lifecycle-<role>.md), base.md, _role_layer (roles/<file>.md via _ROLE_LAYER_MAP), _autogen_verbs_layer (_generated/<role>.md), _team_layer (teams/<file>.md via _TEAM_LAYER_MAP, None for board/main-pm), identities/<agent_slug>.md, then the optional ambient string. Empty/None layers are dropped; the rest are joined with "\n\n---\n\n". The composed string is written to /app/prompts-generated/<agent_id>-prompt.md (container) or $TMPDIR/robofleet-prompts/ (host) and the path returned to the spawn path that mounts it as the agent's system prompt.
 
 Ambient resolution (async, best-effort): orchestrator._resolve_conventions_ambient gates on settings.conventions_enabled, opens a DB session, resolves in-scope projects (single project_slug for delivery roles, or per-cell projects from a task's product_id for PO/Intake), and calls conventions_ambient_layer -> ConventionsService.render_ambient_block per project (ensuring a read clone), multi-project-headed, capped to 3000 chars. Any exception is caught and returns None so a compose is never blocked by conventions.
 
 Identity binding at spawn: agents_config.issue_agent_token(agent_id, role, team) HMAC-signs the canonical lowercase agent_id:role:team with ROBOFLEET_AGENT_AUTH_SECRET and the orchestrator injects the token into the agent env; verify_agent_token (called server-side on X-Agent-Token headers) fail-closes on unset secret or UNSIGNED. The panel gets issue_panel_token() signed for the CEO identity.
 
-Injection guard (runtime, per turn): IntakeDriver.send_turn calls detect_injection(text) before sending to the model; on a match it emits an error chunk with refusal_message(reason) and returns without forwarding. The grok one-shot entrypoint runs `python -m roboco.agent_sdk.prompt_guard <text>` and refuses start (exit 1) on a match. The same five patterns run in docker/scripts/user-prompt-hook.sh for non-SDK Claude sessions.
+Injection guard (runtime, per turn): IntakeDriver.send_turn calls detect_injection(text) before sending to the model; on a match it emits an error chunk with refusal_message(reason) and returns without forwarding. The grok one-shot entrypoint runs `python -m robofleet.agent_sdk.prompt_guard <text>` and refuses start (exit 1) on a match. The same five patterns run in docker/scripts/user-prompt-hook.sh for non-SDK Claude sessions.
 
-Callers: orchestrator.py:3238 (compose_prompt), orchestrator.py:3265/3299 (conventions_ambient_layer), intake_driver.py:379-382 (detect_injection/refusal_message). Callees from this slice: roboco.foundation.identity (AGENTS/Role/Team/slugs_for_team), roboco.foundation.policy.communications (NOTIFY_SENDER_ROLES), roboco.seeds.initial_data (AGENT_UUIDS/CEO_AGENT_ID), roboco.services.conventions (get_conventions_service), roboco.config.settings, roboco.models.base (NotificationType/Priority).
+Callers: orchestrator.py:3238 (compose_prompt), orchestrator.py:3265/3299 (conventions_ambient_layer), intake_driver.py:379-382 (detect_injection/refusal_message). Callees from this slice: robofleet.foundation.identity (AGENTS/Role/Team/slugs_for_team), robofleet.foundation.policy.communications (NOTIFY_SENDER_ROLES), robofleet.seeds.initial_data (AGENT_UUIDS/CEO_AGENT_ID), robofleet.services.conventions (get_conventions_service), robofleet.config.settings, robofleet.models.base (NotificationType/Priority).
 
 ## Mermaid
 ```mermaid
@@ -183,7 +183,7 @@ graph TD
 ## Logical Tree
 ```
 prompts-roles-taxonomy slice
-├── Prompt composition (roboco/agents/factories/)
+├── Prompt composition (robofleet/agents/factories/)
 │   ├── _base.py
 │   │   ├── PROMPTS_BASE_PATH resolver
 │   │   ├── _load_layer (file -> str|'')
@@ -193,7 +193,7 @@ prompts-roles-taxonomy slice
 │   │   ├── compose_prompt (ordered join with '---')
 │   │   └── conventions_ambient_layer (async, multi-project, 3000-char cap) + _AMBIENT_TOTAL_CAP
 │   └── __init__.py (shim)
-├── Permission taxonomy (roboco/agents_config.py)
+├── Permission taxonomy (robofleet/agents_config.py)
 │   ├── HMAC token layer: _auth_secret, _signing_payload, issue_agent_token, verify_agent_token, issue_panel_token
 │   ├── UUID<->slug: _UUID_TO_SLUG, _resolve_to_slug
 │   ├── Derived maps: AGENT_ROLE_MAP, AGENT_TEAM_MAP, CELL_MEMBERS, ALL_AGENTS, BOARD_MEMBERS, ALL_DOCS
@@ -203,7 +203,7 @@ prompts-roles-taxonomy slice
 │   ├── Notification enums: VALID_NOTIFICATION_TYPES/PRIORITIES
 │   ├── A2A skills: ROLE_SKILLS, get_agent_skills
 │   └── A2A routing: _check_cell_pm/cell_member/main_pm_a2a, can_a2a_direct, get_a2a_route_hint
-├── Injection guard (roboco/agent_sdk/prompt_guard.py)
+├── Injection guard (robofleet/agent_sdk/prompt_guard.py)
 │   ├── _PATTERNS (5 regexes mirroring user-prompt-hook.sh)
 │   ├── detect_injection, refusal_message
 │   └── main (CLI for grok entrypoint)
@@ -219,17 +219,17 @@ prompts-roles-taxonomy slice
 ```
 
 ## Dependencies
-- Internal: roboco.foundation.identity (AGENTS, Role, Team, CELL_TEAMS, BOARD_ROLES, slugs_for_team), roboco.foundation.policy.communications (NOTIFY_SENDER_ROLES), roboco.seeds.initial_data (AGENT_UUIDS, CEO_AGENT_ID), roboco.models.base (AgentRole, Team, NotificationType, NotificationPriority), roboco.config.settings (conventions_enabled), roboco.services.conventions (get_conventions_service, ConventionsService.render_ambient_block/resolve_workspace), roboco.db.base (get_session_factory), roboco.db.tables (ProjectTable), roboco.runtime.orchestrator (_generate_prompt, _resolve_conventions_ambient, _resolve_ambient_projects), roboco.agent_sdk.intake_driver (IntakeDriver.send_turn consumer), scripts/regenerate_verb_tables.py (regenerates _generated/<role>.md + verbs.md), scripts/build_lifecycle_artifacts.py (regenerates _generated/lifecycle-<role>.md; make lifecycle), docker/scripts/user-prompt-hook.sh (canonical bash guard mirrored by prompt_guard.py), roboco.api.schemas.v1 (Pydantic verb schemas the autogen tables derive from), roboco.services.gateway.role_config (role->verb config the autogen tables derive from)
+- Internal: robofleet.foundation.identity (AGENTS, Role, Team, CELL_TEAMS, BOARD_ROLES, slugs_for_team), robofleet.foundation.policy.communications (NOTIFY_SENDER_ROLES), robofleet.seeds.initial_data (AGENT_UUIDS, CEO_AGENT_ID), robofleet.models.base (AgentRole, Team, NotificationType, NotificationPriority), robofleet.config.settings (conventions_enabled), robofleet.services.conventions (get_conventions_service, ConventionsService.render_ambient_block/resolve_workspace), robofleet.db.base (get_session_factory), robofleet.db.tables (ProjectTable), robofleet.runtime.orchestrator (_generate_prompt, _resolve_conventions_ambient, _resolve_ambient_projects), robofleet.agent_sdk.intake_driver (IntakeDriver.send_turn consumer), scripts/regenerate_verb_tables.py (regenerates _generated/<role>.md + verbs.md), scripts/build_lifecycle_artifacts.py (regenerates _generated/lifecycle-<role>.md; make lifecycle), docker/scripts/user-prompt-hook.sh (canonical bash guard mirrored by prompt_guard.py), robofleet.api.schemas.v1 (Pydantic verb schemas the autogen tables derive from), robofleet.services.gateway.role_config (role->verb config the autogen tables derive from)
 - External: pathlib.Path, hmac / hashlib (HMAC-SHA256 tokens), os.environ (ROBOFLEET_AGENT_AUTH_SECRET), re (injection regexes), sys (prompt_guard CLI), sqlalchemy.ext.asyncio.AsyncSession (ambient layer), typing.Final, argparse-less sys.argv CLI
 
 ## Entry Points
 
 | Name | File | Trigger |
 |---|---|---|
-| orchestrator._generate_prompt | roboco/runtime/orchestrator.py | Called per agent spawn to compose + write the system-prompt .md file; calls compose_prompt (line 3238) |
-| orchestrator._resolve_conventions_ambient | roboco/runtime/orchestrator.py | Async, called from the spawn path before _generate_prompt to resolve the optional ambient block; calls conventions_ambient_layer (line 3299) |
-| IntakeDriver.send_turn | roboco/agent_sdk/intake_driver.py | Per interactive turn (Intake/Secretary Claude-SDK and Grok sessions); calls detect_injection before forwarding to the model (line 379) |
-| python -m roboco.agent_sdk.prompt_guard | roboco/agent_sdk/prompt_guard.py | CLI invoked by the grok one-shot entrypoint on ROBOFLEET_INITIAL_PROMPT; exit 1 denies start |
+| orchestrator._generate_prompt | robofleet/runtime/orchestrator.py | Called per agent spawn to compose + write the system-prompt .md file; calls compose_prompt (line 3238) |
+| orchestrator._resolve_conventions_ambient | robofleet/runtime/orchestrator.py | Async, called from the spawn path before _generate_prompt to resolve the optional ambient block; calls conventions_ambient_layer (line 3299) |
+| IntakeDriver.send_turn | robofleet/agent_sdk/intake_driver.py | Per interactive turn (Intake/Secretary Claude-SDK and Grok sessions); calls detect_injection before forwarding to the model (line 379) |
+| python -m robofleet.agent_sdk.prompt_guard | robofleet/agent_sdk/prompt_guard.py | CLI invoked by the grok one-shot entrypoint on ROBOFLEET_INITIAL_PROMPT; exit 1 denies start |
 | make lifecycle | scripts/build_lifecycle_artifacts.py | Developer/CI target regenerating _generated/lifecycle-*.md; CI gates on git diff --exit-code |
 | scripts/regenerate_verb_tables.py | scripts/regenerate_verb_tables.py | Developer target regenerating _generated/<role>.md + verbs.md after role_config/schema changes |
 
@@ -237,10 +237,10 @@ prompts-roles-taxonomy slice
 - ROBOFLEET_AGENT_AUTH_SECRET (env) — HMAC signing secret for agent/panel tokens; unset => verify_agent_token fail-closes (rejects every token), issue_*_token returns UNSIGNED
 - ROBOFLEET_CONVENTIONS_ENABLED — gates whether conventions_ambient_layer resolves + injects the architectural-standard ambient block; off => compose_prompt omits the ambient layer entirely
 - ROBOFLEET_FABLE_MODE_ENABLED (default off) — gates fable_doctrine_layer AND ponytail_doctrine_layer (bundled — no separate ponytail flag); off => compose_prompt omits both doctrine layers entirely (byte-for-byte unchanged prompt)
-- ROBOFLEET_PONYTAIL_INTENSITY (default full) — string value (lite/full/ultra), NOT a feature flag; selects the operative intensity the developer ponytail doctrine runs at (appended as a `**Operative intensity: ...**` directive for developers only; non-developers run a fixed restrained ethos regardless). `roboco/config.py` `ponytail_intensity`, validated as `Literal["lite","full","ultra"]` at Settings instantiation
+- ROBOFLEET_PONYTAIL_INTENSITY (default full) — string value (lite/full/ultra), NOT a feature flag; selects the operative intensity the developer ponytail doctrine runs at (appended as a `**Operative intensity: ...**` directive for developers only; non-developers run a fixed restrained ethos regardless). `robofleet/config.py` `ponytail_intensity`, validated as `Literal["lite","full","ultra"]` at Settings instantiation
 - ROBOFLEET_SDK_URL (env, default http://localhost:9000) — used by the bash user-prompt-hook.sh (sister guard), not prompt_guard.py directly
 - ROBOFLEET_INITIAL_PROMPT (env) — the one-shot prompt the grok entrypoint hands to prompt_guard CLI main
-- PROJECT_HOST_PATH (orchestrator) — selects container (/app/prompts-generated) vs host ($TMPDIR/roboco-prompts) output dir for composed prompts
+- PROJECT_HOST_PATH (orchestrator) — selects container (/app/prompts-generated) vs host ($TMPDIR/robofleet-prompts) output dir for composed prompts
 
 
 ## Gotchas
@@ -261,7 +261,7 @@ prompts-roles-taxonomy slice
 ## Drift from CLAUDE.md
 - CLAUDE.md Project Overview states '25 AI agents + 1 human CEO', but agents/prompts/base.md line 3 says '22 AI agents + 1 human CEO'. The base prompt agent count is stale relative to CLAUDE.md (memory notes a 20->22 update on 2026-06-16; CLAUDE.md later moved to 25). A spawned agent reads '22' in its system prompt while the org chart it sees has 25.
 - CLAUDE.md's verb-surface table lists `i_am_blocked` for the qa and documenter roles. The role prompts qa.md and documenter.md ONLY added the i_am_blocked verb row in commit 15effce0 (this slice's baseline diff) — before that the role prompts omitted it even though the gateway accepted it. The prompts are now aligned, but the documenter.md circuit-breaker section previously explicitly said 'you don't have an i_am_blocked verb', which was false vs the gateway and vs CLAUDE.md. Fixed in 15effce0.
-- CLAUDE.md says the lifecycle is defined in roboco/foundation/policy/lifecycle.py with a shim at roboco/enforcement/task_lifecycle.py. _base.py:_lifecycle_layer (line 187-200) docstring says the lifecycle fragment is regenerated from `roboco/lifecycle/spec.py` by `make lifecycle`. The actual source path the regenerator uses is roboco/lifecycle/spec.py (per the docstring), which is not mentioned in CLAUDE.md's lifecycle section — minor doc-path drift, not behavioral.
+- CLAUDE.md says the lifecycle is defined in robofleet/foundation/policy/lifecycle.py with a shim at robofleet/enforcement/task_lifecycle.py. _base.py:_lifecycle_layer (line 187-200) docstring says the lifecycle fragment is regenerated from `robofleet/lifecycle/spec.py` by `make lifecycle`. The actual source path the regenerator uses is robofleet/lifecycle/spec.py (per the docstring), which is not mentioned in CLAUDE.md's lifecycle section — minor doc-path drift, not behavioral.
 - CLAUDE.md describes the prompt composition as 'base + role + team + identity prompts' and an ambient 'Architectural Standard' block at spawn. The actual compose_prompt order (line 295-306) is tool-directive + lifecycle + base + fable + ponytail + role + autogen-verbs + team + identity + ambient — i.e. FIVE additional layers (tool-directive, lifecycle, fable, ponytail, autogen-verbs) not named in CLAUDE.md's composition description. CLAUDE.md undersells the actual layer stack.
 - Identity files declare `role: pm` / `role: board` (e.g. identities/main-pm.md, identities/product-owner.md) which do not match the canonical AgentRole enum values (main_pm, cell_pm, product_owner, head_marketing, auditor) that CLAUDE.md and agents_config use. The pipeline ignores this label so it is cosmetic, but it is inconsistent with the canonical taxonomy CLAUDE.md documents.
 
@@ -276,7 +276,7 @@ prompts-roles-taxonomy slice
 >
 > **v0.18.0** (2026-07-04): Fable mode adds a 9th conditional compose_prompt layer — `fable_doctrine_layer()` (_base.py:203) injects `agents/prompts/doctrine/fable.md` right after base.md, gated by `fable_mode_enabled` (default off; off = byte-for-byte unchanged prompt). FE/UX-UI design bar: `## Design bar` sections added to `teams/frontend.md` + `teams/ux_ui.md` (taste-skill-distilled dials + rules), plus a scoping pointer in `roles/developer.md` — doc-only, no flag, no compose_prompt change (team/role layers already existed; only their file contents grew).
 >
-> **v0.19.0** (2026-07-05): Ponytail build-laziness doctrine bundled with Fable — `ponytail_doctrine_layer(prompts_path, role)` in `roboco/agents/factories/_base.py`, gated on the same `fable_mode_enabled` flag (no separate flag — ponytail is Fable's complementary build-doctrine), slotted into compose_prompt immediately after `fable_doctrine_layer`. Role-scoped: developers (`AgentRole.DEVELOPER`) → `agents/prompts/doctrine/ponytail.md` (the full ladder: YAGNI → reuse-in-this-codebase → stdlib → native-platform → installed-dep → one-line → minimal, the rules, the Intensity table, the `ponytail:` comment convention) plus a trailing `**Operative intensity: {settings.ponytail_intensity}.**` directive; every other role → `agents/prompts/doctrine/ponytail-ethos.md` (ethos-only — the code-mechanics rungs and the Intensity table are dropped so they can't leak into prose artifacts like task plans / review notes / docs). Both files vendored from the ponytail plugin (MIT, Copyright (c) 2026 DietrichGebert), trimmed, YAML frontmatter stripped, and carry a 5-point RoboCo preamble that makes the ladder yield to the Architectural Conventions Standard (placement), the 80% coverage gate + QA review + self-verification, the per-team design bar, task hygiene, and reviewer feedback — overlap mitigated by scoping, not deletion. `ROBOFLEET_PONYTAIL_INTENSITY` (lite/full/ultra, default full; `roboco/config.py` `ponytail_intensity`, a string value — NOT a feature flag) selects the developer's operative intensity; non-developers get no dial. Prompt-only — no hooks, no grok-path changes; a flag-off spawn is byte-for-byte unchanged.
+> **v0.19.0** (2026-07-05): Ponytail build-laziness doctrine bundled with Fable — `ponytail_doctrine_layer(prompts_path, role)` in `robofleet/agents/factories/_base.py`, gated on the same `fable_mode_enabled` flag (no separate flag — ponytail is Fable's complementary build-doctrine), slotted into compose_prompt immediately after `fable_doctrine_layer`. Role-scoped: developers (`AgentRole.DEVELOPER`) → `agents/prompts/doctrine/ponytail.md` (the full ladder: YAGNI → reuse-in-this-codebase → stdlib → native-platform → installed-dep → one-line → minimal, the rules, the Intensity table, the `ponytail:` comment convention) plus a trailing `**Operative intensity: {settings.ponytail_intensity}.**` directive; every other role → `agents/prompts/doctrine/ponytail-ethos.md` (ethos-only — the code-mechanics rungs and the Intensity table are dropped so they can't leak into prose artifacts like task plans / review notes / docs). Both files vendored from the ponytail plugin (MIT, Copyright (c) 2026 DietrichGebert), trimmed, YAML frontmatter stripped, and carry a 5-point RoboFleet preamble that makes the ladder yield to the Architectural Conventions Standard (placement), the 80% coverage gate + QA review + self-verification, the per-team design bar, task hygiene, and reviewer feedback — overlap mitigated by scoping, not deletion. `ROBOFLEET_PONYTAIL_INTENSITY` (lite/full/ultra, default full; `robofleet/config.py` `ponytail_intensity`, a string value — NOT a feature flag) selects the developer's operative intensity; non-developers get no dial. Prompt-only — no hooks, no grok-path changes; a flag-off spawn is byte-for-byte unchanged.
 >
 > **PR #544** (2026-07-17, `fd621f0d`): The design bar's web dials (`DESIGN_VARIANCE`/`MOTION_INTENSITY`/`VISUAL_DENSITY`) were silently steering a `source=video` authoring task toward "dense product UI → motion 2-3" — wrong for a marketing film. `agents/prompts/teams/ux_ui.md` gains a one-line video-mode override (see Files above) telling the dev the web dials do not apply to a video-authoring task and pointing it at `motion/README.md`'s cinematography bar + the vendored `motion/skills/` doctrine instead. Doc-only within this slice — the runtime half of the same PR (playwright MCP registered for the video-authoring ux-dev spawn, `_is_video_authoring_spawn`) is documented in `docs/map/video-engine.md` and `docs/map/orchestrator.md`.
 >
@@ -289,7 +289,7 @@ prompts-roles-taxonomy slice
 | Title | File:Line | Claim | Severity |
 |---|---|---|---|
 | Collision-surface declaration is prompt-only, not gate-enforced | agents/prompts/roles/cell_pm.md:141 | The new 'Collision surface' section tells the cell PM to fill intends_to_touch/adds_migration/touches_shared on every code subtask so the analyzer can sequence colliding siblings, but the section explicitly says 'leave it empty only for a research/design subtask' — there is no documented gate that REFUSES a code delegate with empty intends_to_touch. If a PM omits it on a code subtask, two siblings editing the same file run in parallel and collide (the exact 2026-06-27 out-of-order break this was added to prevent). The protection hinges on agent compliance with prompt prose, not a hard gate. | medium |
-| sync_branch guidance contradicting the i_am_done gate for behind-base branches | agents/prompts/roles/developer.md:126 | developer.md now says 'call sync_branch as soon as roboco_git_status shows your branch behind, OR when i_am_done refuses with your branch is N behind'. If the i_am_done gate's behind-base check and sync_branch's rebase disagree on what 'base' means (e.g. base resolved from the recorded branch vs the parent task's head), a dev could sync_branch successfully and still hit the i_am_done behind-base refusal, looping. The prompt assumes both use the same base resolution; a divergence there would trap the dev. No fallback to i_am_blocked is offered anymore (the prompt explicitly forbids it for a plain behind-base condition), removing the previous escape hatch. | medium |
+| sync_branch guidance contradicting the i_am_done gate for behind-base branches | agents/prompts/roles/developer.md:126 | developer.md now says 'call sync_branch as soon as robofleet_git_status shows your branch behind, OR when i_am_done refuses with your branch is N behind'. If the i_am_done gate's behind-base check and sync_branch's rebase disagree on what 'base' means (e.g. base resolved from the recorded branch vs the parent task's head), a dev could sync_branch successfully and still hit the i_am_done behind-base refusal, looping. The prompt assumes both use the same base resolution; a divergence there would trap the dev. No fallback to i_am_blocked is offered anymore (the prompt explicitly forbids it for a plain behind-base condition), removing the previous escape hatch. | medium |
 | ~~documenter/qa circuit-breaker now directs to i_am_blocked — verify the verb is actually granted to those roles~~ **VERIFIED OK** | agents/prompts/roles/documenter.md:100 | The circuit-breaker section was rewritten from 'you don't have an i_am_blocked verb -> unclaim' to 'i_am_blocked(task_id, reason=...) to escalate'. This relies on i_am_blocked being genuinely callable by qa and documenter at the gateway. The autogen verbs.md shows i_am_blocked for qa but the documenter section in verbs.md (and _generated/documenter.md) must also list it — if the role_config does not grant i_am_blocked to documenter, the new prompt guidance sends the agent to a verb that will return not_authorized, trapping them on a circuit_open with no documented fallback (the old unclaim-only path was removed). **Verified 2026-07-01: lifecycle spec `i_am_blocked.allowed_roles = frozenset(_DEV_ROLES | _QA_ROLES | _DOC_ROLES)` — documenter IS granted this verb at baseline and post-snapshot; not a live risk.** | high |
 | ~~submit_root description changed from code-root to branch-bearing-root semantics~~ **RESOLVED (536bbb64)** | agents/prompts/_generated/lifecycle-main_pm.md:14 | The lifecycle fragment now says submit_root is 'For branch-bearing roots' and 'The gate is branch-keyed, not task_type-keyed — a Main-PM root is planning-typed, never code'. If the gateway's submit_root implementation still keys off task_type=code (the old contract), a planning-typed branch-bearing root would be rejected by the gate while the prompt tells the Main PM to call submit_root on it — a loop. The prompt now asserts a behavior the gateway must match; mismatch breaks Main-PM root submission. **Fixed 2026-06-30: 536bbb64 added `PRECONDITION_ROOT_NOT_CODE` (`_p_root_not_code`: checks `task_type != code`) to `submit_root.extra_preconditions` in the lifecycle spec, and the spec description was updated to match; prompt and gateway are now aligned.** | high |
 | note schema advertises done/next/where_to_look the gateway must accept | agents/prompts/_generated/developer.md:25 | All autogen verb tables now show note(...) with done/next/where_to_look top-level params. If the Pydantic note schema (the regenerator source) was updated but the gateway's note handler / DB journal model does not persist these fields, agents will pass them, the schema accepts them, but they are silently dropped — the handoff/quick_context fields the meltdown #1 fix intended to surface top-level would never reach downstream briefings. The prompt advertises params that may be no-ops at the persistence layer. | medium |

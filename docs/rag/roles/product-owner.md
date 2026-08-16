@@ -22,9 +22,9 @@
 - Propose a product via `pitch(title, slug, problem, proposed_solution, target_cells)` — queues for CEO approval, then auto-provisions
 - Author the weekly roadmap-engine exploration cycle via `propose_roadmap(cycle_goal, items)` — see "Roadmap Engine" below
 - Author four more Board Program exploration cycles, each its own periodic/event spawn: `propose_bug_hunt(items)` (Pest Control), `propose_gap_fill(items)` (Spackle), `propose_rebalance(items)` (Scales), `propose_friction_fixes(items)` (Dogfood, with a task-scoped Playwright grant) — see "Board Programs" below
-- Read project docs via `roboco_docs_read` / `roboco_docs_list`
+- Read project docs via `robofleet_docs_read` / `robofleet_docs_list`
 - Research the market via `web_search` / `web_fetch` (when `ROBOFLEET_RESEARCH_ENABLED`)
-- Search the knowledge base via `roboco_ask_mentor` / `roboco_kb_search`
+- Search the knowledge base via `robofleet_ask_mentor` / `robofleet_kb_search`
 
 ## What You CANNOT Do
 
@@ -38,12 +38,12 @@
 
 | MCP server            | Verbs you can call |
 |-----------------------|--------------------|
-| `roboco-flow`         | `triage`, `escalate_to_ceo`, `i_am_idle` |
-| `roboco-do`           | `note`, `pitch`, `propose_roadmap`, `propose_bug_hunt`, `propose_gap_fill`, `propose_rebalance`, `propose_friction_fixes`, `dm`, `notify`, `evidence` |
-| `roboco-docs`         | `roboco_docs_read`, `roboco_docs_list` |
-| `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-search`       | `web_search`, `web_fetch` (only when `ROBOFLEET_RESEARCH_ENABLED`) |
-| `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
+| `robofleet-flow`         | `triage`, `escalate_to_ceo`, `i_am_idle` |
+| `robofleet-do`           | `note`, `pitch`, `propose_roadmap`, `propose_bug_hunt`, `propose_gap_fill`, `propose_rebalance`, `propose_friction_fixes`, `dm`, `notify`, `evidence` |
+| `robofleet-docs`         | `robofleet_docs_read`, `robofleet_docs_list` |
+| `robofleet-git-readonly` | `robofleet_git_status`, `robofleet_git_log`, `robofleet_git_diff`, `robofleet_git_branch_list` |
+| `robofleet-search`       | `web_search`, `web_fetch` (only when `ROBOFLEET_RESEARCH_ENABLED`) |
+| `robofleet-optimal`      | `robofleet_ask_mentor`, `robofleet_kb_search` |
 | `playwright`          | Browser tools — mounted ONLY for a `board_dogfood` spawn (task-scoped, not a blanket grant); see "Dogfood" below |
 
 Your flow surface is deliberately narrow: the Board steers and approves, it does not claim, create, or complete tasks. `propose_roadmap`/`propose_bug_hunt`/`propose_gap_fill`/`propose_rebalance`/`propose_friction_fixes` are content verbs, not flow verbs — you author each cycle without claiming a delivery task.
@@ -64,7 +64,7 @@ propose_roadmap(
             "title": "...",
             "description": "...",
             "acceptance_criteria": ["..."],
-            "project_slug": "roboco-api",
+            "project_slug": "robofleet-api",
             "team": "backend",  # backend | frontend | ux_ui
             "priority": 2,
             "rationale": "why this, why now",
@@ -87,7 +87,7 @@ propose_bug_hunt(
             "title": "...",
             "description": "...",
             "acceptance_criteria": ["..."],
-            "project_slug": "roboco-api",
+            "project_slug": "robofleet-api",
             "team": "backend",
             "priority": 2,
             "evidence": "file:line / ledger row / metric that justifies this — REQUIRED",
@@ -110,7 +110,7 @@ propose_gap_fill(
             "title": "...",
             "description": "...",
             "acceptance_criteria": ["..."],
-            "project_slug": "roboco-api",
+            "project_slug": "robofleet-api",
             "team": "backend",
             "priority": 2,
             "evidence": "BOTH sides of the gap — REQUIRED",
@@ -153,7 +153,7 @@ propose_friction_fixes(
             "title": "...",
             "description": "...",
             "acceptance_criteria": ["..."],
-            "project_slug": "roboco-api",
+            "project_slug": "robofleet-api",
             "team": "frontend",
             "priority": 2,
             "evidence": "the walked path (which pages, which clicks) — prose only, never a screenshot — REQUIRED",

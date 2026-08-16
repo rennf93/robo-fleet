@@ -1,6 +1,6 @@
-# RoboCo Data Models
+# RoboFleet Data Models
 
-This directory contains all Pydantic data models for the RoboCo AI Agents Company system.
+This directory contains all Pydantic data models for the RoboFleet AI Agents Company system.
 
 ## Model Overview
 
@@ -40,7 +40,7 @@ Work Layer:
 
 ## Task Lifecycle States
 
-From `roboco/enforcement/task_lifecycle.py`:
+From `robofleet/enforcement/task_lifecycle.py`:
 
 ```
 backlog ────────► pending ────────► claimed ────────► in_progress
@@ -217,7 +217,7 @@ class Task:
 class Project:
     id: UUID
     name: str
-    slug: str  # URL-safe identifier (e.g., 'roboco', 'roboco-panel')
+    slug: str  # URL-safe identifier (e.g., 'robo-fleet', 'robofleet-panel')
     git_url: str  # Git repository URL
     default_branch: str  # e.g., "main"
     protected_branches: list[str]  # Cannot push directly
@@ -273,7 +273,7 @@ class WorkSession:
 
 ## Database Mapping
 
-These Pydantic models are mirrored in SQLAlchemy tables at `roboco/db/tables.py`:
+These Pydantic models are mirrored in SQLAlchemy tables at `robofleet/db/tables.py`:
 
 | Pydantic Model | SQLAlchemy Table |
 |----------------|------------------|
@@ -288,8 +288,8 @@ These Pydantic models are mirrored in SQLAlchemy tables at `roboco/db/tables.py`
 
 ### Creating a Task
 ```python
-from roboco.models.task import TaskCreate
-from roboco.models.base import Team, Complexity
+from robofleet.models.task import TaskCreate
+from robofleet.models.base import Team, Complexity
 
 task_data = TaskCreate(
     title="Implement rate limiting",
@@ -306,13 +306,13 @@ task_data = TaskCreate(
 
 ### Creating a Project
 ```python
-from roboco.models.project import ProjectCreate
-from roboco.models.base import Team
+from robofleet.models.project import ProjectCreate
+from robofleet.models.base import Team
 
 project = ProjectCreate(
-    name="RoboCo API",
-    slug="roboco",
-    git_url="git@github.com:org/roboco.git",
+    name="RoboFleet API",
+    slug="robo-fleet",
+    git_url="git@github.com:org/robofleet.git",
     default_branch="main",
     assigned_cell=Team.BACKEND,
     test_command="uv run pytest",

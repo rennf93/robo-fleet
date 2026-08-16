@@ -10,7 +10,7 @@ This is **distinct from `is_branchless_coordination`** (no branch at all — a M
 
 ## Detection: `VerbRunner._maybe_waive_pr_creation`
 
-**Location:** `roboco/services/gateway/choreographer/_verb_runner.py`
+**Location:** `robofleet/services/gateway/choreographer/_verb_runner.py`
 
 Runs inside `VerbRunner._run_pre_side_effects`, intercepted for exactly two pre-side-effect names — `create_pr` and `create_root_pr` (`_PR_CREATION_SIDE_EFFECTS`):
 
@@ -30,7 +30,7 @@ When `pr_waived=True`, the composed `submit_for_review` action — which would o
 
 ## The `pr_waived` marker
 
-**Location:** `roboco/foundation/policy/content/markers.py`
+**Location:** `robofleet/foundation/policy/content/markers.py`
 
 - `PR_WAIVED = "pr_waived"` — the marker key.
 - `mark_pr_waived(task)` — sets the marker on waiver.
@@ -47,16 +47,16 @@ Every PR-required gate a normal task would hit on its way to `completed` now als
 
 | Gate | File | What changed |
 |---|---|---|
-| `submit_pm_review` PR-created check | `roboco/services/task.py` | `(not pr_created or not pr_number) and not (is_umbrella or pr_waived)` — a waived task no longer needs `pr_created`/`pr_number` to advance. |
-| Cell-complete merge guard | `roboco/services/gateway/choreographer/_impl.py` | `t.pr_number is None and not markers.is_pr_waived(t)` — a waived task is allowed through with no PR to merge. |
-| `TaskService.complete`'s work-session-merged check | `roboco/services/task.py` | Short-circuits `True` for a `pr_waived` task before checking `work_session_id` at all — there is no PR to have merged. |
-| CEO-escalation `pr_number` gate | `roboco/enforcement/task_lifecycle.py`, `GitContext.is_pr_waived` | `_check_ceo_escalation_gate` no longer raises for `awaiting_pm_review → awaiting_ceo_approval` when `is_pr_waived` is set, alongside the pre-existing `is_umbrella` exemption. |
+| `submit_pm_review` PR-created check | `robofleet/services/task.py` | `(not pr_created or not pr_number) and not (is_umbrella or pr_waived)` — a waived task no longer needs `pr_created`/`pr_number` to advance. |
+| Cell-complete merge guard | `robofleet/services/gateway/choreographer/_impl.py` | `t.pr_number is None and not markers.is_pr_waived(t)` — a waived task is allowed through with no PR to merge. |
+| `TaskService.complete`'s work-session-merged check | `robofleet/services/task.py` | Short-circuits `True` for a `pr_waived` task before checking `work_session_id` at all — there is no PR to have merged. |
+| CEO-escalation `pr_number` gate | `robofleet/enforcement/task_lifecycle.py`, `GitContext.is_pr_waived` | `_check_ceo_escalation_gate` no longer raises for `awaiting_pm_review → awaiting_ceo_approval` when `is_pr_waived` is set, alongside the pre-existing `is_umbrella` exemption. |
 
 `TaskService._git_context_for` populates `GitContext.is_pr_waived` from `markers.is_pr_waived(task)` on every transition-gate check, so all of the above read one consistent, marker-derived source of truth.
 
 ## Bug fix that unblocked this: `GitService.is_behind_base`
 
-**Location:** `roboco/services/git.py`
+**Location:** `robofleet/services/git.py`
 
 `git rev-list --left-right --count` separates its two counts with a **TAB**, not a space. The pre-existing parse used `.partition(" ")`, which never found a match and silently fell through to `behind=0, ahead=0` on every real branch. This was harmless for the method's only pre-existing callers (which only read `behind`, where a false "0 behind" just skipped an unneeded freshen) but would have made the zero-diff detection above **false-positive on every non-empty branch** — waiving PR creation for branches that genuinely had commits. Fixed to `.split()` (whitespace-agnostic), matching the already-correct sibling parse in `_ahead_behind`.
 
@@ -69,8 +69,8 @@ Every PR-required gate a normal task would hit on its way to `completed` now als
 
 ## Related Files
 
-- **Detection + routing:** `roboco/services/gateway/choreographer/_verb_runner.py`
-- **Marker:** `roboco/foundation/policy/content/markers.py`
-- **Gate exemptions:** `roboco/services/task.py`, `roboco/services/gateway/choreographer/_impl.py`, `roboco/enforcement/task_lifecycle.py`
-- **Parsing fix:** `roboco/services/git.py` (`GitService.is_behind_base`)
+- **Detection + routing:** `robofleet/services/gateway/choreographer/_verb_runner.py`
+- **Marker:** `robofleet/foundation/policy/content/markers.py`
+- **Gate exemptions:** `robofleet/services/task.py`, `robofleet/services/gateway/choreographer/_impl.py`, `robofleet/enforcement/task_lifecycle.py`
+- **Parsing fix:** `robofleet/services/git.py` (`GitService.is_behind_base`)
 - **Tests:** `tests/unit/gateway/test_verb_runner.py`, `tests/e2e_smoke/test_pr_waiver.py`

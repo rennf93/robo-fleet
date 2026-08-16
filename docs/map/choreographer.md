@@ -7,9 +7,9 @@ The Choreographer is the server-side composition layer that turns agent intent-v
 
 | Path | Role |
 |------|------|
-| `roboco/services/gateway/choreographer/_impl.py` | The `_LegacyChoreographer` / `Choreographer` class — all verb bodies + guard helpers (~6.9k lines). |
-| `roboco/services/gateway/choreographer/_protocol.py` | `ChoreographerHelpers` — TYPE_CHECKING-only stub of helpers role mixins call on `self`, so mypy sees typed signatures (runtime `object`). |
-| `roboco/services/gateway/choreographer/_verb_runner.py` | `VerbRunner` — composed-actions runner; wraps `composes` in `session.begin_nested()` SAVEPOINT, runs `pre_side_effects` / `side_effects` outside. |
+| `robofleet/services/gateway/choreographer/_impl.py` | The `_LegacyChoreographer` / `Choreographer` class — all verb bodies + guard helpers (~6.9k lines). |
+| `robofleet/services/gateway/choreographer/_protocol.py` | `ChoreographerHelpers` — TYPE_CHECKING-only stub of helpers role mixins call on `self`, so mypy sees typed signatures (runtime `object`). |
+| `robofleet/services/gateway/choreographer/_verb_runner.py` | `VerbRunner` — composed-actions runner; wraps `composes` in `session.begin_nested()` SAVEPOINT, runs `pre_side_effects` / `side_effects` outside. |
 
 ## Key Symbols (landmarks only)
 
@@ -122,12 +122,12 @@ Choreographer (composed class, _impl.py)
 
 ## Dependencies
 - **Internal services**: `TaskService`, `WorkSessionService`, `GitService`, `EvidenceRepo`/`evidence_builder`, `a2a`, `JournalService`, `AuditService`, `ProjectService`/product, orchestrator handle, `StreamEventBus`.
-- **Policy (pure)**: `roboco.foundation.policy.lifecycle` (`can_invoke_intent`, `Context`, `Role`, `_INTENT_VERBS`), `foundation.policy.batch` (`is_batch_umbrella`), `foundation.policy.content` markers + `reject_trivial`.
+- **Policy (pure)**: `robofleet.foundation.policy.lifecycle` (`can_invoke_intent`, `Context`, `Role`, `_INTENT_VERBS`), `foundation.policy.batch` (`is_batch_umbrella`), `foundation.policy.content` markers + `reject_trivial`.
 - **Gateway helpers**: `claim_guards` (`already_active_guard`, `paused_tasks_guard`, `unmet_dependency_guard`), `merge_chain.resolve_parent_branch`, `envelope.Envelope`, `remediation` hints.
 - **External**: `structlog`, `asyncpg` (via task_service session / SAVEPOINT), `redis` (rate-limit parking), `git`/`gh` CLI (via git_service).
 
 ## Entry Points
-- MCP `roboco-flow` server → per-role verb methods (manifest-driven allowlist from `role_config.py`).
+- MCP `robofleet-flow` server → per-role verb methods (manifest-driven allowlist from `role_config.py`).
 - Orchestrator `/api/v1/flow/*` REST endpoints → same `Choreographer` methods.
 - Internal cross-verb calls (e.g. `complete` → `cell_pm_complete` / `main_pm_complete`; `_claim_plan_start_run` shared by `i_will_work_on` + `i_will_plan`).
 
@@ -155,7 +155,7 @@ Choreographer (composed class, _impl.py)
 - CLAUDE.md: "only the CEO merges master; Main PM ready root PR → awaiting_ceo_approval (does NOT merge)" — `main_pm_complete` escalates; `VerbRunner._do_pr_merge` exists for cell-level merges and `create_root_pr` opens but the root merge is CEO-gated. Consistent. No drift.
 
 ## Changes Since Baseline
-`git log --oneline fd10cc862c2020b3f639cdb686d427b0198a2441..HEAD -- roboco/services/gateway/choreographer/` → 2 commits touching these files (+814/−89):
+`git log --oneline fd10cc862c2020b3f639cdb686d427b0198a2441..HEAD -- robofleet/services/gateway/choreographer/` → 2 commits touching these files (+814/−89):
 
 1. `15effce0` — 141 Gaps fill-in (#283): added out-of-order-start guards (`_lane_claim_guard`, `_behind_base_gate`, `sync_branch`), unchanged-PR loop-stoppers (`_submit_root_unchanged_pr_guard`, `_submit_up_unchanged_pr_guard`, `_current_pr_head_sha`), `project_id` scoping on `pr_merge` (cross-repo collision fix), umbrella-in-progress bypass in `complete`, `_submit_root_finalize` None-guard, reviewer flag on `_toolchain_broken_guard`.
 2. `3aff6e04` — Close gaps (#285): follow-on touch-ups in the same areas (per-cell project map root-subtask support umbrella handling).

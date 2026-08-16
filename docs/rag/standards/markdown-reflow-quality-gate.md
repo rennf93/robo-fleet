@@ -24,7 +24,7 @@ The reflowed version is a single line, making the change history (git diff) clea
 
 ## The Reflow Check Script
 
-RoboCo includes a deterministic script, `scripts/reflow_md.py`, that detects hard-wrapped prose in markdown files:
+RoboFleet includes a deterministic script, `scripts/reflow_md.py`, that detects hard-wrapped prose in markdown files:
 
 ```bash
 python3 scripts/reflow_md.py --check
@@ -48,7 +48,7 @@ This runs (among other checks):
 1. `uv run ruff format --check .` — code formatting
 2. `uv run ruff check .` — linting
 3. `python3 scripts/reflow_md.py --check` — markdown reflow
-4. `uv run mypy roboco/ tests/` — type checking
+4. `uv run mypy robofleet/ tests/` — type checking
 5. `uv run pytest` — unit tests (DB-dependent, skipped in sandboxes)
 
 A failure in *any* stage blocks the merge.

@@ -4,7 +4,7 @@ A navbar control plus a persistent banner that let the CEO halt new agent spawns
 
 ## API contract
 
-CEO-only server-side; the panel's default identity headers (`lib/api/client.ts`, `X-Agent-ID`/`X-Agent-Role` defaulting to the CEO) already carry that, so no extra auth wiring lives in this module. Mirrors `roboco/api/routes/maintenance_pause.py` exactly.
+CEO-only server-side; the panel's default identity headers (`lib/api/client.ts`, `X-Agent-ID`/`X-Agent-Role` defaulting to the CEO) already carry that, so no extra auth wiring lives in this module. Mirrors `robofleet/api/routes/maintenance_pause.py` exactly.
 
 ```
 GET    /api/maintenance-pause              -> MaintenancePauseStatus[]        (always all three scopes, one row each)

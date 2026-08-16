@@ -2,7 +2,7 @@
 
 ## What It Is
 
-RoboCo can draft posts for the company's X (Twitter) account — release announcements and mention replies — implemented in `roboco/services/x_engine.py` (`XEngine`) and `roboco/services/x_post_service.py` (`XPostService`). Every draft is HELD for an explicit, per-post CEO approval; nothing is ever posted automatically. It mirrors the `ReleaseManagerEngine` "detect → originate a CEO-gated artifact → hold" shape.
+RoboFleet can draft posts for the company's X (Twitter) account — release announcements and mention replies — implemented in `robofleet/services/x_engine.py` (`XEngine`) and `robofleet/services/x_post_service.py` (`XPostService`). Every draft is HELD for an explicit, per-post CEO approval; nothing is ever posted automatically. It mirrors the `ReleaseManagerEngine` "detect → originate a CEO-gated artifact → hold" shape.
 
 ## Enable/Disable
 
@@ -36,7 +36,7 @@ Draft bodies are written by a **local-model** chat call (`_chat`, hitting `ROBOF
 
 ## IMPACT BAR
 
-Voice alone (no em dashes, no slop words, no exclamation pileups) is necessary but not sufficient: a clean post can still be a topic announcement nobody acts on. The IMPACT BAR is a second, titled section appended beside the voice/slop rules, distilled from a real 5.05M-view X post (@XOpenSource's "Open-sourcing the For You timeline", https://x.com/XOpenSource/status/2087951962004230428), that requires the deliverable noun in the first sentence, one falsifiable specific, demonstration over claim, at most one canonical verifiable link near the close, naming any neutral verification, zero engagement-bait, closing on substance or an invitation, naming the cadence for a standing practice, and leading with the reader's payoff. It is authored once, then carried at two chokepoints that must stay in lockstep: `_HOM_VOICE_GUIDE` in `roboco/services/x_engine.py` (the local-model release/reply/revision prompts covered in [Drafting](#drafting) above) and the VOICE GUIDE section of `agents/prompts/identities/head-marketing.md` (every cloud-agent Board Program spawn that drafts a post: feature spotlight, Megaphone, War Room, Barfly). `tests/unit/services/test_x_engine.py`'s `test_impact_bar_parity_with_head_marketing_md` pins a shared set of sentinel phrases in both copies so a one-sided edit fails the test instead of silently drifting.
+Voice alone (no em dashes, no slop words, no exclamation pileups) is necessary but not sufficient: a clean post can still be a topic announcement nobody acts on. The IMPACT BAR is a second, titled section appended beside the voice/slop rules, distilled from a real 5.05M-view X post (@XOpenSource's "Open-sourcing the For You timeline", https://x.com/XOpenSource/status/2087951962004230428), that requires the deliverable noun in the first sentence, one falsifiable specific, demonstration over claim, at most one canonical verifiable link near the close, naming any neutral verification, zero engagement-bait, closing on substance or an invitation, naming the cadence for a standing practice, and leading with the reader's payoff. It is authored once, then carried at two chokepoints that must stay in lockstep: `_HOM_VOICE_GUIDE` in `robofleet/services/x_engine.py` (the local-model release/reply/revision prompts covered in [Drafting](#drafting) above) and the VOICE GUIDE section of `agents/prompts/identities/head-marketing.md` (every cloud-agent Board Program spawn that drafts a post: feature spotlight, Megaphone, War Room, Barfly). `tests/unit/services/test_x_engine.py`'s `test_impact_bar_parity_with_head_marketing_md` pins a shared set of sentinel phrases in both copies so a one-sided edit fails the test instead of silently drifting.
 
 ## Ownership and the CEO gate
 
@@ -52,7 +52,7 @@ The CEO acts through panel-only REST, CEO-role-gated (`require_ceo_role`), never
 | `GET /api/x/credentials` | Whether all four OAuth secrets are stored (`has_credentials` boolean — never the secrets). |
 | `POST /api/x/credentials` | Set (or, passing all four empty, clear) the four secrets. All-or-nothing — a partial set raises a validation error. |
 
-Approval runs under a Redis single-flight lock (`roboco:x_post:{task_id}`, plain `SET NX`, 60s TTL) so a double-click can't double-post; the task is marked `COMPLETED` under the same lock before it releases.
+Approval runs under a Redis single-flight lock (`robo-fleet:x_post:{task_id}`, plain `SET NX`, 60s TTL) so a double-click can't double-post; the task is marked `COMPLETED` under the same lock before it releases.
 
 ## Redraft from rejection
 
@@ -78,7 +78,7 @@ A redraft is deduped by identity: while one redraft is already open for the same
 
 Credentials are entered in the **panel only** — never in `.env` or an agent-visible setting. The four OAuth 1.0a user-context secrets (`api_key`, `api_secret`, `access_token`, `access_token_secret`) are Fernet-encrypted (`ROBOFLEET_ENCRYPTION_KEY`) in the singleton `x_credentials` table (migration `059`); `get_decrypted()` is called only server-side, by `x_post_service` / `x_engine` — the API surface is write-only (`has_credentials` boolean, matching the `has_git_token` pattern for per-project git tokens).
 
-Requests are signed with a **hand-rolled OAuth 1.0a HMAC-SHA1** signer (`roboco/services/x_client.py`, no new dependency) — no library does this signing for X's v2 API in the project's existing dependency set. Without credentials, `build_x_client` returns a `NullXClient` that never raises and never egresses, exactly like the research `NullProvider`.
+Requests are signed with a **hand-rolled OAuth 1.0a HMAC-SHA1** signer (`robofleet/services/x_client.py`, no new dependency) — no library does this signing for X's v2 API in the project's existing dependency set. Without credentials, `build_x_client` returns a `NullXClient` that never raises and never egresses, exactly like the research `NullProvider`.
 
 ## Related
 

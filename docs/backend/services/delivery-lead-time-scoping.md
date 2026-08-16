@@ -2,7 +2,7 @@
 
 ## What changed
 
-`TaskService.get_delivery_stats_30d` (`roboco/services/task.py`, called by `CockpitService.summary` and rendered by the panel's `company-scorecard-card.tsx` Speed/Delivery sections) used to compute `completed_30d` and `median_lead_time_hours` over every `status=completed` task in the last 30 days, with no filter on task type, source, or tree position. That population mixed real delivery work with rows that carry no real delivery lead time:
+`TaskService.get_delivery_stats_30d` (`robofleet/services/task.py`, called by `CockpitService.summary` and rendered by the panel's `company-scorecard-card.tsx` Speed/Delivery sections) used to compute `completed_30d` and `median_lead_time_hours` over every `status=completed` task in the last 30 days, with no filter on task type, source, or tree position. That population mixed real delivery work with rows that carry no real delivery lead time:
 
 - Held CEO-approval drafts (X posts/replies/feature drafts, video-post drafts, release proposals) that complete the instant the CEO approves them, seconds after being drafted.
 - Board-program exploration cycles and generic administrative tasks (`task_type=administrative`), which complete the moment a Board role files its proposal, not when anything ships.
@@ -12,13 +12,13 @@ The fix adds three predicates to the existing `status=completed AND completed_at
 
 1. `TaskTable.parent_task_id.is_(None)` — one row per delivery root. For a single-task delivery that root is the coordination root itself; for a MegaTask that root is the branchless **umbrella** (its `parent_task_id` is NULL), NOT a root-subtask — each root-subtask has `parent_task_id=<umbrella id>` set, so it's a child of the umbrella and is excluded by this same predicate.
 2. `TaskTable.task_type != TaskType.ADMINISTRATIVE` — covers every board-program exploration cycle (`board_roadmap`, `board_pest_control`, ...) plus generic administrative work in one filter, since every board-program explorer already stamps `task_type=ADMINISTRATIVE`.
-3. `TaskTable.source.notin_(LEAD_TIME_EXCLUDED_SOURCES)` — a new frozenset constant (defined next to `EVAL_BENCH_SOURCE` in `roboco/services/task.py`) unioning `X_SOURCES`, `X_FEATURE_EXPLORATION_SOURCE`, `VIDEO_HELD_SOURCES` (the held `video_post` draft), and `RELEASE_MANAGER_SOURCE`. `VIDEO_SOURCE` (the video-authoring task itself) is deliberately NOT in this set — it's a normal dispatched UX/UI code task, not a held draft, so excluding it would drop real delivery work. A `ceo_report` (Periscope/Sentinel) is never a `TaskTable` row at all — filed as a report, not a task — so it needs no entry in the set.
+3. `TaskTable.source.notin_(LEAD_TIME_EXCLUDED_SOURCES)` — a new frozenset constant (defined next to `EVAL_BENCH_SOURCE` in `robofleet/services/task.py`) unioning `X_SOURCES`, `X_FEATURE_EXPLORATION_SOURCE`, `VIDEO_HELD_SOURCES` (the held `video_post` draft), and `RELEASE_MANAGER_SOURCE`. `VIDEO_SOURCE` (the video-authoring task itself) is deliberately NOT in this set — it's a normal dispatched UX/UI code task, not a held draft, so excluding it would drop real delivery work. A `ceo_report` (Periscope/Sentinel) is never a `TaskTable` row at all — filed as a report, not a task — so it needs no entry in the set.
 
 `completed_30d` and `median_lead_time_hours` are computed from the same filtered row set, so the two figures returned together always describe one population — the dict schema (`{completed_30d: int, median_lead_time_hours: float | None}`) is unchanged, so `CockpitService.summary` and every other consumer need no changes.
 
 ## Where the population is documented
 
-The method's own docstring (`roboco/services/task.py`, `get_delivery_stats_30d`) is the source of truth for the scoping rule and spells out the MegaTask umbrella-vs-root-subtask distinction. `docs/map/metrics-observability.md` (the agent-facing codebase map's Gotchas section) carries the same explanation for agents exploring the metrics slice, plus a Key Symbols entry and a "Changes Since Baseline" note dated 2026-08-08.
+The method's own docstring (`robofleet/services/task.py`, `get_delivery_stats_30d`) is the source of truth for the scoping rule and spells out the MegaTask umbrella-vs-root-subtask distinction. `docs/map/metrics-observability.md` (the agent-facing codebase map's Gotchas section) carries the same explanation for agents exploring the metrics slice, plus a Key Symbols entry and a "Changes Since Baseline" note dated 2026-08-08.
 
 ## UI-facing text
 
@@ -38,4 +38,4 @@ The method's own docstring (`roboco/services/task.py`, `get_delivery_stats_30d`)
 
 ## Future-maintenance note
 
-Any future held/report-drafting engine must either tag its exploration/draft task `task_type=ADMINISTRATIVE` or add its `source` to `LEAD_TIME_EXCLUDED_SOURCES`, or it will silently enter the lead-time population. This is flagged in the constant's own code comment in `roboco/services/task.py`.
+Any future held/report-drafting engine must either tag its exploration/draft task `task_type=ADMINISTRATIVE` or add its `source` to `LEAD_TIME_EXCLUDED_SOURCES`, or it will silently enter the lead-time population. This is flagged in the constant's own code comment in `robofleet/services/task.py`.

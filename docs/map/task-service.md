@@ -7,7 +7,7 @@
 
 | Path | Role |
 |------|------|
-| `roboco/services/task.py` | Single 8.7k-line service module implementing TaskService + a few internal dataclass containers (`_CompletionSnapshot`, `SoftBlockInput`, `SoftBlockInfo`, `GatewayAgentView`). |
+| `robofleet/services/task.py` | Single 8.7k-line service module implementing TaskService + a few internal dataclass containers (`_CompletionSnapshot`, `SoftBlockInput`, `SoftBlockInfo`, `GatewayAgentView`). |
 
 ## Key Symbols
 
@@ -33,12 +33,12 @@
 | `_emit_admin_override_audit` | method | task.py:8555 | Factored out of `_apply_pre_block_restore`: writes `task.admin_override` audit row for admin-triggered blocked restores (`forced=False, restore=True`). |
 | `claim` | method | task.py:3112 | `FOR UPDATE` lock + `_validate_claim_preconditions` + `_finalize_claim`; calls `_validate_and_set_status(claimed)`. |
 | `_validate_claim_preconditions` | method | task.py:2883 | Per-claim validator chain: status, `_claim_blocked_by_sequencing` (dependency + sequence), team, pre-assignment theft, self-review. |
-| `_claim_blocked_by_sequence` | method | task.py:2805 | Sequence gate for a PENDING/`needs_revision` task with a parent + effective `sequence` (`COALESCE(sequence, 0)`) N — **reachability-aware since #681**: it branches on `is_batch_root_subtask(task.batch_id, task.parent_task_id)`. A MegaTask root-subtask keeps the ORIGINAL strict rule unchanged (held while ANY same-parent sibling with a strictly lower sequence is non-terminal — assignee-blind, edge-agnostic; `sequence` there is a one-shot globally-computed Kahn wave, a deliberate staged-release barrier). Every other same-parent context instead routes through the pure `sequence_blocker_id` (`roboco/services/sequencing.py`), which only lets a lower-sequence sibling block when it is a real transitive predecessor via `dependency_ids` UNIONED with `completed_dependency_ids` — a task with NO dependency edge onto any same-parent sibling still falls back to the raw edge-agnostic bar (preserves the pre-#681 #452 edge-less-PM-delegation scenario). Ties run parallel; cancelled siblings never block. |
+| `_claim_blocked_by_sequence` | method | task.py:2805 | Sequence gate for a PENDING/`needs_revision` task with a parent + effective `sequence` (`COALESCE(sequence, 0)`) N — **reachability-aware since #681**: it branches on `is_batch_root_subtask(task.batch_id, task.parent_task_id)`. A MegaTask root-subtask keeps the ORIGINAL strict rule unchanged (held while ANY same-parent sibling with a strictly lower sequence is non-terminal — assignee-blind, edge-agnostic; `sequence` there is a one-shot globally-computed Kahn wave, a deliberate staged-release barrier). Every other same-parent context instead routes through the pure `sequence_blocker_id` (`robofleet/services/sequencing.py`), which only lets a lower-sequence sibling block when it is a real transitive predecessor via `dependency_ids` UNIONED with `completed_dependency_ids` — a task with NO dependency edge onto any same-parent sibling still falls back to the raw edge-agnostic bar (preserves the pre-#681 #452 edge-less-PM-delegation scenario). Ties run parallel; cancelled siblings never block. |
 | `sequence_blocker_id` | function | services/sequencing.py | Pure reachability check backing the non-batch branch of `_claim_blocked_by_sequence` (#681): returns the blocking sibling's id, or `None`, from `dependency_ids ∪ completed_dependency_ids` — the union matters because `_unblock_dependents` prunes a completed dependency's edge into `completed_dependency_ids` the moment it lands, almost always before the dependent is ever claimed. |
 | `sequence_hold_reason` | method | task.py | Names the blocking sibling for the caller instead of a bare `None`; feeds the gateway's `Envelope.sequence_held` (#681) so a held claim on PENDING or NEEDS_REVISION surfaces cleanly instead of `claim()`'s bare `None` return being misdiagnosed by the verb runner as a concurrent-transition `INVALID_STATE`. |
 | `_claim_blocked_by_dependencies` | method | task.py:2781 | `unmet_dependency` TIMING gate: refuses claim while any `dependency_ids` entry is non-terminal. |
 | `is_pending_claim_blocked` | method | task.py:2864 | Read-only wrapper over `_claim_blocked_by_sequencing` (dependency OR sequence) so the orchestrator dispatcher can filter a doomed claim before attempting it (`_pending_claim_blocked` in orchestrator.py); extended to NEEDS_REVISION so `give_me_work`'s two offer paths (`list_pending_for_agent`, the Choreographer's `_drop_dependency_held`) never offer a task the reachability-aware bar (#681) is about to reject. |
-| `terminal_children_count` | method | task.py:9711 | Count of a task's terminal (completed/cancelled) direct children; feeds the orchestrator oscillation breaker's progress fingerprint (#685, `roboco/services/gateway/choreographer/_impl.py`) so a coordination root whose children advance between escalate/unblock round-trips resets its strike count instead of accruing toward a false trip. |
+| `terminal_children_count` | method | task.py:9711 | Count of a task's terminal (completed/cancelled) direct children; feeds the orchestrator oscillation breaker's progress fingerprint (#685, `robofleet/services/gateway/choreographer/_impl.py`) so a coordination root whose children advance between escalate/unblock round-trips resets its strike count instead of accruing toward a false trip. |
 | `stamp_wave_sequence` | method | task.py:7452 | Stamps a freshly delegated subtask's `sequence` as `1 + max(sequence of each same-parent dependency target)`, or `0` when independent — so independent siblings tie (parallel under the sequence gate) while colliding/ordered work ascends. Runs POST-wiring (after the collision DAG / cross-cell edges land); PM-authored sequences are never rewritten. |
 | `_apply_dependency_lineage` / `_merge_one_dependency` | method | task.py:2308 / 2337 | Claim-time content assist (not a gate): merges each same-repo dependency's landed work into a freshly cut branch when it lies outside the branch's own ancestor chain (`GitService.merge_dependency_lineage`); a real conflict aborts the merge and stamps a `dependency_lineage_conflict` transition note instead of failing the claim. |
 | `_finalize_claim` | method | task.py:3265 | Work-session create/inherit, branch cut, proactive-context injection; calls `_inherit_upstream_base` when `_should_inherit_base` says the reclaimed branch may need an upstream merge. |
@@ -119,12 +119,12 @@ stateDiagram-v2
   - Queries: `list_*`, `count_*`, `*_ac_coverage`, `all_subtasks_terminal`
 
 ## Dependencies
-- `roboco.foundation.policy.lifecycle` (transitions, role restrictions, git requirements, `is_branchless_coordination`, `is_batch_umbrella`)
-- `roboco.foundation.policy.batch` / `sequencing` (batch predicates, sibling DAG)
-- `roboco.services.work_session` (close/abandon), `roboco.services.workspace`, `roboco.services.learning`, `roboco.services.memory_distiller`
-- `roboco.services.conventions` (`_attach_baseline_constraints`)
-- `roboco.db.tables` (`TaskTable`, `AuditLogTable`, `WorkSessionTable`, `ProjectTable`)
-- `roboco.api.deps.get_orchestrator` (lazy; dispatch poke), `roboco.config.settings`
+- `robofleet.foundation.policy.lifecycle` (transitions, role restrictions, git requirements, `is_branchless_coordination`, `is_batch_umbrella`)
+- `robofleet.foundation.policy.batch` / `sequencing` (batch predicates, sibling DAG)
+- `robofleet.services.work_session` (close/abandon), `robofleet.services.workspace`, `robofleet.services.learning`, `robofleet.services.memory_distiller`
+- `robofleet.services.conventions` (`_attach_baseline_constraints`)
+- `robofleet.db.tables` (`TaskTable`, `AuditLogTable`, `WorkSessionTable`, `ProjectTable`)
+- `robofleet.api.deps.get_orchestrator` (lazy; dispatch poke), `robofleet.config.settings`
 - Markers / `extract_original_developer` helpers
 
 ## Entry Points
@@ -160,7 +160,7 @@ stateDiagram-v2
 - CLAUDE.md verb table lists `pr_reviewer` `pr_pass`/`pr_fail` — present at task.py:8100/8137 (consistent).
 
 ## Changes Since Baseline
-`git log fd10cc86..HEAD -- roboco/services/task.py`:
+`git log fd10cc86..HEAD -- robofleet/services/task.py`:
 - `15effce0` Chore: 141 Gaps fill-in (#283) — bulk gap closure; transition audit chokepoint + `revision_count` centralization (task.py:685-706), branchless/umbrella git-context exemptions, fail_qa work-session fallback, ceo_reject branchless routing.
 - `3aff6e04` Chore: Close gaps (#285) — follow-on gap close (worktree-on-terminal cleanup F123 Phase C, escalation audit emit, rework routing hardening).
 

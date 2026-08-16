@@ -1,6 +1,6 @@
-# RoboCo Slice Map — `support-services`
+# RoboFleet Slice Map — `support-services`
 
-Slice key: `support-services` Repo root: `/Users/renzof/Documents/GitHub/ZZZ/roboco-master/roboco` Scope: `roboco/services/{agent,health,settings,toolchain,provider,llm,proactive,transcription,base,exceptions}.py`, `roboco/events/`, `roboco/seeds/`, `roboco/utils/`
+Slice key: `support-services` Repo root: `/Users/renzof/Documents/GitHub/ZZZ/robofleet-master/robofleet` Scope: `robofleet/services/{agent,health,settings,toolchain,provider,llm,proactive,transcription,base,exceptions}.py`, `robofleet/events/`, `robofleet/seeds/`, `robofleet/utils/`
 
 ## Purpose
 
@@ -10,26 +10,26 @@ Cross-cutting support layer beneath the delivery services: the service-base/erro
 
 | Path | Role | approx LOC |
 |---|---|---|
-| `roboco/services/base.py` | `BaseService` (session-bound) + `SingletonService` + `SingletonHolder[T]` + `ServiceError` hierarchy (NotFound/Validation/Conflict/Unauthorized/ServiceUnavailable) | 226 |
-| `roboco/services/exceptions.py` | LLM-provider rate-limit exception + `Retry-After` parser + retry constants | 81 |
-| `roboco/services/agent.py` | Thin read-side `AgentService` over `AgentTable` (list/get by uuid/slug/raise) | 74 |
-| `roboco/services/health.py` | `check_database` / `check_redis` infrastructure probes backing `/health` | 32 |
-| `roboco/services/settings.py` | `SettingsService` CRUD over `system_settings` + `FEATURE_FLAGS` registry + startup overlay onto `roboco.config.settings` | 165 |
-| `roboco/services/toolchain.py` | Pure resolver: target project's Python interpreter from `pyproject.toml` / `.python-version` | 117 |
-| `roboco/services/provider.py` | `ProviderService` CRUD for `provider_configs` rows + Fernet-encrypted token tri-state updates | 229 |
-| `roboco/services/llm.py` | `ModelRoutingService`: resolve (provider, model) per agent spawn; assignment CRUD; mode apply (anthropic/grok/ollama/self_hosted/mix); Ollama probe | 599 |
-| `roboco/services/proactive.py` | `ProactiveKnowledgeService`: assemble RAG context packages on task-claim / session-start | 542 |
-| `roboco/services/transcription.py` | `TranscriptionService`: buffer raw LLM stream chunks into extractable segments | 278 |
-| `roboco/events/__init__.py` | Public re-exports for the event system | 41 |
-| `roboco/events/bus.py` | Backward-compat shim: `EventBus = StreamEventBus`, `get_event_bus`, `init_event_bus` | 57 |
-| `roboco/events/handlers.py` | Workflow trigger handlers (task status → notifications, QA result, blocker, question, auditor spawn) + `register_default_handlers` | 419 |
-| `roboco/events/stream_bus.py` | `StreamEventBus`: Redis Streams durable event bus with consumer groups, ACK, pending recovery, periodic reclaim loop, dead-letter for undecodable messages | 604 |
-| `roboco/seeds/__init__.py` | Re-exports seed constants | 25 |
-| `roboco/seeds/initial_data.py` | Static seed data (agents) derived from `foundation` catalogs | 332 |
-| `roboco/utils/__init__.py` | Re-exports crypto + converter helpers | 23 |
-| `roboco/utils/converters.py` | `InvalidIdentifierError` + `require_uuid` / `to_python_uuid` / `to_python_uuid_list` + `repo_key` | 99 |
-| `roboco/utils/crypto.py` | Fernet `encrypt_token` / `decrypt_token` / `is_encryption_configured` + `EncryptionError` | 111 |
-| `roboco/utils/telegram_initdata.py` | Pure Telegram Mini App `initData` validation (no I/O): `WebAppData`-keyed HMAC-SHA256 derivation, `hmac.compare_digest` check, freshness window (`auth_date` within `max_age_seconds`, ±60s clock-skew tolerance, no far-future) | 76 |
+| `robofleet/services/base.py` | `BaseService` (session-bound) + `SingletonService` + `SingletonHolder[T]` + `ServiceError` hierarchy (NotFound/Validation/Conflict/Unauthorized/ServiceUnavailable) | 226 |
+| `robofleet/services/exceptions.py` | LLM-provider rate-limit exception + `Retry-After` parser + retry constants | 81 |
+| `robofleet/services/agent.py` | Thin read-side `AgentService` over `AgentTable` (list/get by uuid/slug/raise) | 74 |
+| `robofleet/services/health.py` | `check_database` / `check_redis` infrastructure probes backing `/health` | 32 |
+| `robofleet/services/settings.py` | `SettingsService` CRUD over `system_settings` + `FEATURE_FLAGS` registry + startup overlay onto `robofleet.config.settings` | 165 |
+| `robofleet/services/toolchain.py` | Pure resolver: target project's Python interpreter from `pyproject.toml` / `.python-version` | 117 |
+| `robofleet/services/provider.py` | `ProviderService` CRUD for `provider_configs` rows + Fernet-encrypted token tri-state updates | 229 |
+| `robofleet/services/llm.py` | `ModelRoutingService`: resolve (provider, model) per agent spawn; assignment CRUD; mode apply (anthropic/grok/ollama/self_hosted/mix); Ollama probe | 599 |
+| `robofleet/services/proactive.py` | `ProactiveKnowledgeService`: assemble RAG context packages on task-claim / session-start | 542 |
+| `robofleet/services/transcription.py` | `TranscriptionService`: buffer raw LLM stream chunks into extractable segments | 278 |
+| `robofleet/events/__init__.py` | Public re-exports for the event system | 41 |
+| `robofleet/events/bus.py` | Backward-compat shim: `EventBus = StreamEventBus`, `get_event_bus`, `init_event_bus` | 57 |
+| `robofleet/events/handlers.py` | Workflow trigger handlers (task status → notifications, QA result, blocker, question, auditor spawn) + `register_default_handlers` | 419 |
+| `robofleet/events/stream_bus.py` | `StreamEventBus`: Redis Streams durable event bus with consumer groups, ACK, pending recovery, periodic reclaim loop, dead-letter for undecodable messages | 604 |
+| `robofleet/seeds/__init__.py` | Re-exports seed constants | 25 |
+| `robofleet/seeds/initial_data.py` | Static seed data (agents) derived from `foundation` catalogs | 332 |
+| `robofleet/utils/__init__.py` | Re-exports crypto + converter helpers | 23 |
+| `robofleet/utils/converters.py` | `InvalidIdentifierError` + `require_uuid` / `to_python_uuid` / `to_python_uuid_list` + `repo_key` | 99 |
+| `robofleet/utils/crypto.py` | Fernet `encrypt_token` / `decrypt_token` / `is_encryption_configured` + `EncryptionError` | 111 |
+| `robofleet/utils/telegram_initdata.py` | Pure Telegram Mini App `initData` validation (no I/O): `WebAppData`-keyed HMAC-SHA256 derivation, `hmac.compare_digest` check, freshness window (`auth_date` within `max_age_seconds`, ±60s clock-skew tolerance, no far-future) | 76 |
 
 ## Key Symbols
 
@@ -84,7 +84,7 @@ Cross-cutting support layer beneath the delivery services: the service-base/erro
 | `process_chunk` | method | `services/transcription.py:120` | Append chunk, return buffer if ready-for-extraction else None |
 | `_periodic_flush` | method | `services/transcription.py:225` | Background loop: sleep `flush_interval_seconds`, yield ready buffers to callbacks |
 | `StreamEventBus` | class | `events/stream_bus.py:35` | Redis Streams bus: `xadd` trim, `xreadgroup` block=5000, ACK-on-success, `xclaim` recovery, periodic `_reclaim_loop`, dead-letter for undecodable messages |
-| `DEAD_LETTER_STREAM` | class attr | `events/stream_bus.py:51` | `"roboco:stream:dead-letter"` — undecodable messages are parked here before ACK for operator inspection |
+| `DEAD_LETTER_STREAM` | class attr | `events/stream_bus.py:51` | `"robo-fleet:stream:dead-letter"` — undecodable messages are parked here before ACK for operator inspection |
 | `publish` / `publish_task_event` | methods | `events/stream_bus.py:152,191` | `xadd` to category-grouped stream, returns message id |
 | `recover_pending` | method | `events/stream_bus.py:534` | `xpending_range` + `xclaim` idle≥60s messages; called at startup and periodically by `_reclaim_loop` |
 | `_reclaim_loop` | method | `events/stream_bus.py:253` | Background task spawned alongside `_listen_loop`; re-runs `recover_pending` every 60s so runtime handler failures are retried without waiting for a restart |
@@ -110,9 +110,9 @@ Cross-cutting support layer beneath the delivery services: the service-base/erro
 
 **Routing presets.** On top of modes, an operator can `save_routing_preset(name)` to snapshot the FULL current routing state (mode + every assignment row, AGENT_SLUG pins included) into a `RoutingPresetTable` row, then `apply_routing_preset(preset_id)` later to restore it wholesale — a full swap that validates every entry via `_validate_preset_entry` BEFORE the wipe, unlike a mode switch's pin-preserving, validate-as-you-go behavior. Panel: the AI routing settings card (`ai-routing-card.tsx`) exposes preset save/apply/delete alongside the existing mode buttons and the complexity-override editor.
 
-**Settings/flags.** At FastAPI lifespan (`api/app.py:117`), `apply_persisted_feature_flags(db)` reads each `FEATURE_FLAGS` key from `system_settings` and `setattr`s the live `roboco.config.settings` singleton so the rest of the app reads panel choices; an unset key keeps the env default. The Settings panel reads effective values via `feature_flag_effective_values` and writes via `SettingsService.set` (validates → upsert → flush; route commits).
+**Settings/flags.** At FastAPI lifespan (`api/app.py:117`), `apply_persisted_feature_flags(db)` reads each `FEATURE_FLAGS` key from `system_settings` and `setattr`s the live `robofleet.config.settings` singleton so the rest of the app reads panel choices; an unset key keeps the env default. The Settings panel reads effective values via `feature_flag_effective_values` and writes via `SettingsService.set` (validates → upsert → flush; route commits).
 
-**Events.** `bootstrap.py:92` calls `init_event_bus()` → `init_stream_event_bus` → `connect()` + `recover_pending()` (reclaims idle ≥60s messages from crashed consumers via `xclaim`). `register_default_handlers` subscribes task/session/handoff/QA/blocker/question/auditor handlers. Publishers call `bus.publish(Event)` → `xadd` to `roboco:stream:{category}` (trimmed to 10000). `start_listening` spawns both `_listen_loop` and `_reclaim_loop`; the reclaim loop re-runs `recover_pending` every 60s so a runtime handler failure is retried without waiting for a restart. `_listen_loop` blocks on `xreadgroup` (count=10, block=5000); `_handle_message` first tries `Event.from_json` in its own try/except — an undecodable payload (unknown `EventType`, bad UUID/timestamp, malformed JSON) is dead-lettered to `DEAD_LETTER_STREAM` then ACKed so a poison pill never wedges the stream. Successfully decoded events are dispatched via `asyncio.gather` with a per-(event.id, handler) SET-NX idempotency guard (`_run_handler_guarded`), and the message is ACKed only if every handler succeeded — failed handlers leave the message pending for the reclaim loop. `_run_handler_guarded` catches `BaseException` (including `asyncio.CancelledError`) so a mid-flight cancellation clears the idempotency marker and allows replay. Handlers use the injected `_context` (notification_service + orchestrator).
+**Events.** `bootstrap.py:92` calls `init_event_bus()` → `init_stream_event_bus` → `connect()` + `recover_pending()` (reclaims idle ≥60s messages from crashed consumers via `xclaim`). `register_default_handlers` subscribes task/session/handoff/QA/blocker/question/auditor handlers. Publishers call `bus.publish(Event)` → `xadd` to `robo-fleet:stream:{category}` (trimmed to 10000). `start_listening` spawns both `_listen_loop` and `_reclaim_loop`; the reclaim loop re-runs `recover_pending` every 60s so a runtime handler failure is retried without waiting for a restart. `_listen_loop` blocks on `xreadgroup` (count=10, block=5000); `_handle_message` first tries `Event.from_json` in its own try/except — an undecodable payload (unknown `EventType`, bad UUID/timestamp, malformed JSON) is dead-lettered to `DEAD_LETTER_STREAM` then ACKed so a poison pill never wedges the stream. Successfully decoded events are dispatched via `asyncio.gather` with a per-(event.id, handler) SET-NX idempotency guard (`_run_handler_guarded`), and the message is ACKed only if every handler succeeded — failed handlers leave the message pending for the reclaim loop. `_run_handler_guarded` catches `BaseException` (including `asyncio.CancelledError`) so a mid-flight cancellation clears the idempotency marker and allows replay. Handlers use the injected `_context` (notification_service + orchestrator).
 
 **Proactive injection.** `TaskService.claim_task` (`services/task.py:2548`) lazily calls `get_proactive_service()`, which singleton-inits with `OptimalService`. `on_task_claimed` runs five best-effort RAG searches (similar tasks, learnings, standards, decisions, known issues), each in its own try/except, builds a `ContextPackage` + summary. The `code_patterns` field is retained in `ContextPackage` for API/schema back-compat but is always empty — `_find_code_patterns` was removed. `api/routes/optimal.py:1255` exposes `get_context_for_task`/`get_context_for_session` which own DB lookups so routes don't query directly.
 
@@ -176,7 +176,7 @@ graph LR
     SS --> DB[("system_settings")]
     LIFESPAN["api/app.py lifespan"] --> APPLY["apply_persisted_feature_flags"]
     APPLY --> DB
-    APPLY -->|"setattr(key,bool)"| CFG["roboco.config.settings singleton"]
+    APPLY -->|"setattr(key,bool)"| CFG["robofleet.config.settings singleton"]
     CFG --> CONSUMERS["all flag-gated code"]
   end
 ```
@@ -213,19 +213,19 @@ support-services
 ## Dependencies
 
 **Internal (downstream):**
-- `roboco.config.settings` (encryption key, redis_url, feature-flag defaults) — `crypto`, `stream_bus`, `health`, `settings`
-- `roboco.db.tables` (`AgentTable`, `ProviderConfigTable`, `ModelAssignmentTable`, `SystemSettingTable`, `TaskTable`) — `agent`, `provider`, `llm`, `settings`, `proactive`
-- `roboco.db.base.get_db_context` — `health`, `proactive`
-- `roboco.models.base` (`AgentRole`, `Team`, `ModelProvider`, `AssignmentScope`) — `agent`, `provider`, `llm`
-- `roboco.models.events` (`Event`, `EventType`, `EventContext`, protocols) — `events/*`
-- `roboco.models.llm_catalog` (`MODEL_CATALOG_BY_NAME`, `OLLAMA_DEFAULT_MODEL`) — `llm`
-- `roboco.models.runtime` (`MODEL_MAP`, `ROLE_MODEL_MAP`) — `llm`
-- `roboco.models.optimal` (`IndexType`, `QueryContext`, `SearchResult`) — `proactive`
-- `roboco.models.message.RawStream`, `roboco.models.transcription.*` — `transcription`
-- `roboco.agents_config.get_agent_role` — `llm`
-- `roboco.foundation.identity` — `seeds`
-- `roboco.services.optimal.get_optimal_service` — `proactive` (lazy)
-- `roboco.logging.get_logger` — `crypto`
+- `robofleet.config.settings` (encryption key, redis_url, feature-flag defaults) — `crypto`, `stream_bus`, `health`, `settings`
+- `robofleet.db.tables` (`AgentTable`, `ProviderConfigTable`, `ModelAssignmentTable`, `SystemSettingTable`, `TaskTable`) — `agent`, `provider`, `llm`, `settings`, `proactive`
+- `robofleet.db.base.get_db_context` — `health`, `proactive`
+- `robofleet.models.base` (`AgentRole`, `Team`, `ModelProvider`, `AssignmentScope`) — `agent`, `provider`, `llm`
+- `robofleet.models.events` (`Event`, `EventType`, `EventContext`, protocols) — `events/*`
+- `robofleet.models.llm_catalog` (`MODEL_CATALOG_BY_NAME`, `OLLAMA_DEFAULT_MODEL`) — `llm`
+- `robofleet.models.runtime` (`MODEL_MAP`, `ROLE_MODEL_MAP`) — `llm`
+- `robofleet.models.optimal` (`IndexType`, `QueryContext`, `SearchResult`) — `proactive`
+- `robofleet.models.message.RawStream`, `robofleet.models.transcription.*` — `transcription`
+- `robofleet.agents_config.get_agent_role` — `llm`
+- `robofleet.foundation.identity` — `seeds`
+- `robofleet.services.optimal.get_optimal_service` — `proactive` (lazy)
+- `robofleet.logging.get_logger` — `crypto`
 
 **External:**
 - `sqlalchemy` / `sqlalchemy.ext.asyncio` — ORM sessions
@@ -257,7 +257,7 @@ support-services
 
 ## Config Flags
 
-Panel-tunable flags defined in `services/settings.py:46` `FEATURE_FLAGS` (stored override → `roboco.config.settings.<key>` at startup; env default when unset):
+Panel-tunable flags defined in `services/settings.py:46` `FEATURE_FLAGS` (stored override → `robofleet.config.settings.<key>` at startup; env default when unset):
 
 | Key | Label | Env counterpart |
 |---|---|---|
@@ -325,7 +325,7 @@ No logic-touching commits to list — IMPACT: none.
 > - `321e68d7` [sweep] proactive: `_find_code_patterns` method, its call, summary line, and count removed; `ContextPackage.code_patterns` field retained (always-empty, back-compat).
 > - `536bbb64` Chore/all/logical-gaps-sweep (#286) — merge commit pulling the above into the branch.
 > - `d83104e9` (2026-07-17, PR #546, "wave-1 quick wins") fix(llm): provider mode switches preserve per-agent model pins — `_apply_anthropic`/`_apply_grok`/`_apply_ollama`/`_apply_self_hosted` now delete only ROLE/GLOBAL `model_assignments` rows (`scope != AGENT_SLUG`) instead of wiping the whole table, so an AGENT_SLUG pin survives a mode switch; `OLLAMA_ROLE_DEFAULTS` removed from `llm_catalog.py` as dead code (it was never consulted by routing — see `models.md`).
-> - `82642bea` (2026-07-18, PR #554, Telegram V3 Mini App) adds `roboco/utils/telegram_initdata.py` (new file, pure `validate_init_data`) — no other file in this slice's scope touched by the PR.
+> - `82642bea` (2026-07-18, PR #554, Telegram V3 Mini App) adds `robofleet/utils/telegram_initdata.py` (new file, pure `validate_init_data`) — no other file in this slice's scope touched by the PR.
 
 ## Regression Risks
 

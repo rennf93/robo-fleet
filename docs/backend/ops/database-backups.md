@@ -4,7 +4,7 @@ An interim `backup` sidecar service ships in both `docker-compose.yml` and `dock
 
 ## What it does
 
-On container start, and then every `BACKUP_INTERVAL_SECONDS` (default `86400`, i.e. 24h), the script runs `pg_dump -Fc` against the `roboco` database over the network (via `PGHOST=roboco-postgres`, the same container-name resolution every other data-network consumer uses) and writes a timestamped custom-format dump to `${ROBOFLEET_DATA_DIR:-./data}/backups/roboco-<UTC-timestamp>.dump` on the host. The dump is written to a `.tmp` suffix first and only renamed into place on success, so a crash mid-dump never leaves a half-written file that looks complete.
+On container start, and then every `BACKUP_INTERVAL_SECONDS` (default `86400`, i.e. 24h), the script runs `pg_dump -Fc` against the `robo-fleet` database over the network (via `PGHOST=robofleet-postgres`, the same container-name resolution every other data-network consumer uses) and writes a timestamped custom-format dump to `${ROBOFLEET_DATA_DIR:-./data}/backups/robofleet-<UTC-timestamp>.dump` on the host. The dump is written to a `.tmp` suffix first and only renamed into place on success, so a crash mid-dump never leaves a half-written file that looks complete.
 
 ## Retention
 
@@ -18,11 +18,11 @@ Point it at a path that actually leaves the machine (e.g. a mounted cloud-synced
 
 ## Failure behavior
 
-A failed `pg_dump` (network hiccup, postgres briefly unhealthy, disk full) logs to `docker logs roboco-backup` and is retried on the next cycle; the loop itself never exits, so the container never crash-loops on a transient failure. `restart: unless-stopped` covers the rest.
+A failed `pg_dump` (network hiccup, postgres briefly unhealthy, disk full) logs to `docker logs robofleet-backup` and is retried on the next cycle; the loop itself never exits, so the container never crash-loops on a transient failure. `restart: unless-stopped` covers the rest.
 
 ## Restoring a dump
 
-Stop anything writing to the database, then restore into a running (empty or throwaway) `roboco` database with `pg_restore`, for example: `docker exec -i roboco-postgres pg_restore -U roboco -d roboco --clean --if-exists < ./data/backups/roboco-20260711T030000Z.dump` (drop the `.tmp` files if any are present — they are in-progress dumps, not backups). Use `pg_restore -l <dump>` first if you want to inspect or selectively restore a subset of objects rather than the whole database. For a fresh empty database instead of `--clean`, create it first (`createdb -U roboco roboco_restore`) and restore into that.
+Stop anything writing to the database, then restore into a running (empty or throwaway) `robo-fleet` database with `pg_restore`, for example: `docker exec -i robofleet-postgres pg_restore -U robo-fleet -d robo-fleet --clean --if-exists < ./data/backups/robofleet-20260711T030000Z.dump` (drop the `.tmp` files if any are present — they are in-progress dumps, not backups). Use `pg_restore -l <dump>` first if you want to inspect or selectively restore a subset of objects rather than the whole database. For a fresh empty database instead of `--clean`, create it first (`createdb -U robo-fleet robofleet_restore`) and restore into that.
 
 ## Restore drill
 
@@ -30,26 +30,26 @@ A backup that has never been restored is a hope, not a backup. Run this quarterl
 
 ```bash
 # 1. Newest dump (skip any .tmp files — those are in-progress, not backups)
-DUMP=$(ls -1t ./data/backups/roboco-*.dump | head -1) && echo "$DUMP"
+DUMP=$(ls -1t ./data/backups/robofleet-*.dump | head -1) && echo "$DUMP"
 
 # 2. Throwaway postgres with the same image the stack pins
-docker run -d --name roboco-restore-drill -e POSTGRES_PASSWORD=drill \
-  -e POSTGRES_USER=roboco -e POSTGRES_DB=roboco pgvector/pgvector:pg16
-until docker exec roboco-restore-drill pg_isready -U roboco -q; do sleep 1; done
+docker run -d --name robofleet-restore-drill -e POSTGRES_PASSWORD=drill \
+  -e POSTGRES_USER=robo-fleet -e POSTGRES_DB=robo-fleet pgvector/pgvector:pg16
+until docker exec robofleet-restore-drill pg_isready -U robo-fleet -q; do sleep 1; done
 
 # 3. Restore the dump into it
-docker exec -i roboco-restore-drill pg_restore -U roboco -d roboco \
+docker exec -i robofleet-restore-drill pg_restore -U robo-fleet -d robo-fleet \
   --no-owner < "$DUMP"
 
 # 4. Sanity-check: key tables non-empty and recent
-docker exec roboco-restore-drill psql -U roboco -d roboco -c \
+docker exec robofleet-restore-drill psql -U robo-fleet -d robo-fleet -c \
   "SELECT (SELECT count(*) FROM tasks) AS tasks,
           (SELECT count(*) FROM agents) AS agents,
           (SELECT count(*) FROM projects) AS projects,
           (SELECT max(created_at) FROM tasks) AS newest_task;"
 
 # 5. Tear down
-docker rm -f roboco-restore-drill
+docker rm -f robofleet-restore-drill
 ```
 
 The drill passes when step 4 shows non-zero counts and a `newest_task` within the last backup interval. A restore error in step 3 or empty counts in step 4 means the backups are not trustworthy — investigate before you need them.

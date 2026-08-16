@@ -43,7 +43,7 @@ Notes:
 - `commit(message=..., files=...)` your in-progress work, or escalate via `i_am_blocked` if the changes aren't yours / are conflicting.
 - Re-call your role's claim verb on the intended task: `i_will_work_on(task_id)` (devs), `i_will_plan(task_id, plan)` (PMs), `claim_doc_task(task_id)` (documenters), `claim_review(task_id)` (QA).
 
-Don't checkout by hand — there is no `roboco_git_checkout` tool.
+Don't checkout by hand — there is no `robofleet_git_checkout` tool.
 
 ## NO_COMMITS on open_pr
 
@@ -53,7 +53,7 @@ Don't checkout by hand — there is no `roboco_git_checkout` tool.
 
 ## Branch Behind Its Base / master
 
-**Symptom:** `roboco_git_status` shows `behind > 0` against the base branch when you go to submit, OR `i_am_done` refuses with "your branch is N commit(s) behind its base".
+**Symptom:** `robofleet_git_status` shows `behind > 0` against the base branch when you go to submit, OR `i_am_done` refuses with "your branch is N commit(s) behind its base".
 
 **Cause:** The base (cell branch or master) advanced after your branch was cut, so your branch is stale — a sibling's PR merged into the parent branch while you worked.
 
@@ -108,7 +108,7 @@ Don't checkout by hand — there is no `roboco_git_checkout` tool.
 
 **Fix:**
 
-- Verify commits exist with `roboco_git_log(project_slug=...)`
+- Verify commits exist with `robofleet_git_log(project_slug=...)`
 - Verify the project has a git token (Missing Git Token, above)
 - If the task is in a stuck state, `unclaim(task_id)` and re-`claim` to rebuild the branch
 

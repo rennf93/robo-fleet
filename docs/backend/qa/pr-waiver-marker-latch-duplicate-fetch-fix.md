@@ -4,9 +4,9 @@ PR #858 (branch `feature/backend/c2673793--486cd44f--297a1b4d`, the zero-diff PR
 
 ## F-7ba05e51 (major): PR_WAIVED never cleared
 
-`mark_pr_waived`/`is_pr_waived` (`roboco/foundation/policy/content/markers.py`) existed with no clear path anywhere in `roboco/`, so the marker was a one-way latch. Reachable sequence: a report-only task is waived (`ahead == 0`, no PR opened) and sits in `awaiting_pm_review`; the PM `request_changes`s it back to `needs_revision`; the cell lands real commits; `submit_up`/`submit_root` re-runs with `ahead > 0` and `create_pr`/ `create_root_pr` DOES open a real PR this round. The stale `pr_waived` marker then kept short-circuiting `TaskService.complete`'s work-session-merged check and the CEO-escalation `pr_number` check even though a real PR now existed.
+`mark_pr_waived`/`is_pr_waived` (`robofleet/foundation/policy/content/markers.py`) existed with no clear path anywhere in `robofleet/`, so the marker was a one-way latch. Reachable sequence: a report-only task is waived (`ahead == 0`, no PR opened) and sits in `awaiting_pm_review`; the PM `request_changes`s it back to `needs_revision`; the cell lands real commits; `submit_up`/`submit_root` re-runs with `ahead > 0` and `create_pr`/ `create_root_pr` DOES open a real PR this round. The stale `pr_waived` marker then kept short-circuiting `TaskService.complete`'s work-session-merged check and the CEO-escalation `pr_number` check even though a real PR now existed.
 
-**Fix:** `markers.clear_pr_waived(task)` (`clear_marker(task, PR_WAIVED)`), called from `VerbRunner._run_pre_side_effects` (`roboco/services/gateway/choreographer/_verb_runner.py`) the moment a `_PR_CREATION_SIDE_EFFECTS` item is NOT waived — i.e. whenever `create_pr`/`create_root_pr` is about to actually run because `ahead > 0`.
+**Fix:** `markers.clear_pr_waived(task)` (`clear_marker(task, PR_WAIVED)`), called from `VerbRunner._run_pre_side_effects` (`robofleet/services/gateway/choreographer/_verb_runner.py`) the moment a `_PR_CREATION_SIDE_EFFECTS` item is NOT waived — i.e. whenever `create_pr`/`create_root_pr` is about to actually run because `ahead > 0`.
 
 ## F-bdfdce5d (minor): duplicate git fetch per submit
 
@@ -16,9 +16,9 @@ PR #858 (branch `feature/backend/c2673793--486cd44f--297a1b4d`, the zero-diff PR
 
 ## What shipped (commit `6aa685d8`)
 
-- `roboco/foundation/policy/content/markers.py`: new `clear_pr_waived`.
-- `roboco/services/gateway/choreographer/_verb_runner.py`: `run_intent` / `_run_pre_side_effects` / `_maybe_waive_pr_creation` all gain an optional `precomputed_ahead: int | None` parameter; `_run_pre_side_effects` calls `markers.clear_pr_waived` on the un-waived branch.
-- `roboco/services/gateway/choreographer/_impl.py`: `_assembled_submit_guards` and `_freshen_assembled_branch` return `(Envelope | None, int | None)`; `_submit_up_run_intent`/the `submit_root` verb path thread the probed `ahead` through as `precomputed_ahead`.
+- `robofleet/foundation/policy/content/markers.py`: new `clear_pr_waived`.
+- `robofleet/services/gateway/choreographer/_verb_runner.py`: `run_intent` / `_run_pre_side_effects` / `_maybe_waive_pr_creation` all gain an optional `precomputed_ahead: int | None` parameter; `_run_pre_side_effects` calls `markers.clear_pr_waived` on the un-waived branch.
+- `robofleet/services/gateway/choreographer/_impl.py`: `_assembled_submit_guards` and `_freshen_assembled_branch` return `(Envelope | None, int | None)`; `_submit_up_run_intent`/the `submit_root` verb path thread the probed `ahead` through as `precomputed_ahead`.
 - Tests: `tests/unit/gateway/test_verb_runner.py` gained 5 new cases — round-trip marker clear for `submit_up` and `submit_root`, an untouched-when-still-waived case, and two `precomputed_ahead` reuse cases. `tests/unit/gateway/test_assembled_branch_freshen.py` updated its assertions to the new tuple return shape.
 
 ## Full picture

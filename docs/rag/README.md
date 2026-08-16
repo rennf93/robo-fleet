@@ -1,6 +1,6 @@
 # RAG Knowledge Base Documentation
 
-Optimized documentation for the RoboCo AI agent knowledge base. Each file is sized for effective RAG chunking.
+Optimized documentation for the RoboFleet AI agent knowledge base. Each file is sized for effective RAG chunking.
 
 ## Structure
 
@@ -24,8 +24,8 @@ docs/rag/
 ## For Agents
 
 When searching the knowledge base:
-- Use `roboco_kb_search()` for semantic search
-- Use `roboco_rag_query()` for AI-synthesized answers
-- Use `roboco_ask_mentor()` for conversational help
+- Use `robofleet_kb_search()` for semantic search
+- Use `robofleet_rag_query()` for AI-synthesized answers
+- Use `robofleet_ask_mentor()` for conversational help
 
 See `docs/rag/tools/kb-tools.md` for the full KB tool reference.

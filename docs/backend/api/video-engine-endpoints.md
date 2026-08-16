@@ -2,7 +2,7 @@
 
 ## Overview
 
-The RoboCo video engine API is CEO-only and manages three concerns:
+The RoboFleet video engine API is CEO-only and manages three concerns:
 
 1. **On-demand video requests**: `POST /api/video/request` opens a video-authoring task scoped to a specific project
 2. **Re-render (CEO retry)**: `POST /api/video/pipeline/{task_id}/rerender` clears render idempotency keys to re-trigger rendering
@@ -235,7 +235,7 @@ Each opted-in project can now:
 New `VideoEngine.resolve_authoring_project(project_id, occasion)`:
 
 - **If `project_id` provided** (on-demand, per-task): Looks up project by ID
-- **If `project_id` is None** (release/spotlight hooks): Falls back to fixed RoboCo project (`self_heal_project_slug`)
+- **If `project_id` is None** (release/spotlight hooks): Falls back to fixed RoboFleet project (`self_heal_project_slug`)
 - **Both paths**: Check `video_engine_enabled` and log skip reasons identically
 
 ### Migration Impact
@@ -246,4 +246,4 @@ New `VideoEngine.resolve_authoring_project(project_id, occasion)`:
 - Panel's video-request form needs project picker (frontend task, out of scope)
 
 **For release/spotlight hooks**:
-- No change; they continue defaulting to fixed RoboCo project when no `project_id` provided
+- No change; they continue defaulting to fixed RoboFleet project when no `project_id` provided

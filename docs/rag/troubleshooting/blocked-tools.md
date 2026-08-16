@@ -6,12 +6,12 @@
 
 **Cause:** Shell git for network / auth / branch-mutating ops bypasses the PAT injection done by the MCP layer; raw `git fetch` etc. would fail with `could not read Username for 'https://github.com'` anyway.
 
-**Solution:** Use the role-scoped MCP verb that matches what you're trying to do. There is **no** `roboco_git_commit / _push / _create_pr / _merge_pr / _checkout` MCP tool — the surface is smaller than that:
+**Solution:** Use the role-scoped MCP verb that matches what you're trying to do. There is **no** `robofleet_git_commit / _push / _create_pr / _merge_pr / _checkout` MCP tool — the surface is smaller than that:
 
 | Blocked shell command | Use instead |
 |-----------------------|-------------|
-| `git status` / `git diff` / `git log` / `git branch` | `roboco_git_status` / `roboco_git_diff` / `roboco_git_log` / `roboco_git_branch_list` (roboco-git-readonly) |
-| `git commit` + `git push` (devs / docs) | `commit(message, files)` (roboco-do) — auto-prefixes [task-id], pushes |
+| `git status` / `git diff` / `git log` / `git branch` | `robofleet_git_status` / `robofleet_git_diff` / `robofleet_git_log` / `robofleet_git_branch_list` (robofleet-git-readonly) |
+| `git commit` + `git push` (devs / docs) | `commit(message, files)` (robofleet-do) — auto-prefixes [task-id], pushes |
 | `git checkout` of a task branch | None — branch is auto-checked-out by `i_will_work_on(task_id)` (devs) or `i_will_plan(task_id, plan)` (PMs) |
 | Open a PR | None — PR is opened by the choreographer when the dev calls `open_pr(task_id)` |
 | Merge a PR | `complete(task_id, notes)` (PMs only) — Cell PM merges leaf PR; Main PM merges parent and escalates to CEO |

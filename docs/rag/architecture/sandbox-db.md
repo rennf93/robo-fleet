@@ -2,15 +2,15 @@
 
 ## What It Is
 
-A throwaway Postgres/Redis/Mongo set, provisioned as **sibling containers** to the agent container (never docker-in-agent — the docker socket/CLI stay structurally absent from agent images). Implemented in `roboco/runtime/sandbox.py` (`SandboxProvisioner`) and `AgentOrchestrator.ensure_sandbox`.
+A throwaway Postgres/Redis/Mongo set, provisioned as **sibling containers** to the agent container (never docker-in-agent — the docker socket/CLI stay structurally absent from agent images). Implemented in `robofleet/runtime/sandbox.py` (`SandboxProvisioner`) and `AgentOrchestrator.ensure_sandbox`.
 
 **On-demand since 2026-07-08**: a sandbox is provisioned only when an agent actually asks for one, via the `request_sandbox` do-verb (developer + QA roles) — not eagerly at spawn. See "The `request_sandbox` verb" below; the design rationale lives in `docs/internal/specs/2026-07-08-sandbox-on-demand.md`.
 
-It replaces — never coexists with — the legacy `_append_gate_env` behavior that hands an agent RoboCo's own production Postgres credentials so its `make quality` gate can run the DB-backed test suite instead of a hollow unit-only subset.
+It replaces — never coexists with — the legacy `_append_gate_env` behavior that hands an agent RoboFleet's own production Postgres credentials so its `make quality` gate can run the DB-backed test suite instead of a hollow unit-only subset.
 
 ## The engine registry
 
-The service set is a **pluggable engine registry**, not a hardcoded postgres+redis pair. `roboco/models/sandbox.py` defines a `SandboxEngine` ABC (image, container port, readiness probe, tmpfs paths, env emission) and the concrete engines:
+The service set is a **pluggable engine registry**, not a hardcoded postgres+redis pair. `robofleet/models/sandbox.py` defines a `SandboxEngine` ABC (image, container port, readiness probe, tmpfs paths, env emission) and the concrete engines:
 
 - `_PostgresEngine` — `postgres:16-alpine`, tmpfs `/var/lib/postgresql/data`, `pg_isready` probe (60s), env `ROBOFLEET_TEST_DB_*` (incl. `ROBOFLEET_TEST_DB_ADMIN_DB`).
 - `_RedisEngine` — `redis:8-alpine`, no tmpfs, `redis-cli -a … ping` probe (15s), env `ROBOFLEET_TEST_REDIS_*`.
@@ -28,7 +28,7 @@ A second, per-project gate applies even when the flag is on: only a project with
 
 ## The `request_sandbox` verb
 
-Provisioning is **on-demand**: nothing is provisioned at spawn. A developer or QA agent calls the `request_sandbox` content tool (on `roboco-do`) when it actually needs a sandboxed DB, and the orchestrator provisions it inline. Wiring: `roboco/api/schemas/v1/do.py` `RequestSandboxRequest` → `POST /api/v1/do/request_sandbox` → `ContentActions.request_sandbox` (`roboco/services/gateway/content_actions.py`) → `AgentOrchestrator.ensure_sandbox` → `roboco/mcp/do_server.py`'s `request_sandbox()` tool (1080s timeout — `ensure_sandbox` always provisions the project's full opted-in set on first call, so an all-three-engines-cold first request is the norm the timeout must cover, not a rare edge case).
+Provisioning is **on-demand**: nothing is provisioned at spawn. A developer or QA agent calls the `request_sandbox` content tool (on `robofleet-do`) when it actually needs a sandboxed DB, and the orchestrator provisions it inline. Wiring: `robofleet/api/schemas/v1/do.py` `RequestSandboxRequest` → `POST /api/v1/do/request_sandbox` → `ContentActions.request_sandbox` (`robofleet/services/gateway/content_actions.py`) → `AgentOrchestrator.ensure_sandbox` → `robofleet/mcp/do_server.py`'s `request_sandbox()` tool (1080s timeout — `ensure_sandbox` always provisions the project's full opted-in set on first call, so an all-three-engines-cold first request is the norm the timeout must cover, not a rare edge case).
 
 ```python
 request_sandbox(
@@ -53,13 +53,13 @@ On success, creds return in the ok-envelope's `evidence`, one entry per service 
 ```json
 {
   "postgres": {
-    "host": "roboco-sandbox-pg-be-dev-1",
+    "host": "robofleet-sandbox-pg-be-dev-1",
     "port": 5432,
     "user": "sandbox",
     "password": "<random>",
     "database": "sandbox",
     "env": {
-      "ROBOFLEET_TEST_DB_HOST": "roboco-sandbox-pg-be-dev-1",
+      "ROBOFLEET_TEST_DB_HOST": "robofleet-sandbox-pg-be-dev-1",
       "ROBOFLEET_TEST_DB_PORT": "5432",
       "ROBOFLEET_TEST_DB_USER": "sandbox",
       "ROBOFLEET_TEST_DB_PASSWORD": "<random>",
@@ -69,17 +69,17 @@ On success, creds return in the ok-envelope's `evidence`, one entry per service 
 }
 ```
 
-The `env` sub-dict (`SandboxInfo.as_payload()`, `roboco/models/sandbox.py`) carries the exact same variable names the legacy env-injection path used, so an agent can `export` them verbatim for gate tooling that reads `ROBOFLEET_TEST_*`. Networking needs no extra step: sandboxes join `roboco_default` at `docker run`, the same network every agent is on, so DNS resolves the moment the sibling starts.
+The `env` sub-dict (`SandboxInfo.as_payload()`, `robofleet/models/sandbox.py`) carries the exact same variable names the legacy env-injection path used, so an agent can `export` them verbatim for gate tooling that reads `ROBOFLEET_TEST_*`. Networking needs no extra step: sandboxes join `robofleet_default` at `docker run`, the same network every agent is on, so DNS resolves the moment the sibling starts.
 
 `ensure_sandbox` always provisions the project's **whole opted-in set** on first call, regardless of what a given `request_sandbox` call named — so calling it again for any subset or superset of that opted set is a guaranteed cache hit (same creds, no docker calls), and a live container is never torn down mid-session by a later, broader request. `services` only scopes what comes back in this call's `evidence`; the response payload is filtered down to that subset even though the full set was provisioned. A cache hit is also re-verified live (`SandboxProvisioner.is_live`) before being trusted — a container OOM-killed or removed out-of-band evicts the stale entry and triggers a fresh full-set provision with new creds. Concurrent calls for the same agent (e.g. a client timeout + retry) are serialized behind a per-agent-slug `asyncio.Lock` so they can't race `provision()`/`teardown()` against each other. `ensure_sandbox` is always called with the **caller's own** authenticated agent slug — a caller can never reach another agent's sandbox.
 
-Only `developer` and `qa` roles carry `request_sandbox` in their spawn manifest (`roboco/services/gateway/role_config.py` `_DEV_DO` / `_QA_DO`) — the DB-needing gate roles. It is carried unconditionally on those manifests (declarative); the real gating is the project opt-in check inside the verb itself.
+Only `developer` and `qa` roles carry `request_sandbox` in their spawn manifest (`robofleet/services/gateway/role_config.py` `_DEV_DO` / `_QA_DO`) — the DB-needing gate roles. It is carried unconditionally on those manifests (declarative); the real gating is the project opt-in check inside the verb itself.
 
 ## Extensions and modules (on the fly)
 
 A sandboxed DB/Redis can be built to a venture's declared extensions on the fly — "need a db? ok, extensions?" — instead of a fixed flavor. A project declares a per-service extension/module map in `projects.sandbox_extensions` (migration `072`, jsonb null), e.g. `{"postgres": ["vector", "postgis"], "redis": ["search"]}`. The provisioner activates them **post-ready** via `docker exec` (`CREATE EXTENSION IF NOT EXISTS <name>` for pg, `MODULE LOAD <so>` for redis) then verifies presence, so a missing extension file fails loudly at first provision rather than silently. Design spec: `docs/internal/specs/2026-07-13-sandbox-extensions-on-the-fly.md`.
 
-**The allowlist is the security containment.** `SANDBOX_PG_EXTENSIONS = {vector, postgis, pg_trgm, citext, uuid-ossp}` and `SANDBOX_REDIS_MODULES = {search, json, bloom}` (`roboco/models/sandbox.py` `SANDBOX_ENGINE_FEATURES`) are the only extensions/modules the system will ever activate. A `plpython3u` (superuser-RCE) is excluded by construction — rejected at the Project pydantic boundary before it can be persisted, and again at the verb. Mongo has no activatable features and is intentionally absent from the map. The Project model normalizes order, drops empty feature lists (a service with `[]` is bare), and rejects unknown service keys or unallowed features with the allowlist named.
+**The allowlist is the security containment.** `SANDBOX_PG_EXTENSIONS = {vector, postgis, pg_trgm, citext, uuid-ossp}` and `SANDBOX_REDIS_MODULES = {search, json, bloom}` (`robofleet/models/sandbox.py` `SANDBOX_ENGINE_FEATURES`) are the only extensions/modules the system will ever activate. A `plpython3u` (superuser-RCE) is excluded by construction — rejected at the Project pydantic boundary before it can be persisted, and again at the verb. Mongo has no activatable features and is intentionally absent from the map. The Project model normalizes order, drops empty feature lists (a service with `[]` is bare), and rejects unknown service keys or unallowed features with the allowlist named.
 
 **No default set.** Opters set the extensions they need explicitly; an unset service is bare. Existing opted-in projects stay byte-for-byte unchanged on the bare path — no behavior change unless a venture declares a set.
 
@@ -87,7 +87,7 @@ A sandboxed DB/Redis can be built to a venture's declared extensions on the fly 
 
 **Cache-by-features.** A cached `SandboxInfo` satisfies a new `ensure_sandbox` call iff the services are a subset AND every requested feature per service is already cached. A feature superset re-provisions with fresh creds (the pre-clear teardown removes the now-too-small container), exactly as a services superset does.
 
-**Feature-aware image selection.** A bare request (no features) uses the light upstream image (`postgres:16-alpine` / `redis:8-alpine`); a request with features pulls a kitchen-sink image that carries all extension/module files (`roboco-sandbox-pg:latest` — `pgvector/pgvector:pg16` + postgis; `redis/redis-stack-server:latest`). So a bare project never pays for a heavier image, and the intersection case (pgvector AND postgis in one DB) just works — flavors are inadequate because the intersection isn't a flavor. `SandboxEngine.image_for(features)` picks; the provisioner pulls whichever it resolves to.
+**Feature-aware image selection.** A bare request (no features) uses the light upstream image (`postgres:16-alpine` / `redis:8-alpine`); a request with features pulls a kitchen-sink image that carries all extension/module files (`robofleet-sandbox-pg:latest` — `pgvector/pgvector:pg16` + postgis; `redis/redis-stack-server:latest`). So a bare project never pays for a heavier image, and the intersection case (pgvector AND postgis in one DB) just works — flavors are inadequate because the intersection isn't a flavor. `SandboxEngine.image_for(features)` picks; the provisioner pulls whichever it resolves to.
 
 **Delivery.** The ok-envelope's per-service evidence entry carries `available_extensions` (the sorted list actually activated) so an agent doesn't guess what was turned on. The project's standing set is edited in the panel's project edit dialog (Sandbox section) — checkboxes from the allowlist grouped under each enabled service.
 
@@ -95,11 +95,11 @@ A sandboxed DB/Redis can be built to a venture's declared extensions on the fly 
 
 `ensure_sandbox(agent_slug, requested, opted)` provisions `requested | opted` (in practice the project's whole opted-in set) through a single generic `_provision_engine` (no per-engine branch): it generates a random 32-hex-char password (`secrets.token_hex(16)`), pre-pulls the image, `docker run`s the sibling container, and polls the engine's readiness probe up to its deadline.
 
-- **Postgres**: named `roboco-sandbox-pg-{agent_id}`, `--tmpfs /var/lib/postgresql/data` (no disk persistence), `--memory 512m --cpus 1`, user/db both `sandbox`, readiness via `pg_isready` up to 60s.
-- **Redis**: named `roboco-sandbox-redis-{agent_id}`, same memory/cpu caps, `redis-server --requirepass`, readiness via `redis-cli -a … ping` up to 15s.
-- **Mongo**: named `roboco-sandbox-mongo-{agent_id}`, `--tmpfs /data/db`, same memory/cpu caps, root user/db `sandbox`/`sandbox`, readiness via `mongosh` ping (auth db `admin`) up to 60s.
+- **Postgres**: named `robofleet-sandbox-pg-{agent_id}`, `--tmpfs /var/lib/postgresql/data` (no disk persistence), `--memory 512m --cpus 1`, user/db both `sandbox`, readiness via `pg_isready` up to 60s.
+- **Redis**: named `robofleet-sandbox-redis-{agent_id}`, same memory/cpu caps, `redis-server --requirepass`, readiness via `redis-cli -a … ping` up to 15s.
+- **Mongo**: named `robofleet-sandbox-mongo-{agent_id}`, `--tmpfs /data/db`, same memory/cpu caps, root user/db `sandbox`/`sandbox`, readiness via `mongosh` ping (auth db `admin`) up to 60s.
 
-All are labeled `roboco.sandbox=1` plus an owner label (`roboco.sandbox.owner=roboco-agent-{agent_id}`) so the janitor can find them. A stale same-named sandbox left by a crash-missed teardown is pre-cleared before provisioning, so a leftover container can't collide with a fresh `docker run`. A provisioning failure now surfaces as a retryable envelope on the verb (see above) rather than refusing anything — there is no spawn to refuse, since the sandbox is requested well after the agent is already running.
+All are labeled `robofleet.sandbox=1` plus an owner label (`robofleet.sandbox.owner=robofleet-agent-{agent_id}`) so the janitor can find them. A stale same-named sandbox left by a crash-missed teardown is pre-cleared before provisioning, so a leftover container can't collide with a fresh `docker run`. A provisioning failure now surfaces as a retryable envelope on the verb (see above) rather than refusing anything — there is no spawn to refuse, since the sandbox is requested well after the agent is already running.
 
 ### Image pre-pull
 
@@ -111,7 +111,7 @@ Spawn itself no longer provisions anything. For an opted-in project, `AgentOrche
 
 ## Lifetime and teardown
 
-A sandbox no longer only dies with its container: `AgentOrchestrator.release_sandbox(agent_slug)` tears it down at the end of the caller's own engagement with its work — the Choreographer calls it (best-effort, never failing the verb) on the SUCCESSFUL exit of `i_am_done`, `unclaim`, `i_am_idle`, `pass_review`/`fail_review`, and `i_documented`, so an agent that finishes then idles or picks up unrelated work doesn't leave a sidecar running for the rest of its session. `release_sandbox` is a fast no-op for the common case of no cached sandbox (a single dict check, before any lock or docker call) and otherwise reuses the same teardown + cache-eviction pairing as container removal. A sandbox's lifetime STILL tracks its owning agent container 1:1 as the backstop: torn down (`stop` → `kill` fallback → `rm -f`, all best-effort and idempotent) at every container-removal path. Teardown iterates **all** registered engines (`SANDBOX_ENGINES.values()`) — a mongo sandbox is reaped by the same path that reaps postgres/redis, with no per-engine teardown branch. An **orphan janitor** also runs at orchestrator startup and on each reaper tick: it lists every `roboco.sandbox=1` container, cross-references live agent containers, and removes any sandbox whose owner is gone.
+A sandbox no longer only dies with its container: `AgentOrchestrator.release_sandbox(agent_slug)` tears it down at the end of the caller's own engagement with its work — the Choreographer calls it (best-effort, never failing the verb) on the SUCCESSFUL exit of `i_am_done`, `unclaim`, `i_am_idle`, `pass_review`/`fail_review`, and `i_documented`, so an agent that finishes then idles or picks up unrelated work doesn't leave a sidecar running for the rest of its session. `release_sandbox` is a fast no-op for the common case of no cached sandbox (a single dict check, before any lock or docker call) and otherwise reuses the same teardown + cache-eviction pairing as container removal. A sandbox's lifetime STILL tracks its owning agent container 1:1 as the backstop: torn down (`stop` → `kill` fallback → `rm -f`, all best-effort and idempotent) at every container-removal path. Teardown iterates **all** registered engines (`SANDBOX_ENGINES.values()`) — a mongo sandbox is reaped by the same path that reaps postgres/redis, with no per-engine teardown branch. An **orphan janitor** also runs at orchestrator startup and on each reaper tick: it lists every `robofleet.sandbox=1` container, cross-references live agent containers, and removes any sandbox whose owner is gone.
 
 The janitor has a **grace window** (`_JANITOR_GRACE_SECONDS`, 180s): a sweep racing a mid-flight `request_sandbox` call would otherwise see "owner not live yet" and reap a sandbox out from under a request still in progress. Owners provisioned within the grace window are skipped by that pass. The pre-spawn stale-clear likewise never touches a sandbox just requested via the verb.
 

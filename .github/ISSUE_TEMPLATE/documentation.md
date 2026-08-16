@@ -1,7 +1,7 @@
 ---
 
 name: Documentation
-about: Report issues with the RoboCo documentation or suggest improvements
+about: Report issues with the RoboFleet documentation or suggest improvements
 title: '[DOCS] '
 labels: documentation
 assignees: ''

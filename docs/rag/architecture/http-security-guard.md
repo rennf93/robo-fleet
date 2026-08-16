@@ -2,7 +2,7 @@
 
 ## What It Is
 
-RoboCo's HTTP request layer is protected by `fastapi-guard` (7.6.0, on `guard-core` 3.12.0), implemented in `roboco/security.py` and wired into the app in `roboco/api/app.py`'s `create_app`.
+RoboFleet's HTTP request layer is protected by `fastapi-guard` (7.6.0, on `guard-core` 3.12.0), implemented in `robofleet/security.py` and wired into the app in `robofleet/api/app.py`'s `create_app`.
 
 ## Enable/Disable
 
@@ -20,13 +20,13 @@ As of 2026-07-19 the guard is gated off by default in config, but the NAS build 
 
 With `ROBOFLEET_GUARD_ENABLED=true`, a `SecurityMiddleware` sits outermost in the middleware stack, and per-route decorators add rate limits, request-size caps, content-type filters, a signature-based WAF (detects SQL injection, XSS, path traversal, and suspicious URL patterns), security response headers, cloud-provider/honeypot checks, and an emergency lockdown switch.
 
-On top of those generic checks, three RoboCo-specific custom validators run against request bodies:
+On top of those generic checks, three RoboFleet-specific custom validators run against request bodies:
 
 | Validator | Blocks |
 |-----------|--------|
 | Prompt-injection detection | Bodies attempting to inject instructions |
 | Secret-exfil detection | Bodies carrying literal credential-shaped strings (e.g. `sk-ant-...`, `ghp_...`, postgres connection URLs) or phrasing like "reveal your api keys" |
-| Internal-SSRF detection | Fetch-type bodies targeting internal/metadata hosts (e.g. `169.254.169.254`, `roboco-*` internal service hostnames) |
+| Internal-SSRF detection | Fetch-type bodies targeting internal/metadata hosts (e.g. `169.254.169.254`, `robofleet-*` internal service hostnames) |
 
 ## Enforcement Posture
 
@@ -58,7 +58,7 @@ The invariant: **whatever ranges the whitelist excludes, `trusted_proxies` must 
 
 If you ever narrow or widen the whitelist, apply the same edit to `trusted_proxies` in the same commit — the two lists are one policy, split across two guard-core knobs.
 
-The invariant is anchored by two layers of tests in `tests/unit/test_security_middleware.py`. The end-to-end test `test_nginx_forwarded_lan_client_is_not_whitelisted` drives the full `SecurityMiddleware` stack (including the `@deco.custom_validation` route on `/task`) with a docker-bridge peer forwarding `X-Forwarded-For: 192.168.1.50` and asserts the request is blocked (status != 200); it passes on guard-core 3.7.0+ (including the current 3.12.0 pin), where `IpSecurityCheck.check` (guard-core `core/checks/implementations/ip_security.py:197-208`) falls through to `_check_global_ip_restrictions` even when a `route_config` exists. Its companion `test_docker_bridge_peer_without_xff_is_whitelisted` asserts the same peer without XFF stays exempt. Two isolated unit tests — `test_extract_client_ip_forwarded_lan_not_peeled` and `test_is_ip_allowed_rejects_lan_ranges` — call `guard_core.utils` functions directly (no running server) as defense-in-depth, verifying that `extract_client_ip` resolves the LAN IP correctly and `is_ip_allowed` rejects it against the narrowed whitelist. An `INVARIANT` comment at the `trusted_proxies` definition in `build_security_config` (`roboco/security.py`) restates the must-mirror-`_INTERNAL_NETWORKS` rule in-line.
+The invariant is anchored by two layers of tests in `tests/unit/test_security_middleware.py`. The end-to-end test `test_nginx_forwarded_lan_client_is_not_whitelisted` drives the full `SecurityMiddleware` stack (including the `@deco.custom_validation` route on `/task`) with a docker-bridge peer forwarding `X-Forwarded-For: 192.168.1.50` and asserts the request is blocked (status != 200); it passes on guard-core 3.7.0+ (including the current 3.12.0 pin), where `IpSecurityCheck.check` (guard-core `core/checks/implementations/ip_security.py:197-208`) falls through to `_check_global_ip_restrictions` even when a `route_config` exists. Its companion `test_docker_bridge_peer_without_xff_is_whitelisted` asserts the same peer without XFF stays exempt. Two isolated unit tests — `test_extract_client_ip_forwarded_lan_not_peeled` and `test_is_ip_allowed_rejects_lan_ranges` — call `guard_core.utils` functions directly (no running server) as defense-in-depth, verifying that `extract_client_ip` resolves the LAN IP correctly and `is_ip_allowed` rejects it against the narrowed whitelist. An `INVARIANT` comment at the `trusted_proxies` definition in `build_security_config` (`robofleet/security.py`) restates the must-mirror-`_INTERNAL_NETWORKS` rule in-line.
 
 Note the guard-core version sensitivity: on 3.4.0, `IpSecurityCheck` had an early-return that skipped `_check_global_ip_restrictions` for routes with a `route_config` (any `@deco.custom_validation` route), so the e2e test failed because the resolved LAN IP was never consulted against the whitelist. guard-core 3.7.0 fixed this (the current 3.12.0 pin retains the fix) — the check falls through to the global IP restrictions regardless of `route_config` (the final `return await self._check_global_ip_restrictions(...)` at `ip_security.py:208` runs unconditionally after the route-level check returns `None`). The PR #817 in-path review failure was exactly this drift: the reviewer's local venv had downgraded to guard-core 3.4.0 while `uv.lock` pinned 3.7.0, so the e2e test failed in that environment and passes on the pinned version. Always run tests against the `uv.lock`-pinned version (via `make` targets, never bare `uv run`); a drifted local venv can silently downgrade guard-core and reintroduce the bypass.
 
@@ -78,9 +78,9 @@ The pattern is `status:404` / `status:401`, not a bare `404` / `401` substring. 
 
 ## Behavioral Rule Redis Fail-Open Patch
 
-`route_config.behavior_rules` (per-route `usage_monitor()`/`behavior_analysis()`) and `global_behavior_rules` (the 404/401 rules above) are invoked directly from `SecurityMiddleware.dispatch`/`_process_response` in the `guard` package, OUTSIDE `SecurityCheckPipeline`, the only place `redis_fail_open` is honored. `BehaviorTracker.track_endpoint_usage`/`track_return_pattern` call redis unguarded and raise `GuardRedisError` on a blip, which would otherwise fall through to roboco's generic exception handler as a `500` instead of failing open like every pipeline check does.
+`route_config.behavior_rules` (per-route `usage_monitor()`/`behavior_analysis()`) and `global_behavior_rules` (the 404/401 rules above) are invoked directly from `SecurityMiddleware.dispatch`/`_process_response` in the `guard` package, OUTSIDE `SecurityCheckPipeline`, the only place `redis_fail_open` is honored. `BehaviorTracker.track_endpoint_usage`/`track_return_pattern` call redis unguarded and raise `GuardRedisError` on a blip, which would otherwise fall through to robo-fleet's generic exception handler as a `500` instead of failing open like every pipeline check does.
 
-`roboco/security.py` patches all three call sites at import time: `BehavioralProcessor.process_usage_rules` (route-level usage/frequency rules), `process_return_rules` (route-level return_pattern rules, roboco has none of these today), and `process_global_return_rules` (the seam the status:404/401 rules actually run through). Each wraps the original method, catches `GuardRedisError`, and either re-raises (when `redis_fail_open=False`) or logs a warning and swallows it (when `redis_fail_open=True`, roboco's default). Verified still required at guard-core 3.12.0; the durable fix belongs upstream.
+`robofleet/security.py` patches all three call sites at import time: `BehavioralProcessor.process_usage_rules` (route-level usage/frequency rules), `process_return_rules` (route-level return_pattern rules, robo-fleet has none of these today), and `process_global_return_rules` (the seam the status:404/401 rules actually run through). Each wraps the original method, catches `GuardRedisError`, and either re-raises (when `redis_fail_open=False`) or logs a warning and swallows it (when `redis_fail_open=True`, robo-fleet's default). Verified still required at guard-core 3.12.0; the durable fix belongs upstream.
 
 ## Internal Readiness Probe
 
@@ -88,7 +88,7 @@ The pattern is `status:404` / `status:401`, not a bare `404` / `401` substring. 
 
 ## Immutable Config Collections
 
-guard-core 3.12.0 freezes ten `SecurityConfig` collection fields after construction: `whitelist`/`blacklist`/`trusted_proxies` coerce to `tuple`, `enabled_detection_categories`/`muted_*`/`block_cloud_providers` coerce to `frozenset`, `threat_ban_config` coerces to `MappingProxyType`, and `global_behavior_rules` coerces to `tuple`. Construction from a plain list/set/dict still works; only in-place mutation after construction raises. `roboco/security.py`'s own module-level constants (`_THREAT_BAN_CONFIG`, `_BEHAVIOR_RULES`, `_guard_whitelist()`, the inline `trusted_proxies` literal) are declared as the frozen shape directly so static typing matches the runtime contract. `tests/unit/test_security.py::test_whitelist_is_immutable_after_construction` pins the new contract.
+guard-core 3.12.0 freezes ten `SecurityConfig` collection fields after construction: `whitelist`/`blacklist`/`trusted_proxies` coerce to `tuple`, `enabled_detection_categories`/`muted_*`/`block_cloud_providers` coerce to `frozenset`, `threat_ban_config` coerces to `MappingProxyType`, and `global_behavior_rules` coerces to `tuple`. Construction from a plain list/set/dict still works; only in-place mutation after construction raises. `robofleet/security.py`'s own module-level constants (`_THREAT_BAN_CONFIG`, `_BEHAVIOR_RULES`, `_guard_whitelist()`, the inline `trusted_proxies` literal) are declared as the frozen shape directly so static typing matches the runtime contract. `tests/unit/test_security.py::test_whitelist_is_immutable_after_construction` pins the new contract.
 
 ## Telemetry: Sensitive Headers
 

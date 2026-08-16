@@ -20,5 +20,5 @@ cast(UUID, child.id)  # noqa: TC006
 
 ## Where we use it
 
-- `roboco/services/task.py:_supersede_replacement_landed` — descendant traversal.
-- `roboco/services/task.py:get_all_descendants` — descendant traversal.
+- `robofleet/services/task.py:_supersede_replacement_landed` — descendant traversal.
+- `robofleet/services/task.py:get_all_descendants` — descendant traversal.

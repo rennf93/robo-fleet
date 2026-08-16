@@ -80,7 +80,7 @@ Run before merge:
 
 ```bash
 # Security scan
-uv run bandit -r roboco/ -ll
+uv run bandit -r robofleet/ -ll
 
 # Dependency audit
 uv run pip-audit

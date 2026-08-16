@@ -1,6 +1,6 @@
 """Per-project video-engine opt-in column.
 
-The video engine is armed by the global ``ROBOCO_VIDEO_ENGINE_ENABLED`` flag,
+The video engine is armed by the global ``ROBOFLEET_VIDEO_ENGINE_ENABLED`` flag,
 but authoring writes a HyperFrames composition into a project's ``motion/``
 dir, so a project opts in via ``video_engine_enabled``. Additive and
 default-off, mirroring ``ci_watch_enabled`` (migration 048): existing projects

@@ -631,7 +631,7 @@ class DbCommitMiddleware:
     connection in an undefined protocol state, and the pool's own recovery —
     ``invalidate()`` forcing the driver's ``terminate()`` — is itself
     implicated in a uvloop/asyncpg segfault class observed on CI (uvloop
-    0.22 + asyncpg 0.31 + Python 3.13; see ``ROBOCO_UVICORN_LOOP``). So the
+    0.22 + asyncpg 0.31 + Python 3.13; see ``ROBOFLEET_UVICORN_LOOP``). So the
     commit runs as its own task, shielded from this request's cancellation,
     and gets a short grace (``settings.db_commit_cancel_grace_seconds``) to
     finish naturally instead of being severed on the spot. Only a commit

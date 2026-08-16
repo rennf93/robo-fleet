@@ -24,8 +24,8 @@
 #     (DB + Redis only).
 #   FULL_RESET=1 — opt-in aggressive clean-slate: after the DB + Redis wipe,
 #     delete everything under the roboco data root EXCEPT ollama/postgres/redis
-#     (overridable via ROBOCO_DATA_ROOT) and clear the persisted agent Claude
-#     session dirs listed in ROBOCO_CLAUDE_STATE_DIRS (space-separated). Skips
+#     (overridable via ROBOFLEET_DATA_ROOT) and clear the persisted agent Claude
+#     session dirs listed in ROBOFLEET_CLAUDE_STATE_DIRS (space-separated). Skips
 #     the per-workspace git reset (the clones are removed and re-cloned).
 
 set -euo pipefail
@@ -81,16 +81,16 @@ fi
 # redis), and clear the persisted agent Claude session state that would
 # otherwise replay across runs. Default OFF — the workspace git-reset below is
 # the usual path. The data root is resolved from the workspaces root's parent
-# (or ROBOCO_DATA_ROOT).
+# (or ROBOFLEET_DATA_ROOT).
 #
-# Claude session state lives under the mounted Claude home (ROBOCO_HOST_CLAUDE_DIR,
-# the same dir the agent containers mount). When ROBOCO_CLAUDE_STATE_DIRS is unset
+# Claude session state lives under the mounted Claude home (ROBOFLEET_HOST_CLAUDE_DIR,
+# the same dir the agent containers mount). When ROBOFLEET_CLAUDE_STATE_DIRS is unset
 # we clear the conversation-transcript and todo subdirs of that home — the state
 # that replays across runs — and NEVER the home root itself, which holds
 # `.credentials.json` (wiping it would log the host out of Claude). Override
-# ROBOCO_CLAUDE_STATE_DIRS (space-separated) to target different paths.
+# ROBOFLEET_CLAUDE_STATE_DIRS (space-separated) to target different paths.
 if [ "${FULL_RESET:-0}" = "1" ]; then
-    DATA_ROOT="${ROBOCO_DATA_ROOT:-}"
+    DATA_ROOT="${ROBOFLEET_DATA_ROOT:-}"
     if [ -z "$DATA_ROOT" ]; then
         for candidate in /volume1/roboco/data /data; do
             if [ -d "$candidate/workspaces" ]; then
@@ -116,8 +116,8 @@ if [ "${FULL_RESET:-0}" = "1" ]; then
     else
         echo ">>> FULL_RESET: no data root resolved — skipping data wipe."
     fi
-    CLAUDE_HOME="${ROBOCO_HOST_CLAUDE_DIR:-$HOME/.claude}"
-    CLAUDE_STATE_DIRS="${ROBOCO_CLAUDE_STATE_DIRS:-$CLAUDE_HOME/projects $CLAUDE_HOME/todos}"
+    CLAUDE_HOME="${ROBOFLEET_HOST_CLAUDE_DIR:-$HOME/.claude}"
+    CLAUDE_STATE_DIRS="${ROBOFLEET_CLAUDE_STATE_DIRS:-$CLAUDE_HOME/projects $CLAUDE_HOME/todos}"
     for cdir in $CLAUDE_STATE_DIRS; do
         # Never wipe the Claude home itself — credentials live there.
         case "$cdir" in

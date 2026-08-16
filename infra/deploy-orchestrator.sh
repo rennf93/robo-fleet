@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Deploy roboco-orchestrator to Cloud Run.
-# Reads project/region/repo from ROBOCO_GCP_* env vars (no hardcoded values).
+# Reads project/region/repo from ROBOFLEET_GCP_* env vars (no hardcoded values).
 # Pulls infra references (Cloud SQL connection name, Memorystore host, Filestore
 # IP/share, GCS bucket) from terraform output, sed-substitutes the
 # __PLACEHOLDER__ tokens in orchestrator-service.yaml into a temp copy, and
@@ -8,21 +8,21 @@
 #
 # Requires: gcloud (authed), terraform (infra/ applied or at least refreshed).
 # Env (required):
-#   ROBOCO_GCP_PROJECT_ID
-#   ROBOCO_GCP_REGION
-#   ROBOCO_GCP_ARTIFACT_REGISTRY_REPO (default robo-fleet)
-#   ROBOCO_DATABASE_PASSWORD   (Cloud SQL user password)
-#   ROBOCO_REDIS_PASSWORD       (Memorystore AUTH token)
-#   ROBOCO_CLOUD_AUTH_EMAIL     (seeded CEO login)
-#   ROBOCO_CLOUD_AUTH_PASSWORD  (seeded CEO login password)
+#   ROBOFLEET_GCP_PROJECT_ID
+#   ROBOFLEET_GCP_REGION
+#   ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO (default robo-fleet)
+#   ROBOFLEET_DATABASE_PASSWORD   (Cloud SQL user password)
+#   ROBOFLEET_REDIS_PASSWORD       (Memorystore AUTH token)
+#   ROBOFLEET_CLOUD_AUTH_EMAIL     (seeded CEO login)
+#   ROBOFLEET_CLOUD_AUTH_PASSWORD  (seeded CEO login password)
 # Env (optional):
-#   ROBOCO_GCP_VPC_CONNECTOR_NAME (default roboco-connector)
+#   ROBOFLEET_GCP_VPC_CONNECTOR_NAME (default roboco-connector)
 set -euo pipefail
 
-PROJECT="${ROBOCO_GCP_PROJECT_ID:?set ROBOCO_GCP_PROJECT_ID}"
-REGION="${ROBOCO_GCP_REGION:?set ROBOCO_GCP_REGION}"
-REPO="${ROBOCO_GCP_ARTIFACT_REGISTRY_REPO:-robo-fleet}"
-CONNECTOR="${ROBOCO_GCP_VPC_CONNECTOR_NAME:-roboco-connector}"
+PROJECT="${ROBOFLEET_GCP_PROJECT_ID:?set ROBOFLEET_GCP_PROJECT_ID}"
+REGION="${ROBOFLEET_GCP_REGION:?set ROBOFLEET_GCP_REGION}"
+REPO="${ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO:-robo-fleet}"
+CONNECTOR="${ROBOFLEET_GCP_VPC_CONNECTOR_NAME:-roboco-connector}"
 AR_HOST="${REGION}-docker.pkg.dev"
 
 cd "$(dirname "$0")/.."
@@ -73,7 +73,7 @@ echo "Updating env vars (passwords, cloud auth creds)..."
 gcloud run services update roboco-orchestrator \
   --region="${REGION}" \
   --project="${PROJECT}" \
-  --update-env-vars="^@^ROBOCO_DATABASE_PASSWORD=${ROBOCO_DATABASE_PASSWORD:?set ROBOCO_DATABASE_PASSWORD}@ROBOCO_REDIS_PASSWORD=${ROBOCO_REDIS_PASSWORD:?set ROBOCO_REDIS_PASSWORD}@ROBOCO_CLOUD_AUTH_EMAIL=${ROBOCO_CLOUD_AUTH_EMAIL:?set ROBOCO_CLOUD_AUTH_EMAIL}@ROBOCO_CLOUD_AUTH_PASSWORD=${ROBOCO_CLOUD_AUTH_PASSWORD:?set ROBOCO_CLOUD_AUTH_PASSWORD}"
+  --update-env-vars="^@^ROBOFLEET_DATABASE_PASSWORD=${ROBOFLEET_DATABASE_PASSWORD:?set ROBOFLEET_DATABASE_PASSWORD}@ROBOFLEET_REDIS_PASSWORD=${ROBOFLEET_REDIS_PASSWORD:?set ROBOFLEET_REDIS_PASSWORD}@ROBOFLEET_CLOUD_AUTH_EMAIL=${ROBOFLEET_CLOUD_AUTH_EMAIL:?set ROBOFLEET_CLOUD_AUTH_EMAIL}@ROBOFLEET_CLOUD_AUTH_PASSWORD=${ROBOFLEET_CLOUD_AUTH_PASSWORD:?set ROBOFLEET_CLOUD_AUTH_PASSWORD}"
 
 echo "Deployed roboco-orchestrator to ${REGION}."
 echo "Verify: gcloud run services describe roboco-orchestrator --region=${REGION} --project=${PROJECT}"

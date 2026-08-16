@@ -23,7 +23,7 @@ class RobocoError(Exception):
     def __init__(
         self,
         message: str,
-        code: str = "ROBOCO_ERROR",
+        code: str = "ROBOFLEET_ERROR",
         details: dict[str, Any] | None = None,
     ):
         self.message = message

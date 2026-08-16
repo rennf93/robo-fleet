@@ -66,7 +66,7 @@ async def _require_panel_token(websocket: WebSocket) -> bool:
 
     /ws/* streams are operator-only (the panel is the sole WS client; agents
     use MCP verbs). nginx injects the CEO panel token as ``X-Agent-Token``.
-    In strict mode (``ROBOCO_AGENT_AUTH_REQUIRED=true``) the token is required
+    In strict mode (``ROBOFLEET_AGENT_AUTH_REQUIRED=true``) the token is required
     + verified against the CEO identity; a presented-but-forged token is
     rejected even in dev mode. Returns True to proceed, False to close.
 

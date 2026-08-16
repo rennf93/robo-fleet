@@ -127,9 +127,9 @@ pr-gate-review slice
 | post_pr_review | roboco/services/gateway/choreographer/pr_review.py | pr_reviewer calls post_pr_review(task_id, body, event, findings?) via roboco-flow / HTTP route to post one change-request and complete |
 
 ## Config Flags
-- ROBOCO_TOOLCHAIN_MATCH_ENABLED (gates _toolchain_broken_guard in _pr_pass_blocked — inert when off)
-- ROBOCO_CONVENTIONS_ENABLED (gates _conventions_guard in _pr_pass_blocked — inert when off)
-- ROBOCO_PR_REVIEWER_NOTES_MIN_CHARS / settings.pr_reviewer_notes_min_chars (tracing gate substantive-note threshold for pr_pass/pr_fail/post_pr_review)
+- ROBOFLEET_TOOLCHAIN_MATCH_ENABLED (gates _toolchain_broken_guard in _pr_pass_blocked — inert when off)
+- ROBOFLEET_CONVENTIONS_ENABLED (gates _conventions_guard in _pr_pass_blocked — inert when off)
+- ROBOFLEET_PR_REVIEWER_NOTES_MIN_CHARS / settings.pr_reviewer_notes_min_chars (tracing gate substantive-note threshold for pr_pass/pr_fail/post_pr_review)
 - CI-status guard is always armed when the toolchain can reach get_pr_ci_status via git service. Configuration gaps (missing project/git_url/token) and unreachable/nonexistent repos (404 or network error) classify as no_ci_configured and pass through with evidence stamp. Genuine API failures on reachable repos classify as error and stay fail-closed (retryable). A project with no CI configured at all also passes through cleanly (no_ci_configured). The guard never blocks pr_pass on a misconfigured project.
 
 

@@ -15,7 +15,7 @@ def test_task_budgets_disabled_by_default() -> None:
 
 
 def test_task_budgets_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_TASK_BUDGETS_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_TASK_BUDGETS_ENABLED": "true"}):
         assert Settings().task_budgets_enabled is True
 
 

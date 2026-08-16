@@ -47,7 +47,7 @@ SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 HOM_UUID = _foundation.AGENTS["head-marketing"].uuid
 CEO_UUID = _foundation.AGENTS["ceo"].uuid
 MAIN_PM_UUID = _foundation.AGENTS["main-pm"].uuid
-ROBOCO_SLUG = "roboco-standin"
+ROBOFLEET_SLUG = "roboco-standin"
 ONE = 1
 
 
@@ -119,14 +119,14 @@ async def _seed_roboco_project(
     project = ProjectTable(
         id=uuid4(),
         name="RoboCo",
-        slug=ROBOCO_SLUG,
+        slug=ROBOFLEET_SLUG,
         git_url="https://example.com/roboco.git",
         assigned_cell=Team.BACKEND,
         created_by=SYSTEM_UUID,
     )
     session.add(project)
     await session.flush()
-    monkeypatch.setattr(cfg, "self_heal_project_slug", ROBOCO_SLUG)
+    monkeypatch.setattr(cfg, "self_heal_project_slug", ROBOFLEET_SLUG)
     return project
 
 

@@ -41,7 +41,7 @@ Parity notes (where Kimi's runtime model differs from grok's/gemini's):
     pointed at ``kimi-bash-guard-wrapper.sh`` rather than the hook script
     directly: a ``[[hooks]]`` entry only tolerates ``event``/``matcher``/
     ``command``/``timeout`` (an ``env`` key silently drops the WHOLE hooks
-    section — live-verified), so ``ROBOCO_GUARD_SKIP_GIT=1`` rides the
+    section — live-verified), so ``ROBOFLEET_GUARD_SKIP_GIT=1`` rides the
     wrapper's own ``export`` instead. Git ops are already denied gracefully by
     the permission rules above, so the hook is defense-in-depth for the
     exfil/identity-forgery categories the deny-rule globs don't reach.
@@ -84,20 +84,20 @@ KIMI_AGENTS_MD_PATH = KIMI_CODE_HOME / "AGENTS.md"
 KIMI_CREDENTIALS_PATH = KIMI_CODE_HOME / "credentials" / "kimi-code.json"
 # The composed role blueprint the orchestrator mounts into every agent container.
 SYSTEM_PROMPT_PATH = Path(
-    os.environ.get("ROBOCO_SYSTEM_PROMPT", "/app/system-prompt.md")
+    os.environ.get("ROBOFLEET_SYSTEM_PROMPT", "/app/system-prompt.md")
 )
 # The bash-guard PreToolUse hook script, baked into the agent base image —
 # same script the Claude/grok paths install (verified to accept kimi's
 # Claude-schema snake_case stdin payload unmodified).
 BASH_GUARD_HOOK = os.environ.get(
-    "ROBOCO_BASH_GUARD_HOOK", "/app/scripts/bash-guard-hook.sh"
+    "ROBOFLEET_BASH_GUARD_HOOK", "/app/scripts/bash-guard-hook.sh"
 )
 # A [[hooks]] entry has no `env` field (live-verified: one present drops the
 # WHOLE hooks section silently — see kimi_hooks_config below), so
-# ROBOCO_GUARD_SKIP_GIT=1 rides this wrapper's own export instead. Baked into
+# ROBOFLEET_GUARD_SKIP_GIT=1 rides this wrapper's own export instead. Baked into
 # the kimi image alongside the entrypoint (docker/agent-kimi.Dockerfile).
 KIMI_BASH_GUARD_WRAPPER = os.environ.get(
-    "ROBOCO_KIMI_BASH_GUARD_WRAPPER", "/app/scripts/kimi-bash-guard-wrapper.sh"
+    "ROBOFLEET_KIMI_BASH_GUARD_WRAPPER", "/app/scripts/kimi-bash-guard-wrapper.sh"
 )
 # The entrypoint reads a small preflight ok/fail from `--check`'s exit code —
 # no args file handoff is needed for kimi (unlike grok/codex/gemini's
@@ -257,7 +257,7 @@ def kimi_hooks_config(
     ``timeout`` — an ``env`` key (or any other extra field) makes the CLI
     silently drop the WHOLE ``hooks`` section (live-verified: "Ignored
     invalid config ... hooks", run continues with NO hooks installed at
-    all). ``ROBOCO_GUARD_SKIP_GIT=1`` therefore rides
+    all). ``ROBOFLEET_GUARD_SKIP_GIT=1`` therefore rides
     ``kimi-bash-guard-wrapper.sh`` (its own ``export`` before exec'ing the
     real hook) instead of an ``env`` field — git ops stay on the graceful
     deny rules above (see :func:`permission_rules_for_role`); the hook
@@ -424,8 +424,8 @@ def main(argv: list[str] | None = None) -> int:
     if "--check" in args:
         return 0 if is_valid(KIMI_CREDENTIALS_PATH) else 1
 
-    agent_id = os.environ.get("ROBOCO_AGENT_ID", "")
-    mcp_path = os.environ.get("ROBOCO_MCP_CONFIG", "/app/mcp-config.json")
+    agent_id = os.environ.get("ROBOFLEET_AGENT_ID", "")
+    mcp_path = os.environ.get("ROBOFLEET_MCP_CONFIG", "/app/mcp-config.json")
     role = get_agent_role(agent_id) or ""
 
     KIMI_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)

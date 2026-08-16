@@ -235,7 +235,7 @@ async def test_non_kimi_spawn_unaffected_by_kimi_cap(
 
 @pytest.mark.asyncio
 async def test_cap_honors_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ROBOCO_KIMI_MAX_CONCURRENT populates settings.kimi_max_concurrent at
+    """ROBOFLEET_KIMI_MAX_CONCURRENT populates settings.kimi_max_concurrent at
     construction; monkeypatching the singleton attribute is this suite's
     established stand-in for an env override (see test_agent_image_registry.py)."""
     monkeypatch.setattr(orch_module.settings, "kimi_max_concurrent", 2)

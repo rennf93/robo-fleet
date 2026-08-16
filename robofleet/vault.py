@@ -15,7 +15,7 @@ already-existing destination (a personal vault) receives only the ``RoboCo/``
 subtree plus any absent shipped assets — its own ``.obsidian`` is never
 touched.
 
-Both are inert unless ``ROBOCO_OBSIDIAN_VAULT_ENABLED`` is on (rebuild would
+Both are inert unless ``ROBOFLEET_OBSIDIAN_VAULT_ENABLED`` is on (rebuild would
 otherwise materialize a vault nobody reads).
 """
 
@@ -198,7 +198,7 @@ def _relocate(new_path: Path) -> int:
         new_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(old_root), str(new_path))
     print(
-        f"Vault moved to {new_path}. Set ROBOCO_VAULT_PATH={new_path} in the "
+        f"Vault moved to {new_path}. Set ROBOFLEET_VAULT_PATH={new_path} in the "
         "environment for this to persist across restarts."
     )
     return 0
@@ -214,7 +214,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not settings.obsidian_vault_enabled:
         print(
-            "ROBOCO_OBSIDIAN_VAULT_ENABLED is off — nothing to do.",
+            "ROBOFLEET_OBSIDIAN_VAULT_ENABLED is off — nothing to do.",
             file=sys.stderr,
         )
         return 1

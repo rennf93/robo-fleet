@@ -1141,7 +1141,7 @@ def _register_proactive_tools(mcp: FastMCP, client: ApiClient) -> None:
 # the groups its duties use. A group absent from this map registers for every
 # role; an unknown/unset role registers everything (fail-open to the previous
 # behaviour) — except index management, which is destructive operator tooling
-# (clear/reindex) and registers only under ROBOCO_ALLOW_FULL_TOOLSET.
+# (clear/reindex) and registers only under ROBOFLEET_ALLOW_FULL_TOOLSET.
 _GROUP_ROLES: dict[str, frozenset[str]] = {
     "error": frozenset({"developer", "qa"}),
     "standards": frozenset({"developer", "qa", "documenter", "pr_reviewer"}),
@@ -1166,8 +1166,8 @@ def create_optimal_mcp_server(agent_id: str) -> FastMCP:
     """Create an Optimal MCP server for a specific agent, scoped to its role."""
     mcp = FastMCP(f"roboco-optimal-{agent_id}", json_response=True)
     client = ApiClient(agent_id)
-    role = os.environ.get("ROBOCO_AGENT_ROLE", "")
-    full_toolset = bool(os.environ.get("ROBOCO_ALLOW_FULL_TOOLSET"))
+    role = os.environ.get("ROBOFLEET_AGENT_ROLE", "")
+    full_toolset = bool(os.environ.get("ROBOFLEET_ALLOW_FULL_TOOLSET"))
 
     # Universal groups — every role reasons with search/mentor/learnings.
     _register_search_tools(mcp, client)

@@ -25,7 +25,7 @@ from google.genai import types
 from robofleet.agent.gateway_shim import _load_manifest, build_gateway_tools
 from robofleet.agent.git_tools import build_git_tools
 
-_MODEL = os.environ.get("ROBOCO_AGENT_MODEL", "gemini-3.5-flash")
+_MODEL = os.environ.get("ROBOFLEET_AGENT_MODEL", "gemini-3.5-flash")
 _APP_NAME = "robo-fleet"
 _SYSTEM_PROMPT_PATH = "/app/system-prompt.md"
 # Exit codes mirror the grok/codex/kimi CLIs (75 = rate-limit/quota,
@@ -52,17 +52,19 @@ def _instruction() -> str:
 
 def _headers() -> dict[str, str]:
     h: dict[str, str] = {
-        "X-Agent-ID": os.environ["ROBOCO_AGENT_ID"],
-        "X-Agent-Role": os.environ["ROBOCO_AGENT_ROLE"],
+        "X-Agent-ID": os.environ["ROBOFLEET_AGENT_ID"],
+        "X-Agent-Role": os.environ["ROBOFLEET_AGENT_ROLE"],
     }
-    tok = os.environ.get("ROBOCO_AGENT_TOKEN", "")
+    tok = os.environ.get("ROBOFLEET_AGENT_TOKEN", "")
     if tok and tok != "UNSIGNED":
         h["X-Agent-Token"] = tok
     return h
 
 
 async def _post_usage(usage: dict[str, Any], exit_reason: str) -> None:
-    base = os.environ.get("ROBOCO_ORCHESTRATOR_URL", "http://roboco-orchestrator:8000")
+    base = os.environ.get(
+        "ROBOFLEET_ORCHESTRATOR_URL", "http://roboco-orchestrator:8000"
+    )
     payload = {**usage, "exit_reason": exit_reason}
     async with httpx.AsyncClient(timeout=10.0) as client:
         await client.post(
@@ -104,7 +106,7 @@ def _classify(exc: BaseException) -> int | None:
 
 async def main() -> int:
     instruction = _instruction()
-    initial = os.environ.get("ROBOCO_INITIAL_PROMPT", "")
+    initial = os.environ.get("ROBOFLEET_INITIAL_PROMPT", "")
     tools: list[Any] = build_gateway_tools() + build_git_tools()
     agent = LlmAgent(
         name="roboco_agent",

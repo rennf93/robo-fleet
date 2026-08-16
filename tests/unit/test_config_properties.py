@@ -57,7 +57,7 @@ def test_cloud_auth_off_does_not_require_secret() -> None:
 def test_cloud_auth_enabled_without_secret_fails_loud() -> None:
     """Arming cloud auth with no session-signing secret must fail at startup,
     not silently mint unsigned/unsafe sessions."""
-    with pytest.raises(ValueError, match="ROBOCO_CLOUD_AUTH_SECRET"):
+    with pytest.raises(ValueError, match="ROBOFLEET_CLOUD_AUTH_SECRET"):
         Settings(cloud_auth_enabled=True, cloud_auth_secret=None)
 
 
@@ -73,19 +73,19 @@ def test_cloud_auth_cookie_max_age_defaults_to_30_days() -> None:
 
 
 def test_cloud_auth_rejects_panel_agent_token(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_CLOUD_AUTH_ENABLED", "true")
-    monkeypatch.setenv("ROBOCO_CLOUD_AUTH_SECRET", "x" * 32)
-    monkeypatch.setenv("ROBOCO_PANEL_AGENT_TOKEN", "some-signed-token")
-    with pytest.raises(ValueError, match="ROBOCO_PANEL_AGENT_TOKEN"):
+    monkeypatch.setenv("ROBOFLEET_CLOUD_AUTH_ENABLED", "true")
+    monkeypatch.setenv("ROBOFLEET_CLOUD_AUTH_SECRET", "x" * 32)
+    monkeypatch.setenv("ROBOFLEET_PANEL_AGENT_TOKEN", "some-signed-token")
+    with pytest.raises(ValueError, match="ROBOFLEET_PANEL_AGENT_TOKEN"):
         Settings()
 
 
 def test_cloud_auth_ok_without_panel_agent_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_CLOUD_AUTH_ENABLED", "true")
-    monkeypatch.setenv("ROBOCO_CLOUD_AUTH_SECRET", "x" * 32)
-    monkeypatch.delenv("ROBOCO_PANEL_AGENT_TOKEN", raising=False)
+    monkeypatch.setenv("ROBOFLEET_CLOUD_AUTH_ENABLED", "true")
+    monkeypatch.setenv("ROBOFLEET_CLOUD_AUTH_SECRET", "x" * 32)
+    monkeypatch.delenv("ROBOFLEET_PANEL_AGENT_TOKEN", raising=False)
     s = Settings()
     assert s.cloud_auth_enabled is True
 
@@ -104,7 +104,7 @@ def test_telegram_miniapp_off_does_not_require_cloud_auth() -> None:
 def test_telegram_miniapp_enabled_without_cloud_auth_fails_loud() -> None:
     """The Mini App route mints a cloud-auth session cookie — with cloud
     auth off there's nothing to mint, so this must fail at startup."""
-    with pytest.raises(ValueError, match="ROBOCO_TELEGRAM_MINIAPP_ENABLED"):
+    with pytest.raises(ValueError, match="ROBOFLEET_TELEGRAM_MINIAPP_ENABLED"):
         Settings(telegram_miniapp_enabled=True, cloud_auth_enabled=False)
 
 
@@ -177,7 +177,7 @@ def test_uvicorn_loop_honors_constructor_override() -> None:
 
 
 def test_uvicorn_loop_honors_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_UVICORN_LOOP", "uvloop")
+    monkeypatch.setenv("ROBOFLEET_UVICORN_LOOP", "uvloop")
     assert Settings().uvicorn_loop == "uvloop"
 
 

@@ -16,7 +16,7 @@
 
 set -u
 
-SDK_URL="${ROBOCO_SDK_URL:-http://localhost:9000}"
+SDK_URL="${ROBOFLEET_SDK_URL:-http://localhost:9000}"
 
 resp=$(curl -sf -m 2 -X POST "$SDK_URL/terminal/stop_attempt" 2>/dev/null)
 
@@ -47,7 +47,7 @@ fi
 {
   echo "Denied: you stopped without calling a terminal tool. The task is"
   echo "still assigned to you and will not be handed off. Call one of:"
-  case "${ROBOCO_AGENT_ROLE:-}" in
+  case "${ROBOFLEET_AGENT_ROLE:-}" in
     developer|documenter)
       echo "  - i_am_done(task_id, notes)   # work submitted for QA"
       echo "  - i_am_blocked(reason)        # stuck, need PM"

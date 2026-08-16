@@ -3,7 +3,7 @@
 ``tasks.budget_usd`` caps one task's own accumulated agent-spawn spend;
 ``projects.monthly_budget_usd`` caps a project's calendar-month spend across
 all its tasks. Both nullable and additive — null means "no cap" and is a pure
-no-op regardless of ``ROBOCO_TASK_BUDGETS_ENABLED`` (the flag itself gates
+no-op regardless of ``ROBOFLEET_TASK_BUDGETS_ENABLED`` (the flag itself gates
 whether the caps are ever consulted at all). Mirrors the ``ci_watch_enabled``
 per-project opt-in shape (migration 048): the column exists unconditionally,
 the feature flag decides whether anything reads it.

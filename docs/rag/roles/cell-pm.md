@@ -74,7 +74,7 @@ unclaim(task_id) / resume(task_id) / i_am_idle()
 | `roboco-flow`         | `give_me_work`, `i_will_plan`, `delegate`, `submit_up`, `triage`, `unblock`, `reassign`, `complete`, `request_changes`, `escalate_up`, `unclaim`, `resume`, `i_am_idle` |
 | `roboco-do`           | `note`, `dm`, `notify`, `evidence` (no `commit`) |
 | `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-search`       | `web_search`, `web_fetch` (only when `ROBOCO_RESEARCH_ENABLED`, default on) |
+| `roboco-search`       | `web_search`, `web_fetch` (only when `ROBOFLEET_RESEARCH_ENABLED`, default on) |
 | `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
 | `roboco-docs`         | project doc file ops |
 

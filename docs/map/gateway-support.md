@@ -39,7 +39,7 @@ The support layer of the agent gateway: pure/cheap components the Choreographer 
 | Envelope.as_dict | method | roboco/services/gateway/envelope.py:257 | Wire-format dict; drops None fields except error; always emits error/correlation_id/current_state/valid_next_verbs. |
 | already_active_guard | function | roboco/services/gateway/claim_guards.py:35 | Reject claim if agent has any active (claimed/in_progress/verifying/blocked) task other than target. |
 | paused_tasks_guard | function | roboco/services/gateway/claim_guards.py:61 | Reject claim if agent has a paused task other than target (PM re-entry on own paused umbrella exempt). |
-| project_budget_exceeded_guard | function | roboco/services/gateway/claim_guards.py:86 | `ROBOCO_TASK_BUDGETS_ENABLED`-gated: reject a WORK-STARTING claim (`i_will_work_on`/`i_will_plan` only — review/doc/gate/inbound-PR claims are exempt so in-flight work can always finish) once the project's `monthly_budget_usd` has been reached this calendar month; fires only when `monthly_budget_usd` is set (`None` = no cap). Spend counts closed sessions' `estimated_cost_usd` plus open sessions priced live from token snapshots. |
+| project_budget_exceeded_guard | function | roboco/services/gateway/claim_guards.py:86 | `ROBOFLEET_TASK_BUDGETS_ENABLED`-gated: reject a WORK-STARTING claim (`i_will_work_on`/`i_will_plan` only — review/doc/gate/inbound-PR claims are exempt so in-flight work can always finish) once the project's `monthly_budget_usd` has been reached this calendar month; fires only when `monthly_budget_usd` is set (`None` = no cap). Spend counts closed sessions' `estimated_cost_usd` plus open sessions priced live from token snapshots. |
 | unmet_dependency_guard | function | roboco/services/gateway/claim_guards.py:112 | Reject claim while task has non-terminal depends_on; holds pre-assigned dev at claim verb. |
 | ClaimDecision | enum | roboco/services/gateway/claimant_lock.py:18 | GRANTED / GRANTED_AFTER_STALE_RELEASE / BLOCKED_OTHER_ACTIVE. |
 | is_stale | function | roboco/services/gateway/claimant_lock.py:24 | True when no heartbeat or heartbeat older than threshold_seconds. |
@@ -282,12 +282,12 @@ gateway-support
 | briefing assembly | roboco/services/gateway/evidence_repo.py | every verb response that carries context_briefing queries EvidenceRepo then evidence_builder shapes it |
 
 ## Config Flags
-- ROBOCO_OVERLOAD_BREAK_ENABLED (provider overload parks like a 429; tracker stores kind='overloaded')
-- ROBOCO_GATEWAY_HEALTH_ENABLED (reaper probes gateway; orthogonal to this slice but tracker feeds park state)
-- ROBOCO_GATEWAY_HEALTH_GRACE_SECONDS
-- ROBOCO_RELEASE_MANAGER_ENABLED / ROBOCO_ORG_MEMORY_ENABLED (similar memory path gated; similar_memory best-effort returns [] when off/failing)
-- ROBOCO_ORG_MEMORY_TOP_K / ROBOCO_ORG_MEMORY_MIN_SCORE (shape_memory_query + similar_memory flooring)
-- ROBOCO_CONVENTIONS_ENABLED (convention_findings in EvidencePayload; empty when off)
+- ROBOFLEET_OVERLOAD_BREAK_ENABLED (provider overload parks like a 429; tracker stores kind='overloaded')
+- ROBOFLEET_GATEWAY_HEALTH_ENABLED (reaper probes gateway; orthogonal to this slice but tracker feeds park state)
+- ROBOFLEET_GATEWAY_HEALTH_GRACE_SECONDS
+- ROBOFLEET_RELEASE_MANAGER_ENABLED / ROBOFLEET_ORG_MEMORY_ENABLED (similar memory path gated; similar_memory best-effort returns [] when off/failing)
+- ROBOFLEET_ORG_MEMORY_TOP_K / ROBOFLEET_ORG_MEMORY_MIN_SCORE (shape_memory_query + similar_memory flooring)
+- ROBOFLEET_CONVENTIONS_ENABLED (convention_findings in EvidencePayload; empty when off)
 - settings.commit_subject_min_chars / settings.commit_banned_words (commit_validator overrides)
 - settings.redis_url (RateLimitStateTracker key prefix + list_rate_limited_providers scan)
 - SpawnConfig.cooldown_seconds / role_rate_per_minute / claim_stale_seconds (trigger_filter tunables, caller-supplied)

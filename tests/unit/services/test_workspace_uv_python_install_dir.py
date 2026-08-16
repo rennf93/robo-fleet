@@ -191,12 +191,12 @@ async def test_install_env_inherits_parent_environ(tmp_path: Path) -> None:
         patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
         patch.dict(
             "os.environ",
-            {"PATH": "/usr/bin:/bin", "ROBOCO_TEST_MARKER": "1"},
+            {"PATH": "/usr/bin:/bin", "ROBOFLEET_TEST_MARKER": "1"},
             clear=False,
         ),
     ):
         await svc._run_dep_install(ws, "uv sync", ["uv", "sync"])
 
     assert captured_env.get("PATH") == "/usr/bin:/bin"
-    assert captured_env.get("ROBOCO_TEST_MARKER") == "1"
+    assert captured_env.get("ROBOFLEET_TEST_MARKER") == "1"
     assert captured_env.get("UV_PYTHON_INSTALL_DIR") == str(ws / ".uv-python")

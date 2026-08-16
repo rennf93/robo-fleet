@@ -69,11 +69,13 @@ class TestInstitutionalMemoryTimeout:
 
 class TestInstitutionalMemoryTimeoutConfig:
     def test_default_is_eight_seconds(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("ROBOCO_INSTITUTIONAL_MEMORY_TIMEOUT_SECONDS", raising=False)
+        monkeypatch.delenv(
+            "ROBOFLEET_INSTITUTIONAL_MEMORY_TIMEOUT_SECONDS", raising=False
+        )
         assert Settings().institutional_memory_timeout_seconds == _DEFAULT_TIMEOUT
 
     def test_reads_env_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv(
-            "ROBOCO_INSTITUTIONAL_MEMORY_TIMEOUT_SECONDS", str(_OVERRIDE_TIMEOUT)
+            "ROBOFLEET_INSTITUTIONAL_MEMORY_TIMEOUT_SECONDS", str(_OVERRIDE_TIMEOUT)
         )
         assert Settings().institutional_memory_timeout_seconds == _OVERRIDE_TIMEOUT

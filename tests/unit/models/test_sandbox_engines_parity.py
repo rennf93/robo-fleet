@@ -16,9 +16,9 @@ from robofleet.models.sandbox import (
 )
 
 _ENV_HOST_PREFIX = {
-    "postgres": "ROBOCO_TEST_DB_HOST",
-    "redis": "ROBOCO_TEST_REDIS_HOST",
-    "mongo": "ROBOCO_TEST_MONGO_HOST",
+    "postgres": "ROBOFLEET_TEST_DB_HOST",
+    "redis": "ROBOFLEET_TEST_REDIS_HOST",
+    "mongo": "ROBOFLEET_TEST_MONGO_HOST",
 }
 
 

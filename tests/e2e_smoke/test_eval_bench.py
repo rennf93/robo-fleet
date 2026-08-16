@@ -14,7 +14,7 @@ Runs the smallest fixture (a single-file bug fix) end to end: PENDING ->
 awaiting_qa -> awaiting_documentation -> awaiting_pm_review -> completed.
 
 Gating: like every other module here, this is skipped unless
-``ROBOCO_E2E_SMOKE=1`` (see ``tests/e2e_smoke/conftest.py``'s
+``ROBOFLEET_E2E_SMOKE=1`` (see ``tests/e2e_smoke/conftest.py``'s
 ``pytest_collection_modifyitems``) — it needs the real test Postgres, which
 ``EvalRunner`` provisions its own throwaway copy of (see
 ``robofleet/eval/runner.py``'s ``_scratch_database``), independent of this

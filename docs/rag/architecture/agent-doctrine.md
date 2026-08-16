@@ -36,7 +36,7 @@ Source: ponytail plugin (MIT, Copyright (c) 2026 DietrichGebert), vendored trimm
 
 ## Intensity knob
 
-`ROBOCO_PONYTAIL_INTENSITY` (env) / `settings.ponytail_intensity` (`roboco/config.py`, `Literal["lite","full","ultra"]`, default `full`). A **string value**, not a feature flag — no `FEATURE_FLAGS` entry, no panel toggle. pydantic validates the `Literal` at Settings instantiation, so an invalid env value raises at startup.
+`ROBOFLEET_PONYTAIL_INTENSITY` (env) / `settings.ponytail_intensity` (`roboco/config.py`, `Literal["lite","full","ultra"]`, default `full`). A **string value**, not a feature flag — no `FEATURE_FLAGS` entry, no panel toggle. pydantic validates the `Literal` at Settings instantiation, so an invalid env value raises at startup.
 
 | Level | Developer behavior |
 |-------|--------------------|

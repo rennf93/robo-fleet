@@ -256,7 +256,7 @@ class ModelRoutingService(BaseService):
         elif resolved is not None and not resolved.provider.enabled:
             # Configured but disabled — distinguishable from "no assignment"
             # so the bypass is surfaced, not silent. Default stays graceful (a
-            # stalled spawn is worse than a routing miss); ROBOCO_ROUTING_STRICT
+            # stalled spawn is worse than a routing miss); ROBOFLEET_ROUTING_STRICT
             # opts into fail-closed for operators who'd rather it stall.
             self.log.warning(
                 "Configured provider is disabled; downgrading to legacy Anthropic path",

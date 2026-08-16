@@ -12,7 +12,7 @@
 
 set -u
 
-SDK_URL="${ROBOCO_SDK_URL:-http://localhost:9000}"
+SDK_URL="${ROBOFLEET_SDK_URL:-http://localhost:9000}"
 input=$(cat 2>/dev/null || true)
 [[ -z "$input" ]] && exit 0
 

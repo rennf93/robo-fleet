@@ -41,7 +41,7 @@ def _get_fernet() -> Fernet:
             ) from e
     if not key:
         raise EncryptionError(
-            "ROBOCO_ENCRYPTION_KEY is not configured. "
+            "ROBOFLEET_ENCRYPTION_KEY is not configured. "
             "Generate one with: python -c 'from cryptography.fernet "
             "import Fernet; print(Fernet.generate_key().decode())'"
         )

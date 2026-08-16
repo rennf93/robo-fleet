@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
-_RECEIVER_PORT = 9000  # ROBOCO_SDK_PORT — the orchestrator delivers messages here
+_RECEIVER_PORT = 9000  # ROBOFLEET_SDK_PORT — the orchestrator delivers messages here
 
 
 class _Turn(BaseModel):
@@ -110,9 +110,9 @@ async def main() -> None:  # pragma: no cover - needs the live container + SDK
         except OSError as exc:
             logger.warning("Could not pre-create ~/.claude.json", error=str(exc))
 
-    session_id = os.environ["ROBOCO_PROMPTER_SESSION_ID"]
-    base_url = os.environ.get("ROBOCO_API_URL", "http://roboco-orchestrator:8000")
-    cwd = os.environ.get("ROBOCO_WORKSPACE", "/data/workspace")
+    session_id = os.environ["ROBOFLEET_PROMPTER_SESSION_ID"]
+    base_url = os.environ.get("ROBOFLEET_API_URL", "http://roboco-orchestrator:8000")
+    cwd = os.environ.get("ROBOFLEET_WORKSPACE", "/data/workspace")
     system_prompt = Path("/app/system-prompt.md").read_text(encoding="utf-8")
     model = os.environ.get("CLAUDE_CODE_SUBAGENT_MODEL") or None
 
@@ -143,8 +143,8 @@ async def main() -> None:  # pragma: no cover - needs the live container + SDK
 
     # Bind all interfaces so the orchestrator reaches the receiver on the docker
     # network. Built from octets (bandit B104 false positive — same as the SDK
-    # sidecar); override via ROBOCO_SDK_BIND_HOST for local dev.
-    bind_host = os.environ.get("ROBOCO_SDK_BIND_HOST", ".".join(["0"] * 4))
+    # sidecar); override via ROBOFLEET_SDK_BIND_HOST for local dev.
+    bind_host = os.environ.get("ROBOFLEET_SDK_BIND_HOST", ".".join(["0"] * 4))
     server = uvicorn.Server(
         uvicorn.Config(
             build_receiver(queue),

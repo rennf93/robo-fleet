@@ -17,12 +17,12 @@ def test_obsidian_vault_disabled_by_default() -> None:
 
 
 def test_obsidian_vault_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_OBSIDIAN_VAULT_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_OBSIDIAN_VAULT_ENABLED": "true"}):
         assert Settings().obsidian_vault_enabled is True
 
 
 def test_vault_path_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_VAULT_PATH": "/mnt/my-vault"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_VAULT_PATH": "/mnt/my-vault"}):
         assert Settings().vault_path == "/mnt/my-vault"
 
 

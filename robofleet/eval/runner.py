@@ -118,11 +118,11 @@ _TEAM_PREFIX = {"backend": "be", "frontend": "fe", "ux_ui": "ux"}
 # without the pytest fixture machinery, since this runs from a plain CLI.
 # ---------------------------------------------------------------------------
 
-_TEST_DB_HOST = os.environ.get("ROBOCO_TEST_DB_HOST", "localhost")
-_TEST_DB_PORT = int(os.environ.get("ROBOCO_TEST_DB_PORT", "5432"))
-_TEST_DB_USER = os.environ.get("ROBOCO_TEST_DB_USER", "roboco")
-_TEST_DB_PASSWORD = os.environ.get("ROBOCO_TEST_DB_PASSWORD", "")
-_TEST_DB_ADMIN_DB = os.environ.get("ROBOCO_TEST_DB_ADMIN_DB", "postgres")
+_TEST_DB_HOST = os.environ.get("ROBOFLEET_TEST_DB_HOST", "localhost")
+_TEST_DB_PORT = int(os.environ.get("ROBOFLEET_TEST_DB_PORT", "5432"))
+_TEST_DB_USER = os.environ.get("ROBOFLEET_TEST_DB_USER", "roboco")
+_TEST_DB_PASSWORD = os.environ.get("ROBOFLEET_TEST_DB_PASSWORD", "")
+_TEST_DB_ADMIN_DB = os.environ.get("ROBOFLEET_TEST_DB_ADMIN_DB", "postgres")
 
 
 def _scratch_db_url(database: str) -> str:

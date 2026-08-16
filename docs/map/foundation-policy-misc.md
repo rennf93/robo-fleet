@@ -62,7 +62,7 @@ The "misc" foundation-policy slice holds the pure, service-agnostic rule catalog
 | VERB_RETRY_LIMITS | constant | roboco/foundation/policy/agent_loop.py:54 | Per-verb retry caps over 60s window keyed by MCP-exposed verb names (pass/fail, i_am_done, open_pr=5, etc.) |
 | UNLIMITED_RETRY_VERBS | constant | roboco/foundation/policy/agent_loop.py:80 | frozenset of verbs exempt from the per-verb circuit breaker (discovery/claim verbs) |
 | retry_limit_for | function | roboco/foundation/policy/agent_loop.py:97 | Return per-verb retry cap or None for unlimited; falls back to default for unknown |
-| default_budget_usd_for | function | roboco/foundation/policy/agent_loop.py:99 | Per-`TaskType` default $ cap consulted only when a task's own `budget_usd` is null AND `ROBOCO_TASK_BUDGETS_ENABLED` is on |
+| default_budget_usd_for | function | roboco/foundation/policy/agent_loop.py:99 | Per-`TaskType` default $ cap consulted only when a task's own `budget_usd` is null AND `ROBOFLEET_TASK_BUDGETS_ENABLED` is on |
 | effective_task_budget_usd | function | roboco/foundation/policy/agent_loop.py:111 | A task's effective $ cap: its own `budget_usd` if set, else the `TaskType` default; the single resolver the orchestrator's budget sweep and the panel's budget-input validation both consult |
 | Severity | enum | roboco/foundation/policy/content/enums.py:14 | PR-review finding severity ladder (blocker/major/minor/nit) |
 | Verdict | enum | roboco/foundation/policy/content/enums.py:23 | Review outcome StrEnum (approved/changes_requested/passed/failed) |
@@ -225,13 +225,13 @@ foundation/policy (misc slice)
 | markers accessors | roboco/foundation/policy/content/markers.py | Called by task.py, orchestrator, self_heal_engine, release_proposal, release_manager_engine whenever reading/writing orchestration_markers |
 
 ## Config Flags
-- ROBOCO_AGENT_TOOL_CALL_WARN (consumed by agent_sdk, defaults from BudgetPolicy.tool_call_warn_at=100)
-- ROBOCO_AGENT_TOOL_CALL_HALT (defaults tool_call_halt_at=300; raised from 150 — the prior cap repeatedly halted legitimate multi-file work mid-task)
-- ROBOCO_AGENT_LOOP_THRESHOLD (defaults loop_threshold=3)
-- ROBOCO_AGENT_LOOP_WINDOW (defaults loop_window=10)
-- ROBOCO_AGENT_LOOP_ACTION (defaults loop_action='halt')
-- ROBOCO_PM_RESPAWN_MAX_UNPRODUCTIVE (defaults pm_respawn_max_unproductive=3)
-- ROBOCO_PM_RESPAWN_MAX_TRACING_RESETS (defaults pm_respawn_max_tracing_resets=3)
+- ROBOFLEET_AGENT_TOOL_CALL_WARN (consumed by agent_sdk, defaults from BudgetPolicy.tool_call_warn_at=100)
+- ROBOFLEET_AGENT_TOOL_CALL_HALT (defaults tool_call_halt_at=300; raised from 150 — the prior cap repeatedly halted legitimate multi-file work mid-task)
+- ROBOFLEET_AGENT_LOOP_THRESHOLD (defaults loop_threshold=3)
+- ROBOFLEET_AGENT_LOOP_WINDOW (defaults loop_window=10)
+- ROBOFLEET_AGENT_LOOP_ACTION (defaults loop_action='halt')
+- ROBOFLEET_PM_RESPAWN_MAX_UNPRODUCTIVE (defaults pm_respawn_max_unproductive=3)
+- ROBOFLEET_PM_RESPAWN_MAX_TRACING_RESETS (defaults pm_respawn_max_tracing_resets=3)
 - Note: BudgetPolicy holds canonical defaults; env overrides applied at consumer layer (agent_sdk/orchestrator), not in this slice
 
 

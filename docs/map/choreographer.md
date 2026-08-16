@@ -132,11 +132,11 @@ Choreographer (composed class, _impl.py)
 - Internal cross-verb calls (e.g. `complete` → `cell_pm_complete` / `main_pm_complete`; `_claim_plan_start_run` shared by `i_will_work_on` + `i_will_plan`).
 
 ## Config Flags
-- `ROBOCO_TOOLCHAIN_MATCH_ENABLED` — gates `_toolchain_broken_guard` (default-off).
-- `ROBOCO_CONVENTIONS_ENABLED` — gates `_conventions_guard` (default-off).
-- `ROBOCO_OVERLOAD_BREAK_ENABLED` — rate-limit/overload parking path (default-on).
-- `ROBOCO_ORG_MEMORY_ENABLED` — institutional-memory injection in `_briefing_for` (default-off).
-- `ROBOCO_GATEWAY_HEALTH_ENABLED` — reaper gateway-health probe (default-on; not directly in choreographer but feeds the parking path).
+- `ROBOFLEET_TOOLCHAIN_MATCH_ENABLED` — gates `_toolchain_broken_guard` (default-off).
+- `ROBOFLEET_CONVENTIONS_ENABLED` — gates `_conventions_guard` (default-off).
+- `ROBOFLEET_OVERLOAD_BREAK_ENABLED` — rate-limit/overload parking path (default-on).
+- `ROBOFLEET_ORG_MEMORY_ENABLED` — institutional-memory injection in `_briefing_for` (default-off).
+- `ROBOFLEET_GATEWAY_HEALTH_ENABLED` — reaper gateway-health probe (default-on; not directly in choreographer but feeds the parking path).
 
 ## Gotchas
 - The SAVEPOINT wraps only DB atomic actions; `pre_side_effects` (e.g. `create_root_pr`) run BEFORE the savepoint and are NOT rolled back if a later composed action raises — they are idempotent by contract.

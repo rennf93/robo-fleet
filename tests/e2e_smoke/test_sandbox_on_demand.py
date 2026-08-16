@@ -89,7 +89,7 @@ def test_request_sandbox_guard_chain_over_real_api(
     # --- flag off: refused before any task/project lookup -------------------
     monkeypatch.setattr(settings, "sandbox_db_enabled", False)
     env = expect_error(dev.do("request_sandbox"), "invalid_state", "flag off")
-    assert "ROBOCO_SANDBOX_DB_ENABLED" in (env.get("remediate") or "")
+    assert "ROBOFLEET_SANDBOX_DB_ENABLED" in (env.get("remediate") or "")
 
     # --- flag on, project opted into a subset, request outside it -----------
     monkeypatch.setattr(settings, "sandbox_db_enabled", True)

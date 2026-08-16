@@ -5,8 +5,8 @@ system only clones/branches/PRs repos that already exist. Used by the pitch
 approval flow to auto-provision a repo per target cell.
 
 GitHub is the default and only forge that needs no extra config (Phase 1).
-Phase 4 adds GitLab/Gitea parity: ``ROBOCO_PROVISIONING_PROVIDER`` selects the
-forge and, for a self-hosted GitLab/Gitea instance, ``ROBOCO_PROVISIONING_HOST``
+Phase 4 adds GitLab/Gitea parity: ``ROBOFLEET_PROVISIONING_PROVIDER`` selects the
+forge and, for a self-hosted GitLab/Gitea instance, ``ROBOFLEET_PROVISIONING_HOST``
 names it — the class/module names stay GitHub-flavored for backward
 compatibility (``pitch.py`` and existing imports read them unchanged), but the
 service now dispatches to whichever :class:`~robofleet.services.forge.base.GitProvider`
@@ -82,7 +82,7 @@ class GitHubProvisioningService:
     """Create private repos in the configured org/group via the forge's REST API.
 
     Despite the name (kept for backward compatibility), the target forge is
-    provider-aware: ``ROBOCO_PROVISIONING_PROVIDER`` picks github (default) /
+    provider-aware: ``ROBOFLEET_PROVISIONING_PROVIDER`` picks github (default) /
     gitlab / gitea, dispatching to the matching ``GitProvider``.
     """
 
@@ -186,10 +186,10 @@ class GitHubProvisioningService:
     def _disabled_message(self) -> str:
         base = (
             f"{self._provider_name.capitalize()} provisioning is not configured. "
-            "Set ROBOCO_PROVISIONING_TOKEN and ROBOCO_PROVISIONING_ORG"
+            "Set ROBOFLEET_PROVISIONING_TOKEN and ROBOFLEET_PROVISIONING_ORG"
         )
         if self._provider_name in ("gitlab", "gitea"):
-            return f"{base} and ROBOCO_PROVISIONING_HOST."
+            return f"{base} and ROBOFLEET_PROVISIONING_HOST."
         return f"{base}."
 
     def _existing_repo_ref(self, name: str) -> RepoRef:

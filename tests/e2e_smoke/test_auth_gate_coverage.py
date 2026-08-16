@@ -52,7 +52,7 @@ def _arm_cloud_auth(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "cloud_auth_secret", _JWT_SECRET)
     monkeypatch.setattr(settings, "cloud_auth_email", _CEO_EMAIL)
     monkeypatch.setattr(settings, "cloud_auth_password", _CEO_PASSWORD)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _HMAC_SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _HMAC_SECRET)
 
 
 async def _seed_ceo_user(session: AsyncSession) -> UserTable:

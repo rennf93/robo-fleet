@@ -4,7 +4,7 @@
 carry the janitor's resume-marker contract (COALESCE timestamps, ascending
 order, half-open archive window) — SQL semantics mocks can't prove. Follows
 the ``test_audit_real_query.py`` pattern: real Postgres via the session-scoped
-test DB (local: ROBOCO_TEST_DB_PORT=55432 ROBOCO_TEST_DB_USER=renzof).
+test DB (local: ROBOFLEET_TEST_DB_PORT=55432 ROBOFLEET_TEST_DB_USER=renzof).
 
 Foreign rows from other tests may share the DB, so every assertion is scoped
 to this module's seeded ids rather than exact result sets.

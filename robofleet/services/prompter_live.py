@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
-# The in-container receiver port (same ROBOCO_SDK_PORT every agent sidecar uses).
+# The in-container receiver port (same ROBOFLEET_SDK_PORT every agent sidecar uses).
 SDK_PORT = 9000
 # Sentinel pushed onto a session's queue to end its SSE stream.
 _CLOSE = object()

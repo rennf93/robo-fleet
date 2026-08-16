@@ -1,4 +1,4 @@
-"""Task-level $ budget sweep (ROBOCO_TASK_BUDGETS_ENABLED).
+"""Task-level $ budget sweep (ROBOFLEET_TASK_BUDGETS_ENABLED).
 
 `_sweep_budget_exceeded` gains a second trigger alongside the existing
 tool-call halt: when the flag is on and an active task's own $ budget is

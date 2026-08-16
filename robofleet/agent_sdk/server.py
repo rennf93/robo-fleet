@@ -55,10 +55,10 @@ from robofleet.services.gateway.envelope import Envelope
 logger = structlog.get_logger()
 
 # Environment configuration
-AGENT_ID = os.environ.get("ROBOCO_AGENT_ID", "unknown")
-AGENT_ROLE = os.environ.get("ROBOCO_AGENT_ROLE", "developer")
-MAIN_API_URL = os.environ.get("ROBOCO_API_URL", "http://roboco-orchestrator:8000")
-SDK_PORT = int(os.environ.get("ROBOCO_SDK_PORT", "9000"))
+AGENT_ID = os.environ.get("ROBOFLEET_AGENT_ID", "unknown")
+AGENT_ROLE = os.environ.get("ROBOFLEET_AGENT_ROLE", "developer")
+MAIN_API_URL = os.environ.get("ROBOFLEET_API_URL", "http://roboco-orchestrator:8000")
+SDK_PORT = int(os.environ.get("ROBOFLEET_SDK_PORT", "9000"))
 
 
 def _agent_headers() -> dict[str, str]:
@@ -67,7 +67,7 @@ def _agent_headers() -> dict[str, str]:
     Mirrors flow_server/do_server ``_build_headers``: ``X-Agent-Token`` (HMAC
     over id:role:team, injected by the orchestrator at spawn) and
     ``X-Agent-Team`` must travel with every call, or the API's
-    ``ROBOCO_AGENT_AUTH_REQUIRED`` gate 401s with "Missing X-Agent-Token" /
+    ``ROBOFLEET_AGENT_AUTH_REQUIRED`` gate 401s with "Missing X-Agent-Token" /
     signature mismatch. Without this the session-end post-mortem flush, the
     A2A persistence/fallback, and the auto-substitute call all fail when auth
     is armed.
@@ -76,7 +76,7 @@ def _agent_headers() -> dict[str, str]:
     team = get_agent_team(AGENT_ID)
     if team:
         headers["X-Agent-Team"] = team
-    token = os.environ.get("ROBOCO_AGENT_TOKEN")
+    token = os.environ.get("ROBOFLEET_AGENT_TOKEN")
     # See flow_server._build_headers: forwarding the "UNSIGNED" sentinel 401s
     # even in dev mode; omit so a missing token is accepted in dev.
     if token and token != "UNSIGNED":
@@ -92,7 +92,7 @@ def _agent_headers() -> dict[str, str]:
 def load_tool_manifest() -> dict[str, object] | None:
     """Load the per-role tool manifest when the gateway is enabled and the file exists.
 
-    Reads ROBOCO_GATEWAY_ENABLED and ROBOCO_TOOL_MANIFEST_PATH from the
+    Reads ROBOFLEET_GATEWAY_ENABLED and ROBOFLEET_TOOL_MANIFEST_PATH from the
     environment at call-time so tests can override them via monkeypatch without
     needing importlib.reload.
 
@@ -102,13 +102,13 @@ def load_tool_manifest() -> dict[str, object] | None:
         missing, or JSON parse error).  Never raises.
     """
     gateway_enabled = (
-        os.environ.get("ROBOCO_GATEWAY_ENABLED", "false").lower() == "true"
+        os.environ.get("ROBOFLEET_GATEWAY_ENABLED", "false").lower() == "true"
     )
     if not gateway_enabled:
         return None
 
     manifest_path = Path(
-        os.environ.get("ROBOCO_TOOL_MANIFEST_PATH", "/app/tool-manifest.json")
+        os.environ.get("ROBOFLEET_TOOL_MANIFEST_PATH", "/app/tool-manifest.json")
     )
     if not manifest_path.exists():
         return None
@@ -379,18 +379,20 @@ async def inbox_count() -> dict[str, int]:
 # matches session lifetime.
 
 _WARN_THRESHOLD = int(
-    os.environ.get("ROBOCO_AGENT_TOOL_CALL_WARN", str(_BUDGET.tool_call_warn_at))
+    os.environ.get("ROBOFLEET_AGENT_TOOL_CALL_WARN", str(_BUDGET.tool_call_warn_at))
 )
 _HALT_THRESHOLD = int(
-    os.environ.get("ROBOCO_AGENT_TOOL_CALL_HALT", str(_BUDGET.tool_call_halt_at))
+    os.environ.get("ROBOFLEET_AGENT_TOOL_CALL_HALT", str(_BUDGET.tool_call_halt_at))
 )
 _LOOP_THRESHOLD = int(
-    os.environ.get("ROBOCO_AGENT_LOOP_THRESHOLD", str(_BUDGET.loop_threshold))
+    os.environ.get("ROBOFLEET_AGENT_LOOP_THRESHOLD", str(_BUDGET.loop_threshold))
 )
-_LOOP_WINDOW = int(os.environ.get("ROBOCO_AGENT_LOOP_WINDOW", str(_BUDGET.loop_window)))
-_LOOP_ACTION_RAW = os.environ.get("ROBOCO_AGENT_LOOP_ACTION", _BUDGET.loop_action)
+_LOOP_WINDOW = int(
+    os.environ.get("ROBOFLEET_AGENT_LOOP_WINDOW", str(_BUDGET.loop_window))
+)
+_LOOP_ACTION_RAW = os.environ.get("ROBOFLEET_AGENT_LOOP_ACTION", _BUDGET.loop_action)
 _LOOP_ACTION: Literal["warn", "halt"] = "halt" if _LOOP_ACTION_RAW == "halt" else "warn"
-_STOP_ALLOWANCE = int(os.environ.get("ROBOCO_AGENT_STOP_ATTEMPT_ALLOWANCE", "1"))
+_STOP_ALLOWANCE = int(os.environ.get("ROBOFLEET_AGENT_STOP_ATTEMPT_ALLOWANCE", "1"))
 _RECENT_TOOL_WINDOW = 5  # not in foundation — keep local
 # Sliding-window for the per-verb retry circuit breaker.
 # 60s matches the docstring on foundation.VERB_RETRY_LIMITS — cap is "N
@@ -842,7 +844,7 @@ def _transcript_root() -> Path:
     """The dir all Claude Code transcripts live under (no session file)."""
     return Path(
         os.environ.get(
-            "ROBOCO_TRANSCRIPT_DIR", str(Path.home() / ".claude" / "projects")
+            "ROBOFLEET_TRANSCRIPT_DIR", str(Path.home() / ".claude" / "projects")
         )
     ).resolve()
 
@@ -962,14 +964,14 @@ def _sdk_bind_host() -> str:
     Defaults to the all-interfaces address because the SDK server runs
     inside each agent container and must be reachable from the
     orchestrator on the docker network. Override via
-    ROBOCO_SDK_BIND_HOST for local development where binding to a
+    ROBOFLEET_SDK_BIND_HOST for local development where binding to a
     specific interface is preferred.
     """
     # Default constructed from octets so the bare literal "0.0.0.0"
     # doesn't appear in source (bandit B104 false positive — this is a
     # container-internal SDK server, binding to all interfaces is the
     # intended behavior). Override via the env var for a specific bind.
-    return os.environ.get("ROBOCO_SDK_BIND_HOST", ".".join(["0"] * 4))
+    return os.environ.get("ROBOFLEET_SDK_BIND_HOST", ".".join(["0"] * 4))
 
 
 if __name__ == "__main__":

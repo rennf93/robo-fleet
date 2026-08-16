@@ -292,15 +292,15 @@ class _PostgresEngine(SandboxEngine):
     def emit_env(self, conn: SandboxConnection) -> list[str]:
         return [
             "-e",
-            f"ROBOCO_TEST_DB_HOST={conn.host}",
+            f"ROBOFLEET_TEST_DB_HOST={conn.host}",
             "-e",
-            f"ROBOCO_TEST_DB_PORT={conn.port}",
+            f"ROBOFLEET_TEST_DB_PORT={conn.port}",
             "-e",
-            f"ROBOCO_TEST_DB_USER={conn.user}",
+            f"ROBOFLEET_TEST_DB_USER={conn.user}",
             "-e",
-            f"ROBOCO_TEST_DB_PASSWORD={conn.password}",
+            f"ROBOFLEET_TEST_DB_PASSWORD={conn.password}",
             "-e",
-            f"ROBOCO_TEST_DB_ADMIN_DB={conn.database}",
+            f"ROBOFLEET_TEST_DB_ADMIN_DB={conn.database}",
         ]
 
 
@@ -369,11 +369,11 @@ class _RedisEngine(SandboxEngine):
     def emit_env(self, conn: SandboxConnection) -> list[str]:
         return [
             "-e",
-            f"ROBOCO_TEST_REDIS_HOST={conn.host}",
+            f"ROBOFLEET_TEST_REDIS_HOST={conn.host}",
             "-e",
-            f"ROBOCO_TEST_REDIS_PORT={conn.port}",
+            f"ROBOFLEET_TEST_REDIS_PORT={conn.port}",
             "-e",
-            f"ROBOCO_TEST_REDIS_PASSWORD={conn.password}",
+            f"ROBOFLEET_TEST_REDIS_PASSWORD={conn.password}",
         ]
 
 
@@ -438,15 +438,15 @@ class _MongoEngine(SandboxEngine):
     def emit_env(self, conn: SandboxConnection) -> list[str]:
         return [
             "-e",
-            f"ROBOCO_TEST_MONGO_HOST={conn.host}",
+            f"ROBOFLEET_TEST_MONGO_HOST={conn.host}",
             "-e",
-            f"ROBOCO_TEST_MONGO_PORT={conn.port}",
+            f"ROBOFLEET_TEST_MONGO_PORT={conn.port}",
             "-e",
-            f"ROBOCO_TEST_MONGO_USER={conn.user}",
+            f"ROBOFLEET_TEST_MONGO_USER={conn.user}",
             "-e",
-            f"ROBOCO_TEST_MONGO_PASSWORD={conn.password}",
+            f"ROBOFLEET_TEST_MONGO_PASSWORD={conn.password}",
             "-e",
-            f"ROBOCO_TEST_MONGO_AUTH_DB={conn.database}",
+            f"ROBOFLEET_TEST_MONGO_AUTH_DB={conn.database}",
         ]
 
 

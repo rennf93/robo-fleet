@@ -142,8 +142,8 @@ def test_main_writes_usage_file(
     _write_jsonl(log, [_turn_completed(input_tokens=200, output_tokens=100)])
     out = tmp_path / "usage.json"
     monkeypatch.setattr(cu, "USAGE_OUT_PATH", out)
-    monkeypatch.setenv("ROBOCO_CODEX_RUN_LOG", str(log))
-    monkeypatch.setenv("ROBOCO_AGENT_MODEL", "gpt-5.3-codex")
+    monkeypatch.setenv("ROBOFLEET_CODEX_RUN_LOG", str(log))
+    monkeypatch.setenv("ROBOFLEET_AGENT_MODEL", "gpt-5.3-codex")
     assert cu.main() == 0
     data = json.loads(out.read_text())
     assert data["tokens_input"] == 200  # noqa: PLR2004
@@ -153,7 +153,7 @@ def test_main_writes_usage_file(
 def test_main_warns_when_run_log_env_missing(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    monkeypatch.delenv("ROBOCO_CODEX_RUN_LOG", raising=False)
+    monkeypatch.delenv("ROBOFLEET_CODEX_RUN_LOG", raising=False)
     with caplog.at_level("WARNING", logger="robofleet.llm.providers.codex_cli_usage"):
         assert cu.main() == 0
-    assert any("ROBOCO_CODEX_RUN_LOG" in r.message for r in caplog.records)
+    assert any("ROBOFLEET_CODEX_RUN_LOG" in r.message for r in caplog.records)

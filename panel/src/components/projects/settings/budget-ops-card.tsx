@@ -145,7 +145,7 @@ export function BudgetOpsCard({ project }: { project: Project }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-2">
-          <HelpTip label="Calendar-month cap on this project's summed agent-spawn spend; a claim is refused once reached. Requires the task-budgets flag armed fleet-wide (ROBOCO_TASK_BUDGETS_ENABLED). Leave blank for no cap.">
+          <HelpTip label="Calendar-month cap on this project's summed agent-spawn spend; a claim is refused once reached. Requires the task-budgets flag armed fleet-wide (ROBOFLEET_TASK_BUDGETS_ENABLED). Leave blank for no cap.">
             <Label htmlFor="monthly_budget_usd">Monthly Budget (USD)</Label>
           </HelpTip>
           <Input
@@ -177,7 +177,7 @@ export function BudgetOpsCard({ project }: { project: Project }) {
         </div>
 
         <div className="flex items-center justify-between">
-          <HelpTip label="Opens a fix task automatically when this repo's default-branch CI goes red. Also requires the CI-watch engine armed fleet-wide (ROBOCO_CI_WATCH_ENABLED) to actually run.">
+          <HelpTip label="Opens a fix task automatically when this repo's default-branch CI goes red. Also requires the CI-watch engine armed fleet-wide (ROBOFLEET_CI_WATCH_ENABLED) to actually run.">
             <Label htmlFor="ci_watch_enabled">
               CI-watch (open a fix task when CI goes red)
             </Label>
@@ -206,7 +206,7 @@ export function BudgetOpsCard({ project }: { project: Project }) {
         </div>
 
         <div className="flex items-center justify-between">
-          <HelpTip label="Opts this repo into authoring motion-graphics videos under motion/. Also requires the video engine armed fleet-wide (ROBOCO_VIDEO_ENGINE_ENABLED) to render/post.">
+          <HelpTip label="Opts this repo into authoring motion-graphics videos under motion/. Also requires the video engine armed fleet-wide (ROBOFLEET_VIDEO_ENGINE_ENABLED) to render/post.">
             <Label htmlFor="video_engine_enabled">
               Video engine (author marketing videos into this project)
             </Label>

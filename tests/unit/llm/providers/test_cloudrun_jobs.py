@@ -33,9 +33,9 @@ async def test_spawn_submits_job_execution(monkeypatch: pytest.MonkeyPatch) -> N
     assert job.endswith("/jobs/roboco-agent-be-dev-1")
     fake_client.create_job.assert_called_once()
     fake_client.run_job.assert_called_once()
-    # manifest path unset -> no ROBOCO_TOOL_MANIFEST_PATH env on the job
+    # manifest path unset -> no ROBOFLEET_TOOL_MANIFEST_PATH env on the job
     create_req = fake_client.create_job.call_args.kwargs["request"]
     container = create_req.job.template.template.containers[0]
     env_names = {e.name for e in container.env}
-    assert "ROBOCO_TOOL_MANIFEST_PATH" not in env_names
-    assert "ROBOCO_INITIAL_PROMPT" in env_names
+    assert "ROBOFLEET_TOOL_MANIFEST_PATH" not in env_names
+    assert "ROBOFLEET_INITIAL_PROMPT" in env_names

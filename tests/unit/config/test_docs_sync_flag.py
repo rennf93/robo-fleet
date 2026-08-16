@@ -15,7 +15,7 @@ def test_docs_sync_disabled_by_default() -> None:
 
 
 def test_docs_sync_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_DOCS_SYNC_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_DOCS_SYNC_ENABLED": "true"}):
         assert Settings().docs_sync_enabled is True
 
 

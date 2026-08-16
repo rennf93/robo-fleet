@@ -3,7 +3,7 @@ the /api/v1/flow/* routers.
 
 The do router serves every role (content tools are role-uniform), so it has
 no single role to assert — but it must still bind the presented X-Agent-ID
-to a verified token when ROBOCO_AGENT_AUTH_REQUIRED=true and reject a forged
+to a verified token when ROBOFLEET_AGENT_AUTH_REQUIRED=true and reject a forged
 token even in dev mode. Without this guard the content-tool endpoints were
 the one agent-gateway path that accepted a forged X-Agent-ID with no token
 check — a weaker gate than the flow routers' role guards.
@@ -49,8 +49,8 @@ def test_do_route_401_when_auth_required_and_no_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Strict mode: a do endpoint must require the token, not just X-Agent-ID."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     client = TestClient(_build_app())
     r = client.post(
         "/api/v1/do/commit",
@@ -64,8 +64,8 @@ def test_do_route_rejects_forged_token_even_in_dev(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Even in header-trust mode, a presented-but-forged token is rejected."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     client = TestClient(_build_app())
     r = client.post(
         "/api/v1/do/commit",
@@ -81,8 +81,8 @@ def test_do_route_rejects_forged_token_even_in_dev(
 
 def test_do_route_accepts_valid_token(monkeypatch: pytest.MonkeyPatch) -> None:
     """The good path: a valid HMAC token passes the guard and reaches the handler."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     token = issue_agent_token(_AGENT_ID, "developer")
     client = TestClient(_build_app())
     r = client.post(

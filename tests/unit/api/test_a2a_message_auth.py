@@ -74,8 +74,8 @@ async def test_send_rejects_missing_token_when_required(
     a2a_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Strict mode + no X-Agent-Token => 401, never reaches the handler."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     r = await a2a_client.post(
         "/api/a2a/message/send",
         json=_message_body(),
@@ -89,8 +89,8 @@ async def test_send_rejects_forged_token_even_in_dev(
     a2a_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A presented-but-forged token is rejected even in header-trust mode."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = await a2a_client.post(
         "/api/a2a/message/send",
         json=_message_body(),
@@ -110,8 +110,8 @@ async def test_send_accepts_valid_token(
     """A valid token passes the gate; the route body then raises
     TASK_ID_REQUIRED (400) because message.task_id is None — proving the
     gate let the request through (401 would mean the gate rejected it)."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     token = issue_agent_token(_AGENT_ID, "developer")
     r = await a2a_client.post(
         "/api/a2a/message/send",
@@ -131,8 +131,8 @@ async def test_send_dev_mode_missing_token_still_succeeds_gate(
 ) -> None:
     """Dev mode + no token => no-op, route body runs (400 TASK_ID_REQUIRED).
     Preserves the agent/panel flow in dev exactly as F003/F004 did."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = await a2a_client.post(
         "/api/a2a/message/send",
         json=_message_body(),
@@ -151,8 +151,8 @@ async def test_stream_rejects_missing_token_when_required(
     a2a_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Strict mode + no X-Agent-Token => 401 on the stream route too."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     r = await a2a_client.post(
         "/api/a2a/message/stream",
         json=_message_body(),
@@ -166,8 +166,8 @@ async def test_stream_rejects_forged_token_even_in_dev(
     a2a_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A presented-but-forged token is rejected even in header-trust mode."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = await a2a_client.post(
         "/api/a2a/message/stream",
         json=_message_body(),
@@ -186,8 +186,8 @@ async def test_stream_accepts_valid_token(
 ) -> None:
     """A valid token passes the gate; the stream route returns 200 (SSE) on
     the new-task branch (message.task_id is None -> no DB access)."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     token = issue_agent_token(_AGENT_ID, "developer")
     r = await a2a_client.post(
         "/api/a2a/message/stream",

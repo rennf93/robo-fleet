@@ -13,16 +13,16 @@ set -euo pipefail
 # from /app so `python -m` resolves the INSTALLED roboco package: dev/doc/qa
 # agents run at their workspace-clone cwd, whose own roboco/ dir would shadow it
 # on the sys.path front (the ModuleNotFound lesson). The render reads
-# ROBOCO_MCP_CONFIG + ROBOCO_AGENT_ID and writes the config + an args file.
+# ROBOFLEET_MCP_CONFIG + ROBOFLEET_AGENT_ID and writes the config + an args file.
 ( cd /app && python -m robofleet.llm.providers.grok_cli_config )
 
-GROK_ARGS_FILE="${ROBOCO_GROK_ARGS_FILE:-/tmp/roboco-grok-args}"
+GROK_ARGS_FILE="${ROBOFLEET_GROK_ARGS_FILE:-/tmp/roboco-grok-args}"
 mapfile -t GROK_ARGS < "$GROK_ARGS_FILE"
 
 # Prompt-injection guard (parity with the Claude UserPromptSubmit hook): the task
 # prompt is DATA, not instructions — refuse a poisoned one before the model sees
 # it. Same patterns as docker/scripts/user-prompt-hook.sh; run from /app too.
-if ! ( cd /app && python -m robofleet.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
+if ! ( cd /app && python -m robofleet.agent_sdk.prompt_guard "${ROBOFLEET_INITIAL_PROMPT:-}" ); then
   echo "Refusing to run: task prompt matched a prompt-injection pattern." >&2
   exit 1
 fi
@@ -58,7 +58,7 @@ fi
 # effort / turn cap) come from the rendered args file.
 RUN_LOG="/tmp/grok-run.json"
 ERR_LOG="/tmp/grok-run.err"
-WORKSPACE="${ROBOCO_WORKSPACE:-$PWD}"
+WORKSPACE="${ROBOFLEET_WORKSPACE:-$PWD}"
 # The role blueprint reaches grok as its system prompt via ~/.grok/AGENTS.md (a
 # global instruction file grok loads regardless of --cwd, verified live — the
 # `--system-prompt-override`/`--rules` flags are ignored in headless mode). The
@@ -74,8 +74,8 @@ WORKSPACE="${ROBOCO_WORKSPACE:-$PWD}"
 # it ends (the buffered-to-a-file black box). stderr (grok's tool calls /
 # diagnostics) goes to ERR_LOG and is surfaced after the run.
 set +e
-grok -p "${ROBOCO_INITIAL_PROMPT:-}" \
-  -m "${ROBOCO_AGENT_MODEL:-grok-build}" \
+grok -p "${ROBOFLEET_INITIAL_PROMPT:-}" \
+  -m "${ROBOFLEET_AGENT_MODEL:-grok-build}" \
   --cwd "$WORKSPACE" \
   --output-format streaming-json \
   "${GROK_ARGS[@]}" \
@@ -86,11 +86,11 @@ set -e
 [ -s "$ERR_LOG" ] && cat "$ERR_LOG" >&2
 
 # Capture token usage from the grok session store (~/.grok/sessions). The reader
-# reads the run's real session id out of $ROBOCO_GROK_RUN_LOG, locates the store,
+# reads the run's real session id out of $ROBOFLEET_GROK_RUN_LOG, locates the store,
 # and writes a usage.json the orchestrator reads back at finalize — the grok
 # analogue of the Claude transcript. Best-effort; never fails the run. Run from
 # /app for the same module-resolution reason as the render above.
-( cd /app && ROBOCO_GROK_RUN_CWD="$WORKSPACE" ROBOCO_GROK_RUN_LOG="$RUN_LOG" \
+( cd /app && ROBOFLEET_GROK_RUN_CWD="$WORKSPACE" ROBOFLEET_GROK_RUN_LOG="$RUN_LOG" \
     python -m robofleet.llm.providers.grok_cli_usage ) || true
 
 # Rate-limit detection: an xAI 429 / quota error ends the run without a terminal

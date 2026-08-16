@@ -3,7 +3,7 @@
 The endpoint is an unauthenticated container-internal HTTP surface; a forged
 ``transcript_path`` could ``stat`` / read arbitrary files. The guard requires
 a ``.jsonl`` suffix and that the resolved path stays under the transcript
-root (``ROBOCO_TRANSCRIPT_DIR``, default ``~/.claude/projects``). Existing
+root (``ROBOFLEET_TRANSCRIPT_DIR``, default ``~/.claude/projects``). Existing
 behavior — a missing-but-contained transcript returns 200 with zeroed totals
 — is preserved.
 """
@@ -35,7 +35,7 @@ def _reset_state() -> Iterator[None]:
 @pytest.fixture(autouse=True)
 def _transcript_base(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Contain transcripts under tmp_path so the guard's base is the test dir.
-    monkeypatch.setenv("ROBOCO_TRANSCRIPT_DIR", str(tmp_path))
+    monkeypatch.setenv("ROBOFLEET_TRANSCRIPT_DIR", str(tmp_path))
 
 
 @pytest.fixture

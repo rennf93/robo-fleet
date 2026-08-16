@@ -230,7 +230,7 @@ class Project(TimestampMixin):
         default=None, description="Workflow file to scope the CI-watch signal to"
     )
 
-    # Video-engine opt-in (global ROBOCO_VIDEO_ENGINE_ENABLED arms the subsystem)
+    # Video-engine opt-in (global ROBOFLEET_VIDEO_ENGINE_ENABLED arms the subsystem)
     video_engine_enabled: bool = Field(
         default=False,
         description="Opt this project into the video engine (authoring into motion/)",
@@ -246,7 +246,7 @@ class Project(TimestampMixin):
         description="Lockfile globs to inspect (null → infer uv.lock/pnpm-lock.yaml)",
     )
 
-    # Cost budgets (feature-flagged: ROBOCO_TASK_BUDGETS_ENABLED). Null = no
+    # Cost budgets (feature-flagged: ROBOFLEET_TASK_BUDGETS_ENABLED). Null = no
     # cap, regardless of the flag — this is purely additive.
     monthly_budget_usd: float | None = Field(
         default=None,
@@ -254,7 +254,7 @@ class Project(TimestampMixin):
         description=(
             "Calendar-month cap on this project's summed agent-spawn spend "
             "(estimated_cost_usd). Null = no cap. Only enforced at claim time "
-            "when ROBOCO_TASK_BUDGETS_ENABLED is on. Must be > 0 — a 0/negative "
+            "when ROBOFLEET_TASK_BUDGETS_ENABLED is on. Must be > 0 — a 0/negative "
             "cap would block every claim immediately."
         ),
     )

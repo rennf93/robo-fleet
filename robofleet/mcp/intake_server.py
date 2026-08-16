@@ -15,7 +15,7 @@ intake path differs: the Claude SDK exposes the tool-use block, so its driver
 intercepts it.)
 
 Wired into ``~/.grok/config.toml`` by ``grok_intake_main``; the container
-provides ``ROBOCO_API_URL`` + ``ROBOCO_PROMPTER_SESSION_ID``.
+provides ``ROBOFLEET_API_URL`` + ``ROBOFLEET_PROMPTER_SESSION_ID``.
 """
 
 from __future__ import annotations
@@ -38,9 +38,9 @@ mcp = FastMCP("roboco-intake")
 
 
 def _api_base() -> str:
-    return os.environ.get("ROBOCO_API_URL", "http://roboco-orchestrator:8000").rstrip(
-        "/"
-    )
+    return os.environ.get(
+        "ROBOFLEET_API_URL", "http://roboco-orchestrator:8000"
+    ).rstrip("/")
 
 
 async def _post_event(
@@ -167,9 +167,9 @@ async def search_past_tasks(query: str, limit: int = _SEARCH_DEFAULT_LIMIT) -> s
     ("follows up <short-id>"). Returns up to ``limit`` (max 10) compact
     results: short id, title, status, team, date.
     """
-    session_id = os.environ.get("ROBOCO_PROMPTER_SESSION_ID", "")
+    session_id = os.environ.get("ROBOFLEET_PROMPTER_SESSION_ID", "")
     if not session_id:
-        return "No live session id (ROBOCO_PROMPTER_SESSION_ID) — cannot search."
+        return "No live session id (ROBOFLEET_PROMPTER_SESSION_ID) — cannot search."
     result = await query_past_tasks(session_id, query, limit=limit)
     return format_search_results(result)
 
@@ -193,10 +193,10 @@ async def propose_draft(draft: dict[str, Any]) -> str:
     component, token, or primitive?). Over-declaring a surface is safer than
     under-declaring; the analyzer derives the ordering from these.
     """
-    session_id = os.environ.get("ROBOCO_PROMPTER_SESSION_ID", "")
+    session_id = os.environ.get("ROBOFLEET_PROMPTER_SESSION_ID", "")
     if not session_id:
         return (
-            "No live session id (ROBOCO_PROMPTER_SESSION_ID) — cannot surface the "
+            "No live session id (ROBOFLEET_PROMPTER_SESSION_ID) — cannot surface the "
             "draft."
         )
     result = await post_draft(session_id, draft or {})
@@ -257,10 +257,10 @@ async def propose_batch(drafts: list[dict[str, Any]], title: str = "") -> str:
     task has one project_id per cell; a single-cell task may use one the_work
     entry or a top-level ``project_id``).
     """
-    session_id = os.environ.get("ROBOCO_PROMPTER_SESSION_ID", "")
+    session_id = os.environ.get("ROBOFLEET_PROMPTER_SESSION_ID", "")
     if not session_id:
         return (
-            "No live session id (ROBOCO_PROMPTER_SESSION_ID) — cannot surface the "
+            "No live session id (ROBOFLEET_PROMPTER_SESSION_ID) — cannot surface the "
             "MegaTask."
         )
     # Malformed entries are dropped and counted; an empty batch is refused

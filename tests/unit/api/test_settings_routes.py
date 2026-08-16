@@ -32,7 +32,7 @@ _HTTP_401 = 401
 async def settings_client(
     monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncIterator[AsyncClient]:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
     fake_service = MagicMock()
     fake_service.all = AsyncMock(return_value={})
     monkeypatch.setattr(
@@ -58,7 +58,7 @@ async def test_settings_rejects_no_credential_under_cloud_auth(
     settings_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = await settings_client.get("/api/settings")
     assert r.status_code == _HTTP_401
 
@@ -94,7 +94,7 @@ async def test_settings_dev_mode_no_token_passes(
     settings_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", False)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = await settings_client.get("/api/settings")
     assert r.status_code == _HTTP_200
 
@@ -104,6 +104,6 @@ async def test_settings_put_rejects_no_credential_under_cloud_auth(
     settings_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = await settings_client.put("/api/settings/some.key", json={"value": "x"})
     assert r.status_code == _HTTP_401

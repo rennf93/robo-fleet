@@ -3,7 +3,7 @@
 Asserts the constructed Cloud Run Job carries the full agent-identity env
 surface (HMAC token signed over the UUID, not the slug), the Filestore NFS
 workspace volume + VPC connector when GCP fields are armed, and the
-ROBOCO_GIT_TOKEN from the project's decrypted PAT. Uses real ``run_v2``
+ROBOFLEET_GIT_TOKEN from the project's decrypted PAT. Uses real ``run_v2``
 objects (no GCP call: only the JobsClient is faked) so the assertions inspect
 the exact protobuf the provider would submit.
 """
@@ -124,18 +124,18 @@ async def test_spawn_env_identity_token_signed_over_uuid(
     assert calls["role"] == _ROLE
     assert calls["team"] == _TEAM
     # AGENT_ID is the UUID (gateway X-Agent-ID is Annotated[UUID, Header]).
-    assert env["ROBOCO_AGENT_ID"] == _UUID
-    assert env["ROBOCO_AGENT_TOKEN"] == _TOKEN
-    assert env["ROBOCO_AGENT_ROLE"] == _ROLE
-    assert env["ROBOCO_ORCHESTRATOR_URL"] == "http://orch:8000"
-    assert env["ROBOCO_API_URL"] == "http://orch:8000"
-    assert env["ROBOCO_FLOW_VERB_TIMEOUT_SECONDS"] == "120.0"
-    assert env["ROBOCO_FLOW_VERB_SLOW_TIMEOUT_SECONDS"] == "900"
+    assert env["ROBOFLEET_AGENT_ID"] == _UUID
+    assert env["ROBOFLEET_AGENT_TOKEN"] == _TOKEN
+    assert env["ROBOFLEET_AGENT_ROLE"] == _ROLE
+    assert env["ROBOFLEET_ORCHESTRATOR_URL"] == "http://orch:8000"
+    assert env["ROBOFLEET_API_URL"] == "http://orch:8000"
+    assert env["ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS"] == "120.0"
+    assert env["ROBOFLEET_FLOW_VERB_SLOW_TIMEOUT_SECONDS"] == "900"
     # Existing 4 env vars still present.
-    assert env["ROBOCO_INITIAL_PROMPT"] == "do the work"
-    assert env["ROBOCO_AGENT_MODEL"] == "gemini-3.5-flash"
-    # No git context -> no ROBOCO_GIT_TOKEN.
-    assert "ROBOCO_GIT_TOKEN" not in env
+    assert env["ROBOFLEET_INITIAL_PROMPT"] == "do the work"
+    assert env["ROBOFLEET_AGENT_MODEL"] == "gemini-3.5-flash"
+    # No git context -> no ROBOFLEET_GIT_TOKEN.
+    assert "ROBOFLEET_GIT_TOKEN" not in env
 
 
 @pytest.mark.asyncio
@@ -201,7 +201,7 @@ async def test_spawn_no_volume_vpc_when_gcp_unset(
     assert container_has_no_mounts(tmpl.containers[0])
     # api_url falls back to localhost:port (no PROJECT_HOST_PATH in test env).
     env = _env_map(fake.captured.job)
-    assert env["ROBOCO_ORCHESTRATOR_URL"].startswith("http://127.0.0.1:")
+    assert env["ROBOFLEET_ORCHESTRATOR_URL"].startswith("http://127.0.0.1:")
 
 
 def container_has_no_mounts(container: run_v2.Container) -> bool:
@@ -212,7 +212,7 @@ def container_has_no_mounts(container: run_v2.Container) -> bool:
 async def test_spawn_wires_git_token_from_project_pat(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """ROBOCO_GIT_TOKEN set from the project's decrypted PAT when git_context
+    """ROBOFLEET_GIT_TOKEN set from the project's decrypted PAT when git_context
     carries a project slug (the ADK git_push tool reads it directly)."""
 
     class _FakeProjectService:
@@ -246,7 +246,7 @@ async def test_spawn_wires_git_token_from_project_pat(
 
     assert fake.captured is not None
     env = _env_map(fake.captured.job)
-    assert env["ROBOCO_GIT_TOKEN"] == "ghp_decrypted_pat"
+    assert env["ROBOFLEET_GIT_TOKEN"] == "ghp_decrypted_pat"
 
 
 @pytest.mark.asyncio
@@ -286,16 +286,16 @@ async def test_spawn_no_git_token_when_project_has_no_pat(
 
     assert fake.captured is not None
     env = _env_map(fake.captured.job)
-    assert "ROBOCO_GIT_TOKEN" not in env
+    assert "ROBOFLEET_GIT_TOKEN" not in env
 
 
 @pytest.mark.asyncio
 async def test_spawn_sets_working_dir_and_workspace_env_for_developer(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Developer role: container working_dir + ROBOCO_WORKSPACE_DIR env set to
+    """Developer role: container working_dir + ROBOFLEET_WORKSPACE_DIR env set to
     _resolve_workspace_cwd's path (clone root when no task branch). The ADK
-    git/file tools read ROBOCO_WORKSPACE_DIR; setting both working_dir (process
+    git/file tools read ROBOFLEET_WORKSPACE_DIR; setting both working_dir (process
     cwd IS the workspace) and the env var keeps them in lockstep."""
     monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
     monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
@@ -323,14 +323,14 @@ async def test_spawn_sets_working_dir_and_workspace_env_for_developer(
     expected = "/data/workspaces/roboco/backend/be-dev-1"
     assert container.working_dir == expected
     env = _env_map(fake.captured.job)
-    assert env["ROBOCO_WORKSPACE_DIR"] == expected
+    assert env["ROBOFLEET_WORKSPACE_DIR"] == expected
 
 
 @pytest.mark.asyncio
 async def test_spawn_omits_working_dir_and_workspace_env_for_qa(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """QA role (no workspace): neither working_dir nor ROBOCO_WORKSPACE_DIR is
+    """QA role (no workspace): neither working_dir nor ROBOFLEET_WORKSPACE_DIR is
     set. git_tools._worktree falls back to the process cwd (Part 1), so a
     no-workspace role never needs the env var."""
     monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
@@ -362,4 +362,4 @@ async def test_spawn_omits_working_dir_and_workspace_env_for_qa(
     container = fake.captured.job.template.template.containers[0]
     assert not container.working_dir
     env = _env_map(fake.captured.job)
-    assert "ROBOCO_WORKSPACE_DIR" not in env
+    assert "ROBOFLEET_WORKSPACE_DIR" not in env

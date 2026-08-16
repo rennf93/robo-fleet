@@ -135,7 +135,7 @@ def test_blocks_setting_roboco_agent_id_inline() -> None:
     """Forging identity via an inline env assignment before a command."""
     assert (
         _run(
-            "ROBOCO_AGENT_ID=00000000-0000-0000-0001-000000000001 "
+            "ROBOFLEET_AGENT_ID=00000000-0000-0000-0001-000000000001 "
             "uv run python3 -c 'print(1)'"
         )
         == _DENIED
@@ -144,18 +144,19 @@ def test_blocks_setting_roboco_agent_id_inline() -> None:
 
 def test_blocks_export_roboco_agent_id() -> None:
     assert (
-        _run("export ROBOCO_AGENT_ID=00000000-0000-0000-0001-000000000001") == _DENIED
+        _run("export ROBOFLEET_AGENT_ID=00000000-0000-0000-0001-000000000001")
+        == _DENIED
     )
 
 
 def test_blocks_os_environ_roboco_agent_id_in_python() -> None:
-    """The smoke-12 form: os.environ['ROBOCO_AGENT_ID']=... then import robofleet.
+    """The smoke-12 form: os.environ['ROBOFLEET_AGENT_ID']=... then import robofleet.
 
     Caught by the import-bypass rule (references roboco import) even
     independent of the identity rule."""
     cmd = (
         'uv run python3 -c "import os; '
-        "os.environ['ROBOCO_AGENT_ID']='00000000-0000-0000-0001-000000000001'; "
+        "os.environ['ROBOFLEET_AGENT_ID']='00000000-0000-0000-0001-000000000001'; "
         "from robofleet.mcp.flow_server import open_pr; open_pr(task_id='x')\""
     )
     assert _run(cmd) == _DENIED
@@ -209,7 +210,7 @@ def test_allows_unquoted_heredoc_documenting_git() -> None:
 
 
 def _run_skip_git(cmd: str) -> int:
-    """Run the hook the way grok does — ROBOCO_GUARD_SKIP_GIT=1."""
+    """Run the hook the way grok does — ROBOFLEET_GUARD_SKIP_GIT=1."""
     payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": cmd}})
     result = subprocess.run(
         [str(GUARD)],
@@ -217,7 +218,7 @@ def _run_skip_git(cmd: str) -> int:
         capture_output=True,
         text=True,
         check=False,
-        env={**os.environ, "ROBOCO_GUARD_SKIP_GIT": "1"},
+        env={**os.environ, "ROBOFLEET_GUARD_SKIP_GIT": "1"},
     )
     return result.returncode
 
@@ -419,7 +420,7 @@ def test_blocks_uv_project_environment_app() -> None:
 
 
 def test_blocks_app_mutation_even_in_grok_mode() -> None:
-    """Grok runs the hook with ROBOCO_GUARD_SKIP_GIT=1; the /app rule is NOT a
+    """Grok runs the hook with ROBOFLEET_GUARD_SKIP_GIT=1; the /app rule is NOT a
     git rule, so it must STILL fire — every provider is protected."""
     payload = json.dumps(
         {"tool_name": "Bash", "tool_input": {"command": "cd /app && uv sync"}}
@@ -430,7 +431,7 @@ def test_blocks_app_mutation_even_in_grok_mode() -> None:
         capture_output=True,
         text=True,
         check=False,
-        env={**os.environ, "ROBOCO_GUARD_SKIP_GIT": "1"},
+        env={**os.environ, "ROBOFLEET_GUARD_SKIP_GIT": "1"},
     )
     assert result.returncode == _DENIED
 

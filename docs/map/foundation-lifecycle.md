@@ -170,7 +170,7 @@ foundation-lifecycle
 - agent_sla_developer_verifying
 - agent_sla_qa_claimed
 - agent_sla_documenter_claimed
-- agent_sla_cell_pm_claimed (resolved by sla_seconds_for via roboco.config.settings) — no ROBOCO_* feature flag directly gates this slice; it is the always-on policy core
+- agent_sla_cell_pm_claimed (resolved by sla_seconds_for via roboco.config.settings) — no ROBOFLEET_* feature flag directly gates this slice; it is the always-on policy core
 
 
 ## Gotchas

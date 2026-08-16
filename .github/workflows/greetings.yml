@@ -19,7 +19,7 @@ jobs:
             - A clear reproduction (steps, configuration, or a failing test)
             - Output of `python --version && uv --version` (and Docker / Docker Compose versions if it's a deployment issue)
             - Which subsystem is involved if you can tell (api, services, gateway, orchestrator, enforcement, db, agents, mcp, panel, alembic)
-            - Relevant logs / tracebacks / `ROBOCO_*` configuration
+            - Relevant logs / tracebacks / `ROBOFLEET_*` configuration
 
             A few pointers:
             - Read [CONTRIBUTING.md](../blob/master/CONTRIBUTING.md) for the contribution workflow and the CLA step.

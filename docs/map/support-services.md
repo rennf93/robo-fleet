@@ -261,28 +261,28 @@ Panel-tunable flags defined in `services/settings.py:46` `FEATURE_FLAGS` (stored
 
 | Key | Label | Env counterpart |
 |---|---|---|
-| `external_pr_enabled` | External-PR review | `ROBOCO_EXTERNAL_PR_ENABLED` |
-| `internal_pr_enabled` | Internal-PR safety reviewer | `ROBOCO_INTERNAL_PR_ENABLED` |
-| `research_enabled` | Web research (Board + PM) | `ROBOCO_RESEARCH_ENABLED` |
-| `strategy_engine_enabled` | Strategy engine | `ROBOCO_STRATEGY_ENGINE_ENABLED` |
-| `self_heal_enabled` | Self-healing (detect + notify) | `ROBOCO_SELF_HEAL_ENABLED` |
-| `self_heal_originate_enabled` | Self-healing — open fix tasks | `ROBOCO_SELF_HEAL_ORIGINATE_ENABLED` |
-| `provisioning_enabled` | Pitch auto-provisioning | `ROBOCO_PROVISIONING_ENABLED` |
-| `toolchain_match_enabled` | Agent runtime toolchain matching | `ROBOCO_TOOLCHAIN_MATCH_ENABLED` |
-| `conventions_enabled` | Architectural conventions standard | `ROBOCO_CONVENTIONS_ENABLED` |
-| `rag_auto_update_enabled` | RAG auto-update | `ROBOCO_RAG_AUTO_UPDATE_ENABLED` |
-| `transcript_prune_enabled` | Transcript pruning | `ROBOCO_TRANSCRIPT_PRUNE_ENABLED` |
-| `gateway_health_enabled` | Gateway-health recovery | `ROBOCO_GATEWAY_HEALTH_ENABLED` |
-| `ci_watch_enabled` | Multi-repo CI-watch | `ROBOCO_CI_WATCH_ENABLED` |
-| `dep_update_enabled` | Dependency-update bot | `ROBOCO_DEP_UPDATE_ENABLED` |
-| `release_manager_enabled` | Gated release manager | `ROBOCO_RELEASE_MANAGER_ENABLED` |
-| `docs_sync_enabled` | Docs-divergence sync (release → docs-update task) | `ROBOCO_DOCS_SYNC_ENABLED` |
-| `org_memory_enabled` | Organizational memory loop | `ROBOCO_ORG_MEMORY_ENABLED` |
-| `sandbox_db_enabled` | Sandboxed per-agent test DB/Redis/Mongo (engine registry) | `ROBOCO_SANDBOX_DB_ENABLED` |
-| `x_engine_enabled` | X (Twitter) engine | `ROBOCO_X_ENGINE_ENABLED` |
-| `roadmap_engine_enabled` | Board roadmap engine | `ROBOCO_ROADMAP_ENGINE_ENABLED` |
+| `external_pr_enabled` | External-PR review | `ROBOFLEET_EXTERNAL_PR_ENABLED` |
+| `internal_pr_enabled` | Internal-PR safety reviewer | `ROBOFLEET_INTERNAL_PR_ENABLED` |
+| `research_enabled` | Web research (Board + PM) | `ROBOFLEET_RESEARCH_ENABLED` |
+| `strategy_engine_enabled` | Strategy engine | `ROBOFLEET_STRATEGY_ENGINE_ENABLED` |
+| `self_heal_enabled` | Self-healing (detect + notify) | `ROBOFLEET_SELF_HEAL_ENABLED` |
+| `self_heal_originate_enabled` | Self-healing — open fix tasks | `ROBOFLEET_SELF_HEAL_ORIGINATE_ENABLED` |
+| `provisioning_enabled` | Pitch auto-provisioning | `ROBOFLEET_PROVISIONING_ENABLED` |
+| `toolchain_match_enabled` | Agent runtime toolchain matching | `ROBOFLEET_TOOLCHAIN_MATCH_ENABLED` |
+| `conventions_enabled` | Architectural conventions standard | `ROBOFLEET_CONVENTIONS_ENABLED` |
+| `rag_auto_update_enabled` | RAG auto-update | `ROBOFLEET_RAG_AUTO_UPDATE_ENABLED` |
+| `transcript_prune_enabled` | Transcript pruning | `ROBOFLEET_TRANSCRIPT_PRUNE_ENABLED` |
+| `gateway_health_enabled` | Gateway-health recovery | `ROBOFLEET_GATEWAY_HEALTH_ENABLED` |
+| `ci_watch_enabled` | Multi-repo CI-watch | `ROBOFLEET_CI_WATCH_ENABLED` |
+| `dep_update_enabled` | Dependency-update bot | `ROBOFLEET_DEP_UPDATE_ENABLED` |
+| `release_manager_enabled` | Gated release manager | `ROBOFLEET_RELEASE_MANAGER_ENABLED` |
+| `docs_sync_enabled` | Docs-divergence sync (release → docs-update task) | `ROBOFLEET_DOCS_SYNC_ENABLED` |
+| `org_memory_enabled` | Organizational memory loop | `ROBOFLEET_ORG_MEMORY_ENABLED` |
+| `sandbox_db_enabled` | Sandboxed per-agent test DB/Redis/Mongo (engine registry) | `ROBOFLEET_SANDBOX_DB_ENABLED` |
+| `x_engine_enabled` | X (Twitter) engine | `ROBOFLEET_X_ENGINE_ENABLED` |
+| `roadmap_engine_enabled` | Board roadmap engine | `ROBOFLEET_ROADMAP_ENGINE_ENABLED` |
 
-Cloud auth (`ROBOCO_CLOUD_AUTH_ENABLED`) and DB network isolation (`ROBOCO_DB_NETWORK_ISOLATED`) are deliberately **not** in `FEATURE_FLAGS` — both are compose/env-coupled (cookie/TLS posture and the `networks:` topology respectively) and unsafe for a runtime toggle to flip mid-session; they stay pure env vars, not panel-tunable settings. `ROBOCO_TELEGRAM_MINIAPP_ENABLED` (Telegram Mini App sign-in) joins them for the same reason — security/TLS-coupled, and `Settings` fails loud at startup if it's armed without `cloud_auth_enabled`; its sibling `telegram_initdata_max_age_seconds` (default 600) is likewise env-only.
+Cloud auth (`ROBOFLEET_CLOUD_AUTH_ENABLED`) and DB network isolation (`ROBOFLEET_DB_NETWORK_ISOLATED`) are deliberately **not** in `FEATURE_FLAGS` — both are compose/env-coupled (cookie/TLS posture and the `networks:` topology respectively) and unsafe for a runtime toggle to flip mid-session; they stay pure env vars, not panel-tunable settings. `ROBOFLEET_TELEGRAM_MINIAPP_ENABLED` (Telegram Mini App sign-in) joins them for the same reason — security/TLS-coupled, and `Settings` fails loud at startup if it's armed without `cloud_auth_enabled`; its sibling `telegram_initdata_max_age_seconds` (default 600) is likewise env-only.
 
 Other settings read here: `transcript_retention_days` (int, ≥1; read by orchestrator at `runtime/orchestrator.py:5910`). Non-flag config consumed: `settings.redis_url` (`health`, `stream_bus`), `settings.encryption_key` (`crypto`).
 
@@ -307,11 +307,11 @@ Other settings read here: `transcript_retention_days` (int, ≥1; read by orches
 ## Drift from CLAUDE.md
 
 - **`services/settings.py:46` `FEATURE_FLAGS`** includes `rag_auto_update_enabled` ("RAG auto-update") and `transcript_prune_enabled` ("Transcript pruning") which are **NOT** listed in the CLAUDE.md "Feature Flags / company-in-a-box" enumeration (that list names web research, strategy engine, pitch provisioning, external/internal PR review, toolchain match, conventions, gateway-health, multi-repo CI-watch, dependency-update bot, gated release manager, organizational memory loop, and the self-heal flags). Two flags exist in code with no CLAUDE.md mention.
-- **`services/proactive.py`** (`ProactiveKnowledgeService`) — an entire service that injects RAG context on task-claim / session-start — is **not mentioned anywhere in CLAUDE.md**. The org-memory loop (`ROBOCO_ORG_MEMORY_ENABLED`, `_briefing_for` institutional_memory) is documented, but that is a separate, newer system; `proactive.py` predates and overlaps with it yet remains present and wired (`task.py:2548`, `optimal.py:1257`).
+- **`services/proactive.py`** (`ProactiveKnowledgeService`) — an entire service that injects RAG context on task-claim / session-start — is **not mentioned anywhere in CLAUDE.md**. The org-memory loop (`ROBOFLEET_ORG_MEMORY_ENABLED`, `_briefing_for` institutional_memory) is documented, but that is a separate, newer system; `proactive.py` predates and overlaps with it yet remains present and wired (`task.py:2548`, `optimal.py:1257`).
 - **`services/transcription.py`** (`TranscriptionService`) — the raw-LLM-stream buffering layer between WebSocket and the extraction pipeline — is **not mentioned in CLAUDE.md**. CLAUDE.md documents WebSocket streams and the extraction target (ExtractedMessages) but not the transcription buffer service.
 - **`services/llm.py:316` `derive_mode`** returns `"grok"` for a single GLOBAL GROK assignment; CLAUDE.md's provider table lists `GROK` as a `ModelProvider` and documents the Grok CLI provider, and `apply_mode` supports `"grok"` — consistent. No drift here, noted for completeness.
 - **`events/handlers.py:332` `handle_auditor_spawn`** spawns the auditor on `TASK_BLOCKED`/`TASK_CANCELLED`/`TASK_AWAITING_CEO_APPROVAL`; CLAUDE.md says "The Auditor sees all" and is a "silent observer" but does not describe the event-driven one-shot spawn on exceptional lifecycle events. Minor doc gap, not a contradiction.
-- Otherwise the slice is consistent with CLAUDE.md: agent count (25 AI + 1 CEO) matches `DEFAULT_AGENTS`; `ModelProvider` enum usage matches; feature-flag overlay-on-restart contract matches; Redis-Streams event bus matches the "publish it to the bus" guidance; toolchain matching matches `ROBOCO_TOOLCHAIN_MATCH_ENABLED`.
+- Otherwise the slice is consistent with CLAUDE.md: agent count (25 AI + 1 CEO) matches `DEFAULT_AGENTS`; `ModelProvider` enum usage matches; feature-flag overlay-on-restart contract matches; Redis-Streams event bus matches the "publish it to the bus" guidance; toolchain matching matches `ROBOFLEET_TOOLCHAIN_MATCH_ENABLED`.
 
 ## Changes Since Baseline
 

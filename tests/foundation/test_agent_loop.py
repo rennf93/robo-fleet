@@ -78,15 +78,15 @@ def test_retry_limit_for_unknown_verb_returns_default() -> None:
 
 def test_agent_sdk_thresholds_match_foundation_defaults() -> None:
     """Without env overrides, the agent_sdk constants equal foundation defaults."""
-    # If a test environment sets ROBOCO_AGENT_*, the env override path is in
+    # If a test environment sets ROBOFLEET_AGENT_*, the env override path is in
     # effect and this default-parity check no longer applies.
     if any(
         k in os.environ
         for k in (
-            "ROBOCO_AGENT_TOOL_CALL_WARN",
-            "ROBOCO_AGENT_TOOL_CALL_HALT",
-            "ROBOCO_AGENT_LOOP_THRESHOLD",
-            "ROBOCO_AGENT_LOOP_WINDOW",
+            "ROBOFLEET_AGENT_TOOL_CALL_WARN",
+            "ROBOFLEET_AGENT_TOOL_CALL_HALT",
+            "ROBOFLEET_AGENT_LOOP_THRESHOLD",
+            "ROBOFLEET_AGENT_LOOP_WINDOW",
         )
     ):
         pytest.skip("env override set; skipping default-parity check")

@@ -1,4 +1,4 @@
-"""Unit tests: commit-trailer links use ROBOCO_PUBLIC_BASE_URL."""
+"""Unit tests: commit-trailer links use ROBOFLEET_PUBLIC_BASE_URL."""
 
 import pytest
 import robofleet.config as config_module
@@ -44,7 +44,7 @@ def test_links_use_public_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
     # ``settings`` singleton to a new object and leak that divergence into any
     # other test that captured the original reference via ``from robofleet.config
     # import settings`` (e.g. the PM decision-window gate).
-    monkeypatch.setenv("ROBOCO_PUBLIC_BASE_URL", "https://robofleet.example.com")
+    monkeypatch.setenv("ROBOFLEET_PUBLIC_BASE_URL", "https://robofleet.example.com")
     settings = config_module.Settings()
     api_base = settings.public_base_url.rstrip("/") + "/api"
     ctx = _make_ctx()

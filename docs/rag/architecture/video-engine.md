@@ -8,17 +8,17 @@ RoboCo can author and post short marketing videos for the company's X (Twitter) 
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `ROBOCO_VIDEO_ENGINE_ENABLED` | `false` | Master switch. Off = no video-authoring task is ever opened and no render/post happens. Panel-toggleable (Settings → Feature Flags). |
-| `ROBOCO_VIDEO_ON_RELEASE` | `false` | Sub-switch: open an authoring task when a release publishes. Off even with the master switch on. |
-| `ROBOCO_VIDEO_ON_SPOTLIGHT` | `false` | Sub-switch: open an authoring task when the CEO approves a feature-spotlight draft that requests one. Off even with the master switch on. |
+| `ROBOFLEET_VIDEO_ENGINE_ENABLED` | `false` | Master switch. Off = no video-authoring task is ever opened and no render/post happens. Panel-toggleable (Settings → Feature Flags). |
+| `ROBOFLEET_VIDEO_ON_RELEASE` | `false` | Sub-switch: open an authoring task when a release publishes. Off even with the master switch on. |
+| `ROBOFLEET_VIDEO_ON_SPOTLIGHT` | `false` | Sub-switch: open an authoring task when the CEO approves a feature-spotlight draft that requests one. Off even with the master switch on. |
 
 Even when enabled, distribution requires an explicit per-clip CEO approval — a second independent gate beyond the flag.
 
 ## Three trigger sources
 
-**Release videos** (event-driven). A release publish fires the video-on-release trigger — gated by `ROBOCO_VIDEO_ON_RELEASE` independently of the master switch.
+**Release videos** (event-driven). A release publish fires the video-on-release trigger — gated by `ROBOFLEET_VIDEO_ON_RELEASE` independently of the master switch.
 
-**Feature-spotlight videos** (event-driven). The CEO's approval of a feature-spotlight draft that requests a video fires the video-on-spotlight trigger — gated by `ROBOCO_VIDEO_ON_SPOTLIGHT`.
+**Feature-spotlight videos** (event-driven). The CEO's approval of a feature-spotlight draft that requests a video fires the video-on-spotlight trigger — gated by `ROBOFLEET_VIDEO_ON_SPOTLIGHT`.
 
 **On-demand CEO request** (panel-triggered). `POST /api/video/request` (CEO-role-gated) opens an authoring task directly — the CEO's escape hatch independent of the two automatic triggers.
 
@@ -30,7 +30,7 @@ Authoring is gated on the RENDERED artifact, not just its source: the `request_r
 
 ## Render loop and the sidecar
 
-Once the authoring task completes, an orchestrator render loop (`_video_render_loop`, interval `ROBOCO_VIDEO_RENDER_INTERVAL_SECONDS`) tars the merged `motion/` source and POSTs it to the `video-renderer` sidecar (`ROBOCO_VIDEO_RENDERER_BASE_URL`). The sidecar is credential-free and git-free — it reads only what it's POSTed, bundles the composition, renders both the 9:16 and 1:1 MP4 cuts (`ROBOCO_VIDEO_RENDER_TIMEOUT_SECONDS` per render), and streams the bytes back. The orchestrator writes the MP4s to `ROBOCO_VIDEO_OUTPUT_DIR` (bind-mounted in all three compose files so renders survive container recreation) — the sidecar never writes to disk directly. The sidecar renders via `@hyperframes/producer` — agent-authored HTML rendered in headless Chrome plus system `ffmpeg` for the seek-driven, frame-deterministic MP4 cut. HyperFrames was chosen for its Apache-2.0 license (no React/TSX toolchain lock-in for the authoring agents), agent-authored HTML as the composition substrate, and seek-driven deterministic renders that match the post-pipeline shape without a node-bundled renderer.
+Once the authoring task completes, an orchestrator render loop (`_video_render_loop`, interval `ROBOFLEET_VIDEO_RENDER_INTERVAL_SECONDS`) tars the merged `motion/` source and POSTs it to the `video-renderer` sidecar (`ROBOFLEET_VIDEO_RENDERER_BASE_URL`). The sidecar is credential-free and git-free — it reads only what it's POSTed, bundles the composition, renders both the 9:16 and 1:1 MP4 cuts (`ROBOFLEET_VIDEO_RENDER_TIMEOUT_SECONDS` per render), and streams the bytes back. The orchestrator writes the MP4s to `ROBOFLEET_VIDEO_OUTPUT_DIR` (bind-mounted in all three compose files so renders survive container recreation) — the sidecar never writes to disk directly. The sidecar renders via `@hyperframes/producer` — agent-authored HTML rendered in headless Chrome plus system `ffmpeg` for the seek-driven, frame-deterministic MP4 cut. HyperFrames was chosen for its Apache-2.0 license (no React/TSX toolchain lock-in for the authoring agents), agent-authored HTML as the composition substrate, and seek-driven deterministic renders that match the post-pipeline shape without a node-bundled renderer.
 
 ## Ownership and the CEO gate
 
@@ -47,11 +47,11 @@ Approval runs under a Redis heartbeat-renewed lock so a double-click can't doubl
 
 ## Credentials
 
-TikTok's OAuth2 secrets are Fernet-encrypted (`ROBOCO_ENCRYPTION_KEY`) alongside the existing X credentials, entered in the panel only — never in `.env` or an agent-visible setting. Every unconfigured leg (renderer, X, TikTok) degrades to a graceful no-op rather than a crash — the same graceful-null pattern as the X `NullXClient`.
+TikTok's OAuth2 secrets are Fernet-encrypted (`ROBOFLEET_ENCRYPTION_KEY`) alongside the existing X credentials, entered in the panel only — never in `.env` or an agent-visible setting. Every unconfigured leg (renderer, X, TikTok) degrades to a graceful no-op rather than a crash — the same graceful-null pattern as the X `NullXClient`.
 
 ## Media route confinement
 
-The panel's media fetch for video previews is confined to a single media route that carries the agent-identity headers and streams bytes from `ROBOCO_VIDEO_OUTPUT_DIR` — it cannot traverse the filesystem.
+The panel's media fetch for video previews is confined to a single media route that carries the agent-identity headers and streams bytes from `ROBOFLEET_VIDEO_OUTPUT_DIR` — it cannot traverse the filesystem.
 
 ## Related
 

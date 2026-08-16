@@ -153,9 +153,9 @@ engine-docs-sync
 
 ## Config Flags
 
-- `ROBOCO_DOCS_SYNC_ENABLED` (`docs_sync_enabled`) — master switch; default `false`. When off the engine is never invoked.
-- `ROBOCO_DOCS_SYNC_MAX_OPEN_TASKS` (`docs_sync_max_open_tasks`) — rolling cap on concurrently-open docs-sync tasks; default `3`.
-- `ROBOCO_DOCS_SYNC_MAX_PER_CYCLE` (`docs_sync_max_per_cycle`) — max docs-sync tasks originated in one invocation; default `1`. Because a release publish is a single invocation, this bounds it to one task per publish event.
+- `ROBOFLEET_DOCS_SYNC_ENABLED` (`docs_sync_enabled`) — master switch; default `false`. When off the engine is never invoked.
+- `ROBOFLEET_DOCS_SYNC_MAX_OPEN_TASKS` (`docs_sync_max_open_tasks`) — rolling cap on concurrently-open docs-sync tasks; default `3`.
+- `ROBOFLEET_DOCS_SYNC_MAX_PER_CYCLE` (`docs_sync_max_per_cycle`) — max docs-sync tasks originated in one invocation; default `1`. Because a release publish is a single invocation, this bounds it to one task per publish event.
 
 The flag is registered in `roboco/services/settings.py`'s `FEATURE_FLAGS` tuple, so it can be toggled from the panel's Settings → Feature Flags card without editing env.
 

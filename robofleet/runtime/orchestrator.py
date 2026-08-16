@@ -219,7 +219,7 @@ def _system_api_headers() -> dict[str, str]:
 
     Wraps ``_SYSTEM_API_HEADERS`` and adds a signed ``X-Agent-Token`` for the
     system identity (F038/F039). Without it, arming
-    ``ROBOCO_AGENT_AUTH_REQUIRED=true`` 401s every silent recovery op
+    ``ROBOFLEET_AGENT_AUTH_REQUIRED=true`` 401s every silent recovery op
     (auto-block / auto-resume / auto-recover / SLA annotation) and wedges
     paused/blocked parents — the prior self-PATCH 401 fix only carried
     ``X-Agent-ID`` / ``X-Agent-Role``, so it was incomplete under auth-required.
@@ -241,12 +241,12 @@ def _system_api_headers() -> dict[str, str]:
 def _agent_api_headers(agent_uuid: str, role: str) -> dict[str, str]:
     """Headers for the orchestrator's internal self-API calls acting as a
     specific agent (the cell-PM auto-submit). Adds the signed ``X-Agent-Token``
-    + ``X-Agent-Team`` so the call passes the ``ROBOCO_AGENT_AUTH_REQUIRED``
+    + ``X-Agent-Team`` so the call passes the ``ROBOFLEET_AGENT_AUTH_REQUIRED``
     gate — a hand-built ``{X-Agent-ID, X-Agent-Role}`` dict 401s with
     "Missing X-Agent-Token" under auth-required (F038/F039 — the same gap the
     system-headers helper closes for the system identity).
 
-    The token is attached only when ``ROBOCO_AGENT_AUTH_SECRET`` is set: the
+    The token is attached only when ``ROBOFLEET_AGENT_AUTH_SECRET`` is set: the
     dev-mode middleware rejects a presented-but-unverifiable token (the
     ``UNSIGNED`` sentinel) with 401 "signature mismatch" while accepting a
     missing token, so sending ``UNSIGNED`` would turn a clean dev self-call
@@ -458,20 +458,20 @@ def get_agent_image(agent_id: str) -> str:
 # When running in a container, we need host paths for volume mounts.
 # These can be overridden via environment variables.
 CLAUDE_AUTH_HOST_PATH = os.environ.get(
-    "ROBOCO_HOST_CLAUDE_DIR",
+    "ROBOFLEET_HOST_CLAUDE_DIR",
     str(Path.home() / ".claude"),
 )
-PROJECT_HOST_PATH = os.environ.get("ROBOCO_HOST_PROJECT_DIR", "")
-DATA_HOST_PATH = os.environ.get("ROBOCO_HOST_DATA_DIR", "")
+PROJECT_HOST_PATH = os.environ.get("ROBOFLEET_HOST_PROJECT_DIR", "")
+DATA_HOST_PATH = os.environ.get("ROBOFLEET_HOST_DATA_DIR", "")
 # In-orchestrator path where each GROK agent's usage capture is visible. The
 # agent writes <DATA_HOST_PATH>/grok-usage/<agent_id>/usage.json; the compose file
 # mounts the same host dir here so the finalizer can read the captured tokens back
 # (the grok analogue of reading the Claude transcript from the mounted ~/.claude).
 # Override for local runs.
-GROK_USAGE_DATA_DIR = os.environ.get("ROBOCO_GROK_USAGE_DIR", "/data/grok-usage")
+GROK_USAGE_DATA_DIR = os.environ.get("ROBOFLEET_GROK_USAGE_DIR", "/data/grok-usage")
 # Same shape for CODEX agents (robofleet.llm.providers.codex_cli_usage writes
 # usage.json here; the finalizer reads it back — see _codex_usage_json).
-CODEX_USAGE_DATA_DIR = os.environ.get("ROBOCO_CODEX_USAGE_DIR", "/data/codex-usage")
+CODEX_USAGE_DATA_DIR = os.environ.get("ROBOFLEET_CODEX_USAGE_DIR", "/data/codex-usage")
 
 # Interactive Grok images (grok-CLI conversation drivers) — selected for the
 # intake / secretary roles when their route resolves to GROK, instead of the
@@ -528,7 +528,9 @@ _CODEX_AUTH_RETRY_AFTER_S = 60.0
 
 # In-orchestrator path where each GEMINI agent's usage capture is visible —
 # the gemini analogue of GROK_USAGE_DATA_DIR (see there for the mount shape).
-GEMINI_USAGE_DATA_DIR = os.environ.get("ROBOCO_GEMINI_USAGE_DIR", "/data/gemini-usage")
+GEMINI_USAGE_DATA_DIR = os.environ.get(
+    "ROBOFLEET_GEMINI_USAGE_DIR", "/data/gemini-usage"
+)
 
 # A one-shot Gemini container exits with this code (EX_TEMPFAIL) when the run's
 # captured stdout carried a quota/rate-limit error (gemini-cli-agent-
@@ -558,7 +560,7 @@ _GEMINI_AUTH_EXIT_CODE = 41
 
 # In-orchestrator path where each KIMI agent's usage capture is visible — the
 # kimi analogue of GEMINI_USAGE_DATA_DIR (see there for the mount shape).
-KIMI_USAGE_DATA_DIR = os.environ.get("ROBOCO_KIMI_USAGE_DIR", "/data/kimi-usage")
+KIMI_USAGE_DATA_DIR = os.environ.get("ROBOFLEET_KIMI_USAGE_DIR", "/data/kimi-usage")
 
 # A one-shot Kimi container exits with these SAME codes for the SAME reasons
 # (its entrypoint mirrors the codex/grok exit-code convention — see
@@ -854,7 +856,7 @@ def _resolve_project_slug_from_git_context(
 # =============================================================================
 
 # Phase 4: every spawned role gets a gateway manifest. The legacy briefing path
-# is gone. A role omitted here gets NO manifest and ROBOCO_GATEWAY_ENABLED=false,
+# is gone. A role omitted here gets NO manifest and ROBOFLEET_GATEWAY_ENABLED=false,
 # i.e. none of its flow verbs are pre-registered — so it can never claim its work
 # and the dispatcher respawns it on the same task forever. The only roles that
 # may be absent are the human-only ones (prompter, secretary) that the
@@ -1194,7 +1196,7 @@ class AgentOrchestrator:
     # allocated by _record_expected_stop, same statement-budget rationale.
     _expected_stops: dict[str, tuple[str, float]]
     # Last time the auditor was spawned, by reactive alert or scheduled sweep.
-    # Drives the ROBOCO_AUDIT_INTERVAL_SECONDS throttle. Per-instance override.
+    # Drives the ROBOFLEET_AUDIT_INTERVAL_SECONDS throttle. Per-instance override.
     _last_audit_spawn_at: datetime | None = None
 
     def __new__(cls, *_args: Any, **_kwargs: Any) -> "AgentOrchestrator":
@@ -3084,7 +3086,7 @@ class AgentOrchestrator:
 
         Flag-gated (``spawn_preflight_enabled``, default off). A non-human
         delivery role absent from ``GATEWAY_ENABLED_ROLES`` gets no manifest and
-        ``ROBOCO_GATEWAY_ENABLED=false``, so it can never claim its work and the
+        ``ROBOFLEET_GATEWAY_ENABLED=false``, so it can never claim its work and the
         dispatcher would respawn it on the same task forever. Fail fast instead of
         burning the full system prompt on each futile retry.
         """
@@ -3399,25 +3401,25 @@ class AgentOrchestrator:
             # Annotated[UUID]) and the HMAC token is signed over the same value,
             # so the container env the SDK server inherits must match or its
             # direct API calls 401 with "signature mismatch".
-            f"ROBOCO_AGENT_ID={AGENT_UUIDS.get(config.agent_id, config.agent_id)}",
+            f"ROBOFLEET_AGENT_ID={AGENT_UUIDS.get(config.agent_id, config.agent_id)}",
             "-e",
-            f"ROBOCO_AGENT_ROLE={role}",
+            f"ROBOFLEET_AGENT_ROLE={role}",
             "-e",
-            "ROBOCO_API_URL=http://roboco-orchestrator:8000",
+            "ROBOFLEET_API_URL=http://roboco-orchestrator:8000",
             "-e",
-            "ROBOCO_SDK_PORT=9000",
+            "ROBOFLEET_SDK_PORT=9000",
             "-e",
-            "ROBOCO_SDK_URL=http://localhost:9000",
+            "ROBOFLEET_SDK_URL=http://localhost:9000",
             "-e",
-            f"ROBOCO_AGENT_TOOL_CALL_WARN={settings.agent_tool_call_warn}",
+            f"ROBOFLEET_AGENT_TOOL_CALL_WARN={settings.agent_tool_call_warn}",
             "-e",
-            f"ROBOCO_AGENT_TOOL_CALL_HALT={settings.agent_tool_call_halt}",
+            f"ROBOFLEET_AGENT_TOOL_CALL_HALT={settings.agent_tool_call_halt}",
             "-e",
-            f"ROBOCO_AGENT_LOOP_THRESHOLD={settings.agent_loop_threshold}",
+            f"ROBOFLEET_AGENT_LOOP_THRESHOLD={settings.agent_loop_threshold}",
             "-e",
-            f"ROBOCO_AGENT_LOOP_WINDOW={settings.agent_loop_window}",
+            f"ROBOFLEET_AGENT_LOOP_WINDOW={settings.agent_loop_window}",
             "-e",
-            f"ROBOCO_AGENT_STOP_ATTEMPT_ALLOWANCE={settings.agent_stop_attempt_allowance}",
+            f"ROBOFLEET_AGENT_STOP_ATTEMPT_ALLOWANCE={settings.agent_stop_attempt_allowance}",
         ]
         return env
 
@@ -3455,13 +3457,13 @@ class AgentOrchestrator:
                     "-v",
                     f"{manifest_host_path}:/app/tool-manifest.json:ro",
                     "-e",
-                    "ROBOCO_GATEWAY_ENABLED=true",
+                    "ROBOFLEET_GATEWAY_ENABLED=true",
                     "-e",
-                    "ROBOCO_TOOL_MANIFEST_PATH=/app/tool-manifest.json",
+                    "ROBOFLEET_TOOL_MANIFEST_PATH=/app/tool-manifest.json",
                 ]
             )
         else:
-            cmd.extend(["-e", "ROBOCO_GATEWAY_ENABLED=false"])
+            cmd.extend(["-e", "ROBOFLEET_GATEWAY_ENABLED=false"])
 
     _ROLES_WITH_AGENT_WORKSPACE: ClassVar[frozenset[str]] = frozenset(
         {"developer", "product_owner", "head_marketing"}
@@ -3539,7 +3541,7 @@ class AgentOrchestrator:
             _team,
             ttl_seconds=settings.agent_token_ttl_seconds,
         )
-        cmd.extend(["-e", f"ROBOCO_AGENT_TOKEN={_token}"])
+        cmd.extend(["-e", f"ROBOFLEET_AGENT_TOKEN={_token}"])
 
     @staticmethod
     def _append_git_context_env(cmd: list[str], config: AgentConfig) -> None:
@@ -3547,9 +3549,11 @@ class AgentOrchestrator:
         if not config.git_context:
             return
         if config.git_context.project_slug:
-            cmd.extend(["-e", f"ROBOCO_PROJECT_SLUG={config.git_context.project_slug}"])
+            cmd.extend(
+                ["-e", f"ROBOFLEET_PROJECT_SLUG={config.git_context.project_slug}"]
+            )
         if config.git_context.branch_name:
-            cmd.extend(["-e", f"ROBOCO_BRANCH={config.git_context.branch_name}"])
+            cmd.extend(["-e", f"ROBOFLEET_BRANCH={config.git_context.branch_name}"])
 
     @staticmethod
     def _append_gate_env(cmd: list[str]) -> None:
@@ -3561,7 +3565,7 @@ class AgentOrchestrator:
         against a partial run (the failure that made a PM read 71% on a suite
         that is ~96% with a DB). The values come from the orchestrator's own DB
         settings; agents share the Docker network, so the host resolves. The app
-        runtime reads ROBOCO_DATABASE_*, never ROBOCO_TEST_DB_*, so this only
+        runtime reads ROBOFLEET_DATABASE_*, never ROBOFLEET_TEST_DB_*, so this only
         feeds the test harness and never changes live behaviour. Gated on the
         same faithful-gate flag as interpreter matching — both exist to make an
         agent's self-gate trustworthy.
@@ -3579,15 +3583,15 @@ class AgentOrchestrator:
         cmd.extend(
             [
                 "-e",
-                f"ROBOCO_TEST_DB_HOST={settings.database_host}",
+                f"ROBOFLEET_TEST_DB_HOST={settings.database_host}",
                 "-e",
-                f"ROBOCO_TEST_DB_PORT={settings.database_port}",
+                f"ROBOFLEET_TEST_DB_PORT={settings.database_port}",
                 "-e",
-                f"ROBOCO_TEST_DB_USER={settings.database_user}",
+                f"ROBOFLEET_TEST_DB_USER={settings.database_user}",
                 "-e",
-                f"ROBOCO_TEST_DB_PASSWORD={settings.database_password}",
+                f"ROBOFLEET_TEST_DB_PASSWORD={settings.database_password}",
                 "-e",
-                "ROBOCO_TEST_DB_ADMIN_DB=postgres",
+                "ROBOFLEET_TEST_DB_ADMIN_DB=postgres",
             ]
         )
 
@@ -3600,7 +3604,7 @@ class AgentOrchestrator:
         informational so the agent knows the verb will succeed. Called
         INSTEAD OF `_append_gate_env` for an opted-in project (never both).
         """
-        cmd.extend(["-e", f"ROBOCO_SANDBOX_SERVICES_AVAILABLE={','.join(services)}"])
+        cmd.extend(["-e", f"ROBOFLEET_SANDBOX_SERVICES_AVAILABLE={','.join(services)}"])
 
     @staticmethod
     def _default_spawn_prompt() -> str:
@@ -4118,7 +4122,7 @@ class AgentOrchestrator:
         # calls the orchestrator HTTP directly. Instead of an mcpServers config,
         # write the tool manifest (flow_tools + do_tools + the composed
         # system_prompt inlined) to a local file. The CloudRunJobsProvider
-        # uploads it to GCS and sets ROBOCO_TOOL_MANIFEST_PATH to the gs:// URI;
+        # uploads it to GCS and sets ROBOFLEET_TOOL_MANIFEST_PATH to the gs:// URI;
         # the entrypoint fetches it and uses system_prompt as the LlmAgent
         # instruction. Early-return keeps the docker/ANTHROPIC mcpServers path
         # below byte-for-byte unchanged.
@@ -4176,16 +4180,18 @@ class AgentOrchestrator:
         agent_uuid = AGENT_UUIDS.get(agent_id, agent_id)
 
         mcp_env: dict[str, str] = {
-            "ROBOCO_API_URL": api_url,
-            "ROBOCO_ORCHESTRATOR_URL": api_url,
-            "ROBOCO_AGENT_ID": agent_uuid,
-            "ROBOCO_AGENT_ROLE": agent_role,
+            "ROBOFLEET_API_URL": api_url,
+            "ROBOFLEET_ORCHESTRATOR_URL": api_url,
+            "ROBOFLEET_AGENT_ID": agent_uuid,
+            "ROBOFLEET_AGENT_ROLE": agent_role,
             # Mirrors the server-side FlowVerbTimeoutMiddleware budgets so the
             # roboco-flow MCP client's per-verb timeout (flow_server.py, which
             # can't read Settings directly) stays coherent with operator
             # tuning of either setting.
-            "ROBOCO_FLOW_VERB_TIMEOUT_SECONDS": str(settings.flow_verb_timeout_seconds),
-            "ROBOCO_FLOW_VERB_SLOW_TIMEOUT_SECONDS": str(
+            "ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS": str(
+                settings.flow_verb_timeout_seconds
+            ),
+            "ROBOFLEET_FLOW_VERB_SLOW_TIMEOUT_SECONDS": str(
                 settings.flow_verb_slow_timeout_seconds
             ),
             # Every MCP server is launched as `uv run python -m
@@ -4209,9 +4215,9 @@ class AgentOrchestrator:
         # Add git context if available
         if git_context:
             if git_context.project_slug:
-                mcp_env["ROBOCO_PROJECT_SLUG"] = git_context.project_slug
+                mcp_env["ROBOFLEET_PROJECT_SLUG"] = git_context.project_slug
             if git_context.branch_name:
-                mcp_env["ROBOCO_BRANCH"] = git_context.branch_name
+                mcp_env["ROBOFLEET_BRANCH"] = git_context.branch_name
 
         mcp_servers: dict[str, dict[str, Any]] = {
             # Intent verbs — every role-scoped lifecycle transition.
@@ -4309,7 +4315,7 @@ class AgentOrchestrator:
         (``compose_prompt`` + the conventions ambient block, the same two
         helpers ``_generate_composed_prompt`` uses for /app/system-prompt.md).
         Reuses both helpers rather than re-deriving. The provider uploads this
-        file to GCS and sets ROBOCO_TOOL_MANIFEST_PATH to its gs:// URI.
+        file to GCS and sets ROBOFLEET_TOOL_MANIFEST_PATH to its gs:// URI.
         """
         from robofleet.services.gateway.role_config import get_role_config
 
@@ -5998,17 +6004,17 @@ class AgentOrchestrator:
                 "-v",
                 f"{spec.hosts['prompt']}:/app/system-prompt.md:ro",
                 "-e",
-                f"ROBOCO_AGENT_ID={spec.agent_uuid}",
+                f"ROBOFLEET_AGENT_ID={spec.agent_uuid}",
                 "-e",
-                "ROBOCO_AGENT_ROLE=secretary",
+                "ROBOFLEET_AGENT_ROLE=secretary",
                 "-e",
-                f"ROBOCO_AGENT_TOKEN={spec.agent_token}",
+                f"ROBOFLEET_AGENT_TOKEN={spec.agent_token}",
                 "-e",
-                f"ROBOCO_API_URL={spec.api_url}",
+                f"ROBOFLEET_API_URL={spec.api_url}",
                 "-e",
-                f"ROBOCO_SECRETARY_SESSION_ID={spec.session_id}",
+                f"ROBOFLEET_SECRETARY_SESSION_ID={spec.session_id}",
                 "-e",
-                f"ROBOCO_WORKSPACE={spec.cwd}",
+                f"ROBOFLEET_WORKSPACE={spec.cwd}",
                 "-e",
                 f"CLAUDE_CODE_SUBAGENT_MODEL={spec.cli_model}",
             ]
@@ -6193,9 +6199,9 @@ class AgentOrchestrator:
             cmd.extend(
                 [
                     "-e",
-                    "ROBOCO_AGENT_MODEL=grok-build",
+                    "ROBOFLEET_AGENT_MODEL=grok-build",
                     "-e",
-                    "ROBOCO_GROK_USAGE_FILE=/home/agent/.grok-usage/usage.json",
+                    "ROBOFLEET_GROK_USAGE_FILE=/home/agent/.grok-usage/usage.json",
                 ]
             )
             return
@@ -6231,15 +6237,15 @@ class AgentOrchestrator:
                 "-v",
                 f"{spec.hosts['workspaces']}:/data/workspaces",
                 "-e",
-                f"ROBOCO_AGENT_ID={INTAKE_AGENT_ID}",
+                f"ROBOFLEET_AGENT_ID={INTAKE_AGENT_ID}",
                 "-e",
-                f"ROBOCO_AGENT_ROLE={get_agent_role(INTAKE_AGENT_ID) or 'prompter'}",
+                f"ROBOFLEET_AGENT_ROLE={get_agent_role(INTAKE_AGENT_ID) or 'prompter'}",
                 "-e",
-                f"ROBOCO_API_URL={spec.api_url}",
+                f"ROBOFLEET_API_URL={spec.api_url}",
                 "-e",
-                f"ROBOCO_PROMPTER_SESSION_ID={spec.session_id}",
+                f"ROBOFLEET_PROMPTER_SESSION_ID={spec.session_id}",
                 "-e",
-                f"ROBOCO_WORKSPACE={spec.cwd}",
+                f"ROBOFLEET_WORKSPACE={spec.cwd}",
                 "-e",
                 f"CLAUDE_CODE_SUBAGENT_MODEL={spec.cli_model}",
             ]
@@ -7125,7 +7131,7 @@ class AgentOrchestrator:
         (Claude Code parity for runaway token burn — a loop that keeps firing
         verbs evades the idle watchdog but still burns cost) reads each ACTIVE
         GROK container's captured cost from its ``usage.json`` and kills + evicts
-        it past ``ROBOCO_GROK_MAX_COST_USD``. The reaper then releases the freed
+        it past ``ROBOFLEET_GROK_MAX_COST_USD``. The reaper then releases the freed
         task. This bites on the interactive sessions (the driver rewrites
         usage.json every turn, so a runaway chat is caught between turns); a
         one-shot ``grok -p`` writes usage.json only post-run and is bounded by its
@@ -9101,7 +9107,7 @@ Start by:
 
     async def _sweep_budget_exceeded(self) -> None:
         """Stop agents whose per-session SDK budget reports halt=true, OR
-        (when ``ROBOCO_TASK_BUDGETS_ENABLED`` is on) whose active task's own
+        (when ``ROBOFLEET_TASK_BUDGETS_ENABLED`` is on) whose active task's own
         $ budget is breached.
 
         Tool-call halt: each agent's SDK server is reachable at
@@ -9810,7 +9816,7 @@ Start by:
 
         # Operability: self-heal is armed but has no target → it will silently
         # no-op every cycle. Say so once at startup so a misconfiguration (unset
-        # or wrong ROBOCO_SELF_HEAL_PROJECT_SLUG) isn't mistaken for "all green".
+        # or wrong ROBOFLEET_SELF_HEAL_PROJECT_SLUG) isn't mistaken for "all green".
         if not settings.self_heal_project_slug.strip():
             logger.warning(
                 "self-heal enabled but self_heal_project_slug is unset — the loop "
@@ -13473,9 +13479,9 @@ Start now: evidence(task_id="{task_id}")
                 "exec",
                 container_name,
                 "printenv",
-                "ROBOCO_AGENT_TOKEN",
-                "ROBOCO_AGENT_ID",
-                "ROBOCO_AGENT_ROLE",
+                "ROBOFLEET_AGENT_TOKEN",
+                "ROBOFLEET_AGENT_ID",
+                "ROBOFLEET_AGENT_ROLE",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL,
             )
@@ -13488,19 +13494,19 @@ Start now: evidence(task_id="{task_id}")
         agent_id_env: str | None = None
         role_env: str | None = None
         for line in stdout.decode("utf-8", "replace").splitlines():
-            if line.startswith("ROBOCO_AGENT_TOKEN="):
-                token = line[len("ROBOCO_AGENT_TOKEN=") :]
-            elif line.startswith("ROBOCO_AGENT_ID="):
-                agent_id_env = line[len("ROBOCO_AGENT_ID=") :]
-            elif line.startswith("ROBOCO_AGENT_ROLE="):
-                role_env = line[len("ROBOCO_AGENT_ROLE=") :]
+            if line.startswith("ROBOFLEET_AGENT_TOKEN="):
+                token = line[len("ROBOFLEET_AGENT_TOKEN=") :]
+            elif line.startswith("ROBOFLEET_AGENT_ID="):
+                agent_id_env = line[len("ROBOFLEET_AGENT_ID=") :]
+            elif line.startswith("ROBOFLEET_AGENT_ROLE="):
+                role_env = line[len("ROBOFLEET_AGENT_ROLE=") :]
         if not token or not agent_id_env or not role_env:
             return None
         return token, agent_id_env, role_env
 
     async def _heal_stale_agent_tokens(self) -> int:
-        """Kill running agent containers whose ROBOCO_AGENT_TOKEN no longer
-        verifies against the current ``ROBOCO_AGENT_AUTH_SECRET``.
+        """Kill running agent containers whose ROBOFLEET_AGENT_TOKEN no longer
+        verifies against the current ``ROBOFLEET_AGENT_AUTH_SECRET``.
 
         A token is baked into the container env at spawn (``_append_agent_auth_env``
         signs with the orchestrator's secret at that moment). If the secret later
@@ -13538,10 +13544,10 @@ Start now: evidence(task_id="{task_id}")
             token, agent_id_env, role_env = env
             team = get_agent_team(agent_id_env) or ""
             # Verify against the UUID the MCP servers actually send as
-            # X-Agent-ID, not the container-env ROBOCO_AGENT_ID (a slug on
+            # X-Agent-ID, not the container-env ROBOFLEET_AGENT_ID (a slug on
             # pre-fix containers). A stale container spawned before the
             # slug→UUID fix carries a slug-signed token + a slug
-            # ROBOCO_AGENT_ID, so verifying against the slug would PASS and
+            # ROBOFLEET_AGENT_ID, so verifying against the slug would PASS and
             # leave the stale container running (its MCP server still 401s
             # sending the UUID). Resolving to the UUID makes the heal reject
             # the slug-signed token and kill the container so it respawns
@@ -15938,7 +15944,7 @@ Start now: evidence(task_id="{task_id}")
         """Obsidian-vault root-completion hook: spawn the Auditor to write a
         just-completed root task-tree's narrative.
 
-        Gated on ``ROBOCO_OBSIDIAN_VAULT_ENABLED``; a no-op scan otherwise.
+        Gated on ``ROBOFLEET_OBSIDIAN_VAULT_ENABLED``; a no-op scan otherwise.
         Owns ONLY this vault-curation trigger — distinct from
         ``_dispatch_audit_work`` (scheduled sweeps + alert producers, owned by
         a separate, queued fleet task). ``_client`` is accepted for
@@ -17345,7 +17351,7 @@ Never `commit`, never write code, never run `git`. PMs coordinate.
     def _audit_spawn_cooled(self) -> bool:
         """True when a scheduled sweep should be blocked.
 
-        Blocks when ROBOCO_AUDIT_INTERVAL_SECONDS is 0 (disabled) or when the
+        Blocks when ROBOFLEET_AUDIT_INTERVAL_SECONDS is 0 (disabled) or when the
         auditor was spawned within the interval window.
         """
         interval = settings.audit_interval_seconds

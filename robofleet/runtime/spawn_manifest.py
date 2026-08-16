@@ -70,10 +70,10 @@ def build_for_role(inputs: SpawnInputs) -> SpawnManifest:
         subagent_allowed=cfg.allows_subagent,
         subagent_model=inputs.agent_model if cfg.allows_subagent else None,
         env={
-            "ROBOCO_AGENT_ID": str(inputs.agent_id),
-            "ROBOCO_AGENT_ROLE": inputs.role,
-            "ROBOCO_AGENT_TEAM": inputs.team,
-            "ROBOCO_PUBLIC_BASE_URL": "http://127.0.0.1:8000",
+            "ROBOFLEET_AGENT_ID": str(inputs.agent_id),
+            "ROBOFLEET_AGENT_ROLE": inputs.role,
+            "ROBOFLEET_AGENT_TEAM": inputs.team,
+            "ROBOFLEET_PUBLIC_BASE_URL": "http://127.0.0.1:8000",
             **(inputs.extra_env or {}),
         },
     )

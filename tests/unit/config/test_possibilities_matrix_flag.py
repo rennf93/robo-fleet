@@ -15,7 +15,9 @@ def test_possibilities_matrix_disabled_by_default() -> None:
 
 
 def test_possibilities_matrix_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_POSSIBILITIES_MATRIX_ENABLED": "true"}):
+    with mock.patch.dict(
+        os.environ, {"ROBOFLEET_POSSIBILITIES_MATRIX_ENABLED": "true"}
+    ):
         assert Settings().possibilities_matrix_enabled is True
 
 

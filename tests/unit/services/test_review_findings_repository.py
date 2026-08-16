@@ -2,7 +2,8 @@
 
 Follows the ``test_audit_real_query.py`` / ``test_vault_task_queries_real.py``
 pattern: real Postgres via the session-scoped test DB (local:
-ROBOCO_TEST_DB_PORT=55432 ROBOCO_TEST_DB_USER=renzof). ``Base.metadata.create_all``
+ROBOFLEET_TEST_DB_PORT=55432 ROBOFLEET_TEST_DB_USER=renzof).
+``Base.metadata.create_all``
 builds the schema from live ORM metadata, so ``TaskReviewFindingTable`` needs no
 migration replay here.
 """

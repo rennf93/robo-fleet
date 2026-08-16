@@ -245,9 +245,9 @@ def test_main_writes_usage_file(
     out = tmp_path / "usage.json"
     monkeypatch.setattr(ku, "USAGE_OUT_PATH", out)
     monkeypatch.setattr(ku, "KIMI_CODE_HOME", home)
-    monkeypatch.setenv("ROBOCO_KIMI_RUN_LOG", str(run_log))
-    monkeypatch.setenv("ROBOCO_KIMI_WORKDIR", "/data/workspaces/myrepo")
-    monkeypatch.setenv("ROBOCO_AGENT_MODEL", "kimi-code/k3")
+    monkeypatch.setenv("ROBOFLEET_KIMI_RUN_LOG", str(run_log))
+    monkeypatch.setenv("ROBOFLEET_KIMI_WORKDIR", "/data/workspaces/myrepo")
+    monkeypatch.setenv("ROBOFLEET_AGENT_MODEL", "kimi-code/k3")
 
     assert ku.main() == 0
     data = json.loads(out.read_text())
@@ -258,7 +258,7 @@ def test_main_writes_usage_file(
 def test_main_warns_when_run_log_env_missing(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    monkeypatch.delenv("ROBOCO_KIMI_RUN_LOG", raising=False)
+    monkeypatch.delenv("ROBOFLEET_KIMI_RUN_LOG", raising=False)
     with caplog.at_level("WARNING", logger="robofleet.llm.providers.kimi_cli_usage"):
         assert ku.main() == 0
-    assert any("ROBOCO_KIMI_RUN_LOG" in r.message for r in caplog.records)
+    assert any("ROBOFLEET_KIMI_RUN_LOG" in r.message for r in caplog.records)

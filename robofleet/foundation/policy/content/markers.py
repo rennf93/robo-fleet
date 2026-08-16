@@ -800,7 +800,7 @@ def mark_block_flip_notified(task: HasMarkers) -> None:
 
 # --- budget-breach block ----------------------------------------------------
 # Stamped by the orchestrator's task-budget sweep the moment it BLOCKs a task
-# for exceeding its $ budget (ROBOCO_TASK_BUDGETS_ENABLED). `unblock` consults
+# for exceeding its $ budget (ROBOFLEET_TASK_BUDGETS_ENABLED). `unblock` consults
 # it to re-check spend-vs-cap: still over refuses (naming the budget
 # remediation) so a PM can't silently re-breach the same cap the next tick;
 # under (the CEO raised it) clears the marker and lets the unblock through.

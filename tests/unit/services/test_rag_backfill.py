@@ -8,7 +8,7 @@ Postgres (`db_session`, see tests/conftest.py) — the JOIN/floor/ANY(...)
 logic can't be verified with a mocked session. ``optimal`` itself is mocked
 (index_journal_entry / record_learning) since the embedder is out of scope.
 
-Run with: ROBOCO_TEST_DB_PORT=55432 ROBOCO_TEST_DB_USER=renzof pytest ...
+Run with: ROBOFLEET_TEST_DB_PORT=55432 ROBOFLEET_TEST_DB_USER=renzof pytest ...
 
 ``db_session`` rolls back at the end of each test, so nothing THIS file seeds
 leaks between its own tests. But the DB itself is session-scoped for the

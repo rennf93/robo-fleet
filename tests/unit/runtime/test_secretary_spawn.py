@@ -40,10 +40,10 @@ def _spec() -> _SecretaryRunSpec:
 def test_build_secretary_run_cmd_wires_token_and_session() -> None:
     cmd = AgentOrchestrator._build_secretary_run_cmd(_spec())
     assert cmd[-1] == "roboco-agent-secretary"  # image is last
-    assert "ROBOCO_AGENT_TOKEN=tok-1" in cmd
-    assert "ROBOCO_AGENT_ID=uuid-1" in cmd
-    assert "ROBOCO_AGENT_ROLE=secretary" in cmd
-    assert "ROBOCO_SECRETARY_SESSION_ID=sid123" in cmd
+    assert "ROBOFLEET_AGENT_TOKEN=tok-1" in cmd
+    assert "ROBOFLEET_AGENT_ID=uuid-1" in cmd
+    assert "ROBOFLEET_AGENT_ROLE=secretary" in cmd
+    assert "ROBOFLEET_SECRETARY_SESSION_ID=sid123" in cmd
     # No workspaces mount for the Secretary.
     assert not any("/data/workspaces" in part for part in cmd)
 
@@ -77,9 +77,9 @@ def test_secretary_token_signs_over_real_team_not_empty(
     X-Agent-Team = get_agent_team(uuid) = the secretary's real team ("board"),
     so the token issued at spawn (orchestrator _spawn_secretary_container) must
     be signed over that same team — not "" — or every /api/secretary/* call
-    401s with "signature mismatch" under ROBOCO_AGENT_AUTH_REQUIRED.
+    401s with "signature mismatch" under ROBOFLEET_AGENT_AUTH_REQUIRED.
     """
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "x" * 32)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "x" * 32)
     secretary = AGENTS[SECRETARY_AGENT_ID]
     agent_uuid = str(secretary.uuid)
     team = secretary.team.value

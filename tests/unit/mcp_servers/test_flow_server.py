@@ -62,10 +62,10 @@ def flow_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> types.Module
     manifest_path = tmp_path / "tool-manifest.json"
     manifest_path.write_text(json.dumps(_FULL_MANIFEST))
 
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "00000000-0000-0000-0000-000000000001")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "00000000-0000-0000-0000-000000000001")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest_path))
 
     import robofleet.mcp.flow_server as srv
 
@@ -100,10 +100,10 @@ def _reload_for_role(
     payload = {**_FULL_MANIFEST, "role": role, "agent_id": agent_id}
     manifest_path.write_text(json.dumps(payload))
 
-    monkeypatch.setenv("ROBOCO_AGENT_ID", agent_id)
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", role)
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", agent_id)
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", role)
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest_path))
 
     import robofleet.mcp.flow_server as srv
 
@@ -138,17 +138,17 @@ def test_build_headers_carries_auth_token_and_team(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """flow verbs must carry X-Agent-Token + X-Agent-Team or the API's
-    ROBOCO_AGENT_AUTH_REQUIRED gate 401s with "Missing X-Agent-Token" —
+    ROBOFLEET_AGENT_AUTH_REQUIRED gate 401s with "Missing X-Agent-Token" —
     regression: the manual header dict omitted both, latent until auth was
     armed on the NAS deploy."""
     be_dev_1 = "00000000-0000-0000-0001-000000000001"  # role=developer, team=backend
     manifest = tmp_path / "tool-manifest.json"
     manifest.write_text(json.dumps({**_FULL_MANIFEST, "agent_id": be_dev_1}))
-    monkeypatch.setenv("ROBOCO_AGENT_ID", be_dev_1)
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "test-hmac-token")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", be_dev_1)
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "test-hmac-token")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest))
 
     import robofleet.mcp.flow_server as srv
 
@@ -165,7 +165,7 @@ def test_build_headers_carries_auth_token_and_team(
 def test_build_headers_omits_unsigned_token(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """The orchestrator injects ROBOCO_AGENT_TOKEN=UNSIGNED when the HMAC
+    """The orchestrator injects ROBOFLEET_AGENT_TOKEN=UNSIGNED when the HMAC
     secret is unset at spawn. The middleware rejects a presented-but-unverifiable
     token with 401 "signature mismatch" even in dev mode, so forwarding UNSIGNED
     turns every flow verb (give_me_work / i_am_idle / ...) into a 401 — the live
@@ -174,11 +174,11 @@ def test_build_headers_omits_unsigned_token(
     be_dev_1 = "00000000-0000-0000-0001-000000000001"
     manifest = tmp_path / "tool-manifest.json"
     manifest.write_text(json.dumps({**_FULL_MANIFEST, "agent_id": be_dev_1}))
-    monkeypatch.setenv("ROBOCO_AGENT_ID", be_dev_1)
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "UNSIGNED")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", be_dev_1)
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "UNSIGNED")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest))
 
     import robofleet.mcp.flow_server as srv
 
@@ -556,12 +556,12 @@ def test_client_timeout_env_override_respected(
 ) -> None:
     manifest_path = tmp_path / "tool-manifest.json"
     manifest_path.write_text(json.dumps(_FULL_MANIFEST))
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "00000000-0000-0000-0000-000000000001")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
-    monkeypatch.setenv("ROBOCO_FLOW_VERB_TIMEOUT_SECONDS", "45")
-    monkeypatch.setenv("ROBOCO_FLOW_VERB_SLOW_TIMEOUT_SECONDS", "600")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "00000000-0000-0000-0000-000000000001")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest_path))
+    monkeypatch.setenv("ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS", "45")
+    monkeypatch.setenv("ROBOFLEET_FLOW_VERB_SLOW_TIMEOUT_SECONDS", "600")
 
     import robofleet.mcp.flow_server as srv
 

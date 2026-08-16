@@ -171,15 +171,15 @@ WorkspaceService slice
 | list_workspaces / workspace_exists / delete_workspace | roboco/services/workspace.py | admin API routes / project service maintenance |
 
 ## Config Flags
-- ROBOCO_WORKSPACES_ROOT (settings.workspaces_root; default /data/workspaces)
-- ROBOCO_WORKSPACE_AUTO_CLONE (settings.workspace_auto_clone; default true)
-- ROBOCO_WORKSPACE_CLONE_TIMEOUT (settings.workspace_clone_timeout; default 300s) - bounds git clone + fetch_branch_for_inspection fetch
-- ROBOCO_WORKSPACE_REFRESH_FETCH_TIMEOUT_SECONDS (settings.workspace_refresh_fetch_timeout_seconds; default 60s) - bounds the healthy-clone scoped refresh fetch
-- ROBOCO_WORKSPACE_INSTALL_DEV_DEPS (settings.workspace_install_dev_deps; default true) - gates post-clone dev-dep install
-- ROBOCO_WORKSPACE_DEP_INSTALL_TIMEOUT_SECONDS (settings.workspace_dep_install_timeout_seconds; default 600s) - bounds uv sync / pnpm install / toolchain smoke / dep-upgrade probe
-- ROBOCO_TOOLCHAIN_MATCH_ENABLED (settings.toolchain_match_enabled; default off) - gates provisioning against the target project's declared Python + the runnability smoke marker
-- ROBOCO_CONVENTIONS_ENABLED (settings.conventions_enabled; default off) - gates the first-clone conventions scaffold PR
-- ROBOCO_AGENT_UID / ROBOCO_AGENT_GID (env; default 1000/1000) - the agent container user the workspace is chowned to
+- ROBOFLEET_WORKSPACES_ROOT (settings.workspaces_root; default /data/workspaces)
+- ROBOFLEET_WORKSPACE_AUTO_CLONE (settings.workspace_auto_clone; default true)
+- ROBOFLEET_WORKSPACE_CLONE_TIMEOUT (settings.workspace_clone_timeout; default 300s) - bounds git clone + fetch_branch_for_inspection fetch
+- ROBOFLEET_WORKSPACE_REFRESH_FETCH_TIMEOUT_SECONDS (settings.workspace_refresh_fetch_timeout_seconds; default 60s) - bounds the healthy-clone scoped refresh fetch
+- ROBOFLEET_WORKSPACE_INSTALL_DEV_DEPS (settings.workspace_install_dev_deps; default true) - gates post-clone dev-dep install
+- ROBOFLEET_WORKSPACE_DEP_INSTALL_TIMEOUT_SECONDS (settings.workspace_dep_install_timeout_seconds; default 600s) - bounds uv sync / pnpm install / toolchain smoke / dep-upgrade probe
+- ROBOFLEET_TOOLCHAIN_MATCH_ENABLED (settings.toolchain_match_enabled; default off) - gates provisioning against the target project's declared Python + the runnability smoke marker
+- ROBOFLEET_CONVENTIONS_ENABLED (settings.conventions_enabled; default off) - gates the first-clone conventions scaffold PR
+- ROBOFLEET_AGENT_UID / ROBOFLEET_AGENT_GID (env; default 1000/1000) - the agent container user the workspace is chowned to
 
 
 ## Gotchas

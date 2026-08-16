@@ -217,8 +217,8 @@ def test_main_writes_usage_file(
     )
     out = tmp_path / "usage.json"
     monkeypatch.setattr(gu, "USAGE_OUT_PATH", out)
-    monkeypatch.setenv("ROBOCO_GEMINI_RUN_LOG", str(log))
-    monkeypatch.setenv("ROBOCO_AGENT_MODEL", "gemini-2.5-pro")
+    monkeypatch.setenv("ROBOFLEET_GEMINI_RUN_LOG", str(log))
+    monkeypatch.setenv("ROBOFLEET_AGENT_MODEL", "gemini-2.5-pro")
     assert gu.main([]) == 0
     assert json.loads(out.read_text())["total_tokens"] == 1500  # noqa: PLR2004
 
@@ -233,7 +233,7 @@ def test_main_classify_exit_prints_remapped_code(
         _stream_json([{"type": "error", "error": {"type": "RetryableQuotaError"}}]),
         encoding="utf-8",
     )
-    monkeypatch.setenv("ROBOCO_GEMINI_RUN_LOG", str(log))
-    monkeypatch.setenv("ROBOCO_GEMINI_CLI_EXIT_CODE", "1")
+    monkeypatch.setenv("ROBOFLEET_GEMINI_RUN_LOG", str(log))
+    monkeypatch.setenv("ROBOFLEET_GEMINI_CLI_EXIT_CODE", "1")
     assert gu.main(["--classify-exit"]) == 0
     assert capsys.readouterr().out.strip() == "75"

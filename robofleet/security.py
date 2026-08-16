@@ -9,8 +9,8 @@ effect once the middleware is mounted, so decorating is a harmless no-op while
 the flag is off (the guard-core-api pattern).
 
 Cloud-host-ready but env-driven: ``enforce_https`` follows
-``ROBOCO_ENVIRONMENT`` (dev on the NAS -> not enforced, TLS terminates at
-nginx regardless). ``ROBOCO_GUARD_FAIL_SECURE`` ships ``true`` (fail-secure
+``ROBOFLEET_ENVIRONMENT`` (dev on the NAS -> not enforced, TLS terminates at
+nginx regardless). ``ROBOFLEET_GUARD_FAIL_SECURE`` ships ``true`` (fail-secure
 ON) everywhere, including the personal NAS deploy.
 """
 
@@ -186,9 +186,9 @@ _SECRET_EXFIL_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
         r"postgres(?:ql)?://[^\s:]+:[^\s@]{4,}@",
         r"redis://:[^\s@]{4,}@",
         # The value must look like a real key (b64-ish, 20+ chars), so the
-        # documented placeholder lines (`ROBOCO_ENCRYPTION_KEY=<your-fernet-
+        # documented placeholder lines (`ROBOFLEET_ENCRYPTION_KEY=<your-fernet-
         # key>` in CLAUDE.md/.env.example) and `${VAR}` interpolations pass.
-        r"(?:roboco_encryption_key|roboco_agent_auth_secret|fernet[_-]?key)"
+        r"(?:robofleet_encryption_key|robofleet_agent_auth_secret|fernet[_-]?key)"
         r"\s*[=:]\s*[A-Za-z0-9+/_\-]{20,}={0,2}",
         r"(?:reveal|show|print|leak|exfiltrate|send\s+me)\s+(?:your|the|all)\s+"
         r"(?:api[_\s-]?keys?|tokens?|secrets?|credentials?|passwords?|"
@@ -542,7 +542,7 @@ def _build_trusted_hop_networks() -> tuple[str, ...]:
     bridge — closing the residual where a forged tailnet-CGNAT XFF prefix
     resolved behind an unnamed 172.x rightmost entry. An operator running
     Tailscale Serve behind a docker gateway sets
-    ``ROBOCO_GUARD_TRUSTED_CHAIN_PEERS`` to that gateway's exact address
+    ``ROBOFLEET_GUARD_TRUSTED_CHAIN_PEERS`` to that gateway's exact address
     (e.g. 172.18.0.1) to keep the chain resolving.
 
     Peers are parsed with ``ip_address`` — SINGLE addresses only, never a
@@ -635,7 +635,7 @@ def _warn_unconfigured_tailnet_gateway_once(rightmost: str, candidate: str) -> N
     logger.warning(
         "host-proxied tailnet chain detected but no trusted chain peer "
         "configured — this traffic resolves to a whitelisted bridge IP; "
-        f"set ROBOCO_GUARD_TRUSTED_CHAIN_PEERS to your docker bridge "
+        f"set ROBOFLEET_GUARD_TRUSTED_CHAIN_PEERS to your docker bridge "
         f"gateway ({rightmost})"
     )
 
@@ -807,7 +807,7 @@ def build_security_config() -> SecurityConfig:
         # all. Left False (guard's default), a redis restart on this same host
         # makes every check raise GuardRedisError and fail_secure turns that into
         # a 500 on every guarded route until redis returns: a self-inflicted
-        # outage with no way in but ROBOCO_GUARD_EMERGENCY plus a restart. Open
+        # outage with no way in but ROBOFLEET_GUARD_EMERGENCY plus a restart. Open
         # here means a redis blip degrades rate-limit and ban state to allow,
         # while the WAF, IP lists and every stateless check keep enforcing.
         redis_fail_open=True,

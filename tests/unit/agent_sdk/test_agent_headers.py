@@ -1,5 +1,5 @@
 """The SDK server's direct orchestrator calls must carry the agent HMAC
-token + team, or the API's ``ROBOCO_AGENT_AUTH_REQUIRED`` gate 401s with
+token + team, or the API's ``ROBOFLEET_AGENT_AUTH_REQUIRED`` gate 401s with
 "Missing X-Agent-Token" — regression: the session-end post-mortem flush
 (``/api/journals/me/entries``), A2A persistence/fallback, and
 auto-substitute call all built the header dict by hand and omitted both,
@@ -21,9 +21,9 @@ def test_agent_headers_carries_token_and_team(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     be_dev_1 = "00000000-0000-0000-0001-000000000001"  # role=developer, team=backend
-    monkeypatch.setenv("ROBOCO_AGENT_ID", be_dev_1)
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "test-hmac-token")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", be_dev_1)
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "test-hmac-token")
     importlib.reload(srv)
 
     headers = srv._agent_headers()
@@ -40,9 +40,9 @@ def test_agent_headers_omits_team_when_none(
     # A team-less agent (the `system` sentinel) confirms the team header is
     # omitted, not sent empty — so the middleware passes "" and matches a
     # token signed with team="".
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "00000000-0000-0000-0000-000000000000")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "system")
-    monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "test-hmac-token")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "00000000-0000-0000-0000-000000000000")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "system")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "test-hmac-token")
     importlib.reload(srv)
 
     headers = srv._agent_headers()

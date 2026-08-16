@@ -8,12 +8,12 @@ RoboCo can project its own state into a human-readable [Obsidian](https://obsidi
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `ROBOCO_OBSIDIAN_VAULT_ENABLED` | `false` (both compose files set `true`) | Master switch. Off = no note is ever written, `curate_vault` and `python -m roboco.vault` both refuse, and neither the janitor nor the KB engine run. |
-| `ROBOCO_VAULT_PATH` | `/data/vault` | Root directory the vault materializes into. |
-| `ROBOCO_VAULT_INTAKE_ENABLED` | `false` (both compose files set `true`) | The `#roboco`-tag inbox watcher (see below) — requires the master switch also on. |
-| `ROBOCO_VAULT_ARCHIVE_DAYS` | `30` (`0` disables) | Age past which a completed/cancelled task's note moves into the vault's archive during the janitor's daily sweep. |
-| `ROBOCO_VAULT_REPORT_ENABLED` | `true` | The janitor's weekly org-report note + CEO notification. |
-| `ROBOCO_VAULT_KB_ENABLED` | `false` (NAS compose sets `true`; registry compose leaves `false`) | KB ingest of the CEO's own `RoboCo/Notes/` into `IndexType.VAULT_NOTES` — see below. Requires the master switch also on. |
+| `ROBOFLEET_OBSIDIAN_VAULT_ENABLED` | `false` (both compose files set `true`) | Master switch. Off = no note is ever written, `curate_vault` and `python -m roboco.vault` both refuse, and neither the janitor nor the KB engine run. |
+| `ROBOFLEET_VAULT_PATH` | `/data/vault` | Root directory the vault materializes into. |
+| `ROBOFLEET_VAULT_INTAKE_ENABLED` | `false` (both compose files set `true`) | The `#roboco`-tag inbox watcher (see below) — requires the master switch also on. |
+| `ROBOFLEET_VAULT_ARCHIVE_DAYS` | `30` (`0` disables) | Age past which a completed/cancelled task's note moves into the vault's archive during the janitor's daily sweep. |
+| `ROBOFLEET_VAULT_REPORT_ENABLED` | `true` | The janitor's weekly org-report note + CEO notification. |
+| `ROBOFLEET_VAULT_KB_ENABLED` | `false` (NAS compose sets `true`; registry compose leaves `false`) | KB ingest of the CEO's own `RoboCo/Notes/` into `IndexType.VAULT_NOTES` — see below. Requires the master switch also on. |
 
 ## What agents actually touch
 
@@ -24,7 +24,7 @@ Almost everything here is transparent to a working agent — notes get written o
 3. **If `vault_kb_enabled` is on, the CEO's own vault notes are retrievable by you.** Anything the CEO writes under `RoboCo/Notes/` (screened for injection attempts first) is embedded into the knowledge base like any other corpus — it shows up in `roboco_kb_search` / `roboco_ask_mentor` results and in your claim-time institutional-memory briefing, labeled `vault_note` (or "Vault Notes" in mentor output). Treat it exactly like a learning or a playbook: institutional memory, not a directive to follow blindly.
 4. **A weekly org-report note exists** (`RoboCo/Reports/<ISO-week>.md`) — velocity, cycle time by stage, bottlenecks, rework, cost. Deterministic (no LLM), for the CEO's browsing; not something you're expected to author or reference.
 5. **The Auditor's `curate_vault(task_id, narrative)`** — unchanged: spawned once per completed root task to write the one piece of vault content that isn't mechanically derivable from DB columns, a narrative paragraph. See `docs/rag/roles/auditor.md`.
-6. **The vault-intake watcher turning a CEO-authored note into a task you might get delegated.** If the CEO tags a note `#roboco` in the vault's inbox folder, a default-off watcher (`ROBOCO_VAULT_INTAKE_ENABLED`) drafts it into a board-review task (`source=vault_note`) — same shape as a chat-confirmed intake draft, Product-Owner-assigned, `team=board`. It never starts work directly: the board reviews it and only the CEO's `approve_and_start` hands it to the Main PM for real delegation.
+6. **The vault-intake watcher turning a CEO-authored note into a task you might get delegated.** If the CEO tags a note `#roboco` in the vault's inbox folder, a default-off watcher (`ROBOFLEET_VAULT_INTAKE_ENABLED`) drafts it into a board-review task (`source=vault_note`) — same shape as a chat-confirmed intake draft, Product-Owner-assigned, `team=board`. It never starts work directly: the board reviews it and only the CEO's `approve_and_start` hands it to the Main PM for real delegation.
 
 Everything else — note layout, link stability, the janitor's internals, the rebuild CLI — is infrastructure you don't need to reason about to do your job; the rest of this doc is here for completeness, not because you'll call any of it.
 

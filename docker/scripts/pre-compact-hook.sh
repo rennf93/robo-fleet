@@ -7,8 +7,8 @@
 
 set -u
 
-SDK_URL="${ROBOCO_SDK_URL:-http://localhost:9000}"
-AGENT_ID="${ROBOCO_AGENT_ID:-unknown}"
+SDK_URL="${ROBOFLEET_SDK_URL:-http://localhost:9000}"
+AGENT_ID="${ROBOFLEET_AGENT_ID:-unknown}"
 OUT="/tmp/roboco-precompact-${AGENT_ID}.md"
 
 budget=$(curl -sf -m 2 "$SDK_URL/budget/status" 2>/dev/null || echo "")

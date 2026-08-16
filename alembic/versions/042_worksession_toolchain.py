@@ -8,7 +8,7 @@ matching:
 - ``toolchain_status`` (VARCHAR(20)) — whether the project's test suite can
   actually be executed in that interpreter: ``ok`` | ``broken`` | ``unknown``.
 
-Pure schema change; no data backfill. Inert until ``ROBOCO_TOOLCHAIN_MATCH_ENABLED``.
+Pure schema change; no data backfill. Inert until ``ROBOFLEET_TOOLCHAIN_MATCH_ENABLED``.
 
 Revision ID: 042_worksession_toolchain
 Revises: 041_structured_content_columns

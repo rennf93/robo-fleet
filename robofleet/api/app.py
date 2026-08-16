@@ -221,11 +221,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     if not _auth_required():
         logger.warning(
-            "Agent auth is in HEADER-TRUST mode (ROBOCO_AGENT_AUTH_REQUIRED is "
+            "Agent auth is in HEADER-TRUST mode (ROBOFLEET_AGENT_AUTH_REQUIRED is "
             "not set to true): the API accepts X-Agent-Id / X-Agent-Role without "
             "verifying a signed token, so any client that can reach it may act as "
             "any role, including 'ceo'. Acceptable only on a trusted private "
-            "network. Set ROBOCO_AGENT_AUTH_REQUIRED=true and do NOT expose this "
+            "network. Set ROBOFLEET_AGENT_AUTH_REQUIRED=true and do NOT expose this "
             "API to untrusted networks.",
         )
 
@@ -237,7 +237,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     logger.info("Database initialized")
 
     # Cloud auth: idempotently upsert the single seeded CEO login user.
-    # No-op unless ROBOCO_CLOUD_AUTH_ENABLED (see ensure_seed_user_startup).
+    # No-op unless ROBOFLEET_CLOUD_AUTH_ENABLED (see ensure_seed_user_startup).
     await ensure_seed_user_startup()
 
     await _apply_flag_overrides()
@@ -428,7 +428,7 @@ def create_app() -> FastAPI:
     # Setup custom middleware (error handling, logging, correlation IDs)
     setup_middleware(app)
 
-    # fastapi-guard HTTP security layer — no-op unless ROBOCO_GUARD_ENABLED.
+    # fastapi-guard HTTP security layer — no-op unless ROBOFLEET_GUARD_ENABLED.
     # Mounted last so SecurityMiddleware is outermost and blocks hostile traffic
     # before it reaches the app (guard does its own request logging); order can
     # be tuned during passive-mode calibration.
@@ -578,7 +578,7 @@ def create_app() -> FastAPI:
         )
         # Unconditional per-IP limiter, same backstop /auth/login gets: the
         # guard middleware's rate_limit decorator only bites when
-        # ROBOCO_GUARD_ENABLED is on, toggled independently — a public
+        # ROBOFLEET_GUARD_ENABLED is on, toggled independently — a public
         # session-minting route must not depend on that coupling.
         app.add_middleware(
             LoginRateLimiter,
@@ -712,7 +712,7 @@ def create_app() -> FastAPI:
     )
 
     # Cloud auth — /auth/status is always public; login/logout mount only
-    # when ROBOCO_CLOUD_AUTH_ENABLED (mirrors apply_guard's conditional mount).
+    # when ROBOFLEET_CLOUD_AUTH_ENABLED (mirrors apply_guard's conditional mount).
     mount_cloud_auth(app, f"{api_prefix}/auth")
 
     # API v1 — intent-verb flow + content-tool endpoints (each module owns

@@ -5,8 +5,8 @@ layer every evidence/handoff/claim surface and the pass_review/pr_pass
 verified-stamp thread through.
 
 Follows ``test_review_findings_repository.py``'s pattern: real Postgres via
-the session-scoped test DB (local: ROBOCO_TEST_DB_PORT=55432
-ROBOCO_TEST_DB_USER=renzof).
+the session-scoped test DB (local: ROBOFLEET_TEST_DB_PORT=55432
+ROBOFLEET_TEST_DB_USER=renzof).
 """
 
 from __future__ import annotations

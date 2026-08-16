@@ -19,8 +19,8 @@ reuses one grok session id, so the cumulative total is the whole-chat usage).
 
 The session id must be grok's REAL one: ``grok -p`` ignores a requested id (the
 ``-s`` flag does not pin), so the one-shot entrypoint hands us the run's JSON log
-and we read the generated ``sessionId`` out of it (``ROBOCO_GROK_RUN_LOG``),
-falling back to ``ROBOCO_AGENT_SESSION_ID`` only when no log is given.
+and we read the generated ``sessionId`` out of it (``ROBOFLEET_GROK_RUN_LOG``),
+falling back to ``ROBOFLEET_AGENT_SESSION_ID`` only when no log is given.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 # Where the entrypoint writes the captured usage for the orchestrator to read.
 # Defaults under the system temp dir (not a hardcoded /tmp literal).
 USAGE_OUT_PATH = Path(
-    os.environ.get("ROBOCO_GROK_USAGE_FILE")
+    os.environ.get("ROBOFLEET_GROK_USAGE_FILE")
     or Path(tempfile.gettempdir()) / "roboco-grok-usage.json"
 )
 
@@ -184,23 +184,23 @@ def session_id_from_run_log(run_log: Path) -> str | None:
 
 def main() -> int:
     """Entrypoint: write ``usage.json`` (model, total_tokens, cost) for the run."""
-    cwd = os.environ.get("ROBOCO_GROK_RUN_CWD", str(Path.cwd()))
-    model = os.environ.get("ROBOCO_AGENT_MODEL", "grok-build")
+    cwd = os.environ.get("ROBOFLEET_GROK_RUN_CWD", str(Path.cwd()))
+    model = os.environ.get("ROBOFLEET_AGENT_MODEL", "grok-build")
 
     # grok's real session id: from the run's JSON log if the entrypoint passed
     # one (`-s` does not pin the id), else the orchestrator-supplied fallback.
-    run_log = os.environ.get("ROBOCO_GROK_RUN_LOG", "")
+    run_log = os.environ.get("ROBOFLEET_GROK_RUN_LOG", "")
     parsed_sid = session_id_from_run_log(Path(run_log)) if run_log else None
     if run_log and not parsed_sid:
         # Silent zero-attribution would otherwise hide a mount/path failure as a
         # genuine zero-cost run — keep the swallow, just make it loud.
         logger.warning(
-            "ROBOCO_GROK_RUN_LOG set but no session id parsed from run log; "
-            "falling back to ROBOCO_AGENT_SESSION_ID (usage may read 0): "
+            "ROBOFLEET_GROK_RUN_LOG set but no session id parsed from run log; "
+            "falling back to ROBOFLEET_AGENT_SESSION_ID (usage may read 0): "
             "run_log=%s",
             run_log,
         )
-    session_id = parsed_sid or os.environ.get("ROBOCO_AGENT_SESSION_ID", "")
+    session_id = parsed_sid or os.environ.get("ROBOFLEET_AGENT_SESSION_ID", "")
 
     capture_session_usage(
         cwd=cwd, session_id=session_id, model=model, out_path=USAGE_OUT_PATH

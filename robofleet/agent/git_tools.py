@@ -1,9 +1,9 @@
 """ADK FunctionTools wrapping git + file ops inside the agent worktree.
 
-Each tool operates on ``ROBOCO_WORKSPACE_DIR`` (the per-agent clone). File ops
+Each tool operates on ``ROBOFLEET_WORKSPACE_DIR`` (the per-agent clone). File ops
 resolve the relative path and reject any path that escapes the worktree root
 (``..`` traversal). Git ops run ``git -C <worktree> ...`` via subprocess. Push
-uses the ``x-access-token:<token>`` extraheader against ``ROBOCO_GIT_TOKEN``.
+uses the ``x-access-token:<token>`` extraheader against ``ROBOFLEET_GIT_TOKEN``.
 """
 
 from __future__ import annotations
@@ -17,11 +17,11 @@ from google.adk.tools import FunctionTool
 
 
 def _worktree() -> Path:
-    # ROBOCO_WORKSPACE_DIR is the explicit form (set by the Cloud Run provider
+    # ROBOFLEET_WORKSPACE_DIR is the explicit form (set by the Cloud Run provider
     # and the docker -w path). When unset, fall back to the process cwd: both
     # deploy targets arrange cwd == workspace (-w / working_dir), so the tools
     # resolve correctly without a hard KeyError on every git/file call.
-    env_dir = os.environ.get("ROBOCO_WORKSPACE_DIR")
+    env_dir = os.environ.get("ROBOFLEET_WORKSPACE_DIR")
     return (Path(env_dir) if env_dir else Path.cwd()).resolve()
 
 
@@ -94,9 +94,9 @@ async def git_status() -> dict[str, Any]:
 
 async def git_push(remote: str = "origin", branch: str = "HEAD") -> dict[str, Any]:
     """Push ``branch`` to ``remote`` using the x-access-token extraheader."""
-    token = os.environ.get("ROBOCO_GIT_TOKEN", "")
+    token = os.environ.get("ROBOFLEET_GIT_TOKEN", "")
     if not token:
-        return _err("ROBOCO_GIT_TOKEN not set; cannot push")
+        return _err("ROBOFLEET_GIT_TOKEN not set; cannot push")
     res = _git(["push", remote, branch], token=token)
     if res.returncode != 0:
         return _err(res.stderr.strip() or res.stdout.strip())

@@ -36,11 +36,11 @@ class _FakeSessionService:
 
 
 def _setup_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://orch:8000")
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "77777777-7777-7777-7777-777777777777")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "UNSIGNED")
-    monkeypatch.setenv("ROBOCO_INITIAL_PROMPT", "do the work")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://orch:8000")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "77777777-7777-7777-7777-777777777777")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "UNSIGNED")
+    monkeypatch.setenv("ROBOFLEET_INITIAL_PROMPT", "do the work")
     monkeypatch.setattr("robofleet.agent.adk_entry.build_gateway_tools", lambda: [])
     monkeypatch.setattr("robofleet.agent.adk_entry.build_git_tools", lambda: [])
     monkeypatch.setattr(

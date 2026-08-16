@@ -242,7 +242,7 @@ def _auth_required() -> bool:
     ``X-Agent-Role: ceo`` without a signed token (GHSA-4f7g-w95g-5q2c). An
     explicit opt-out still stands for a trusted private-network prod deploy.
     """
-    val = os.environ.get("ROBOCO_AGENT_AUTH_REQUIRED", "").strip().lower()
+    val = os.environ.get("ROBOFLEET_AGENT_AUTH_REQUIRED", "").strip().lower()
     if val in ("1", "true", "yes"):
         return True
     if val in ("0", "false", "no"):
@@ -259,7 +259,7 @@ def _check_agent_auth_token(
     """Enforce HMAC token when required; reject invalid tokens even in dev."""
     # Token verification: stops an agent on the Docker network from
     # spoofing another agent's role by setting headers directly. When
-    # ROBOCO_AGENT_AUTH_REQUIRED is true, every request must carry a
+    # ROBOFLEET_AGENT_AUTH_REQUIRED is true, every request must carry a
     # token matching HMAC(id:role:team, secret). In dev it's optional
     # (so the panel / curl-for-debugging keep working), but any token
     # that IS presented is still verified — you can't bypass by
@@ -310,7 +310,7 @@ async def require_panel_token(
     ``X-Agent-Token`` on ``/api/`` in prod, and browser ``EventSource`` cannot
     set headers — so the gate is token-only (no ``X-Agent-ID``; the stream is
     session-keyed and the panel is the sole client). In dev
-    (``ROBOCO_AGENT_AUTH_REQUIRED`` unset) a missing token is allowed; a
+    (``ROBOFLEET_AGENT_AUTH_REQUIRED`` unset) a missing token is allowed; a
     presented-but-forged token is still rejected, matching
     ``_check_agent_auth_token`` and the WS gate.
 
@@ -497,7 +497,7 @@ async def _cloud_auth_agent_context(
     x_agent_token: str | None,
     session_cookie: str | None,
 ) -> AgentContext:
-    """Dual-path enforcement when ROBOCO_CLOUD_AUTH_ENABLED.
+    """Dual-path enforcement when ROBOFLEET_CLOUD_AUTH_ENABLED.
 
     Cloud-auth mode kills header-trust entirely: a caller must present EITHER
     a valid HMAC token (the agent fleet, and the orchestrator's `system`
@@ -567,9 +567,9 @@ async def get_agent_context(
         X-Agent-ID: UUID or slug of the agent (e.g., "be-dev-1")
         X-Agent-Role: Role (e.g., 'developer', 'cell_pm')
         X-Agent-Team: (optional) Team (e.g., 'backend', 'frontend')
-        X-Agent-Token: (required when ROBOCO_AGENT_AUTH_REQUIRED=true)
+        X-Agent-Token: (required when ROBOFLEET_AGENT_AUTH_REQUIRED=true)
             HMAC of "agent_id:role:team" signed with
-            ROBOCO_AGENT_AUTH_SECRET. Orchestrator issues this at spawn.
+            ROBOFLEET_AGENT_AUTH_SECRET. Orchestrator issues this at spawn.
 
     When ``settings.cloud_auth_enabled`` is False (the default), this is
     byte-for-byte the historical header-trust behavior. When True, a

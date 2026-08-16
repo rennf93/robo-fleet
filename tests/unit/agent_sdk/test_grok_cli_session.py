@@ -106,11 +106,11 @@ def test_classify_failure_generic_uses_last_stderr_line() -> None:
 def test_session_resolves_role_from_env_when_id_is_a_uuid(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # The secretary's ROBOCO_AGENT_ID is a UUID; get_agent_role returns the
-    # "unknown" sentinel for it, so the role must fall back to ROBOCO_AGENT_ROLE
+    # The secretary's ROBOFLEET_AGENT_ID is a UUID; get_agent_role returns the
+    # "unknown" sentinel for it, so the role must fall back to ROBOFLEET_AGENT_ROLE
     # (not silently use "unknown").
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "secretary")
-    monkeypatch.delenv("ROBOCO_GROK_REASONING_EFFORT", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "secretary")
+    monkeypatch.delenv("ROBOFLEET_GROK_REASONING_EFFORT", raising=False)
     session = GrokCliSession(cwd="/app", agent_id="0192-uuid-not-a-slug")
     assert session._role_args == grok_cli_args_for_role("secretary")
 
@@ -118,8 +118,8 @@ def test_session_resolves_role_from_env_when_id_is_a_uuid(
 def test_session_uses_slug_role_when_id_maps(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("ROBOCO_AGENT_ROLE", raising=False)
-    monkeypatch.delenv("ROBOCO_GROK_REASONING_EFFORT", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_ROLE", raising=False)
+    monkeypatch.delenv("ROBOFLEET_GROK_REASONING_EFFORT", raising=False)
     # intake-1 maps to the prompter role; the slug-derived role args must
     # carry the fleet-wide subagent ban (Agent disallowed for every role).
     session = GrokCliSession(cwd="/ws", agent_id="intake-1")
@@ -130,12 +130,12 @@ def test_session_uses_slug_role_when_id_maps(
 def test_turn_timeout_seconds_env_and_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("ROBOCO_GROK_TURN_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("ROBOFLEET_GROK_TURN_TIMEOUT_SECONDS", raising=False)
     assert _turn_timeout_seconds() == 600.0  # noqa: PLR2004
-    monkeypatch.setenv("ROBOCO_GROK_TURN_TIMEOUT_SECONDS", "120")
+    monkeypatch.setenv("ROBOFLEET_GROK_TURN_TIMEOUT_SECONDS", "120")
     assert _turn_timeout_seconds() == 120.0  # noqa: PLR2004
     # Garbage / non-positive falls back to the default.
-    monkeypatch.setenv("ROBOCO_GROK_TURN_TIMEOUT_SECONDS", "nope")
+    monkeypatch.setenv("ROBOFLEET_GROK_TURN_TIMEOUT_SECONDS", "nope")
     assert _turn_timeout_seconds() == 600.0  # noqa: PLR2004
-    monkeypatch.setenv("ROBOCO_GROK_TURN_TIMEOUT_SECONDS", "0")
+    monkeypatch.setenv("ROBOFLEET_GROK_TURN_TIMEOUT_SECONDS", "0")
     assert _turn_timeout_seconds() == 600.0  # noqa: PLR2004

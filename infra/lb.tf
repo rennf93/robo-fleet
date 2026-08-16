@@ -4,9 +4,9 @@
 # Plain hyphens only, no em-dashes.
 # =============================================================================
 #
-# X-Agent-Token nginx injection is DROPPED on GCP: ROBOCO_CLOUD_AUTH_ENABLED=true
+# X-Agent-Token nginx injection is DROPPED on GCP: ROBOFLEET_CLOUD_AUTH_ENABLED=true
 # is the auth gate (the validator forbids BOTH nginx-static-token AND cloud auth
-# at the same time). The nginx X-Agent-Token injection (ROBOCO_PANEL_AGENT_TOKEN)
+# at the same time). The nginx X-Agent-Token injection (ROBOFLEET_PANEL_AGENT_TOKEN)
 # is NOT carried into any Cloud Run manifest or LB config. Cloud auth's cookie +
 # JWT session is the sole human-auth path on GCP.
 #

@@ -45,7 +45,7 @@ from robofleet.seeds.initial_data import AGENT_UUIDS, CEO_AGENT_ID
 # Must be set in orchestrator + API container environments; if missing,
 # token verification refuses every token (fail-closed). Generate with:
 #   python -c 'import secrets; print(secrets.token_hex(32))'
-_AUTH_SECRET_ENV: Final[str] = "ROBOCO_AGENT_AUTH_SECRET"
+_AUTH_SECRET_ENV: Final[str] = "ROBOFLEET_AGENT_AUTH_SECRET"
 
 # Process-wide cache of the Secret Manager auth secret; fetched once since
 # the secret is stable for the process lifetime and a GCP round-trip per
@@ -109,7 +109,7 @@ def issue_agent_token(
 
     Static form (``ttl_seconds`` None): a hex HMAC-SHA256 of
     ``agent_id:role:team`` — backward-compatible, used by the panel's static
-    ``ROBOCO_PANEL_AGENT_TOKEN``. Expiring form (``ttl_seconds`` set):
+    ``ROBOFLEET_PANEL_AGENT_TOKEN``. Expiring form (``ttl_seconds`` set):
     ``{base64url(payload)}.{hmac}`` carrying ``id/role/team/iat/exp``, signed
     over the base64url payload so a stolen token is bounded by ``exp`` and
     refreshed at each spawn. Returns ``UNSIGNED`` when the secret is unset.

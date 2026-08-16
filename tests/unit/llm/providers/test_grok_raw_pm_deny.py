@@ -5,7 +5,7 @@ adapts to ``make``; the run continues — unlike a hook deny, which cancels the
 whole run). So raw-PM commands are denied via ``_RAW_PM_DENY`` in
 ``_deny_rules()``, mirroring ``_GIT_MUTATE_DENY``. The bash-guard hook handles
 only the compound-command case the globs miss, and there
-``ROBOCO_GUARD_SKIP_PM=1`` nudges instead of canceling.
+``ROBOFLEET_GUARD_SKIP_PM=1`` nudges instead of canceling.
 """
 
 from __future__ import annotations

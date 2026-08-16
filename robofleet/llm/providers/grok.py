@@ -44,16 +44,18 @@ _log = logging.getLogger(__name__)
 # The Grok agent image (own image, like every other agent role). Overridable for
 # tests / staged rollout.
 _DEFAULT_GROK_IMAGE = os.environ.get(
-    "ROBOCO_GROK_AGENT_IMAGE", "roboco-agent-grok:latest"
+    "ROBOFLEET_GROK_AGENT_IMAGE", "roboco-agent-grok:latest"
 )
 
 # The grok CLI model id (the CLI uses ``grok-build``, verified live).
-_GROK_CLI_MODEL = os.environ.get("ROBOCO_GROK_CLI_MODEL", "grok-build")
+_GROK_CLI_MODEL = os.environ.get("ROBOFLEET_GROK_CLI_MODEL", "grok-build")
 
 # Host directory holding the SuperGrok auth (from ``grok login``). Mounted into
 # the agent's ``~/.grok`` like the Claude path mounts ``~/.claude``. Override for
 # docker-in-docker / NAS deploys (the orchestrator's home is not the host's).
-GROK_AUTH_HOST_PATH = os.environ.get("ROBOCO_HOST_GROK_DIR", str(Path.home() / ".grok"))
+GROK_AUTH_HOST_PATH = os.environ.get(
+    "ROBOFLEET_HOST_GROK_DIR", str(Path.home() / ".grok")
+)
 
 # In-container paths.
 _MCP_CONFIG_IN_CONTAINER = "/app/mcp-config.json"
@@ -191,7 +193,7 @@ class GrokCliProvider(AgentProvider):
             _log.warning(
                 "grok host auth.json not found at %s — spawn will start the "
                 "container but it is doomed to exit 78 (no SuperGrok credential). "
-                "Run `grok login` on the host (or set ROBOCO_HOST_GROK_DIR to the "
+                "Run `grok login` on the host (or set ROBOFLEET_HOST_GROK_DIR to the "
                 "directory holding auth.json) before spawning Grok agents.",
                 auth_dir / "auth.json",
             )
@@ -213,22 +215,22 @@ class GrokCliProvider(AgentProvider):
     ) -> None:
         """Append the runtime env the grok-cli entrypoint + renderer read.
 
-        ``ROBOCO_AGENT_ID`` lets the renderer compute the per-role flags;
-        ``ROBOCO_MCP_CONFIG`` points it at the mounted gateway config; the prompt
+        ``ROBOFLEET_AGENT_ID`` lets the renderer compute the per-role flags;
+        ``ROBOFLEET_MCP_CONFIG`` points it at the mounted gateway config; the prompt
         travels as an env var (never an argv positional).
         """
         cmd.extend(
             [
                 "-e",
-                f"ROBOCO_AGENT_ID={config.agent_id}",
+                f"ROBOFLEET_AGENT_ID={config.agent_id}",
                 "-e",
-                f"ROBOCO_AGENT_MODEL={_GROK_CLI_MODEL}",
+                f"ROBOFLEET_AGENT_MODEL={_GROK_CLI_MODEL}",
                 "-e",
-                f"ROBOCO_MCP_CONFIG={_MCP_CONFIG_IN_CONTAINER}",
+                f"ROBOFLEET_MCP_CONFIG={_MCP_CONFIG_IN_CONTAINER}",
                 "-e",
-                f"ROBOCO_INITIAL_PROMPT={initial_prompt or ''}",
+                f"ROBOFLEET_INITIAL_PROMPT={initial_prompt or ''}",
                 "-e",
-                f"ROBOCO_GROK_USAGE_FILE={_GROK_USAGE_FILE_IN_CONTAINER}",
+                f"ROBOFLEET_GROK_USAGE_FILE={_GROK_USAGE_FILE_IN_CONTAINER}",
             ]
         )
 

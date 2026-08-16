@@ -11,7 +11,7 @@
 #               When the SDK reports loop_action="halt" (foundation default
 #               BudgetPolicy.loop_action), the hook exits 1 to deny the
 #               wrapping tool call. Operators can soften with
-#               ROBOCO_AGENT_LOOP_ACTION=warn.
+#               ROBOFLEET_AGENT_LOOP_ACTION=warn.
 #   [Halt]    — hard cap breached; orchestrator kill-switch will terminate
 #               the container on its next sweep. Hook also fires the
 #               auto-escalate on the agent's behalf.
@@ -20,7 +20,7 @@
 
 set -u
 
-SDK_URL="${ROBOCO_SDK_URL:-http://localhost:9000}"
+SDK_URL="${ROBOFLEET_SDK_URL:-http://localhost:9000}"
 input=$(cat 2>/dev/null || true)
 [[ -z "$input" ]] && exit 0
 

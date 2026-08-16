@@ -94,7 +94,7 @@ The CEO-facing intake and chief-of-staff slice. PrompterService turns a confirme
 | TaskService.search_tasks | method | roboco/services/task.py:6384 | Case-insensitive ILIKE search over title/description + id-prefix match; backs the panel's task search bar (GET /tasks/summary?q=), the Secretary's task-by-name lookup (GET /secretary/tasks?q=), and the intake `search_past_tasks` tool |
 | search_past_tasks (route) | route | roboco/api/routes/prompter_live.py:376 | GET /live/{session}/search-tasks: session-aliveness-gated (mirrors /events' trust boundary — the intake container has no agent identity) bounded compact search calling TaskService.search_tasks + compact_task_rows |
 | query_past_tasks / format_search_results | function | roboco/mcp/intake_server.py:108,145 | Shared HTTP-call + bounding + rendering logic for `search_past_tasks`, module-level so both the grok MCP tool and the Claude SDK in-process tool call the exact same implementation |
-| search_past_tasks (grok MCP tool) | mcp tool | roboco/mcp/intake_server.py:161 | Grok-CLI intake's "have we done something like this before?" tool; reads ROBOCO_PROMPTER_SESSION_ID, delegates to query_past_tasks + format_search_results |
+| search_past_tasks (grok MCP tool) | mcp tool | roboco/mcp/intake_server.py:161 | Grok-CLI intake's "have we done something like this before?" tool; reads ROBOFLEET_PROMPTER_SESSION_ID, delegates to query_past_tasks + format_search_results |
 | _search_past_tasks (Claude SDK in-process tool) | tool | roboco/agent_sdk/intake_driver.py:512 | Claude SDK driver's in-process parity tool for the same feature — imports query_past_tasks/format_search_results from intake_server.py directly (one implementation, both runtimes) |
 
 ## Data Flow
@@ -215,9 +215,9 @@ intake-secretary
 | GET /api/secretary/tasks?q= (search_tasks) | roboco/api/routes/secretary.py | Secretary or CEO resolves a task NAME to concrete id(s) -> TaskService.search_tasks, for targeting a `control_task` directive |
 
 ## Config Flags
-- ROBOCO_WORKSPACE_AUTO_CLONE / ROBOCO_WORKSPACE_CLONE_TIMEOUT (intake multi-repo clone scope: _clone_intake_scope, indirectly via orchestrator)
-- ROBOCO_SELF_HEAL_ORIGINATE_ENABLED etc. do NOT gate this slice
-- No direct ROBOCO_* flag in these three files; intake is a core capability (not feature-flagged), secretary is always-on; MegaTask is additive core, not gated
+- ROBOFLEET_WORKSPACE_AUTO_CLONE / ROBOFLEET_WORKSPACE_CLONE_TIMEOUT (intake multi-repo clone scope: _clone_intake_scope, indirectly via orchestrator)
+- ROBOFLEET_SELF_HEAL_ORIGINATE_ENABLED etc. do NOT gate this slice
+- No direct ROBOFLEET_* flag in these three files; intake is a core capability (not feature-flagged), secretary is always-on; MegaTask is additive core, not gated
 
 
 ## Gotchas
@@ -236,7 +236,7 @@ intake-secretary
 - SecretaryService._edit_task never touches status — _EDITABLE_TASK_FIELDS deliberately excludes it (status rides the separate audited start/cancel/override actions), so an "edit" directive that also needs a status change requires a second CONTROL_TASK directive.
 - SecretaryService._reassign_task branches on the task's CURRENT status at call time: claimed/in_progress goes through reassign_active_claim (reseeds the heartbeat so the new assignee isn't immediately stale to the reaper), everything else falls through to the general reassign — a caller relying on one code path for both is testing the wrong branch depending on task state.
 - history_digest_layer / build_history_digest return None / "" respectively on no data — a brand-new project or a board-level (no-project) spawn injects nothing into the ambient prompt (no empty "Recent tasks" header noise), which also means there is no explicit signal in the prompt that the digest was even attempted.
-- search_past_tasks (both the grok MCP tool and the Claude SDK in-process tool) reads ROBOCO_PROMPTER_SESSION_ID from the environment and calls the session-scoped HTTP route — a tool call with no live session (or a session the registry has already closed) returns a plain string error, not an exception, so a stale intake container can call it silently forever without a hard failure surfacing.
+- search_past_tasks (both the grok MCP tool and the Claude SDK in-process tool) reads ROBOFLEET_PROMPTER_SESSION_ID from the environment and calls the session-scoped HTTP route — a tool call with no live session (or a session the registry has already closed) returns a plain string error, not an exception, so a stale intake container can call it silently forever without a hard failure surfacing.
 
 
 ## Changes Since Baseline

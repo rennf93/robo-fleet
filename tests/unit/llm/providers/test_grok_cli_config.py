@@ -19,7 +19,10 @@ _SAMPLE_MCP = {
         "roboco-flow": {
             "command": "uv",
             "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
-            "env": {"ROBOCO_AGENT_ID": "be-dev-1", "ROBOCO_AGENT_TOKEN": "tok-123"},
+            "env": {
+                "ROBOFLEET_AGENT_ID": "be-dev-1",
+                "ROBOFLEET_AGENT_TOKEN": "tok-123",
+            },
         },
         "roboco-do": {"command": "uv", "args": ["run", "x"]},
     }
@@ -36,7 +39,7 @@ def test_render_config_toml_is_valid_toml_and_injects_env() -> None:
     assert flow["command"] == "uv"
     assert flow["args"][:2] == ["run", "--no-sync"]
     # The gateway env (token) reaches the server block — the keystone.
-    assert flow["env"]["ROBOCO_AGENT_TOKEN"] == "tok-123"
+    assert flow["env"]["ROBOFLEET_AGENT_TOKEN"] == "tok-123"
     # A server with no env omits the key entirely.
     assert "env" not in parsed["mcp_servers"]["roboco-do"]
 
@@ -61,7 +64,7 @@ def test_write_agents_md_noops_when_source_absent(tmp_path: Path) -> None:
 
 
 def test_developer_flags(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("ROBOCO_GROK_REASONING_EFFORT", raising=False)
+    monkeypatch.delenv("ROBOFLEET_GROK_REASONING_EFFORT", raising=False)
     args = gc.grok_cli_args("be-dev-1")
     dis = _disallowed(args)
     # Developer writes code + runs a shell → only subagents removed.
@@ -77,7 +80,7 @@ def test_developer_flags(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_pr_reviewer_flags(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("ROBOCO_GROK_REASONING_EFFORT", raising=False)
+    monkeypatch.delenv("ROBOFLEET_GROK_REASONING_EFFORT", raising=False)
     args = gc.grok_cli_args("pr-reviewer-1")
     dis = _disallowed(args)
     assert "run_terminal_cmd" in dis  # read-only reviewer: no shell
@@ -87,7 +90,7 @@ def test_pr_reviewer_flags(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_main_pm_keeps_shell_but_denies_git(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("ROBOCO_GROK_REASONING_EFFORT", raising=False)
+    monkeypatch.delenv("ROBOFLEET_GROK_REASONING_EFFORT", raising=False)
     args = gc.grok_cli_args("main-pm")
     dis = _disallowed(args)
     assert "run_terminal_cmd" not in dis  # PM keeps a shell
@@ -100,7 +103,7 @@ def test_main_pm_keeps_shell_but_denies_git(monkeypatch: pytest.MonkeyPatch) -> 
 def test_prompter_gets_no_subagents_shell_or_edit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("ROBOCO_GROK_REASONING_EFFORT", raising=False)
+    monkeypatch.delenv("ROBOFLEET_GROK_REASONING_EFFORT", raising=False)
     dis = _disallowed(gc.grok_cli_args_for_role("prompter"))
     # Fleet-wide subagent ban (CEO, 2026-07-09): no role fans out, intake included.
     assert "Agent" in dis
@@ -122,13 +125,13 @@ def test_every_role_auto_approves_tools() -> None:
 
 
 def test_effort_is_fleet_override_only(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_GROK_REASONING_EFFORT", "high")
+    monkeypatch.setenv("ROBOFLEET_GROK_REASONING_EFFORT", "high")
     args = gc.grok_cli_args("be-dev-1")
     assert args[args.index("--effort") + 1] == "high"
     # "full" / "default" / empty keep grok's model default (no --effort).
-    monkeypatch.setenv("ROBOCO_GROK_REASONING_EFFORT", "full")
+    monkeypatch.setenv("ROBOFLEET_GROK_REASONING_EFFORT", "full")
     assert "--effort" not in gc.grok_cli_args("main-pm")
-    monkeypatch.delenv("ROBOCO_GROK_REASONING_EFFORT", raising=False)
+    monkeypatch.delenv("ROBOFLEET_GROK_REASONING_EFFORT", raising=False)
     assert "--effort" not in gc.grok_cli_args("documenter")
 
 
@@ -157,7 +160,7 @@ def test_bash_guard_hook_config_skips_git() -> None:
     inner = handler["hooks"][0]
     assert inner["command"] == "/app/scripts/bash-guard-hook.sh"
     # Git is handled by graceful --deny, so the hook skips it (exfil only).
-    assert inner["env"]["ROBOCO_GUARD_SKIP_GIT"] == "1"
+    assert inner["env"]["ROBOFLEET_GUARD_SKIP_GIT"] == "1"
 
 
 def test_write_grok_hooks_installs_when_script_present(tmp_path: Path) -> None:

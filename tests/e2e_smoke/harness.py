@@ -503,18 +503,18 @@ class ScriptedAgent:
         }
 
     def _module(self, name: str) -> ModuleType:
-        os.environ["ROBOCO_AGENT_ID"] = str(self.agent_id)
-        os.environ["ROBOCO_AGENT_ROLE"] = self.role
-        os.environ["ROBOCO_ORCHESTRATOR_URL"] = self.stack.base_url
-        os.environ["ROBOCO_TOOL_MANIFEST_PATH"] = str(self._manifest_path)
-        # The host agent environment may carry a real ROBOCO_AGENT_TOKEN issued
+        os.environ["ROBOFLEET_AGENT_ID"] = str(self.agent_id)
+        os.environ["ROBOFLEET_AGENT_ROLE"] = self.role
+        os.environ["ROBOFLEET_ORCHESTRATOR_URL"] = self.stack.base_url
+        os.environ["ROBOFLEET_TOOL_MANIFEST_PATH"] = str(self._manifest_path)
+        # The host agent environment may carry a real ROBOFLEET_AGENT_TOKEN issued
         # for the test runner's identity. flow_server reads it before each call
         # and forwards it in X-Agent-Token; the token won't match the ephemeral
         # test agent IDs and causes 401s. Drop it so tests run in the same
         # unsigned-token mode as CI.
-        os.environ.pop("ROBOCO_AGENT_TOKEN", None)
+        os.environ.pop("ROBOFLEET_AGENT_TOKEN", None)
         # Same leakage class for the per-verb circuit breaker: flow_server /
-        # do_server post rejections to ROBOCO_SDK_URL (default
+        # do_server post rejections to ROBOFLEET_SDK_URL (default
         # http://localhost:9000), which is this repo's own live agent SDK
         # loopback port when the suite happens to run inside a real spawned
         # agent container. That breaker then records genuine attempts for
@@ -523,7 +523,7 @@ class ScriptedAgent:
         # deliberately-rejected calls). Point it at a guaranteed-refused
         # loopback port so every environment sees the same fail-open
         # bypass CI gets (no SDK process listening at all).
-        os.environ["ROBOCO_SDK_URL"] = "http://127.0.0.1:1"
+        os.environ["ROBOFLEET_SDK_URL"] = "http://127.0.0.1:1"
         module = importlib.import_module(name)
         if getattr(module, "AGENT_ID", None) != str(self.agent_id):
             module = importlib.reload(module)

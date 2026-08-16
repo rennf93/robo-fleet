@@ -72,7 +72,7 @@ class ForgeRouter(GitProvider):
             "Could not resolve a forge for this remote URL — a non-GitHub "
             "host must belong to a registered project with git_provider set "
             "(gitea/gitlab today; GHE uses git_provider='github' with "
-            "ROBOCO_GITHUB_API_BASE_URL).",
+            "ROBOFLEET_GITHUB_API_BASE_URL).",
             {"host": host or "unknown"},
         )
 

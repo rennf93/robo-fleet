@@ -110,12 +110,12 @@ class _FakeHost:
     def _append_agent_auth_env(
         self, cmd: list[str], config: OrchestratorAgentConfig
     ) -> None:
-        cmd += ["-e", f"ROBOCO_AGENT_TOKEN=hmac-{config.agent_id}"]
+        cmd += ["-e", f"ROBOFLEET_AGENT_TOKEN=hmac-{config.agent_id}"]
 
     def _append_git_context_env(
         self, cmd: list[str], config: OrchestratorAgentConfig
     ) -> None:
-        cmd += ["-e", f"ROBOCO_GIT_AGENT={config.agent_id}"]
+        cmd += ["-e", f"ROBOFLEET_GIT_AGENT={config.agent_id}"]
 
 
 def _proc(
@@ -170,15 +170,15 @@ async def test_gemini_spawn_wires_gateway_env_and_image_last() -> None:
     ) as exec_mock:
         result = await provider.spawn(_config())
     cmd = list(exec_mock.call_args.args)
-    assert "ROBOCO_MCP_CONFIG=/app/mcp-config.json" in cmd
-    assert "ROBOCO_AGENT_ID=be-dev-1" in cmd
-    assert "ROBOCO_AGENT_MODEL=gemini-2.5-pro" in cmd
+    assert "ROBOFLEET_MCP_CONFIG=/app/mcp-config.json" in cmd
+    assert "ROBOFLEET_AGENT_ID=be-dev-1" in cmd
+    assert "ROBOFLEET_AGENT_MODEL=gemini-2.5-pro" in cmd
     # Usage capture: per-agent data dir mounted + the entrypoint's usage file.
     assert host.data_dirs_ensured == ["be-dev-1"]
     assert "/host/data/gemini-usage/be-dev-1:/home/agent/.gemini-usage" in cmd
-    assert "ROBOCO_GEMINI_USAGE_FILE=/home/agent/.gemini-usage/usage.json" in cmd
+    assert "ROBOFLEET_GEMINI_USAGE_FILE=/home/agent/.gemini-usage/usage.json" in cmd
     # Identity wiring from the shared host helpers is present.
-    assert "ROBOCO_AGENT_TOKEN=hmac-be-dev-1" in cmd
+    assert "ROBOFLEET_AGENT_TOKEN=hmac-be-dev-1" in cmd
     # The image is the final docker-run argument.
     assert cmd[-1] == "roboco-agent-gemini:test"
     assert host.removed == ["roboco-agent-be-dev-1"]
@@ -272,7 +272,7 @@ async def test_gemini_spawn_prompt_is_injection_safe() -> None:
         await provider.spawn(_config(), initial_prompt=nasty)
     cmd = list(exec_mock.call_args.args)
     # Passed only as an env value, never as a bare argv token.
-    assert f"ROBOCO_INITIAL_PROMPT={nasty}" in cmd
+    assert f"ROBOFLEET_INITIAL_PROMPT={nasty}" in cmd
     assert nasty not in cmd
 
 

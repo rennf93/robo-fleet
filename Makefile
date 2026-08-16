@@ -329,7 +329,7 @@ quality: sync
 .PHONY: e2e-smoke
 e2e-smoke: sync
 	@echo "==> e2e lifecycle smoke (scripted agents, real gates)"
-	@ROBOCO_E2E_SMOKE=1 uv run pytest tests/e2e_smoke -q --no-cov
+	@ROBOFLEET_E2E_SMOKE=1 uv run pytest tests/e2e_smoke -q --no-cov
 
 .PHONY: quality-fast
 quality-fast: sync
@@ -479,9 +479,9 @@ panel-token:
 	@# unquote it, so the token must be signed with the UNQUOTED secret or it
 	@# won't verify against the orchestrator (a quoted .env value silently
 	@# produced a mismatched token before this).
-	@SECRET="$$(grep -E '^ROBOCO_AGENT_AUTH_SECRET=' .env 2>/dev/null | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$$//' -e "s/^'//" -e "s/'$$//")"; \
-	ROBOCO_AGENT_AUTH_SECRET="$${SECRET:-$$ROBOCO_AGENT_AUTH_SECRET}" \
-	uv run python -c "import sys; from robofleet.agents_config import issue_panel_token; tok = issue_panel_token(); print(tok) if tok != 'UNSIGNED' else sys.exit('ERROR: ROBOCO_AGENT_AUTH_SECRET not set (in .env or environment) - the panel token would be unsigned')"
+	@SECRET="$$(grep -E '^ROBOFLEET_AGENT_AUTH_SECRET=' .env 2>/dev/null | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$$//' -e "s/^'//" -e "s/'$$//")"; \
+	ROBOFLEET_AGENT_AUTH_SECRET="$${SECRET:-$$ROBOFLEET_AGENT_AUTH_SECRET}" \
+	uv run python -c "import sys; from robofleet.agents_config import issue_panel_token; tok = issue_panel_token(); print(tok) if tok != 'UNSIGNED' else sys.exit('ERROR: ROBOFLEET_AGENT_AUTH_SECRET not set (in .env or environment) - the panel token would be unsigned')"
 
 # Help
 .PHONY: help

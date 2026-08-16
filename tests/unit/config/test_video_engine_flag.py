@@ -20,17 +20,17 @@ def test_video_engine_disabled_by_default() -> None:
 
 
 def test_video_engine_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_VIDEO_ENGINE_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_VIDEO_ENGINE_ENABLED": "true"}):
         assert Settings().video_engine_enabled is True
 
 
 def test_video_on_release_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_VIDEO_ON_RELEASE": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_VIDEO_ON_RELEASE": "true"}):
         assert Settings().video_on_release is True
 
 
 def test_video_on_spotlight_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_VIDEO_ON_SPOTLIGHT": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_VIDEO_ON_SPOTLIGHT": "true"}):
         assert Settings().video_on_spotlight is True
 
 

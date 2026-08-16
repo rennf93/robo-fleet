@@ -8,7 +8,7 @@ The RoboCo video engine API is CEO-only and manages three concerns:
 2. **Re-render (CEO retry)**: `POST /api/video/pipeline/{task_id}/rerender` clears render idempotency keys to re-trigger rendering
 3. **Live preview proxy**: `GET /api/video/preview/{task_id}/{file_path:path}` serves authoring task composition HTML + assets with path-traversal confinement
 
-All endpoints are CEO-only and require the global video engine flag enabled (`ROBOCO_VIDEO_ENGINE_ENABLED`).
+All endpoints are CEO-only and require the global video engine flag enabled (`ROBOFLEET_VIDEO_ENGINE_ENABLED`).
 
 ---
 
@@ -50,7 +50,7 @@ CEO-only (401 if not CEO).
 | Code | Status | Meaning |
 |------|--------|---------|
 | 200 | opened | Task created and dispatched to UX/UI developer |
-| 200 | disabled | Video engine is off (`ROBOCO_VIDEO_ENGINE_ENABLED=false`) |
+| 200 | disabled | Video engine is off (`ROBOFLEET_VIDEO_ENGINE_ENABLED=false`) |
 | 200 | not_opened | Duplicate occasion or open-post cap reached |
 | 404 | — | `project_id` unresolvable OR project not opted in (`video_engine_enabled=false`) |
 | 401 | — | Not authenticated as CEO |
@@ -60,7 +60,7 @@ CEO-only (401 if not CEO).
 1. **Project validation**: Looks up `project_id` and checks `video_engine_enabled=true`. Returns 404 if unresolvable or not opted in.
 2. **Task creation**: Opens a normal ASSIGNED delivery task (`source=video`) dispatched to an available UX/UI developer (balanced by open-task count).
 3. **Duplicate check**: Returns `not_opened` if a task for this `occasion` is already open.
-4. **Open-post cap**: Returns `not_opened` if open-task count ≥ `ROBOCO_VIDEO_MAX_OPEN_POSTS`.
+4. **Open-post cap**: Returns `not_opened` if open-task count ≥ `ROBOFLEET_VIDEO_MAX_OPEN_POSTS`.
 
 ### Example
 

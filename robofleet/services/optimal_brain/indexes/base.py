@@ -248,7 +248,7 @@ class BaseIndexPlugin(ABC):
                     f"Embedding dimension mismatch for {self.index_type.value}: "
                     f"model produces {actual_dim} dimensions, "
                     f"but settings.embedding_dimensions={expected_dim}. "
-                    f"Update ROBOCO_EMBEDDING_DIMENSIONS or use correct model."
+                    f"Update ROBOFLEET_EMBEDDING_DIMENSIONS or use correct model."
                 )
 
             logger.debug(
@@ -297,7 +297,7 @@ class BaseIndexPlugin(ABC):
         if not self.config.store_url:
             raise RuntimeError(
                 f"store_url is required for {self.index_type.value} VectorStore. "
-                "Set ROBOCO_DATABASE_* environment variables."
+                "Set ROBOFLEET_DATABASE_* environment variables."
             )
 
         self._store = VectorStore(

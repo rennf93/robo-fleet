@@ -14,7 +14,7 @@ proves the runner's plumbing without touching Docker.
 
 Offline dev/ops tool: no panel surface, no feature flag. Also runs from a
 source checkout only (needs ``tests/e2e_smoke``, not shipped in containers
-or wheels) plus the test Postgres (``ROBOCO_TEST_DB_*`` env vars, mirroring
+or wheels) plus the test Postgres (``ROBOFLEET_TEST_DB_*`` env vars, mirroring
 the rest of the gate toolchain).
 """
 

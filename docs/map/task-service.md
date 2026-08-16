@@ -135,9 +135,9 @@ stateDiagram-v2
 - `wire_*` / `add_dependency` — `SequencingService` / `BatchPlacement`.
 
 ## Config Flags
-- `ROBOCO_ORG_MEMORY_ENABLED` — `_completion_learnings_for` swaps raw capture for one distilled lesson (task.py:2810).
-- `ROBOCO_CONVENTIONS_ENABLED` — `_attach_baseline_constraints` skipped when off (task.py:1000).
-- (Indirect, via called services) `ROBOCO_SELF_HEAL_*`, `ROBOCO_CI_WATCH_*`, `ROBOCO_DEP_UPDATE_*`, `ROBOCO_RELEASE_MANAGER_*` gate the `list_open_*`/`list_open_release_proposals` query paths.
+- `ROBOFLEET_ORG_MEMORY_ENABLED` — `_completion_learnings_for` swaps raw capture for one distilled lesson (task.py:2810).
+- `ROBOFLEET_CONVENTIONS_ENABLED` — `_attach_baseline_constraints` skipped when off (task.py:1000).
+- (Indirect, via called services) `ROBOFLEET_SELF_HEAL_*`, `ROBOFLEET_CI_WATCH_*`, `ROBOFLEET_DEP_UPDATE_*`, `ROBOFLEET_RELEASE_MANAGER_*` gate the `list_open_*`/`list_open_release_proposals` query paths.
 
 ## Gotchas
 - `_emit_status_transition_audit` writes the audit row in the CALLER's session — callers that clear `claimed_by` before transitioning MUST pass `audit_agent_id` or the row lands unattributed (task.py:688).

@@ -218,7 +218,7 @@ class KimiCliProvider(AgentProvider):
                 "kimi host credentials/kimi-code.json not found at %s — spawn "
                 "will start the container but it is doomed to exit 78 (no "
                 "Kimi credential). Run `kimi login` on the host (or set "
-                "ROBOCO_HOST_KIMI_DIR to the directory holding credentials/"
+                "ROBOFLEET_HOST_KIMI_DIR to the directory holding credentials/"
                 "kimi-code.json) before spawning Kimi agents.",
                 auth_dir / "credentials" / "kimi-code.json",
             )
@@ -240,22 +240,22 @@ class KimiCliProvider(AgentProvider):
     ) -> None:
         """Append the runtime env the kimi-cli entrypoint + renderer read.
 
-        ``ROBOCO_AGENT_ID`` lets the renderer compute the per-role deny
-        rules; ``ROBOCO_MCP_CONFIG`` points it at the mounted gateway config;
+        ``ROBOFLEET_AGENT_ID`` lets the renderer compute the per-role deny
+        rules; ``ROBOFLEET_MCP_CONFIG`` points it at the mounted gateway config;
         the prompt travels as an env var (never an argv positional).
         """
         cmd.extend(
             [
                 "-e",
-                f"ROBOCO_AGENT_ID={config.agent_id}",
+                f"ROBOFLEET_AGENT_ID={config.agent_id}",
                 "-e",
-                f"ROBOCO_AGENT_MODEL={_KIMI_CLI_MODEL}",
+                f"ROBOFLEET_AGENT_MODEL={_KIMI_CLI_MODEL}",
                 "-e",
-                f"ROBOCO_MCP_CONFIG={_MCP_CONFIG_IN_CONTAINER}",
+                f"ROBOFLEET_MCP_CONFIG={_MCP_CONFIG_IN_CONTAINER}",
                 "-e",
-                f"ROBOCO_INITIAL_PROMPT={initial_prompt or ''}",
+                f"ROBOFLEET_INITIAL_PROMPT={initial_prompt or ''}",
                 "-e",
-                f"ROBOCO_KIMI_USAGE_FILE={_KIMI_USAGE_FILE_IN_CONTAINER}",
+                f"ROBOFLEET_KIMI_USAGE_FILE={_KIMI_USAGE_FILE_IN_CONTAINER}",
             ]
         )
 

@@ -173,7 +173,7 @@ def _network_git_timeout() -> int:
 # isolates git work and caps host parallelism so a burst of commits/pushes
 # can't thrash the box. Never shut down: lives for the process.
 _GIT_EXECUTOR = ThreadPoolExecutor(
-    max_workers=int(os.environ.get("ROBOCO_GIT_EXECUTOR_WORKERS", "16")),
+    max_workers=int(os.environ.get("ROBOFLEET_GIT_EXECUTOR_WORKERS", "16")),
     thread_name_prefix="git",
 )
 

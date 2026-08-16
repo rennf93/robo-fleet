@@ -23,12 +23,12 @@ Notes:
 
 **Error:** `Workspace does not exist`
 
-**Cause:** Workspace not cloned yet (or `ROBOCO_WORKSPACE_AUTO_CLONE` is `false` and no manual clone has run).
+**Cause:** Workspace not cloned yet (or `ROBOFLEET_WORKSPACE_AUTO_CLONE` is `false` and no manual clone has run).
 
 **Fix:**
 
-- If `ROBOCO_WORKSPACE_AUTO_CLONE=true` (default), the first MCP verb that touches the workspace will trigger the clone. Just call your next verb (`i_will_work_on`, `commit`, etc.).
-- Otherwise check `ROBOCO_WORKSPACE_CLONE_TIMEOUT` and the orchestrator logs for a stuck clone.
+- If `ROBOFLEET_WORKSPACE_AUTO_CLONE=true` (default), the first MCP verb that touches the workspace will trigger the clone. Just call your next verb (`i_will_work_on`, `commit`, etc.).
+- Otherwise check `ROBOFLEET_WORKSPACE_CLONE_TIMEOUT` and the orchestrator logs for a stuck clone.
 
 ## BRANCH_MISMATCH
 

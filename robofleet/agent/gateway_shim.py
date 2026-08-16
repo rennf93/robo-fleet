@@ -32,24 +32,24 @@ _DEFAULT_MANIFEST = "/app/tool-manifest.json"
 
 
 def _base() -> str:
-    return os.environ.get("ROBOCO_ORCHESTRATOR_URL", _DEFAULT_BASE)
+    return os.environ.get("ROBOFLEET_ORCHESTRATOR_URL", _DEFAULT_BASE)
 
 
 def _segment() -> str:
-    role = os.environ.get("ROBOCO_AGENT_ROLE", "")
+    role = os.environ.get("ROBOFLEET_AGENT_ROLE", "")
     return "board" if role in _BOARD_ROLES else role
 
 
 def _headers() -> dict[str, str]:
     h: dict[str, str] = {
-        "X-Agent-ID": os.environ.get("ROBOCO_AGENT_ID", ""),
-        "X-Agent-Role": os.environ.get("ROBOCO_AGENT_ROLE", ""),
+        "X-Agent-ID": os.environ.get("ROBOFLEET_AGENT_ID", ""),
+        "X-Agent-Role": os.environ.get("ROBOFLEET_AGENT_ROLE", ""),
         "X-Correlation-ID": str(uuid.uuid4()),
     }
-    team = os.environ.get("ROBOCO_AGENT_TEAM", "")
+    team = os.environ.get("ROBOFLEET_AGENT_TEAM", "")
     if team:
         h["X-Agent-Team"] = team
-    token = os.environ.get("ROBOCO_AGENT_TOKEN", "")
+    token = os.environ.get("ROBOFLEET_AGENT_TOKEN", "")
     if token and token != "UNSIGNED":
         h["X-Agent-Token"] = token
     return h
@@ -94,7 +94,7 @@ async def call_do(tool: str, body: dict[str, Any]) -> dict[str, Any]:
 
 
 def _load_manifest() -> dict[str, Any]:
-    """Load the tool manifest from ROBOCO_TOOL_MANIFEST_PATH.
+    """Load the tool manifest from ROBOFLEET_TOOL_MANIFEST_PATH.
 
     Supports ``gs://`` URIs (fetched lazily from GCS) and local paths. Falls
     back to ``{}`` when the default local path is absent (local-dev with no
@@ -104,7 +104,7 @@ def _load_manifest() -> dict[str, Any]:
     adk_entry (system_prompt) so the gs://-or-local fetch logic is not
     duplicated.
     """
-    path = os.environ.get("ROBOCO_TOOL_MANIFEST_PATH", _DEFAULT_MANIFEST)
+    path = os.environ.get("ROBOFLEET_TOOL_MANIFEST_PATH", _DEFAULT_MANIFEST)
     if path.startswith("gs://"):
         return _load_manifest_from_gcs(path)
     local = Path(path)

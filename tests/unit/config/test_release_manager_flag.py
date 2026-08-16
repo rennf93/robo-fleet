@@ -20,13 +20,13 @@ def test_release_manager_disabled_by_default() -> None:
 
 
 def test_release_manager_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_RELEASE_MANAGER_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_RELEASE_MANAGER_ENABLED": "true"}):
         assert Settings().release_manager_enabled is True
 
 
 def test_release_min_commits_reads_env_var() -> None:
     override = 12
-    with mock.patch.dict(os.environ, {"ROBOCO_RELEASE_MIN_COMMITS": str(override)}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_RELEASE_MIN_COMMITS": str(override)}):
         assert Settings().release_min_commits == override
 
 

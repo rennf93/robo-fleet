@@ -2,17 +2,17 @@
 
 ## What It Is
 
-Rendered MP4s are written to a host bind mount (`ROBOCO_VIDEO_OUTPUT_DIR`, default `/data/video-renders`) and served back via `FileResponse` from the media route. MinIO adds decoupled, docker-managed durable object storage so renders have a durable copy alongside the local-disk source of truth, not relying on the bind-mount sprawl, and gives a clean serve path that keeps app-level auth end-to-end. The client is `minio` (minio-py), sync, with every call site wrapped in `asyncio.to_thread` — same pattern as the existing `_save` in `roboco/services/video_renderer_client.py`.
+Rendered MP4s are written to a host bind mount (`ROBOFLEET_VIDEO_OUTPUT_DIR`, default `/data/video-renders`) and served back via `FileResponse` from the media route. MinIO adds decoupled, docker-managed durable object storage so renders have a durable copy alongside the local-disk source of truth, not relying on the bind-mount sprawl, and gives a clean serve path that keeps app-level auth end-to-end. The client is `minio` (minio-py), sync, with every call site wrapped in `asyncio.to_thread` — same pattern as the existing `_save` in `roboco/services/video_renderer_client.py`.
 
 ## Enable/Disable
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `ROBOCO_MINIO_ENDPOINT` | `` (empty) | MinIO endpoint, e.g. `http://roboco-minio:9000`. Empty = disabled (the media route falls back to `FileResponse` from the local video-renders dir). |
-| `ROBOCO_MINIO_ACCESS_KEY` | `` | Access key. Required when endpoint is set. |
-| `ROBOCO_MINIO_SECRET_KEY` | `` | Secret key. Required when endpoint is set. |
-| `ROBOCO_MINIO_BUCKET` | `roboco-video-renders` | Bucket for rendered videos. Created idempotently by the `minio-init` one-shot service. |
-| `ROBOCO_MINIO_REGION` | `us-east-1` | MinIO region. |
+| `ROBOFLEET_MINIO_ENDPOINT` | `` (empty) | MinIO endpoint, e.g. `http://roboco-minio:9000`. Empty = disabled (the media route falls back to `FileResponse` from the local video-renders dir). |
+| `ROBOFLEET_MINIO_ACCESS_KEY` | `` | Access key. Required when endpoint is set. |
+| `ROBOFLEET_MINIO_SECRET_KEY` | `` | Secret key. Required when endpoint is set. |
+| `ROBOFLEET_MINIO_BUCKET` | `roboco-video-renders` | Bucket for rendered videos. Created idempotently by the `minio-init` one-shot service. |
+| `ROBOFLEET_MINIO_REGION` | `us-east-1` | MinIO region. |
 
 Armed in the NAS compose (`docker-compose.yml` / `docker-compose.yaml`); intentionally omitted from `docker-compose.registry.yml` (NAS default-on, registry default-off).
 

@@ -29,12 +29,14 @@ def test_telegram_inbound_disabled_by_default() -> None:
 
 
 def test_telegram_inbound_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_TELEGRAM_INBOUND_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_TELEGRAM_INBOUND_ENABLED": "true"}):
         assert Settings().telegram_inbound_enabled is True
 
 
 def test_telegram_poll_interval_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_TELEGRAM_POLL_INTERVAL_SECONDS": "10"}):
+    with mock.patch.dict(
+        os.environ, {"ROBOFLEET_TELEGRAM_POLL_INTERVAL_SECONDS": "10"}
+    ):
         assert (
             Settings().telegram_poll_interval_seconds == _OVERRIDE_POLL_INTERVAL_SECONDS
         )

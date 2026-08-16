@@ -11,8 +11,8 @@ reused verbatim from ``secretary_driver`` (the SDK and grok paths share one
 HTTP seam), so this server only wraps those helpers as MCP tools.
 
 Wired into ``~/.grok/config.toml`` by ``grok_secretary_main``; the container
-provides ``ROBOCO_API_URL`` / ``ROBOCO_AGENT_ID`` / ``ROBOCO_AGENT_ROLE`` /
-``ROBOCO_AGENT_TOKEN`` (the same auth substrate the one-shot Grok path uses).
+provides ``ROBOFLEET_API_URL`` / ``ROBOFLEET_AGENT_ID`` / ``ROBOFLEET_AGENT_ROLE`` /
+``ROBOFLEET_AGENT_TOKEN`` (the same auth substrate the one-shot Grok path uses).
 """
 
 from __future__ import annotations

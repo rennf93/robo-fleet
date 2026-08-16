@@ -87,14 +87,15 @@ async def test_secret_exfil_validator_allows_benign() -> None:
 async def test_secret_exfil_validator_allows_documented_placeholder() -> None:
     """The literal CLAUDE.md / .env.example line — a placeholder, not a key —
     must not block (the 2026-07-19 calibration case)."""
-    body = b'{"note":"set ROBOCO_ENCRYPTION_KEY=<your-fernet-key> in the env"}'
+    body = b'{"note":"set ROBOFLEET_ENCRYPTION_KEY=<your-fernet-key> in the env"}'
     assert await security.secret_exfil_validator(_req(body)) is None
 
 
 @pytest.mark.asyncio
 async def test_secret_exfil_validator_blocks_real_fernet_value() -> None:
     body = (
-        b'{"note":"ROBOCO_ENCRYPTION_KEY=RZ0YxCk9nT3vW8mQaL5uJp2eHs7dGfBiOxNc4rAy6zE="}'
+        b'{"note":"ROBOFLEET_ENCRYPTION_KEY='
+        b'RZ0YxCk9nT3vW8mQaL5uJp2eHs7dGfBiOxNc4rAy6zE="}'
     )
     assert await security.secret_exfil_validator(_req(body)) is not None
 

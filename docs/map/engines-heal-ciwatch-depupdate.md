@@ -126,23 +126,23 @@ engines-heal-ciwatch-depupdate
 | _dep_update_loop | /Users/renzof/Documents/GitHub/ZZZ/roboco-master/roboco/roboco/runtime/orchestrator.py | asyncio.create_task at orchestrator start() (line 1014); sleeps dep_update_interval_seconds, runs _run_dep_update_cycle (loads eligible projects, runs DepUpdateEngine.run_cycle, commits); early-returns when dep_update_enabled is False |
 
 ## Config Flags
-- ROBOCO_SELF_HEAL_ENABLED (self_heal_enabled) — master switch for the self-heal loop
-- ROBOCO_SELF_HEAL_ORIGINATE_ENABLED (self_heal_originate_enabled) — second opt-in: actually open a fix task (notify-only otherwise)
-- ROBOCO_SELF_HEAL_PROJECT_SLUG (self_heal_project_slug) — the single repo self-heal targets
-- ROBOCO_SELF_HEAL_CI_WORKFLOW (self_heal_ci_workflow) — CI workflow name for the self-heal telemetry source
-- ROBOCO_SELF_HEAL_INTERVAL_SECONDS (self_heal_interval_seconds) — loop period
-- ROBOCO_SELF_HEAL_MAX_OPEN_TASKS (self_heal_max_open_tasks) — rolling open-task cap
-- ROBOCO_SELF_HEAL_MAX_PER_CYCLE (self_heal_max_per_cycle) — per-cycle origination cap
-- ROBOCO_SELF_HEAL_NOTIFY_DEDUPE_SECONDS (self_heal_notify_dedupe_seconds, default 7200) — per-fingerprint CEO-notify dedupe window; a regression that stays red notifies once per episode, not every tick; the key expires after this window so a recurrence notifies again; fail-open (Redis outage still lets the notify through)
-- ROBOCO_CI_WATCH_ENABLED (ci_watch_enabled) — master switch for multi-repo CI-watch
-- ROBOCO_CI_WATCH_DEFAULT_WORKFLOW (ci_watch_default_workflow) — fallback workflow when a project sets none
-- ROBOCO_CI_WATCH_INTERVAL_SECONDS (ci_watch_interval_seconds)
-- ROBOCO_CI_WATCH_MAX_OPEN_TASKS (ci_watch_max_open_tasks)
-- ROBOCO_CI_WATCH_MAX_PER_CYCLE (ci_watch_max_per_cycle)
-- ROBOCO_DEP_UPDATE_ENABLED (dep_update_enabled) — master switch for the dep-update bot
-- ROBOCO_DEP_UPDATE_INTERVAL_SECONDS (dep_update_interval_seconds, default 604800 = weekly)
-- ROBOCO_DEP_UPDATE_MAX_OPEN_TASKS (dep_update_max_open_tasks)
-- ROBOCO_DEP_UPDATE_MAX_PER_CYCLE (dep_update_max_per_cycle)
+- ROBOFLEET_SELF_HEAL_ENABLED (self_heal_enabled) — master switch for the self-heal loop
+- ROBOFLEET_SELF_HEAL_ORIGINATE_ENABLED (self_heal_originate_enabled) — second opt-in: actually open a fix task (notify-only otherwise)
+- ROBOFLEET_SELF_HEAL_PROJECT_SLUG (self_heal_project_slug) — the single repo self-heal targets
+- ROBOFLEET_SELF_HEAL_CI_WORKFLOW (self_heal_ci_workflow) — CI workflow name for the self-heal telemetry source
+- ROBOFLEET_SELF_HEAL_INTERVAL_SECONDS (self_heal_interval_seconds) — loop period
+- ROBOFLEET_SELF_HEAL_MAX_OPEN_TASKS (self_heal_max_open_tasks) — rolling open-task cap
+- ROBOFLEET_SELF_HEAL_MAX_PER_CYCLE (self_heal_max_per_cycle) — per-cycle origination cap
+- ROBOFLEET_SELF_HEAL_NOTIFY_DEDUPE_SECONDS (self_heal_notify_dedupe_seconds, default 7200) — per-fingerprint CEO-notify dedupe window; a regression that stays red notifies once per episode, not every tick; the key expires after this window so a recurrence notifies again; fail-open (Redis outage still lets the notify through)
+- ROBOFLEET_CI_WATCH_ENABLED (ci_watch_enabled) — master switch for multi-repo CI-watch
+- ROBOFLEET_CI_WATCH_DEFAULT_WORKFLOW (ci_watch_default_workflow) — fallback workflow when a project sets none
+- ROBOFLEET_CI_WATCH_INTERVAL_SECONDS (ci_watch_interval_seconds)
+- ROBOFLEET_CI_WATCH_MAX_OPEN_TASKS (ci_watch_max_open_tasks)
+- ROBOFLEET_CI_WATCH_MAX_PER_CYCLE (ci_watch_max_per_cycle)
+- ROBOFLEET_DEP_UPDATE_ENABLED (dep_update_enabled) — master switch for the dep-update bot
+- ROBOFLEET_DEP_UPDATE_INTERVAL_SECONDS (dep_update_interval_seconds, default 604800 = weekly)
+- ROBOFLEET_DEP_UPDATE_MAX_OPEN_TASKS (dep_update_max_open_tasks)
+- ROBOFLEET_DEP_UPDATE_MAX_PER_CYCLE (dep_update_max_per_cycle)
 - per-project projects.ci_watch_enabled / ci_watch_workflow / dep_update_command / assigned_cell (DB columns)
 
 

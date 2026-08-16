@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The per-project architectural-conventions standard for RoboCo: a service layer (`ConventionsService`) that builds, caches, renders, scaffolds, and restores the *effective* conventions map (auto-derived scan overlaid by the committed `.roboco/conventions.yml`), plus a standalone tree-sitter validator CLI (`python -m roboco.conventions`) that classifies each changed definition and flags forbidden placements, hygiene violations, custom-rule matches, and modularity smells. `DocsService` (in scope because it shares the `roboco-docs`/docs-MCP surface the standard's enforcement relies on) handles documentation file management with RAG dedup, team/path resolution, and repo commit. The standard is gated by `ROBOCO_CONVENTIONS_ENABLED` and enforced deterministically at `i_am_done` / `pr_pass` / `claim_review`.
+The per-project architectural-conventions standard for RoboCo: a service layer (`ConventionsService`) that builds, caches, renders, scaffolds, and restores the *effective* conventions map (auto-derived scan overlaid by the committed `.roboco/conventions.yml`), plus a standalone tree-sitter validator CLI (`python -m roboco.conventions`) that classifies each changed definition and flags forbidden placements, hygiene violations, custom-rule matches, and modularity smells. `DocsService` (in scope because it shares the `roboco-docs`/docs-MCP surface the standard's enforcement relies on) handles documentation file management with RAG dedup, team/path resolution, and repo commit. The standard is gated by `ROBOFLEET_CONVENTIONS_ENABLED` and enforced deterministically at `i_am_done` / `pr_pass` / `claim_review`.
 
 ## Files
 
@@ -209,8 +209,8 @@ conventions-service-validator
 
 ## Config Flags
 
-- `ROBOCO_CONVENTIONS_ENABLED` (`settings.conventions_enabled`) — master toggle. When off: `_baseline_constraints_for` returns `[]`, `conventions_ambient_layer` returns None, and the whole subsystem is inert. Default-off (per CLAUDE.md, armed in the NAS compose as part of the feature).
-- (No other `ROBOCO_*` flag is read inside this slice. The validator CLI reads no env — the gate's fail-closed/fail-open policy lives in `GitService`, not here.)
+- `ROBOFLEET_CONVENTIONS_ENABLED` (`settings.conventions_enabled`) — master toggle. When off: `_baseline_constraints_for` returns `[]`, `conventions_ambient_layer` returns None, and the whole subsystem is inert. Default-off (per CLAUDE.md, armed in the NAS compose as part of the feature).
+- (No other `ROBOFLEET_*` flag is read inside this slice. The validator CLI reads no env — the gate's fail-closed/fail-open policy lives in `GitService`, not here.)
 
 ## Gotchas
 

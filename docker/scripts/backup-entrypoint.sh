@@ -10,7 +10,7 @@ BACKUP_DIR="${BACKUP_DIR:-/backups}"
 KEEP="${BACKUP_KEEP:-14}"
 INTERVAL_SECONDS="${BACKUP_INTERVAL_SECONDS:-86400}"
 # Off-disk mirror: unset (the default) disables it. Compose sets this only
-# when ROBOCO_BACKUP_MIRROR_DIR is set in .env, and that host path should
+# when ROBOFLEET_BACKUP_MIRROR_DIR is set in .env, and that host path should
 # live on a DIFFERENT disk (external/remote mount) — a same-disk mirror
 # protects nothing.
 MIRROR_DIR="${BACKUP_MIRROR_DIR:-}"

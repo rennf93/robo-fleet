@@ -150,12 +150,12 @@ class _FakeHost:
     def _append_agent_auth_env(
         self, cmd: list[str], config: OrchestratorAgentConfig
     ) -> None:
-        cmd += ["-e", f"ROBOCO_AGENT_TOKEN=hmac-{config.agent_id}"]
+        cmd += ["-e", f"ROBOFLEET_AGENT_TOKEN=hmac-{config.agent_id}"]
 
     def _append_git_context_env(
         self, cmd: list[str], config: OrchestratorAgentConfig
     ) -> None:
-        cmd += ["-e", f"ROBOCO_GIT_AGENT={config.agent_id}"]
+        cmd += ["-e", f"ROBOFLEET_GIT_AGENT={config.agent_id}"]
 
 
 def _proc(
@@ -248,18 +248,18 @@ async def test_grok_spawn_wires_gateway_env_and_image_last() -> None:
         result = await provider.spawn(_config())
     cmd = list(exec_mock.call_args.args)
     # Gateway + operational env the grok-cli entrypoint + renderer consume.
-    assert "ROBOCO_MCP_CONFIG=/app/mcp-config.json" in cmd
-    assert "ROBOCO_AGENT_ID=be-dev-1" in cmd  # renderer computes per-role flags
-    assert "ROBOCO_AGENT_MODEL=grok-build" in cmd
+    assert "ROBOFLEET_MCP_CONFIG=/app/mcp-config.json" in cmd
+    assert "ROBOFLEET_AGENT_ID=be-dev-1" in cmd  # renderer computes per-role flags
+    assert "ROBOFLEET_AGENT_MODEL=grok-build" in cmd
     # No session id is injected: grok ignores a requested id, so the entrypoint
     # reads the real one back from the run log for usage capture.
-    assert not any(c.startswith("ROBOCO_AGENT_SESSION_ID=") for c in cmd)
+    assert not any(c.startswith("ROBOFLEET_AGENT_SESSION_ID=") for c in cmd)
     # Usage capture: per-agent data dir mounted + the entrypoint's usage file.
     assert host.data_dirs_ensured == ["be-dev-1"]
     assert "/host/data/grok-usage/be-dev-1:/home/agent/.grok-usage" in cmd
-    assert "ROBOCO_GROK_USAGE_FILE=/home/agent/.grok-usage/usage.json" in cmd
+    assert "ROBOFLEET_GROK_USAGE_FILE=/home/agent/.grok-usage/usage.json" in cmd
     # Identity wiring from the shared host helpers is present.
-    assert "ROBOCO_AGENT_TOKEN=hmac-be-dev-1" in cmd
+    assert "ROBOFLEET_AGENT_TOKEN=hmac-be-dev-1" in cmd
     # The image is the final docker-run argument.
     assert cmd[-1] == "roboco-agent-grok:test"
     assert host.removed == ["roboco-agent-be-dev-1"]
@@ -356,7 +356,7 @@ async def test_grok_spawn_prompt_is_injection_safe() -> None:
         await provider.spawn(_config(), initial_prompt=nasty)
     cmd = list(exec_mock.call_args.args)
     # Passed only as an env value, never as a bare argv token.
-    assert f"ROBOCO_INITIAL_PROMPT={nasty}" in cmd
+    assert f"ROBOFLEET_INITIAL_PROMPT={nasty}" in cmd
     assert nasty not in cmd
 
 
@@ -436,14 +436,14 @@ async def test_codex_spawn_wires_gateway_env_and_image_last() -> None:
     ) as exec_mock:
         result = await provider.spawn(_codex_config())
     cmd = list(exec_mock.call_args.args)
-    assert "ROBOCO_MCP_CONFIG=/app/mcp-config.json" in cmd
-    assert "ROBOCO_AGENT_ID=be-dev-1" in cmd
-    assert "ROBOCO_AGENT_MODEL=gpt-5.3-codex" in cmd
+    assert "ROBOFLEET_MCP_CONFIG=/app/mcp-config.json" in cmd
+    assert "ROBOFLEET_AGENT_ID=be-dev-1" in cmd
+    assert "ROBOFLEET_AGENT_MODEL=gpt-5.3-codex" in cmd
     # Usage capture: per-agent data dir mounted + the entrypoint's usage file.
     assert host.data_dirs_ensured == ["be-dev-1"]
     assert "/host/data/codex-usage/be-dev-1:/home/agent/.codex-usage" in cmd
-    assert "ROBOCO_CODEX_USAGE_FILE=/home/agent/.codex-usage/usage.json" in cmd
-    assert "ROBOCO_AGENT_TOKEN=hmac-be-dev-1" in cmd
+    assert "ROBOFLEET_CODEX_USAGE_FILE=/home/agent/.codex-usage/usage.json" in cmd
+    assert "ROBOFLEET_AGENT_TOKEN=hmac-be-dev-1" in cmd
     assert cmd[-1] == "roboco-agent-codex:test"
     assert host.removed == ["roboco-agent-be-dev-1"]
     assert host.remove_stop_reasons == ["pre_spawn_stale_clear"]
@@ -529,7 +529,7 @@ async def test_codex_spawn_prompt_is_injection_safe() -> None:
     ) as exec_mock:
         await provider.spawn(_codex_config(), initial_prompt=nasty)
     cmd = list(exec_mock.call_args.args)
-    assert f"ROBOCO_INITIAL_PROMPT={nasty}" in cmd
+    assert f"ROBOFLEET_INITIAL_PROMPT={nasty}" in cmd
     assert nasty not in cmd
 
 
@@ -609,14 +609,14 @@ async def test_kimi_spawn_wires_gateway_env_and_image_last() -> None:
     ) as exec_mock:
         result = await provider.spawn(_kimi_config())
     cmd = list(exec_mock.call_args.args)
-    assert "ROBOCO_MCP_CONFIG=/app/mcp-config.json" in cmd
-    assert "ROBOCO_AGENT_ID=be-dev-1" in cmd
-    assert "ROBOCO_AGENT_MODEL=kimi-code/k3" in cmd
+    assert "ROBOFLEET_MCP_CONFIG=/app/mcp-config.json" in cmd
+    assert "ROBOFLEET_AGENT_ID=be-dev-1" in cmd
+    assert "ROBOFLEET_AGENT_MODEL=kimi-code/k3" in cmd
     # Usage capture: per-agent data dir mounted + the entrypoint's usage file.
     assert host.data_dirs_ensured == ["be-dev-1"]
     assert "/host/data/kimi-usage/be-dev-1:/home/agent/.kimi-usage" in cmd
-    assert "ROBOCO_KIMI_USAGE_FILE=/home/agent/.kimi-usage/usage.json" in cmd
-    assert "ROBOCO_AGENT_TOKEN=hmac-be-dev-1" in cmd
+    assert "ROBOFLEET_KIMI_USAGE_FILE=/home/agent/.kimi-usage/usage.json" in cmd
+    assert "ROBOFLEET_AGENT_TOKEN=hmac-be-dev-1" in cmd
     assert cmd[-1] == "roboco-agent-kimi:test"
     assert host.removed == ["roboco-agent-be-dev-1"]
     assert host.remove_stop_reasons == ["pre_spawn_stale_clear"]
@@ -703,7 +703,7 @@ async def test_kimi_spawn_prompt_is_injection_safe() -> None:
     ) as exec_mock:
         await provider.spawn(_kimi_config(), initial_prompt=nasty)
     cmd = list(exec_mock.call_args.args)
-    assert f"ROBOCO_INITIAL_PROMPT={nasty}" in cmd
+    assert f"ROBOFLEET_INITIAL_PROMPT={nasty}" in cmd
     assert nasty not in cmd
 
 

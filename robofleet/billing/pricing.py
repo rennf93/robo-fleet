@@ -110,7 +110,7 @@ _PRICING: list[tuple[str, float, float, float, float]] = [
     ("kimi-code/kimi-for-coding-highspeed", 1.90, 8.00, 0.38, 1.90),
     ("kimi-code/kimi-for-coding", 0.95, 4.00, 0.19, 0.95),
     # Z.ai GLM-5.2 — priced non-Anthropic. Ollama Cloud's `glm-5.2:cloud` tag
-    # (roboco's own ROBOCO_LOCAL_LLM_MODEL default) is billed via flat
+    # (roboco's own ROBOFLEET_LOCAL_LLM_MODEL default) is billed via flat
     # subscription/GPU-time, not per token, but the same "attribute at the
     # underlying API-equivalent rate" convention as grok-build/gpt-5.3-codex
     # applies once a real published rate exists — a real fleet running on

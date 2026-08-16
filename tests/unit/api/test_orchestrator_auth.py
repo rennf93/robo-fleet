@@ -73,8 +73,8 @@ async def test_spawn_rejects_missing_token_when_required(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Strict mode + no X-Agent-Token => 401, never reaches the orchestrator."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     client, orch = orch_client
     r = await client.post(
         f"/api/orchestrator/agents/{_AGENT_ID}/spawn",
@@ -95,8 +95,8 @@ async def test_spawn_rejects_forged_token_even_in_dev(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A presented-but-forged token is rejected even in header-trust mode."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     client, orch = orch_client
     r = await client.post(
         f"/api/orchestrator/agents/{_AGENT_ID}/spawn",
@@ -116,8 +116,8 @@ async def test_spawn_rejects_non_ceo_role(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A developer (even with a validly-issued token) must not spawn/stop agents."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     client, orch = orch_client
     dev_id = str(uuid4())
     token = issue_agent_token(dev_id, "developer")
@@ -144,8 +144,8 @@ async def test_spawn_accepts_valid_ceo_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A valid CEO token passes the gate and reaches the orchestrator."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     client, orch = orch_client
     token = issue_agent_token(_AGENT_ID, "ceo")
     r = await client.post(
@@ -166,8 +166,8 @@ async def test_stop_accepts_valid_ceo_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The gate is wired into stop_agent too."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     client, orch = orch_client
     token = issue_agent_token(_AGENT_ID, "ceo")
     r = await client.post(
@@ -187,10 +187,10 @@ async def test_dev_mode_missing_token_still_succeeds(
     orch_client: tuple[AsyncClient, MagicMock],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Dev mode (no ROBOCO_AGENT_AUTH_REQUIRED) + no token => no-op, route runs.
+    """Dev mode (no ROBOFLEET_AGENT_AUTH_REQUIRED) + no token => no-op, route runs.
     Preserves the panel/operator flow in dev exactly as F003/F004 did."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
 
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", False)
     client, orch = orch_client
@@ -213,8 +213,8 @@ async def test_cloud_auth_forged_ceo_header_no_token_no_cookie_rejected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cloud_auth on: bare X-Agent-Role: ceo with no token/cookie is a spoof."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
 
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
     client, orch = orch_client
@@ -231,8 +231,8 @@ async def test_cloud_auth_valid_ceo_token_passes(
     orch_client: tuple[AsyncClient, MagicMock],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
 
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
     client, orch = orch_client
@@ -255,8 +255,8 @@ async def test_cloud_auth_valid_session_cookie_passes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Panel path: a valid CEO session cookie reaches the orchestrator."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
 
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
     client, orch = orch_client
@@ -282,8 +282,8 @@ async def test_cloud_auth_invalid_session_cookie_rejected(
     orch_client: tuple[AsyncClient, MagicMock],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
 
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
     client, orch = orch_client

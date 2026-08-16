@@ -123,8 +123,9 @@ class PitchService(BaseService):
         prov = provisioning or get_github_provisioning_service()
         if not prov.enabled:
             raise ProvisioningDisabledError(
-                "GitHub provisioning is not configured; cannot approve this "
-                "pitch. Set ROBOCO_PROVISIONING_TOKEN and ROBOCO_PROVISIONING_ORG."
+                "GitHub provisioning is not configured; cannot approve this"
+                " pitch. Set ROBOFLEET_PROVISIONING_TOKEN"
+                " and ROBOFLEET_PROVISIONING_ORG."
             )
         try:
             project_ids, cell_mappings = await self._provision_repos(

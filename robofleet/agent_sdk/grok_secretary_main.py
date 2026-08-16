@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
-_RECEIVER_PORT = 9000  # ROBOCO_SDK_PORT — the orchestrator delivers messages here
+_RECEIVER_PORT = 9000  # ROBOFLEET_SDK_PORT — the orchestrator delivers messages here
 
 
 def _render_grok_config(base_url: str) -> None:
@@ -62,10 +62,12 @@ def _render_grok_config(base_url: str) -> None:
                 "robofleet.mcp.secretary_server",
             ],
             "env": {
-                "ROBOCO_API_URL": base_url,
-                "ROBOCO_AGENT_ID": os.environ.get("ROBOCO_AGENT_ID", ""),
-                "ROBOCO_AGENT_ROLE": os.environ.get("ROBOCO_AGENT_ROLE", "secretary"),
-                "ROBOCO_AGENT_TOKEN": os.environ.get("ROBOCO_AGENT_TOKEN", ""),
+                "ROBOFLEET_API_URL": base_url,
+                "ROBOFLEET_AGENT_ID": os.environ.get("ROBOFLEET_AGENT_ID", ""),
+                "ROBOFLEET_AGENT_ROLE": os.environ.get(
+                    "ROBOFLEET_AGENT_ROLE", "secretary"
+                ),
+                "ROBOFLEET_AGENT_TOKEN": os.environ.get("ROBOFLEET_AGENT_TOKEN", ""),
                 "UV_PROJECT_ENVIRONMENT": "/app/.venv",
             },
         }
@@ -80,9 +82,9 @@ async def main() -> None:  # pragma: no cover - needs the live container + grok
     """Render config.toml, then run the receiver + driver for the chat's life."""
     import uvicorn
 
-    session_id = os.environ["ROBOCO_SECRETARY_SESSION_ID"]
-    base_url = os.environ.get("ROBOCO_API_URL", "http://roboco-orchestrator:8000")
-    cwd = os.environ.get("ROBOCO_WORKSPACE", "/app")
+    session_id = os.environ["ROBOFLEET_SECRETARY_SESSION_ID"]
+    base_url = os.environ.get("ROBOFLEET_API_URL", "http://roboco-orchestrator:8000")
+    cwd = os.environ.get("ROBOFLEET_WORKSPACE", "/app")
 
     _render_grok_config(base_url)
     # Install the role blueprint as grok's global system prompt (~/.grok/AGENTS.md)
@@ -99,9 +101,9 @@ async def main() -> None:  # pragma: no cover - needs the live container + grok
     async def session_factory() -> AsyncIterator[GrokCliSession]:
         async with GrokCliSession(
             cwd=cwd,
-            agent_id=os.environ.get("ROBOCO_AGENT_ID", ""),
-            model=os.environ.get("ROBOCO_AGENT_MODEL", "grok-build"),
-            usage_file=os.environ.get("ROBOCO_GROK_USAGE_FILE"),
+            agent_id=os.environ.get("ROBOFLEET_AGENT_ID", ""),
+            model=os.environ.get("ROBOFLEET_AGENT_MODEL", "grok-build"),
+            usage_file=os.environ.get("ROBOFLEET_GROK_USAGE_FILE"),
         ) as session:
             yield session
 
@@ -111,7 +113,7 @@ async def main() -> None:  # pragma: no cover - needs the live container + grok
         make_relay_sink(base_url, session_id, client),
     )
 
-    bind_host = os.environ.get("ROBOCO_SDK_BIND_HOST", ".".join(["0"] * 4))
+    bind_host = os.environ.get("ROBOFLEET_SDK_BIND_HOST", ".".join(["0"] * 4))
     server = uvicorn.Server(
         uvicorn.Config(
             build_receiver(queue),

@@ -18,7 +18,10 @@ _SAMPLE_MCP = {
         "roboco-flow": {
             "command": "uv",
             "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
-            "env": {"ROBOCO_AGENT_ID": "be-dev-1", "ROBOCO_AGENT_TOKEN": "tok-123"},
+            "env": {
+                "ROBOFLEET_AGENT_ID": "be-dev-1",
+                "ROBOFLEET_AGENT_TOKEN": "tok-123",
+            },
         },
         "roboco-do": {"command": "uv", "args": ["run", "x"]},
     }
@@ -34,7 +37,7 @@ def test_render_settings_json_injects_mcp_servers_and_env() -> None:
     flow = rendered["mcpServers"]["roboco-flow"]
     assert flow["command"] == "uv"
     assert flow["args"][:2] == ["run", "--no-sync"]
-    assert flow["env"]["ROBOCO_AGENT_TOKEN"] == "tok-123"
+    assert flow["env"]["ROBOFLEET_AGENT_TOKEN"] == "tok-123"
     assert "env" not in rendered["mcpServers"]["roboco-do"]
 
 
@@ -151,13 +154,13 @@ def test_main_writes_settings_and_args(
     monkeypatch.setattr(gc, "GEMINI_POLICIES_DIR", policies_dir)
     monkeypatch.setattr(gc, "GEMINI_ARGS_PATH", args_path)
     monkeypatch.setattr(gc, "SYSTEM_PROMPT_PATH", system_prompt)
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "be-dev-1")
-    monkeypatch.setenv("ROBOCO_MCP_CONFIG", str(mcp_path))
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "be-dev-1")
+    monkeypatch.setenv("ROBOFLEET_MCP_CONFIG", str(mcp_path))
 
     assert gc.main() == 0
 
     rendered = json.loads(settings_path.read_text(encoding="utf-8"))
-    assert rendered["mcpServers"]["roboco-flow"]["env"]["ROBOCO_AGENT_TOKEN"] == (
+    assert rendered["mcpServers"]["roboco-flow"]["env"]["ROBOFLEET_AGENT_TOKEN"] == (
         "tok-123"
     )
     assert memory_path.read_text(encoding="utf-8") == "blueprint"
@@ -182,9 +185,9 @@ def test_main_honors_max_turns_env_override(
     monkeypatch.setattr(gc, "GEMINI_MEMORY_PATH", tmp_path / ".gemini" / "GEMINI.md")
     monkeypatch.setattr(gc, "GEMINI_POLICIES_DIR", tmp_path / ".gemini" / "policies")
     monkeypatch.setattr(gc, "GEMINI_ARGS_PATH", args_path)
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "be-dev-1")
-    monkeypatch.setenv("ROBOCO_MCP_CONFIG", str(mcp_path))
-    monkeypatch.setenv("ROBOCO_GEMINI_MAX_TURNS", "42")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "be-dev-1")
+    monkeypatch.setenv("ROBOFLEET_MCP_CONFIG", str(mcp_path))
+    monkeypatch.setenv("ROBOFLEET_GEMINI_MAX_TURNS", "42")
 
     assert gc.main() == 0
     assert args_path.read_text(encoding="utf-8").splitlines()[-2:] == [
@@ -204,9 +207,9 @@ def test_main_falls_back_to_default_max_turns_on_bad_env(
     monkeypatch.setattr(gc, "GEMINI_MEMORY_PATH", tmp_path / ".gemini" / "GEMINI.md")
     monkeypatch.setattr(gc, "GEMINI_POLICIES_DIR", tmp_path / ".gemini" / "policies")
     monkeypatch.setattr(gc, "GEMINI_ARGS_PATH", args_path)
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "be-dev-1")
-    monkeypatch.setenv("ROBOCO_MCP_CONFIG", str(mcp_path))
-    monkeypatch.setenv("ROBOCO_GEMINI_MAX_TURNS", "not-a-number")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "be-dev-1")
+    monkeypatch.setenv("ROBOFLEET_MCP_CONFIG", str(mcp_path))
+    monkeypatch.setenv("ROBOFLEET_GEMINI_MAX_TURNS", "not-a-number")
 
     assert gc.main() == 0
     assert args_path.read_text(encoding="utf-8").splitlines()[-2:] == [

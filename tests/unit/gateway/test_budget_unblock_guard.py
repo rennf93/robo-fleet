@@ -1,4 +1,4 @@
-"""unblock's budget-breach re-check (ROBOCO_TASK_BUDGETS_ENABLED).
+"""unblock's budget-breach re-check (ROBOFLEET_TASK_BUDGETS_ENABLED).
 
 A task the orchestrator's budget sweep BLOCKed carries the BUDGET_BLOCKED
 marker (`_handle_task_budget_breach`). `unblock` re-checks spend-vs-cap

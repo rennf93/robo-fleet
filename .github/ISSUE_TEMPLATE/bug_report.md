@@ -73,7 +73,7 @@ ___
 Logs / Configuration
 --------------------
 
-Relevant logs, tracebacks, and any non-secret `ROBOCO_*` settings:
+Relevant logs, tracebacks, and any non-secret `ROBOFLEET_*` settings:
 
 ```text
 (paste here)

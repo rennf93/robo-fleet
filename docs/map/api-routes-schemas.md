@@ -196,7 +196,7 @@ roboco/api/
 │       ├── flow_board.py        board flow verbs
 │       ├── flow_auditor.py      auditor flow verbs
 │       └── flow_pr_reviewer.py  PR-reviewer flow verbs
-├── auth/ (cloud auth, default off — ROBOCO_CLOUD_AUTH_ENABLED)
+├── auth/ (cloud auth, default off — ROBOFLEET_CLOUD_AUTH_ENABLED)
 │   ├── backend.py               cookie transport + password-fingerprint-bound JWT strategy
 │   ├── manager.py                UserManager + get_user_db/get_user_manager DI chain
 │   ├── session.py               resolve_session_user (shared HTTP + WS cookie validation)
@@ -226,7 +226,7 @@ roboco/api/
 
 ## Config Flags
 - Auth-gate mode: `_auth_required()` (env-driven; HMAC mandatory in prod-ish, optional in dev) — `api/deps.py`.
-- Feature-flag routes are inert when their backing engine is off: `release.py` (ROBOCO_RELEASE_MANAGER_ENABLED), `prompter_live.py` MegaTask batch, `optimal.py` learnings (ROBOCO_ORG_MEMORY_ENABLED), `research.py` (ROBOCO_RESEARCH_ENABLED), `provider.py` grok/self-hosted (ROBOCO_GROK / self-hosted), CI-watch/dep-update originate elsewhere but surface via orchestrator/tasks.
+- Feature-flag routes are inert when their backing engine is off: `release.py` (ROBOFLEET_RELEASE_MANAGER_ENABLED), `prompter_live.py` MegaTask batch, `optimal.py` learnings (ROBOFLEET_ORG_MEMORY_ENABLED), `research.py` (ROBOFLEET_RESEARCH_ENABLED), `provider.py` grok/self-hosted (ROBOFLEET_GROK / self-hosted), CI-watch/dep-update originate elsewhere but surface via orchestrator/tasks.
 - `telegram.py`'s `webapp_auth_router` doesn't merely no-op off — the route doesn't exist at all unless `telegram_miniapp_enabled` AND `cloud_auth_enabled` are both true. As of PR #846 the conditional mount (`app.include_router(webapp_auth_router, ...)` + the `LoginRateLimiter` middleware install) is inlined directly at its call site inside `create_app()` in `app.py`, mirroring `mount_cloud_auth`'s conditional-mount pattern — there is no `mount_telegram_miniapp_auth` function anymore (an earlier round moved it into `utils/telegram.py`, which forced a lazy back-import and still misplaced app-wiring in a helper-only module; a second round moved it into `routes/telegram.py` instead, which just relocated the same `no_helpers_in_routes` violation since routes is helper-forbidden too; inlining in `app.py`, which only forbids `model`, is what actually resolved it).
 
 ## Gotchas

@@ -31,12 +31,12 @@ _DO_TEST_MANIFEST = {
 
 @pytest.fixture
 def do_module(monkeypatch: pytest.MonkeyPatch) -> Any:
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "00000000-0000-0000-0000-000000000001")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "00000000-0000-0000-0000-000000000001")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
     manifest_path = Path(tempfile.mkdtemp()) / "tool-manifest.json"
     manifest_path.write_text(json.dumps(_DO_TEST_MANIFEST))
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest_path))
     import importlib
 
     import robofleet.mcp.do_server as srv
@@ -98,7 +98,7 @@ def test_build_headers_carries_auth_token_and_team(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """do verbs must carry X-Agent-Token + X-Agent-Team or the API's
-    ROBOCO_AGENT_AUTH_REQUIRED gate 401s with "Missing X-Agent-Token" —
+    ROBOFLEET_AGENT_AUTH_REQUIRED gate 401s with "Missing X-Agent-Token" —
     regression: the manual header dict omitted both, latent until auth was
     armed on the NAS deploy."""
     import importlib
@@ -106,11 +106,11 @@ def test_build_headers_carries_auth_token_and_team(
     be_dev_1 = "00000000-0000-0000-0001-000000000001"  # role=developer, team=backend
     manifest = Path(tempfile.mkdtemp()) / "tool-manifest.json"
     manifest.write_text(json.dumps({**_DO_TEST_MANIFEST, "agent_id": be_dev_1}))
-    monkeypatch.setenv("ROBOCO_AGENT_ID", be_dev_1)
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "test-hmac-token")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", be_dev_1)
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "test-hmac-token")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest))
 
     import robofleet.mcp.do_server as srv
 
@@ -125,7 +125,7 @@ def test_build_headers_carries_auth_token_and_team(
 
 
 def test_build_headers_omits_unsigned_token(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The orchestrator injects ROBOCO_AGENT_TOKEN=UNSIGNED when the HMAC
+    """The orchestrator injects ROBOFLEET_AGENT_TOKEN=UNSIGNED when the HMAC
     secret is unset at spawn. The middleware rejects a presented-but-unverifiable
     token with 401 "signature mismatch" even in dev mode, so forwarding UNSIGNED
     turns every do verb into a 401. Omit the header so dev (auth not required)
@@ -135,11 +135,11 @@ def test_build_headers_omits_unsigned_token(monkeypatch: pytest.MonkeyPatch) -> 
     be_dev_1 = "00000000-0000-0000-0001-000000000001"
     manifest = Path(tempfile.mkdtemp()) / "tool-manifest.json"
     manifest.write_text(json.dumps({**_DO_TEST_MANIFEST, "agent_id": be_dev_1}))
-    monkeypatch.setenv("ROBOCO_AGENT_ID", be_dev_1)
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "UNSIGNED")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", be_dev_1)
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "UNSIGNED")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest))
 
     import robofleet.mcp.do_server as srv
 

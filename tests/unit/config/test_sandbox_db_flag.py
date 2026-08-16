@@ -14,7 +14,7 @@ def test_sandbox_db_disabled_by_default() -> None:
 
 
 def test_sandbox_db_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_SANDBOX_DB_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_SANDBOX_DB_ENABLED": "true"}):
         assert Settings().sandbox_db_enabled is True
 
 

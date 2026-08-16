@@ -29,7 +29,7 @@ _CLI_ARG_SERVERS = ("roboco-optimal", "roboco-docs", "roboco-search")
 
 def _spawn_token(monkeypatch: pytest.MonkeyPatch) -> str:
     """Mint the token exactly as _append_agent_auth_env does at spawn."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "spawn-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "spawn-secret")
     monkeypatch.setattr(settings, "agent_token_ttl_seconds", 3600)
     cmd: list[str] = []
     config = AgentConfig(
@@ -39,9 +39,9 @@ def _spawn_token(monkeypatch: pytest.MonkeyPatch) -> str:
     )
     AgentOrchestrator._append_agent_auth_env(cmd, config)
     for i, flag in enumerate(cmd):
-        if flag == "-e" and cmd[i + 1].startswith("ROBOCO_AGENT_TOKEN="):
+        if flag == "-e" and cmd[i + 1].startswith("ROBOFLEET_AGENT_TOKEN="):
             return cmd[i + 1].split("=", 1)[1]
-    raise AssertionError("ROBOCO_AGENT_TOKEN not found in cmd")
+    raise AssertionError("ROBOFLEET_AGENT_TOKEN not found in cmd")
 
 
 async def test_cli_arg_servers_get_uuid_not_slug() -> None:
@@ -69,7 +69,7 @@ async def test_cli_arg_servers_headers_verify_against_spawn_token(
     _generate_mcp_config hands these servers must verify against the token
     the orchestrator actually injects into the container env."""
     token = _spawn_token(monkeypatch)
-    monkeypatch.setenv("ROBOCO_AGENT_TOKEN", token)
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", token)
 
     orch = AgentOrchestrator.__new__(AgentOrchestrator)
     config_path = await orch._generate_mcp_config(_AGENT_SLUG)

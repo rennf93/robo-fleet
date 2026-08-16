@@ -30,11 +30,11 @@ class Settings(BaseSettings):
     """
     Application settings loaded from environment variables.
 
-    Environment variables are prefixed with ROBOCO_ by default.
+    Environment variables are prefixed with ROBOFLEET_ by default.
     """
 
     model_config = SettingsConfigDict(
-        env_prefix="ROBOCO_",
+        env_prefix="ROBOFLEET_",
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
@@ -81,7 +81,7 @@ class Settings(BaseSettings):
         default="asyncio",
         description=(
             "Event loop for the production orchestrator's API server and the "
-            "e2e smoke harness's in-thread uvicorn (env ROBOCO_UVICORN_LOOP). "
+            "e2e smoke harness's in-thread uvicorn (env ROBOFLEET_UVICORN_LOOP). "
             "Default 'asyncio': this API is a control plane, not a high-QPS "
             "service — deterministic beats fast, and a uvloop+asyncpg "
             "segfault class (uvloop 0.22 + asyncpg 0.31 + Python 3.13, GitHub "
@@ -708,29 +708,29 @@ class Settings(BaseSettings):
         """Fail loud at startup rather than silently minting unsigned sessions."""
         if self.cloud_auth_enabled and not self.cloud_auth_secret:
             raise ValueError(
-                "ROBOCO_CLOUD_AUTH_SECRET is required when "
-                "ROBOCO_CLOUD_AUTH_ENABLED=true."
+                "ROBOFLEET_CLOUD_AUTH_SECRET is required when "
+                "ROBOFLEET_CLOUD_AUTH_ENABLED=true."
             )
-        # nginx injects ROBOCO_PANEL_AGENT_TOKEN as a CEO-signed HMAC header on
+        # nginx injects ROBOFLEET_PANEL_AGENT_TOKEN as a CEO-signed HMAC header on
         # every /api/ request. Under cloud auth that token is an alternative
         # human-auth tier that bypasses the login cookie — layering both is a
         # public-exposure footgun. Refuse to start; the operator must unset it.
         if (
             self.cloud_auth_enabled
-            and os.environ.get("ROBOCO_PANEL_AGENT_TOKEN", "").strip()
+            and os.environ.get("ROBOFLEET_PANEL_AGENT_TOKEN", "").strip()
         ):
             raise ValueError(
-                "ROBOCO_CLOUD_AUTH_ENABLED=true is incompatible with a set "
-                "ROBOCO_PANEL_AGENT_TOKEN (nginx CEO-token injection bypasses "
-                "the login cookie). Unset ROBOCO_PANEL_AGENT_TOKEN for a "
+                "ROBOFLEET_CLOUD_AUTH_ENABLED=true is incompatible with a set "
+                "ROBOFLEET_PANEL_AGENT_TOKEN (nginx CEO-token injection bypasses "
+                "the login cookie). Unset ROBOFLEET_PANEL_AGENT_TOKEN for a "
                 "publicly-exposed cloud-auth deploy."
             )
         # The Mini App auth route mints a cloud-auth session cookie — with
         # cloud auth off there is no session mechanism to hand it to.
         if self.telegram_miniapp_enabled and not self.cloud_auth_enabled:
             raise ValueError(
-                "ROBOCO_TELEGRAM_MINIAPP_ENABLED=true requires "
-                "ROBOCO_CLOUD_AUTH_ENABLED=true (the Mini App mints a "
+                "ROBOFLEET_TELEGRAM_MINIAPP_ENABLED=true requires "
+                "ROBOFLEET_CLOUD_AUTH_ENABLED=true (the Mini App mints a "
                 "cloud-auth session cookie; there is nothing to mint "
                 "without it)."
             )
@@ -779,7 +779,7 @@ class Settings(BaseSettings):
         description=(
             "Forge that pitch auto-provisioning targets (default 'github', "
             "byte-for-byte unchanged behavior). 'gitlab'/'gitea' additionally "
-            "require ROBOCO_PROVISIONING_HOST — without it provisioning stays "
+            "require ROBOFLEET_PROVISIONING_HOST — without it provisioning stays "
             "disabled exactly like a missing token/org."
         ),
     )
@@ -873,7 +873,7 @@ class Settings(BaseSettings):
     # prompt-injection / secret-exfil validators). Entirely inert unless
     # guard_enabled is set: create_app never adds the middleware when off, so the
     # request path is byte-for-byte unchanged. Cloud-host-ready but env-driven, so
-    # a personal NAS deploy stays relaxed (ROBOCO_ENVIRONMENT=development).
+    # a personal NAS deploy stays relaxed (ROBOFLEET_ENVIRONMENT=development).
     guard_enabled: bool = Field(
         default=False,
         description=(
@@ -1423,7 +1423,7 @@ class Settings(BaseSettings):
         description=(
             "Search queries Barfly runs each cycle to find X conversations "
             "about these topics without a direct mention of the account. "
-            "ROBOCO_BARFLY_QUERIES accepts a comma-separated list or a JSON "
+            "ROBOFLEET_BARFLY_QUERIES accepts a comma-separated list or a JSON "
             "array."
         ),
     )
@@ -1439,7 +1439,7 @@ class Settings(BaseSettings):
     @field_validator("barfly_queries", mode="before")
     @classmethod
     def _split_barfly_queries_csv(cls, v: str | list[str]) -> str | list[str]:
-        """Accept a comma-separated ``ROBOCO_BARFLY_QUERIES`` env string in
+        """Accept a comma-separated ``ROBOFLEET_BARFLY_QUERIES`` env string in
         addition to a JSON array — csv is the friendlier ops-config shape for
         a short keyword list."""
         if isinstance(v, str) and not v.strip().startswith("["):
@@ -1636,7 +1636,7 @@ class Settings(BaseSettings):
         default="full",
         description=(
             "Operative intensity for the developer Ponytail doctrine (env "
-            "ROBOCO_PONYTAIL_INTENSITY, default 'full'). 'lite' = build what's "
+            "ROBOFLEET_PONYTAIL_INTENSITY, default 'full'). 'lite' = build what's "
             "asked, name the lazier alternative; 'full' = ladder enforced "
             "(default); 'ultra' = YAGNI extremist, deletion before addition, "
             "challenge the requirement. Applied to developers only; "
@@ -2071,7 +2071,7 @@ class Settings(BaseSettings):
         ge=5,
         description=(
             "Debounce (seconds) before respawning a PM to close a recently "
-            "paused parent; override via ROBOCO_PM_CLOSURE_RECENTLY_PAUSED_SECONDS"
+            "paused parent; override via ROBOFLEET_PM_CLOSURE_RECENTLY_PAUSED_SECONDS"
         ),
     )
     # Reaper window for stale-claim detection. Dogfooding reaped agents at
@@ -2087,7 +2087,7 @@ class Settings(BaseSettings):
         ge=60,
         description=(
             "Reaper-only stale claim threshold (seconds); "
-            "override via ROBOCO_STALE_CLAIM_REAP_SECONDS"
+            "override via ROBOFLEET_STALE_CLAIM_REAP_SECONDS"
         ),
     )
     # A GROK agent that wedges — an idle model call / stream with no gateway
@@ -2103,7 +2103,7 @@ class Settings(BaseSettings):
         ge=120,
         description=(
             "Idle-container kill threshold for GROK agents (seconds); "
-            "override via ROBOCO_GROK_IDLE_KILL_SECONDS"
+            "override via ROBOFLEET_GROK_IDLE_KILL_SECONDS"
         ),
     )
     # A non-GROK agent (Claude / Ollama-cloud / etc.) that gets stuck in a
@@ -2118,7 +2118,7 @@ class Settings(BaseSettings):
         ge=600,
         description=(
             "Stuck-in-non-verb-loop kill threshold for non-GROK agents "
-            "(seconds); override via ROBOCO_CLAUDE_STUCK_KILL_SECONDS"
+            "(seconds); override via ROBOFLEET_CLAUDE_STUCK_KILL_SECONDS"
         ),
     )
     # Budget kill-switch parity for GROK. Claude Code's per-agent token-budget
@@ -2131,12 +2131,12 @@ class Settings(BaseSettings):
         ge=0,
         description=(
             "Per-agent GROK cost ceiling (USD) before the container is killed; "
-            "0 disables. Override via ROBOCO_GROK_MAX_COST_USD"
+            "0 disables. Override via ROBOFLEET_GROK_MAX_COST_USD"
         ),
     )
     # Host directory holding the Codex CLI's ChatGPT-subscription auth.json
     # (from `codex login`), mounted read-only into each Codex agent — the
-    # parity analogue of ROBOCO_HOST_GROK_DIR. Unlike the grok path (a raw
+    # parity analogue of ROBOFLEET_HOST_GROK_DIR. Unlike the grok path (a raw
     # os.environ read in grok.py), this is a real Settings field per the
     # Codex build directive, so it shows up in the settings schema.
     host_codex_dir: str = Field(
@@ -2144,7 +2144,7 @@ class Settings(BaseSettings):
         description=(
             "Host directory holding the Codex CLI subscription auth.json "
             "(from `codex login`); mounted read-only into each Codex agent. "
-            "Override via ROBOCO_HOST_CODEX_DIR"
+            "Override via ROBOFLEET_HOST_CODEX_DIR"
         ),
     )
     # The codex CLI model id pinned at spawn (`codex exec -m <id>`). Codex has
@@ -2153,10 +2153,10 @@ class Settings(BaseSettings):
         default="gpt-5.3-codex",
         description=(
             "Codex CLI model id passed to `codex exec -m`; override via "
-            "ROBOCO_CODEX_CLI_MODEL"
+            "ROBOFLEET_CODEX_CLI_MODEL"
         ),
     )
-    # The gemini CLI model id passed via ROBOCO_AGENT_MODEL at spawn. Unlike
+    # The gemini CLI model id passed via ROBOFLEET_AGENT_MODEL at spawn. Unlike
     # the grok path (a raw os.environ read in gemini.py, now fixed to mirror
     # codex_cli_model above), this is a real Settings field so it shows up in
     # the settings schema.
@@ -2164,7 +2164,7 @@ class Settings(BaseSettings):
         default="gemini-2.5-pro",
         description=(
             "Gemini CLI model id passed to the agent at spawn; override via "
-            "ROBOCO_GEMINI_CLI_MODEL"
+            "ROBOFLEET_GEMINI_CLI_MODEL"
         ),
     )
     # Base retry_after when parking the GEMINI provider on a quota/rate-limit
@@ -2179,7 +2179,7 @@ class Settings(BaseSettings):
         description=(
             "Base retry_after (seconds) when parking the GEMINI provider on a "
             "quota/rate-limit exit; override via "
-            "ROBOCO_GEMINI_RATE_LIMIT_RETRY_AFTER_SECONDS"
+            "ROBOFLEET_GEMINI_RATE_LIMIT_RETRY_AFTER_SECONDS"
         ),
     )
     gemini_auth_retry_after_seconds: float = Field(
@@ -2188,13 +2188,13 @@ class Settings(BaseSettings):
         description=(
             "retry_after (seconds) when parking the GEMINI provider on a "
             "missing/invalid OAuth credential (entrypoint preflight exit 41); "
-            "override via ROBOCO_GEMINI_AUTH_RETRY_AFTER_SECONDS"
+            "override via ROBOFLEET_GEMINI_AUTH_RETRY_AFTER_SECONDS"
         ),
     )
     # Host directory holding the Kimi Code CLI's subscription auth (from `kimi
     # login`, credentials/kimi-code.json), mounted READ-WRITE into each Kimi
     # agent — every container symlinks onto this one rotating refresh chain —
-    # the parity analogue of ROBOCO_HOST_CODEX_DIR (a real Settings field, not
+    # the parity analogue of ROBOFLEET_HOST_CODEX_DIR (a real Settings field, not
     # a raw os.environ read).
     host_kimi_dir: str = Field(
         default_factory=lambda: str(Path.home() / ".kimi-code"),
@@ -2202,7 +2202,7 @@ class Settings(BaseSettings):
             "Host directory holding the Kimi Code CLI subscription credential "
             "(from `kimi login`); mounted read-write into each Kimi agent, "
             "which symlinks onto its shared refresh chain. "
-            "Override via ROBOCO_HOST_KIMI_DIR"
+            "Override via ROBOFLEET_HOST_KIMI_DIR"
         ),
     )
     # The kimi CLI model alias passed at spawn (`kimi -p ... -m <alias>`).
@@ -2212,7 +2212,7 @@ class Settings(BaseSettings):
         default="kimi-code/k3",
         description=(
             "Kimi CLI model alias passed to `kimi -p -m`; override via "
-            "ROBOCO_KIMI_CLI_MODEL"
+            "ROBOFLEET_KIMI_CLI_MODEL"
         ),
     )
     # Retry_after tunables for parking the KIMI provider — a real Settings
@@ -2225,7 +2225,7 @@ class Settings(BaseSettings):
         description=(
             "Base retry_after (seconds) when parking the KIMI provider on a "
             "quota/rate-limit exit; override via "
-            "ROBOCO_KIMI_RATE_LIMIT_RETRY_AFTER_SECONDS"
+            "ROBOFLEET_KIMI_RATE_LIMIT_RETRY_AFTER_SECONDS"
         ),
     )
     kimi_auth_retry_after_seconds: float = Field(
@@ -2234,7 +2234,7 @@ class Settings(BaseSettings):
         description=(
             "retry_after (seconds) when parking the KIMI provider on a "
             "missing/expired subscription credential (entrypoint preflight "
-            "exit 78); override via ROBOCO_KIMI_AUTH_RETRY_AFTER_SECONDS"
+            "exit 78); override via ROBOFLEET_KIMI_AUTH_RETRY_AFTER_SECONDS"
         ),
     )
     # Every Kimi container shares ONE OAuth refresh-token chain (the
@@ -2251,7 +2251,7 @@ class Settings(BaseSettings):
             "Max concurrent live KIMI agent containers. Raising this risks "
             "forking the shared OAuth refresh-token chain and triggering "
             "fleet-wide Kimi re-login; override via "
-            "ROBOCO_KIMI_MAX_CONCURRENT only if you understand that risk"
+            "ROBOFLEET_KIMI_MAX_CONCURRENT only if you understand that risk"
         ),
     )
     # An interactive intake/secretary chat the human abandoned (closed the tab
@@ -2266,7 +2266,7 @@ class Settings(BaseSettings):
         ge=0,
         description=(
             "Idle-reap threshold for live intake/secretary chats (seconds); "
-            "0 disables. Override via ROBOCO_INTERACTIVE_IDLE_REAP_SECONDS"
+            "0 disables. Override via ROBOFLEET_INTERACTIVE_IDLE_REAP_SECONDS"
         ),
     )
     # A task left CLAIMED/IN_PROGRESS with an assignee but no running container
@@ -2282,7 +2282,7 @@ class Settings(BaseSettings):
         description=(
             "Grace window (seconds) before the orchestrator (re)spawns or "
             "releases a claimed/in_progress task that has no running agent; "
-            "override via ROBOCO_CLAIMED_NO_AGENT_GRACE_SECONDS"
+            "override via ROBOFLEET_CLAIMED_NO_AGENT_GRACE_SECONDS"
         ),
     )
     # Pre-gateway parity: PMs wrote a fresh
@@ -2296,7 +2296,7 @@ class Settings(BaseSettings):
         ge=1,
         description=(
             "Recency window (seconds) for PM journal:decision to satisfy "
-            "gating verbs; override via ROBOCO_PM_DECISION_WINDOW_SECONDS"
+            "gating verbs; override via ROBOFLEET_PM_DECISION_WINDOW_SECONDS"
         ),
     )
 
@@ -2473,7 +2473,7 @@ class Settings(BaseSettings):
                 continue
             if kb_dir.startswith("/") or ".." in kb_dir.split("/"):
                 raise ValueError(
-                    f"ROBOCO_VAULT_KB_DIRS entry {kb_dir!r} must be a clean "
+                    f"ROBOFLEET_VAULT_KB_DIRS entry {kb_dir!r} must be a clean "
                     "vault-relative path — no absolute paths, no '..' "
                     "segments (KB ingest would index files outside the vault)."
                 )
@@ -2482,7 +2482,7 @@ class Settings(BaseSettings):
             normalized = posixpath.normpath(kb_dir)
             if normalized == ".":
                 raise ValueError(
-                    f"ROBOCO_VAULT_KB_DIRS entry {kb_dir!r} resolves to the "
+                    f"ROBOFLEET_VAULT_KB_DIRS entry {kb_dir!r} resolves to the "
                     "vault root itself — KB ingest must target a subfolder, "
                     "never the whole vault (that would double-index every "
                     "projection dir, including private journals)."
@@ -2490,7 +2490,7 @@ class Settings(BaseSettings):
             for reserved_dir in reserved:
                 if _vault_dirs_overlap(normalized, reserved_dir):
                     raise ValueError(
-                        f"ROBOCO_VAULT_KB_DIRS entry {kb_dir!r} overlaps "
+                        f"ROBOFLEET_VAULT_KB_DIRS entry {kb_dir!r} overlaps "
                         f"reserved vault path {reserved_dir!r} — KB ingest "
                         "must not double-index a projection/intake dir."
                     )

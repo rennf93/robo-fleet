@@ -327,7 +327,7 @@ def _org_report_body(data: OrgReportData) -> list[str]:
 
 
 class VaultWriter:
-    """Pure file-system materializer, rooted at ``root`` (``ROBOCO_VAULT_PATH``)."""
+    """Pure file-system materializer, rooted at ``root`` (``ROBOFLEET_VAULT_PATH``)."""
 
     def __init__(self, root: Path) -> None:
         self.root = Path(root)

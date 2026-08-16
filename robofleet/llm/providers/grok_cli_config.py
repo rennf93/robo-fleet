@@ -22,7 +22,7 @@ grok flags (built-in tool removal + ``--deny`` rules):
     gateway verbs, never raw git.
   * **destructive** — ``--deny "Bash(rm -rf*)"`` for every bash-capable role.
   * **reasoning** — ``--effort`` by role (``low`` for coordination / docs / board;
-    full for the code-quality roles). A global ``ROBOCO_GROK_REASONING_EFFORT``
+    full for the code-quality roles). A global ``ROBOFLEET_GROK_REASONING_EFFORT``
     override wins.
 """
 
@@ -51,25 +51,25 @@ GROK_CONFIG_PATH = Path.home() / ".grok" / "config.toml"
 GROK_AGENTS_PATH = Path.home() / ".grok" / "AGENTS.md"
 # The composed role blueprint the orchestrator mounts into every agent container.
 SYSTEM_PROMPT_PATH = Path(
-    os.environ.get("ROBOCO_SYSTEM_PROMPT", "/app/system-prompt.md")
+    os.environ.get("ROBOFLEET_SYSTEM_PROMPT", "/app/system-prompt.md")
 )
 # grok loads blocking ``PreToolUse`` hooks from ``$HOME/.grok/hooks/*.json``
 # (always trusted). We install the SAME bash-guard the Claude path runs as a
 # PreToolUse hook to get its full exfil-pattern analysis (credential files,
 # /proc/environ, internal-API forgery, identity forgery, …) — far beyond the
-# glob ``--deny`` rules. It runs with ``ROBOCO_GUARD_SKIP_GIT=1``: a grok hook
+# glob ``--deny`` rules. It runs with ``ROBOFLEET_GUARD_SKIP_GIT=1``: a grok hook
 # deny CANCELS the run, which is the right response for an exfil attempt (no
 # legit use) but wrong for a routine git op, so git stays on the graceful
 # ``--deny`` rules. The script is baked into the agent base image.
 GROK_HOOKS_DIR = Path.home() / ".grok" / "hooks"
 BASH_GUARD_HOOK = os.environ.get(
-    "ROBOCO_BASH_GUARD_HOOK", "/app/scripts/bash-guard-hook.sh"
+    "ROBOFLEET_BASH_GUARD_HOOK", "/app/scripts/bash-guard-hook.sh"
 )
 # The entrypoint reads the computed flags (one token per line) from this file.
 # Defaults under the system temp dir (not a hardcoded /tmp literal) — the
-# entrypoint reads the same ROBOCO_GROK_ARGS_FILE / tmp default.
+# entrypoint reads the same ROBOFLEET_GROK_ARGS_FILE / tmp default.
 GROK_ARGS_PATH = Path(
-    os.environ.get("ROBOCO_GROK_ARGS_FILE")
+    os.environ.get("ROBOFLEET_GROK_ARGS_FILE")
     or Path(tempfile.gettempdir()) / "roboco-grok-args"
 )
 
@@ -78,7 +78,7 @@ _DEFAULT_MAX_TURNS = 200
 
 # Reasoning effort is left at grok's model default for every role (parity with
 # the Claude path, which sets no per-role thinking budget). An operator can still
-# trade quality for cost across the fleet with ``ROBOCO_GROK_REASONING_EFFORT``.
+# trade quality for cost across the fleet with ``ROBOFLEET_GROK_REASONING_EFFORT``.
 _FULL_REASONING_OVERRIDES = frozenset({"default", "full", "none", ""})
 
 # Roles that legitimately run a shell. Review / board roles never do.
@@ -130,7 +130,7 @@ _DESTRUCTIVE_DENY = ("Bash(rm -rf*)",)
 # Native --deny is graceful (model adapts to `make`, run continues), so this is
 # the primary gate on grok; the bash-guard hook only catches the compound
 # commands the globs miss (cd x && uv run) and there nudges via
-# ROBOCO_GUARD_SKIP_PM=1 instead of canceling the run.
+# ROBOFLEET_GUARD_SKIP_PM=1 instead of canceling the run.
 _RAW_PM_DENY = (
     "Bash(uv run*)",
     "Bash(uv sync*)",
@@ -202,10 +202,10 @@ def _effort() -> str | None:
     """Resolve ``--effort`` from the fleet override; ``None`` = grok's default.
 
     No per-role reduction (parity with Claude). A global
-    ``ROBOCO_GROK_REASONING_EFFORT`` lets an operator dial cost vs quality;
+    ``ROBOFLEET_GROK_REASONING_EFFORT`` lets an operator dial cost vs quality;
     ``default`` / ``full`` / empty keeps the model default.
     """
-    override = os.environ.get("ROBOCO_GROK_REASONING_EFFORT", "").strip()
+    override = os.environ.get("ROBOFLEET_GROK_REASONING_EFFORT", "").strip()
     if override and override.lower() not in _FULL_REASONING_OVERRIDES:
         return override.lower()
     return None
@@ -278,7 +278,7 @@ def bash_guard_hook_config(hook_path: str = BASH_GUARD_HOOK) -> dict[str, Any]:
     """The grok hooks JSON installing the bash-guard as a blocking PreToolUse hook.
 
     Matcher ``Bash`` covers grok's ``run_terminal_command`` alias too. The hook
-    runs with ``ROBOCO_GUARD_SKIP_GIT=1`` so it only blocks the exfil categories
+    runs with ``ROBOFLEET_GUARD_SKIP_GIT=1`` so it only blocks the exfil categories
     (git ops stay on the graceful ``--deny`` rules); it denies via exit 2.
     """
     return {
@@ -291,11 +291,11 @@ def bash_guard_hook_config(hook_path: str = BASH_GUARD_HOOK) -> dict[str, Any]:
                             "type": "command",
                             "command": hook_path,
                             "env": {
-                                "ROBOCO_GUARD_SKIP_GIT": "1",
+                                "ROBOFLEET_GUARD_SKIP_GIT": "1",
                                 # Raw-PM is gated by graceful native --deny above;
                                 # the hook only nudges (exit 0) for compound
                                 # commands the globs miss, never cancels the run.
-                                "ROBOCO_GUARD_SKIP_PM": "1",
+                                "ROBOFLEET_GUARD_SKIP_PM": "1",
                             },
                         }
                     ],
@@ -332,7 +332,7 @@ def write_grok_hooks(
 # without confirming a non-cancelling outcome exists would be disproportionate
 # for a benign habit like a bare `cat`).
 FABLE_HONESTY_NUDGE_HOOK = os.environ.get(
-    "ROBOCO_FABLE_HONESTY_NUDGE_HOOK", "/app/scripts/fable-honesty-nudge-hook.sh"
+    "ROBOFLEET_FABLE_HONESTY_NUDGE_HOOK", "/app/scripts/fable-honesty-nudge-hook.sh"
 )
 
 
@@ -378,11 +378,11 @@ def write_grok_fable_hooks(*, hooks_dir: Path = GROK_HOOKS_DIR) -> bool:
 
 def main() -> int:
     """Entrypoint: write ``~/.grok/config.toml`` + AGENTS.md + hooks + per-role args."""
-    agent_id = os.environ.get("ROBOCO_AGENT_ID", "")
-    mcp_path = os.environ.get("ROBOCO_MCP_CONFIG", "/app/mcp-config.json")
+    agent_id = os.environ.get("ROBOFLEET_AGENT_ID", "")
+    mcp_path = os.environ.get("ROBOFLEET_MCP_CONFIG", "/app/mcp-config.json")
     try:
         max_turns = int(
-            os.environ.get("ROBOCO_GROK_MAX_TURNS", str(_DEFAULT_MAX_TURNS))
+            os.environ.get("ROBOFLEET_GROK_MAX_TURNS", str(_DEFAULT_MAX_TURNS))
         )
     except ValueError:
         max_turns = _DEFAULT_MAX_TURNS

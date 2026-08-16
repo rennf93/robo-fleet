@@ -23,7 +23,7 @@ def test_ci_watch_disabled_by_default() -> None:
 
 
 def test_ci_watch_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_CI_WATCH_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_CI_WATCH_ENABLED": "true"}):
         assert Settings().ci_watch_enabled is True
 
 

@@ -32,21 +32,21 @@ _SECRETARY_BASE_TOOLS: tuple[str, ...] = ("Read", "Grep", "Glob")
 
 
 def _api_base() -> str:
-    return os.environ.get("ROBOCO_API_URL", "http://roboco-orchestrator:8000").rstrip(
-        "/"
-    )
+    return os.environ.get(
+        "ROBOFLEET_API_URL", "http://roboco-orchestrator:8000"
+    ).rstrip("/")
 
 
 def _headers() -> dict[str, str]:
-    agent_id = os.environ.get("ROBOCO_AGENT_ID", "")
+    agent_id = os.environ.get("ROBOFLEET_AGENT_ID", "")
     headers = {
         "X-Agent-ID": agent_id,
-        "X-Agent-Role": os.environ.get("ROBOCO_AGENT_ROLE", "secretary"),
+        "X-Agent-Role": os.environ.get("ROBOFLEET_AGENT_ROLE", "secretary"),
     }
     team = get_agent_team(agent_id)
     if team:
         headers["X-Agent-Team"] = team
-    token = os.environ.get("ROBOCO_AGENT_TOKEN")
+    token = os.environ.get("ROBOFLEET_AGENT_TOKEN")
     # See flow_server._build_headers: forwarding the "UNSIGNED" sentinel 401s
     # even in dev mode; omit so a missing token is accepted in dev.
     if token and token != "UNSIGNED":

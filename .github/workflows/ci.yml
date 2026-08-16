@@ -127,27 +127,27 @@ jobs:
           --health-retries 5
 
     env:
-      # Runtime settings (roboco.config.Settings reads ROBOCO_*).
-      ROBOCO_DATABASE_HOST: localhost
-      ROBOCO_DATABASE_PORT: '5432'
-      ROBOCO_DATABASE_USER: roboco
-      ROBOCO_DATABASE_PASSWORD: roboco
-      ROBOCO_DATABASE_NAME: roboco
-      ROBOCO_REDIS_HOST: localhost
-      ROBOCO_REDIS_PORT: '6379'
+      # Runtime settings (roboco.config.Settings reads ROBOFLEET_*).
+      ROBOFLEET_DATABASE_HOST: localhost
+      ROBOFLEET_DATABASE_PORT: '5432'
+      ROBOFLEET_DATABASE_USER: roboco
+      ROBOFLEET_DATABASE_PASSWORD: roboco
+      ROBOFLEET_DATABASE_NAME: roboco
+      ROBOFLEET_REDIS_HOST: localhost
+      ROBOFLEET_REDIS_PORT: '6379'
       # Fernet key required by the security layer (utils/crypto). Test-only —
       # a valid generated key (the previous value was 43 chars, not a real
       # Fernet key, so encryption tests failed with "Incorrect padding").
-      ROBOCO_ENCRYPTION_KEY: 'yp3Awiv0zmxpRa6Gi9Y9hJbi4pZ2FXHRNr4EI6-Gx9U='
+      ROBOFLEET_ENCRYPTION_KEY: 'yp3Awiv0zmxpRa6Gi9Y9hJbi4pZ2FXHRNr4EI6-Gx9U='
       # The pytest harness (tests/conftest.py) provisions its own ephemeral
       # databases via an admin connection to the `postgres` DB and reads a
-      # separate ROBOCO_TEST_DB_* set. The pgvector image's POSTGRES_USER is a
+      # separate ROBOFLEET_TEST_DB_* set. The pgvector image's POSTGRES_USER is a
       # superuser, so it can CREATE/DROP DATABASE and enable the vector extension.
-      ROBOCO_TEST_DB_HOST: localhost
-      ROBOCO_TEST_DB_PORT: '5432'
-      ROBOCO_TEST_DB_USER: roboco
-      ROBOCO_TEST_DB_PASSWORD: roboco
-      ROBOCO_TEST_DB_ADMIN_DB: postgres
+      ROBOFLEET_TEST_DB_HOST: localhost
+      ROBOFLEET_TEST_DB_PORT: '5432'
+      ROBOFLEET_TEST_DB_USER: roboco
+      ROBOFLEET_TEST_DB_PASSWORD: roboco
+      ROBOFLEET_TEST_DB_ADMIN_DB: postgres
 
     steps:
       - name: Checkout code

@@ -1,7 +1,7 @@
 """Idempotently upserts the single seeded CEO login user at startup.
 
 Exactly one row, ever — no registration route exists. Looked up by primary
-key (not email), so changing ROBOCO_CLOUD_AUTH_EMAIL renames the existing
+key (not email), so changing ROBOFLEET_CLOUD_AUTH_EMAIL renames the existing
 row instead of creating a second one.
 """
 
@@ -37,7 +37,7 @@ async def ensure_seed_user(db: AsyncSession) -> None:
     password = settings.cloud_auth_password
     if not email or not password:
         logger.warning(
-            "cloud_auth_enabled but ROBOCO_CLOUD_AUTH_EMAIL/PASSWORD unset — "
+            "cloud_auth_enabled but ROBOFLEET_CLOUD_AUTH_EMAIL/PASSWORD unset — "
             "no login user seeded; /api/auth/login will reject every attempt."
         )
         return

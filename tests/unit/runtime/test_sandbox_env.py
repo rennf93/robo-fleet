@@ -1,6 +1,6 @@
 """Sandbox marker env: `_append_sandbox_marker_env` + the `_spawn_container` branch.
 
-An opted-in spawn injects a cheap `ROBOCO_SANDBOX_SERVICES_AVAILABLE` marker
+An opted-in spawn injects a cheap `ROBOFLEET_SANDBOX_SERVICES_AVAILABLE` marker
 (never prod creds — actual provisioning is on-demand via `request_sandbox`)
 and MUST NOT also run the legacy `_append_gate_env` prod-creds injection —
 the marker replaces, never coexists with, prod creds.
@@ -32,14 +32,14 @@ def test_append_sandbox_marker_env_lists_services() -> None:
     cmd: list[str] = []
     AgentOrchestrator._append_sandbox_marker_env(cmd, ["postgres", "redis"])
 
-    assert "ROBOCO_SANDBOX_SERVICES_AVAILABLE=postgres,redis" in cmd
+    assert "ROBOFLEET_SANDBOX_SERVICES_AVAILABLE=postgres,redis" in cmd
 
 
 def test_append_sandbox_marker_env_single_service() -> None:
     cmd: list[str] = []
     AgentOrchestrator._append_sandbox_marker_env(cmd, ["mongo"])
 
-    assert "ROBOCO_SANDBOX_SERVICES_AVAILABLE=mongo" in cmd
+    assert "ROBOFLEET_SANDBOX_SERVICES_AVAILABLE=mongo" in cmd
 
 
 def _fake_proc() -> AsyncMock:

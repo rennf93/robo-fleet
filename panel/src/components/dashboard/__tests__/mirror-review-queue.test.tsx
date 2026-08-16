@@ -42,7 +42,7 @@ const { listCycles, approveItem, rejectItem } = vi.hoisted(() => ({
               team: "frontend",
               priority: 3,
               evidence:
-                "roboco/config.py:310 arms ROBOCO_SANDBOX_DB_ENABLED; docs-site has no page for it",
+                "roboco/config.py:310 arms ROBOFLEET_SANDBOX_DB_ENABLED; docs-site has no page for it",
               status: "proposed",
             },
           ],

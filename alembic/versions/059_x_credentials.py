@@ -4,7 +4,7 @@
 user-context secrets (mirrors provider_configs' encrypted-token column).
 ``x_seen_mentions`` is the mentions-poll dedup ledger, keyed by mention id so
 a mention is never turned into a second held reply proposal. Additive and
-inert while ``ROBOCO_X_ENGINE_ENABLED`` is off.
+inert while ``ROBOFLEET_X_ENGINE_ENABLED`` is off.
 
 Revision ID: 059_x_credentials
 Revises: 058_cloud_auth_users

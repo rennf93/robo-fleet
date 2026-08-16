@@ -50,11 +50,11 @@ def _pm_manifest() -> dict[str, object]:
 def flow_module_pm(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> types.ModuleType:
     manifest_path = tmp_path / "tool-manifest.json"
     manifest_path.write_text(json.dumps(_pm_manifest()))
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "00000000-0000-0000-0000-000000000098")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "cell_pm")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.setenv("ROBOCO_SDK_URL", "http://test-sdk:9000")
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "00000000-0000-0000-0000-000000000098")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "cell_pm")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_SDK_URL", "http://test-sdk:9000")
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest_path))
 
     import robofleet.mcp.flow_server as srv
 

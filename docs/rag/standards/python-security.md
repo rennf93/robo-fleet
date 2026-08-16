@@ -16,7 +16,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     api_key: str
     database_url: str
-    model_config = {"env_prefix": "ROBOCO_"}
+    model_config = {"env_prefix": "ROBOFLEET_"}
 ```
 
 ## SQL Injection Prevention

@@ -14,7 +14,7 @@ def test_db_network_isolated_false_by_default() -> None:
 
 
 def test_db_network_isolated_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_DB_NETWORK_ISOLATED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_DB_NETWORK_ISOLATED": "true"}):
         assert Settings().db_network_isolated is True
 
 

@@ -173,7 +173,7 @@ export function SandboxCard({ project }: { project: Project }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-2">
-          <HelpTip label="Requires the sandbox engine armed fleet-wide (ROBOCO_SANDBOX_DB_ENABLED); agents call request_sandbox() on-demand rather than getting creds at spawn.">
+          <HelpTip label="Requires the sandbox engine armed fleet-wide (ROBOFLEET_SANDBOX_DB_ENABLED); agents call request_sandbox() on-demand rather than getting creds at spawn.">
             <Label>Sandbox Services</Label>
           </HelpTip>
           {SANDBOX_SERVICES.map((svc) => (

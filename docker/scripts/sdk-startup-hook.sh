@@ -6,8 +6,8 @@
 # The briefing is written by the orchestrator before the container spawns
 # (_write_agent_briefing) and mounted read-only at /app/briefing.md.
 
-SDK_PORT="${ROBOCO_SDK_PORT:-9000}"
-AGENT_ID="${ROBOCO_AGENT_ID:-unknown}"
+SDK_PORT="${ROBOFLEET_SDK_PORT:-9000}"
+AGENT_ID="${ROBOFLEET_AGENT_ID:-unknown}"
 LOG_FILE="/tmp/sdk-server.log"
 BRIEFING_FILE="/app/briefing.md"
 PRECOMPACT_FILE="/tmp/roboco-precompact-${AGENT_ID}.md"

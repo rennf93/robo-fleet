@@ -32,7 +32,7 @@ class BudgetPolicy:
     """Per-agent runtime budget + loop policy.
 
     All thresholds are env-overridable at the consumer layer (agent_sdk
-    reads ROBOCO_AGENT_TOOL_CALL_WARN etc. and falls back to these
+    reads ROBOFLEET_AGENT_TOOL_CALL_WARN etc. and falls back to these
     defaults). The dataclass holds the canonical defaults.
     """
 

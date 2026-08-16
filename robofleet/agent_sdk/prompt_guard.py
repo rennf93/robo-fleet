@@ -9,7 +9,7 @@ the deny patterns to reusable Python so the same guard applies to:
     turn before sending it to the model, covering BOTH Claude (whose SDK session
     runs with ``setting_sources=[]`` and so never loads the bash hook) and Grok
     (the grok CLI, scanned at the same boundary);
-  * one-shot Grok agents — the grok entrypoint scans ``ROBOCO_INITIAL_PROMPT``.
+  * one-shot Grok agents — the grok entrypoint scans ``ROBOFLEET_INITIAL_PROMPT``.
 
 Content delivered to an agent (an A2A skill request, a PM's task description, an
 external notification) is DATA, not instructions. A turn matching a classic

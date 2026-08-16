@@ -9,7 +9,7 @@ anywhere — so seam bugs (tool↔gate schema drift, squash merges, stale
 refs, workspace routing) die here instead of in a live run.
 
 Gating: excluded from the default suite (`make quality`); runs via
-`make e2e-smoke` (sets ROBOCO_E2E_SMOKE=1). Needs the test Postgres
+`make e2e-smoke` (sets ROBOFLEET_E2E_SMOKE=1). Needs the test Postgres
 reachable and git on PATH, nothing else.
 """
 
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
-    if os.environ.get("ROBOCO_E2E_SMOKE") == "1":
+    if os.environ.get("ROBOFLEET_E2E_SMOKE") == "1":
         return
     skip = pytest.mark.skip(reason="e2e smoke runs via `make e2e-smoke` only")
     for item in items:

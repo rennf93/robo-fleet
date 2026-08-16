@@ -7,7 +7,7 @@
 # This hook is non-blocking and always succeeds to avoid
 # interrupting Claude's workflow.
 
-SDK_URL="${ROBOCO_SDK_URL:-http://localhost:9000}"
+SDK_URL="${ROBOFLEET_SDK_URL:-http://localhost:9000}"
 
 # Check inbox count (non-consuming endpoint)
 response=$(curl -sf "$SDK_URL/inbox/count" 2>/dev/null)

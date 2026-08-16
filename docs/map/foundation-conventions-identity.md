@@ -200,8 +200,8 @@ foundation-conventions-identity
 | render_intent_verbs_md / render_status_transitions_md / render_panel_json / render_agent_prompt_fragment | roboco/foundation/_generators.py | invoked by scripts/build_lifecycle_artifacts.py under the CI gate `make lifecycle && git diff --exit-code` to keep on-disk lifecycle artifacts byte-identical to the spec |
 
 ## Config Flags
-- ROBOCO_CONVENTIONS_ENABLED (default-off) — gates the surrounding ConventionsService + validator gate enforcement (i_am_done / pr_pass block + ambient/baseline injection). The schema/effective_map in this slice are pure and always importable, but the gate that consumes them is flag-gated. No flag lives inside the slice itself.
-- ROBOCO_ORG_MEMORY_ENABLED / ROBOCO_RELEASE_MANAGER_ENABLED / etc. — do NOT touch this slice; mentioned only to confirm they do not gate identity or conventions-schema behavior.
+- ROBOFLEET_CONVENTIONS_ENABLED (default-off) — gates the surrounding ConventionsService + validator gate enforcement (i_am_done / pr_pass block + ambient/baseline injection). The schema/effective_map in this slice are pure and always importable, but the gate that consumes them is flag-gated. No flag lives inside the slice itself.
+- ROBOFLEET_ORG_MEMORY_ENABLED / ROBOFLEET_RELEASE_MANAGER_ENABLED / etc. — do NOT touch this slice; mentioned only to confirm they do not gate identity or conventions-schema behavior.
 
 
 ## Gotchas

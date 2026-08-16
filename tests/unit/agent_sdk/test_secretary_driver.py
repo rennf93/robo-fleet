@@ -17,10 +17,10 @@ def _client(handler: Handler) -> httpx.AsyncClient:
 
 
 def _env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_API_URL", "http://x:8000")
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "secretary-uuid")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "secretary")
-    monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "tok")
+    monkeypatch.setenv("ROBOFLEET_API_URL", "http://x:8000")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "secretary-uuid")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "secretary")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "tok")
 
 
 @pytest.mark.asyncio

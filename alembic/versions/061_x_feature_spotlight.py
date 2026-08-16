@@ -5,7 +5,7 @@ slug so a shipped capability is never spotlighted twice (mirrors
 ``x_seen_mentions``). ``company_goals.brand_voice`` is the CEO-authored
 brand-voice sample/direction, a dedicated Text column mirroring
 ``north_star`` (not folded into the catch-all ``operating_policy`` JSON
-blob). Additive and inert while ``ROBOCO_X_FEATURE_SPOTLIGHT_ENABLED`` is off.
+blob). Additive and inert while ``ROBOFLEET_X_FEATURE_SPOTLIGHT_ENABLED`` is off.
 
 Revision ID: 061_x_feature_spotlight
 Revises: 060_drop_messaging

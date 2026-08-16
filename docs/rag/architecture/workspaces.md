@@ -34,9 +34,9 @@ Each agent gets their own git clone:
 
 ```bash
 # Environment variables
-ROBOCO_WORKSPACES_ROOT=/data/workspaces
-ROBOCO_WORKSPACE_AUTO_CLONE=true
-ROBOCO_WORKSPACE_CLONE_TIMEOUT=300
+ROBOFLEET_WORKSPACES_ROOT=/data/workspaces
+ROBOFLEET_WORKSPACE_AUTO_CLONE=true
+ROBOFLEET_WORKSPACE_CLONE_TIMEOUT=300
 ```
 
 ## Features

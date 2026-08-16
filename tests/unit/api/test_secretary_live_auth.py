@@ -70,13 +70,13 @@ async def auth_client(
 
 
 def _strict(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
 
 
 def _dev(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
 
 
 def _start_body() -> dict[str, Any]:

@@ -24,12 +24,12 @@ def test_vault_intake_disabled_by_default() -> None:
 
 
 def test_vault_intake_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_VAULT_INTAKE_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_VAULT_INTAKE_ENABLED": "true"}):
         assert Settings().vault_intake_enabled is True
 
 
 def test_vault_intake_dir_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_VAULT_INTAKE_DIR": "Foo/Bar"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_VAULT_INTAKE_DIR": "Foo/Bar"}):
         assert Settings().vault_intake_dir == "Foo/Bar"
 
 

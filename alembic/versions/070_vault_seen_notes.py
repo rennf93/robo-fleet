@@ -2,7 +2,7 @@
 
 Keyed by (vault-relative path, content hash) together: an unchanged note
 never reprocesses, but an edited note (new hash) is eligible again. Mirrors
-``x_seen_mentions``. Additive and inert while ``ROBOCO_VAULT_INTAKE_ENABLED``
+``x_seen_mentions``. Additive and inert while ``ROBOFLEET_VAULT_INTAKE_ENABLED``
 is off.
 
 Revision ID: 070_vault_seen_notes

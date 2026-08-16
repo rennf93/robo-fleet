@@ -44,15 +44,15 @@ from robofleet.foundation.policy.flow_timeouts import (
 StrList = Annotated[list[str], BeforeValidator(coerce_str_list)]
 
 ORCHESTRATOR_URL = os.environ.get(
-    "ROBOCO_ORCHESTRATOR_URL",
+    "ROBOFLEET_ORCHESTRATOR_URL",
     "http://roboco-orchestrator:8000",
 )
 # Where the per-agent SDK server lives (per-container loopback). The
 # flow server POSTs /verb/attempted here so the per-verb circuit breaker
 # can record rejections and tell us when to substitute circuit_open.
-SDK_URL = os.environ.get("ROBOCO_SDK_URL", "http://localhost:9000")
-AGENT_ID = os.environ["ROBOCO_AGENT_ID"]
-AGENT_ROLE = os.environ["ROBOCO_AGENT_ROLE"]
+SDK_URL = os.environ.get("ROBOFLEET_SDK_URL", "http://localhost:9000")
+AGENT_ID = os.environ["ROBOFLEET_AGENT_ID"]
+AGENT_ROLE = os.environ["ROBOFLEET_AGENT_ROLE"]
 
 # Client wall = the matching server wall (FlowVerbTimeoutMiddleware) plus
 # headroom, so the client always outlasts the server's asyncio.timeout and
@@ -63,10 +63,10 @@ AGENT_ROLE = os.environ["ROBOCO_AGENT_ROLE"]
 # flow_verb_slow_timeout_seconds; the literal fallbacks match those settings'
 # own defaults (120 / 900).
 _SERVER_TIMEOUT_SECONDS = float(
-    os.environ.get("ROBOCO_FLOW_VERB_TIMEOUT_SECONDS", "120")
+    os.environ.get("ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS", "120")
 )
 _SERVER_SLOW_TIMEOUT_SECONDS = float(
-    os.environ.get("ROBOCO_FLOW_VERB_SLOW_TIMEOUT_SECONDS", "900")
+    os.environ.get("ROBOFLEET_FLOW_VERB_SLOW_TIMEOUT_SECONDS", "900")
 )
 _TIMEOUT = _SERVER_TIMEOUT_SECONDS + CLIENT_HEADROOM_SECONDS
 _SLOW_TIMEOUT = _SERVER_SLOW_TIMEOUT_SECONDS + CLIENT_HEADROOM_SECONDS
@@ -282,7 +282,7 @@ def _build_headers() -> dict[str, str]:
     """
     # X-Agent-Token (HMAC over id:role:team, issued by the orchestrator at
     # spawn) and X-Agent-Team must travel with every flow verb or the API's
-    # ROBOCO_AGENT_AUTH_REQUIRED gate 401s with "Missing X-Agent-Token" —
+    # ROBOFLEET_AGENT_AUTH_REQUIRED gate 401s with "Missing X-Agent-Token" —
     # the same headers ApiClient injects for the other MCP servers.
     headers = {
         "X-Agent-ID": AGENT_ID,
@@ -292,8 +292,8 @@ def _build_headers() -> dict[str, str]:
     team = get_agent_team(AGENT_ID)
     if team:
         headers["X-Agent-Team"] = team
-    token = os.environ.get("ROBOCO_AGENT_TOKEN")
-    # The orchestrator injects "UNSIGNED" when ROBOCO_AGENT_AUTH_SECRET is
+    token = os.environ.get("ROBOFLEET_AGENT_TOKEN")
+    # The orchestrator injects "UNSIGNED" when ROBOFLEET_AGENT_AUTH_SECRET is
     # unset at spawn. The middleware rejects a presented-but-unverifiable
     # token with 401 "signature mismatch" even in dev mode, so forwarding
     # UNSIGNED turns every flow verb into a 401. Omit the header instead —
@@ -1165,7 +1165,7 @@ def _load_manifest_flow_tools() -> list[str] | None:
     fall back to registering the full tool set. Never raises.
     """
     manifest_path = Path(
-        os.environ.get("ROBOCO_TOOL_MANIFEST_PATH", "/app/tool-manifest.json"),
+        os.environ.get("ROBOFLEET_TOOL_MANIFEST_PATH", "/app/tool-manifest.json"),
     )
     if not manifest_path.exists():
         return None
@@ -1194,7 +1194,7 @@ def _register_tools() -> list[str]:
     The manifest is the role-authoritative tool list. Falling back to
     all-verbs registration (the previous behaviour) caused PMs to see
     developer/QA verbs and call them at wrong URLs (404s). We now refuse
-    to start without the manifest — unless ``ROBOCO_ALLOW_FULL_TOOLSET`` is
+    to start without the manifest — unless ``ROBOFLEET_ALLOW_FULL_TOOLSET`` is
     set, a dev/test escape hatch that registers the full tool set instead of
     raising so the server modules import without a hand-written manifest
     (#162). Default-off so production behaviour is unchanged.
@@ -1204,11 +1204,11 @@ def _register_tools() -> list[str]:
     allowed = _load_manifest_flow_tools()
     if allowed is None:
         manifest_path = os.environ.get(
-            "ROBOCO_TOOL_MANIFEST_PATH", "/app/tool-manifest.json"
+            "ROBOFLEET_TOOL_MANIFEST_PATH", "/app/tool-manifest.json"
         )
-        if os.environ.get("ROBOCO_ALLOW_FULL_TOOLSET"):
+        if os.environ.get("ROBOFLEET_ALLOW_FULL_TOOLSET"):
             log.warning(
-                "flow_server: manifest missing — ROBOCO_ALLOW_FULL_TOOLSET set,"
+                "flow_server: manifest missing — ROBOFLEET_ALLOW_FULL_TOOLSET set,"
                 " registering the full tool set (dev/test only)",
                 role=AGENT_ROLE,
                 path=manifest_path,

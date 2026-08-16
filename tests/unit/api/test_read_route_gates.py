@@ -40,7 +40,7 @@ async def _fake_db() -> AsyncIterator[object]:
 async def gated_client(
     monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncIterator[AsyncClient]:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
     app = FastAPI()
     app.include_router(agents_router, prefix="/api/agents")
     app.include_router(kanban_router, prefix="/api/kanban")
@@ -90,7 +90,7 @@ async def test_panel_read_routes_reject_no_credential_under_cloud_auth(
     path: str,
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = (
         await gated_client.get(path)
         if method == "GET"
@@ -105,7 +105,7 @@ async def test_a2a_tasks_reject_no_credential_under_cloud_auth(
 ) -> None:
     """/api/a2a/tasks is gated with get_agent_context (any authenticated agent)."""
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = await gated_client.get("/api/a2a/tasks")
     assert r.status_code == _HTTP_401
 
@@ -115,7 +115,7 @@ async def test_a2a_task_by_id_rejects_no_credential_under_cloud_auth(
     gated_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = await gated_client.get("/api/a2a/tasks/t-1")
     assert r.status_code == _HTTP_401
 
@@ -136,7 +136,7 @@ async def test_agents_dev_mode_no_token_passes(
     gated_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", False)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = await gated_client.get("/api/agents")
     assert r.status_code == _HTTP_200
 

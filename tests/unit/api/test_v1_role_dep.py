@@ -96,8 +96,8 @@ def test_dev_route_401_when_auth_required_and_no_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # In strict mode the role guard must require the token, not just the header.
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     client = TestClient(_build_app())
     r = client.post(
         "/api/v1/flow/developer/give_me_work",
@@ -111,8 +111,8 @@ def test_dev_route_rejects_invalid_token_even_in_dev(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Even in header-trust mode, a presented-but-forged token is rejected.
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     client = TestClient(_build_app())
     r = client.post(
         "/api/v1/flow/developer/give_me_work",
@@ -128,8 +128,8 @@ def test_dev_route_rejects_invalid_token_even_in_dev(
 
 def test_dev_route_accepts_valid_token(monkeypatch: pytest.MonkeyPatch) -> None:
     # The good path: a valid HMAC token for the allowed role passes the guard.
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     token = issue_agent_token(_AGENT_ID, "developer")
     client = TestClient(_build_app())
     r = client.post(

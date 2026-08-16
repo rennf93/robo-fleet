@@ -2,7 +2,7 @@
 
 A per-project, repo-canonical standard for *where code lives*, how a definition is *built*, and basic house-style hygiene — the layer above the `make`-style gates (which check syntax, types, and tests, not placement or structure). It exists so an agent cannot land a model defined inside a router, a route handler that runs its own database access, or a lint suppression, even when the code compiles and the tests pass (a misplaced *helper* — any top-level function — only warns, since that signal is too blunt to hard-block). It enforces the separation of concerns a senior would demand in review, not just linting.
 
-The standard is gated by `ROBOCO_CONVENTIONS_ENABLED` (default off) and is fully inert when off.
+The standard is gated by `ROBOFLEET_CONVENTIONS_ENABLED` (default off) and is fully inert when off.
 
 ## How a project declares it
 

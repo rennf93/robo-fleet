@@ -34,7 +34,7 @@ def _require_roles(allowed: frozenset[Role]) -> params.Depends:
         # flow guards are the sole gate for the /api/v1/flow/* endpoints, but
         # previously checked only the role string — unlike get_agent_context,
         # which already verifies the token. So a forged X-Agent-Role passed, and
-        # in strict mode (ROBOCO_AGENT_AUTH_REQUIRED) the token was never
+        # in strict mode (ROBOFLEET_AGENT_AUTH_REQUIRED) the token was never
         # required here. In header-trust (dev) mode a missing token stays a
         # no-op; any presented token is still verified. Deferred import avoids
         # an import cycle with routers that import both this module and deps.
@@ -59,7 +59,7 @@ def _require_authenticated_agent() -> params.Depends:
     per-role removal handled in the spawn manifest — so, unlike the flow
     routers, there is no single role to assert. But it must still bind the
     presented ``X-Agent-ID`` to a verified HMAC token when
-    ``ROBOCO_AGENT_AUTH_REQUIRED=true`` and reject a forged token even in
+    ``ROBOFLEET_AGENT_AUTH_REQUIRED=true`` and reject a forged token even in
     dev mode, exactly as the flow role guards do. Without this the
     ``/api/v1/do/*`` endpoints were the one agent-gateway path that
     accepted a forged ``X-Agent-ID`` with no token check — a weaker gate

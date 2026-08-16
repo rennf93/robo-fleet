@@ -22,7 +22,7 @@ def test_dep_update_disabled_by_default() -> None:
 
 
 def test_dep_update_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_DEP_UPDATE_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_DEP_UPDATE_ENABLED": "true"}):
         assert Settings().dep_update_enabled is True
 
 

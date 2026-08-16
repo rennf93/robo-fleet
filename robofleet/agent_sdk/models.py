@@ -103,7 +103,7 @@ class BudgetStatus(BaseModel):
             "'halt' -> hook exits 1 to deny the wrapping tool call; "
             "'warn' -> hook prints [Loop] and exits 0 (legacy behaviour). "
             "Sourced from foundation.BudgetPolicy.loop_action; env-overridable "
-            "via ROBOCO_AGENT_LOOP_ACTION."
+            "via ROBOFLEET_AGENT_LOOP_ACTION."
         ),
     )
 

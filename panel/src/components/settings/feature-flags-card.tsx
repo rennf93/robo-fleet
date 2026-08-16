@@ -96,7 +96,7 @@ const FLAG_DESCRIPTIONS: Record<string, string> = {
   video_on_spotlight:
     "Also open a video-authoring task when you approve a feature-spotlight draft that requests one. Off by default even with video_engine_enabled on.",
   obsidian_vault_enabled:
-    "Project tasks, journals, and A2A digests into a human-readable, wikilinked Obsidian vault on disk (RoboCo/Tasks, Journals, A2A, Agents) — a rebuildable, DB-derived projection, never the system of record. Needs ROBOCO_VAULT_PATH set.",
+    "Project tasks, journals, and A2A digests into a human-readable, wikilinked Obsidian vault on disk (RoboCo/Tasks, Journals, A2A, Agents) — a rebuildable, DB-derived projection, never the system of record. Needs ROBOFLEET_VAULT_PATH set.",
   vault_intake_enabled:
     "Watch the vault's inbox folder for #roboco-tagged notes and turn them into board-review drafts — the same Product-Owner-reviewed path a chat-confirmed task takes, never straight into delivery. Needs the Obsidian vault projection on.",
   vault_report_enabled:

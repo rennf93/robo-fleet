@@ -7,7 +7,7 @@ quality/gate/lint/test targets, denying raw package-manager / test-runner
 commands and remediating to the make targets. Skipped when no Makefile exists,
 or when one exists but declares none of those targets (a Go/Rust Makefile with
 only build/run — existence alone would remediate into a dead end). On the grok
-path (``ROBOCO_GUARD_SKIP_PM=1``) a deny cancels the whole run, so it nudges
+path (``ROBOFLEET_GUARD_SKIP_PM=1``) a deny cancels the whole run, so it nudges
 (exit 0) instead.
 """
 
@@ -100,7 +100,7 @@ def test_denies_when_makefile_has_only_one_remediation_target(tmp_path: Path) ->
 
 
 def test_grok_path_nudges_not_denies() -> None:
-    """ROBOCO_GUARD_SKIP_PM=1 (grok) -> exit 0 nudge, not run-canceling exit 2."""
-    rc, err = _run_hook("uv run pytest", REPO_ROOT, {"ROBOCO_GUARD_SKIP_PM": "1"})
+    """ROBOFLEET_GUARD_SKIP_PM=1 (grok) -> exit 0 nudge, not run-canceling exit 2."""
+    rc, err = _run_hook("uv run pytest", REPO_ROOT, {"ROBOFLEET_GUARD_SKIP_PM": "1"})
     assert rc == _ALLOWED
     assert "make" in err.lower()

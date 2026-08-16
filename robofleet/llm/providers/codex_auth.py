@@ -20,7 +20,7 @@ The refresh-token grant posts to ``https://auth.openai.com/oauth/token``
 (verified). The grant's ``client_id`` is NOT part of the auth.json struct we
 were handed, so :data:`_DEFAULT_OAUTH_CLIENT_ID` is a best-effort default
 (the Codex CLI's own public, non-secret OAuth client id) — override with
-``ROBOCO_CODEX_OAUTH_CLIENT_ID`` if OpenAI rotates it; this is the one value
+``ROBOFLEET_CODEX_OAUTH_CLIENT_ID`` if OpenAI rotates it; this is the one value
 in this module not drawn from the verified build facts, flagged here and in
 the build report for a human to confirm.
 
@@ -60,12 +60,12 @@ _refresh_lock = threading.Lock()
 _TOKEN_ENDPOINT = "https://auth.openai.com/oauth/token"
 # Not part of the verified auth.json struct — see module docstring.
 _DEFAULT_OAUTH_CLIENT_ID = os.environ.get(
-    "ROBOCO_CODEX_OAUTH_CLIENT_ID", "app_EMoamEEZ73f0CkXaXp7hrann"
+    "ROBOFLEET_CODEX_OAUTH_CLIENT_ID", "app_EMoamEEZ73f0CkXaXp7hrann"
 )
 # Refresh when the access token expires within this window: a run that starts
 # inside it could outlive the token, so refresh proactively rather than at the
 # last second. Mirrors grok_auth's REFRESH_SKEW_SECONDS.
-REFRESH_SKEW_SECONDS = int(os.environ.get("ROBOCO_CODEX_AUTH_REFRESH_SKEW", "1800"))
+REFRESH_SKEW_SECONDS = int(os.environ.get("ROBOFLEET_CODEX_AUTH_REFRESH_SKEW", "1800"))
 # A JWT is header.payload.signature; fewer parts means it isn't one.
 _MIN_JWT_PARTS = 2
 

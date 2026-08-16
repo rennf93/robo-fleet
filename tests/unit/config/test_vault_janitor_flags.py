@@ -21,13 +21,13 @@ def test_vault_janitor_defaults() -> None:
 
 
 def test_vault_archive_days_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_VAULT_ARCHIVE_DAYS": "0"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_VAULT_ARCHIVE_DAYS": "0"}):
         assert Settings().vault_archive_days == 0
 
 
 def test_vault_archive_days_rejects_negative() -> None:
     with (
-        mock.patch.dict(os.environ, {"ROBOCO_VAULT_ARCHIVE_DAYS": "-1"}),
+        mock.patch.dict(os.environ, {"ROBOFLEET_VAULT_ARCHIVE_DAYS": "-1"}),
         pytest.raises(ValidationError),
     ):
         Settings()

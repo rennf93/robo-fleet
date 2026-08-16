@@ -15,7 +15,7 @@ Design:
 * ``ResearchService`` selects an adapter from settings, clamps result/byte
   caps defensively, and is the single entry point the route uses.
 
-Swapping providers is a config change (``ROBOCO_RESEARCH_PROVIDER``) only.
+Swapping providers is a config change (``ROBOFLEET_RESEARCH_PROVIDER``) only.
 """
 
 from __future__ import annotations

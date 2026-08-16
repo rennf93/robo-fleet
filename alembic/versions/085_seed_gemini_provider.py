@@ -8,7 +8,7 @@ Unlike Grok's row (migration 039), Gemini has no API-key mode: the CLI
 authenticates from a mounted OAuth credential (``~/.gemini/oauth_creds.json``),
 never a base URL / bearer token, so both columns stay NULL permanently. The
 row starts disabled; an operator enables it once the host OAuth credential is
-in place (``ROBOCO_HOST_GEMINI_DIR``). ON CONFLICT (name) DO NOTHING keeps
+in place (``ROBOFLEET_HOST_GEMINI_DIR``). ON CONFLICT (name) DO NOTHING keeps
 this safe to re-run.
 
 RE-CHAIN CAVEAT: renumbered 083->085 (was 083 in this task's original

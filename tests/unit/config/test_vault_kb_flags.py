@@ -23,7 +23,7 @@ def test_vault_kb_defaults() -> None:
 
 def test_vault_kb_interval_rejects_below_minimum() -> None:
     with (
-        mock.patch.dict(os.environ, {"ROBOCO_VAULT_KB_INTERVAL_SECONDS": "30"}),
+        mock.patch.dict(os.environ, {"ROBOFLEET_VAULT_KB_INTERVAL_SECONDS": "30"}),
         pytest.raises(ValidationError),
     ):
         Settings()
@@ -40,7 +40,10 @@ def test_vault_kb_flag_validates_as_bool() -> None:
 def test_vault_kb_dirs_clean_config_passes() -> None:
     with mock.patch.dict(
         os.environ,
-        {"ROBOCO_VAULT_KB_ENABLED": "true", "ROBOCO_VAULT_KB_DIRS": "RoboCo/Notes"},
+        {
+            "ROBOFLEET_VAULT_KB_ENABLED": "true",
+            "ROBOFLEET_VAULT_KB_DIRS": "RoboCo/Notes",
+        },
     ):
         assert Settings().vault_kb_dirs == "RoboCo/Notes"
 
@@ -50,8 +53,8 @@ def test_vault_kb_dirs_overlap_with_intake_dir_rejected() -> None:
         mock.patch.dict(
             os.environ,
             {
-                "ROBOCO_VAULT_KB_ENABLED": "true",
-                "ROBOCO_VAULT_KB_DIRS": "RoboCo/Inbox",
+                "ROBOFLEET_VAULT_KB_ENABLED": "true",
+                "ROBOFLEET_VAULT_KB_DIRS": "RoboCo/Inbox",
             },
         ),
         pytest.raises(ValidationError),
@@ -73,7 +76,7 @@ def test_vault_kb_dirs_reserved_overlap_rejected(kb_dirs: str) -> None:
     with (
         mock.patch.dict(
             os.environ,
-            {"ROBOCO_VAULT_KB_ENABLED": "true", "ROBOCO_VAULT_KB_DIRS": kb_dirs},
+            {"ROBOFLEET_VAULT_KB_ENABLED": "true", "ROBOFLEET_VAULT_KB_DIRS": kb_dirs},
         ),
         pytest.raises(ValidationError),
     ):
@@ -100,7 +103,7 @@ def test_vault_kb_dirs_traversal_rejected(kb_dirs: str) -> None:
     with (
         mock.patch.dict(
             os.environ,
-            {"ROBOCO_VAULT_KB_ENABLED": "true", "ROBOCO_VAULT_KB_DIRS": kb_dirs},
+            {"ROBOFLEET_VAULT_KB_ENABLED": "true", "ROBOFLEET_VAULT_KB_DIRS": kb_dirs},
         ),
         pytest.raises(ValidationError),
     ):
@@ -112,8 +115,8 @@ def test_vault_kb_dirs_dot_prefixed_clean_entry_passes() -> None:
     with mock.patch.dict(
         os.environ,
         {
-            "ROBOCO_VAULT_KB_ENABLED": "true",
-            "ROBOCO_VAULT_KB_DIRS": "./RoboCo/Notes",
+            "ROBOFLEET_VAULT_KB_ENABLED": "true",
+            "ROBOFLEET_VAULT_KB_DIRS": "./RoboCo/Notes",
         },
     ):
         assert Settings().vault_kb_dirs == "./RoboCo/Notes"
@@ -124,8 +127,8 @@ def test_vault_kb_dirs_dotted_name_is_not_traversal() -> None:
     with mock.patch.dict(
         os.environ,
         {
-            "ROBOCO_VAULT_KB_ENABLED": "true",
-            "ROBOCO_VAULT_KB_DIRS": "RoboCo/my..notes",
+            "ROBOFLEET_VAULT_KB_ENABLED": "true",
+            "ROBOFLEET_VAULT_KB_DIRS": "RoboCo/my..notes",
         },
     ):
         assert Settings().vault_kb_dirs == "RoboCo/my..notes"
@@ -136,6 +139,9 @@ def test_vault_kb_disabled_skips_dir_validation() -> None:
     by default, so a stale/misconfigured env value never blocks startup."""
     with mock.patch.dict(
         os.environ,
-        {"ROBOCO_VAULT_KB_ENABLED": "false", "ROBOCO_VAULT_KB_DIRS": "RoboCo/Tasks"},
+        {
+            "ROBOFLEET_VAULT_KB_ENABLED": "false",
+            "ROBOFLEET_VAULT_KB_DIRS": "RoboCo/Tasks",
+        },
     ):
         assert Settings().vault_kb_dirs == "RoboCo/Tasks"

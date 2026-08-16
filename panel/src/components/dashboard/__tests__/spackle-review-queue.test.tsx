@@ -31,7 +31,7 @@ const { listCycles, approveItem, rejectItem } = vi.hoisted(() => ({
             },
             {
               id: "item-1",
-              title: "Document ROBOCO_WIDGETS_ENABLED",
+              title: "Document ROBOFLEET_WIDGETS_ENABLED",
               description: "Flag is armed in config.py but undocumented",
               acceptance_criteria: ["docs/map entry added"],
               project_slug: "frontend-app",
@@ -93,7 +93,7 @@ describe("SpackleReviewQueue", () => {
       await screen.findByText("Add panel surface for /api/widgets"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Document ROBOCO_WIDGETS_ENABLED"),
+      screen.getByText("Document ROBOFLEET_WIDGETS_ENABLED"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/roboco\/api\/routes\/widgets.py:12/),

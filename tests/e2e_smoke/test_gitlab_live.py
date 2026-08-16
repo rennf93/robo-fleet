@@ -10,8 +10,8 @@ claim. The project is deleted afterwards (best-effort).
 
 Skipped unless both env vars are set:
 
-    ROBOCO_GITLAB_E2E_URL    e.g. https://gitlab.com
-    ROBOCO_GITLAB_E2E_TOKEN  a PAT with `api` scope
+    ROBOFLEET_GITLAB_E2E_URL    e.g. https://gitlab.com
+    ROBOFLEET_GITLAB_E2E_TOKEN  a PAT with `api` scope
 
 Run tip: the token is a secret — export it in the shell, never write it
 into a file or a compose entry.
@@ -35,14 +35,14 @@ from robofleet.services.forge.gitlab import GitLabProvider
 if TYPE_CHECKING:
     from pathlib import Path
 
-_URL = os.environ.get("ROBOCO_GITLAB_E2E_URL", "")
-_TOKEN = os.environ.get("ROBOCO_GITLAB_E2E_TOKEN", "")
+_URL = os.environ.get("ROBOFLEET_GITLAB_E2E_URL", "")
+_TOKEN = os.environ.get("ROBOFLEET_GITLAB_E2E_TOKEN", "")
 
 pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.skipif(
         not (_URL and _TOKEN),
-        reason="ROBOCO_GITLAB_E2E_URL / ROBOCO_GITLAB_E2E_TOKEN not set",
+        reason="ROBOFLEET_GITLAB_E2E_URL / ROBOFLEET_GITLAB_E2E_TOKEN not set",
     ),
 ]
 

@@ -52,7 +52,7 @@ fi
 # ever sees it. The composed role blueprint travels separately via the
 # additive AGENTS.md (rendered above), so only the raw task prompt is
 # screened here. Run from /app too.
-if ! ( cd /app && python -m robofleet.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
+if ! ( cd /app && python -m robofleet.agent_sdk.prompt_guard "${ROBOFLEET_INITIAL_PROMPT:-}" ); then
   echo "Refusing to run: task prompt matched a prompt-injection pattern." >&2
   exit 1
 fi
@@ -67,7 +67,7 @@ fi
 # of the CLI hanging or failing deep into the run.
 if ! ( cd /app && python -m robofleet.llm.providers.kimi_cli_config --check ); then
   echo "[kimi] auth credential missing or expired — refusing to run. Run" \
-    "\`kimi login\` on the host (or set ROBOCO_HOST_KIMI_DIR to the" \
+    "\`kimi login\` on the host (or set ROBOFLEET_HOST_KIMI_DIR to the" \
     "directory holding credentials/kimi-code.json) before spawning Kimi" \
     "agents." >&2
   exit 78
@@ -95,9 +95,9 @@ ERR_LOG="/tmp/kimi-run.err"
 # `tee` alone is safe, it always drains stdin to completion). stderr goes to
 # ERR_LOG and is surfaced after the run.
 set +e
-kimi -p "${ROBOCO_INITIAL_PROMPT:-}" \
+kimi -p "${ROBOFLEET_INITIAL_PROMPT:-}" \
   --output-format stream-json \
-  -m "${ROBOCO_AGENT_MODEL:-kimi-code/k3}" \
+  -m "${ROBOFLEET_AGENT_MODEL:-kimi-code/k3}" \
   < /dev/null 2> "$ERR_LOG" | tee "$RUN_LOG"
 run_rc=${PIPESTATUS[0]}
 set -e
@@ -106,10 +106,10 @@ set -e
 # Capture token usage from the session's wire.jsonl (kimi's stdout carries no
 # usage summary of its own, unlike codex/gemini — see kimi_cli_usage for the
 # session-dir resolution). Best-effort; never fails the run. Run from /app
-# for the same module-resolution reason as the render above; ROBOCO_KIMI_WORKDIR
+# for the same module-resolution reason as the render above; ROBOFLEET_KIMI_WORKDIR
 # carries the captured workspace cwd so the usage reader can find the right
 # sessions/wd_<cwd-basename>_*/ directory after this subshell's own `cd /app`.
-( cd /app && ROBOCO_KIMI_RUN_LOG="$RUN_LOG" ROBOCO_KIMI_WORKDIR="$WORKDIR" \
+( cd /app && ROBOFLEET_KIMI_RUN_LOG="$RUN_LOG" ROBOFLEET_KIMI_WORKDIR="$WORKDIR" \
     python -m robofleet.llm.providers.kimi_cli_usage ) || true
 
 # Kimi has NO documented exit-code taxonomy for `-p` (a claimed 75/1 split is

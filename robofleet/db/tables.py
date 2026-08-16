@@ -213,7 +213,7 @@ class TaskTable(Base):
         nullable=True,
     )
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
-    # Cost budget (migration 079, feature-flagged: ROBOCO_TASK_BUDGETS_ENABLED).
+    # Cost budget (migration 079, feature-flagged: ROBOFLEET_TASK_BUDGETS_ENABLED).
     # Null = no cap: budgets enforce only when explicitly set; a pure
     # no-op off. Enforced periodically by the orchestrator's budget sweep.
     budget_usd: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -577,7 +577,7 @@ class ProjectTable(Base):
     )
     ci_watch_workflow: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    # Video-engine opt-in. The global ROBOCO_VIDEO_ENGINE_ENABLED flag arms the
+    # Video-engine opt-in. The global ROBOFLEET_VIDEO_ENGINE_ENABLED flag arms the
     # subsystem; a project opts in via video_engine_enabled before any
     # authoring task opens against its motion/ dir. Default-off, mirroring
     # ci_watch_enabled (migration 048).
@@ -593,7 +593,7 @@ class ProjectTable(Base):
         ARRAY(String), nullable=True
     )
 
-    # Cost budgets (migration 079, feature-flagged: ROBOCO_TASK_BUDGETS_ENABLED).
+    # Cost budgets (migration 079, feature-flagged: ROBOFLEET_TASK_BUDGETS_ENABLED).
     # Null = no cap, regardless of the flag. Enforced at claim time against
     # this calendar month's summed agent-spawn spend across the project's tasks.
     monthly_budget_usd: Mapped[float | None] = mapped_column(Float, nullable=True)

@@ -11,7 +11,7 @@ stream-json (for the live ``docker logs`` view, parity with the Claude/grok
 paths) and tees it to a run log this module scans for that ``result`` event.
 
 ``stats.models`` is keyed by model name (normally one — the pinned
-``ROBOCO_GEMINI_CLI_MODEL`` — but summed generically in case the CLI ever
+``ROBOFLEET_GEMINI_CLI_MODEL`` — but summed generically in case the CLI ever
 reports more than one). Its per-model entry shape depends on which
 ``--output-format`` produced it — our entrypoint always uses stream-json, so
 that is the PRIMARY shape parsed; the ``json``-mode shape is a tolerated
@@ -76,7 +76,7 @@ logger = logging.getLogger(__name__)
 # Where the entrypoint writes the captured usage for the orchestrator to read.
 # Defaults under the system temp dir (not a hardcoded /tmp literal).
 USAGE_OUT_PATH = Path(
-    os.environ.get("ROBOCO_GEMINI_USAGE_FILE")
+    os.environ.get("ROBOFLEET_GEMINI_USAGE_FILE")
     or Path(tempfile.gettempdir()) / "roboco-gemini-usage.json"
 )
 
@@ -271,17 +271,17 @@ def main(argv: list[str] | None = None) -> int:
     The bash entrypoint calls this twice: once (default) after the run to
     capture usage, and once with ``--classify-exit`` to decide what exit code
     to actually return (see :func:`classify_exit_code`). Both read the SAME
-    ``ROBOCO_GEMINI_RUN_LOG``.
+    ``ROBOFLEET_GEMINI_RUN_LOG``.
     """
     args = argv if argv is not None else sys.argv[1:]
-    run_log = Path(os.environ.get("ROBOCO_GEMINI_RUN_LOG", ""))
+    run_log = Path(os.environ.get("ROBOFLEET_GEMINI_RUN_LOG", ""))
 
     if "--classify-exit" in args:
-        cli_exit_code = int(os.environ.get("ROBOCO_GEMINI_CLI_EXIT_CODE", "1"))
+        cli_exit_code = int(os.environ.get("ROBOFLEET_GEMINI_CLI_EXIT_CODE", "1"))
         print(classify_exit_code(cli_exit_code, run_log))
         return 0
 
-    model = os.environ.get("ROBOCO_AGENT_MODEL", _DEFAULT_MODEL)
+    model = os.environ.get("ROBOFLEET_AGENT_MODEL", _DEFAULT_MODEL)
     capture_run_usage(run_log=run_log, fallback_model=model, out_path=USAGE_OUT_PATH)
     return 0
 

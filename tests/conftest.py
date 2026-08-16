@@ -20,8 +20,8 @@ Why Postgres and not SQLite:
 Behaviour:
     Tests that request `db_session` or `smoke_test_batch` are skipped at
     collection time when no Postgres is reachable on `localhost:5432`. Set
-    `ROBOCO_TEST_DB_HOST`, `ROBOCO_TEST_DB_PORT`, `ROBOCO_TEST_DB_USER`, or
-    `ROBOCO_TEST_DB_PASSWORD` to override.
+    `ROBOFLEET_TEST_DB_HOST`, `ROBOFLEET_TEST_DB_PORT`, `ROBOFLEET_TEST_DB_USER`, or
+    `ROBOFLEET_TEST_DB_PASSWORD` to override.
 
 Redis isolation:
     No test uses a real Redis, so `_no_live_redis` (autouse) points the
@@ -106,7 +106,7 @@ def _hermetic_settings(monkeypatch: pytest.MonkeyPatch) -> None:
 
     A developer machine may carry a production-flavored .env (real deploy
     values) or nothing at all; both skewed the suite — a missing
-    ROBOCO_ENCRYPTION_KEY failed every crypto-touching test with
+    ROBOFLEET_ENCRYPTION_KEY failed every crypto-touching test with
     EncryptionError, and environment=production flips the GHSA-4f7g
     fail-closed auth gate so header-trust tests 401. Pin both: development
     environment and a per-process Fernet key (crypto round-trips within
@@ -148,13 +148,13 @@ def _no_live_redis(monkeypatch: pytest.MonkeyPatch) -> None:
 # every `db_session` test failed with `InvalidPasswordError: password
 # authentication failed for user "renzof"` instead of running. Defaulting to
 # the project's actual DB makes the integration suite run out of the box; any
-# of these can still be overridden with `ROBOCO_TEST_DB_*`.
+# of these can still be overridden with `ROBOFLEET_TEST_DB_*`.
 # ---------------------------------------------------------------------------
-_TEST_DB_HOST = os.environ.get("ROBOCO_TEST_DB_HOST", "localhost")
-_TEST_DB_PORT = int(os.environ.get("ROBOCO_TEST_DB_PORT", "15432"))
-_TEST_DB_USER = os.environ.get("ROBOCO_TEST_DB_USER", "roboco")
-_TEST_DB_PASSWORD = os.environ.get("ROBOCO_TEST_DB_PASSWORD", "roboco")
-_TEST_DB_ADMIN_DB = os.environ.get("ROBOCO_TEST_DB_ADMIN_DB", "postgres")
+_TEST_DB_HOST = os.environ.get("ROBOFLEET_TEST_DB_HOST", "localhost")
+_TEST_DB_PORT = int(os.environ.get("ROBOFLEET_TEST_DB_PORT", "15432"))
+_TEST_DB_USER = os.environ.get("ROBOFLEET_TEST_DB_USER", "robofleet")
+_TEST_DB_PASSWORD = os.environ.get("ROBOFLEET_TEST_DB_PASSWORD", "robofleet")
+_TEST_DB_ADMIN_DB = os.environ.get("ROBOFLEET_TEST_DB_ADMIN_DB", "postgres")
 
 
 def _postgres_reachable() -> bool:
@@ -172,9 +172,10 @@ def _warn_if_pg_unavailable(available: bool, host: str, port: int) -> None:
     only adds a visible import-time warning."""
     if not available:
         warnings.warn(
-            f"Postgres unreachable at {host}:{port} — every DB test will be "
-            "SKIPPED. Set ROBOCO_TEST_DB_HOST/PORT/USER/PASSWORD or start "
-            "Postgres (local: ROBOCO_TEST_DB_PORT=55432 ROBOCO_TEST_DB_USER=renzof).",
+            f"Postgres unreachable at {host}:{port} — every DB test will be"
+            " SKIPPED. Set ROBOFLEET_TEST_DB_HOST/PORT/USER/PASSWORD or start"
+            " Postgres (local: ROBOFLEET_TEST_DB_PORT=55432"
+            " ROBOFLEET_TEST_DB_USER=renzof).",
             stacklevel=2,
         )
 
@@ -208,7 +209,7 @@ async def _test_database_url() -> AsyncIterator[str]:
     if not _PG_AVAILABLE:
         pytest.skip(
             f"Postgres unreachable at {_TEST_DB_HOST}:{_TEST_DB_PORT} — "
-            "set ROBOCO_TEST_DB_HOST/PORT/USER/PASSWORD or start Postgres",
+            "set ROBOFLEET_TEST_DB_HOST/PORT/USER/PASSWORD or start Postgres",
             allow_module_level=False,
         )
 
@@ -592,7 +593,7 @@ def pytest_collection_modifyitems(
     skip = pytest.mark.skip(
         reason=(
             f"Postgres unreachable at {_TEST_DB_HOST}:{_TEST_DB_PORT} — "
-            "set ROBOCO_TEST_DB_HOST/PORT/USER/PASSWORD or start Postgres"
+            "set ROBOFLEET_TEST_DB_HOST/PORT/USER/PASSWORD or start Postgres"
         )
     )
     fixtures_requiring_db = {"db_session", "smoke_test_batch"}

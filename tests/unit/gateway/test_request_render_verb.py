@@ -171,7 +171,7 @@ async def test_renderer_unconfigured_refused(monkeypatch: pytest.MonkeyPatch) ->
     env = await actions.request_render(agent_id=uuid4())
 
     assert env.error == "invalid_state"
-    assert "ROBOCO_VIDEO_RENDERER_BASE_URL" in (env.remediate or "")
+    assert "ROBOFLEET_VIDEO_RENDERER_BASE_URL" in (env.remediate or "")
 
 
 @pytest.mark.asyncio

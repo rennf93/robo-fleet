@@ -50,4 +50,4 @@ The repo ships a compliance test at `tests/compliance/test_hackathon_stack.py` t
 2. `roboco.agent.adk_entry._MODEL` resolves to a `gemini-3.5-*` id (Gemini 3.5+ via Gemini API/Vertex).
 3. `roboco.infra.cloudsql.async_engine_for_cloudsql` is callable and `get_engine` routes through it when `gcp_cloudsql_instance` is armed (>=1 Google Cloud infra service wired).
 
-Run it with `uv run pytest tests/compliance/ -v`. The live-GCP assertion (`test_live_gcp_cloudsql_instance_configured`) skips unless `ROBOCO_GCP_E2E=1` is set against the deployed stack.
+Run it with `uv run pytest tests/compliance/ -v`. The live-GCP assertion (`test_live_gcp_cloudsql_instance_configured`) skips unless `ROBOFLEET_GCP_E2E=1` is set against the deployed stack.

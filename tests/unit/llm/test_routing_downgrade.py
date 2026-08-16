@@ -4,7 +4,7 @@ A configured-but-disabled provider was indistinguishable from "no assignment":
 ``resolve_for_agent`` fell straight to the legacy Anthropic path with no signal,
 so an operator who disabled a provider got no warning that spawns were bypassing
 it. The fix surfaces the bypass with a warning (graceful degradation, but not
-silent) and adds an opt-in ``ROBOCO_ROUTING_STRICT`` fail-closed for operators
+silent) and adds an opt-in ``ROBOFLEET_ROUTING_STRICT`` fail-closed for operators
 who'd rather a misconfigured provider stall a spawn than run on the wrong one.
 """
 
@@ -53,7 +53,7 @@ async def test_resolve_for_agent_warns_on_disabled_configured_provider() -> None
 
 @pytest.mark.asyncio
 async def test_resolve_for_agent_strict_raises_on_disabled_provider() -> None:
-    """ROBOCO_ROUTING_STRICT refuses to silently downgrade — a disabled
+    """ROBOFLEET_ROUTING_STRICT refuses to silently downgrade — a disabled
     configured provider raises instead of running on the legacy path."""
     svc = _svc()
     with (

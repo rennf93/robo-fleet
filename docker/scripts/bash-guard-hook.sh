@@ -14,7 +14,7 @@
 # the extractor accepts either, so the one tested script guards both runtimes.
 # Exit 0 = allow. Exit 2 = deny.
 #
-# ROBOCO_GUARD_SKIP_GIT=1 skips the git-ops category. The grok path sets it because
+# ROBOFLEET_GUARD_SKIP_GIT=1 skips the git-ops category. The grok path sets it because
 # grok handles git via NATIVE --deny rules, which deny GRACEFULLY (the agent gets
 # a permission error and recovers) — whereas a grok hook deny CANCELS the whole
 # run. So grok keeps git on --deny (operational reflex → recoverable) and uses
@@ -93,7 +93,7 @@ git_skel_low=$(printf '%s' "$git_skel" | tr "[:upper:]" "[:lower:]")
 # --- git network / auth ops ---------------------------------------------------
 # Skipped on grok (handled by native --deny so a blocked git op is recoverable,
 # not a run-cancelling hook deny). See the header.
-if [[ "${ROBOCO_GUARD_SKIP_GIT:-}" != "1" ]] && \
+if [[ "${ROBOFLEET_GUARD_SKIP_GIT:-}" != "1" ]] && \
    echo "$git_skel_low" | grep -qE '(^|[[:space:];&|])git[[:space:]]+(fetch|pull|push|clone|remote|ls-remote|checkout|commit|merge|rebase|reset|cherry-pick|revert|tag[[:space:]]+-d|update-ref|reflog[[:space:]]+delete)'; then
     echo "Denied: shell git for network / auth / branch-mutating ops is blocked." >&2
     echo "Use the verb listed in your role's State→Verb table (e.g. commit, complete, i_am_done)." >&2
@@ -110,7 +110,7 @@ fi
 # is not a false positive — this targets the echo/printf substitution class
 # (`echo $(git push)`). Same SKIP_GIT guard as the check above — on grok this
 # stays the native --deny's job, never a run-cancelling hook deny.
-if [[ "${ROBOCO_GUARD_SKIP_GIT:-}" != "1" ]]; then
+if [[ "${ROBOFLEET_GUARD_SKIP_GIT:-}" != "1" ]]; then
     subst_git=$(printf '%s' "$cmd" | python3 -c '
 import sys, re
 src = sys.stdin.read()
@@ -317,13 +317,13 @@ if echo "$low" | grep -qE '(python3?|uv[[:space:]]+run|poetry[[:space:]]+run|pip
 fi
 
 # --- agent-identity forgery --------------------------------------------------
-# ROBOCO_AGENT_ID is the agent's identity. It is injected by the orchestrator
+# ROBOFLEET_AGENT_ID is the agent's identity. It is injected by the orchestrator
 # at spawn and the agent process must never rewrite it — doing so lets one
 # agent act as another (forged audit trail, bypassed ownership checks). No
 # legitimate agent shell command sets this variable; deny any assignment or
 # export of it (already lowercased into $low).
-if echo "$low" | grep -qE '(^|[[:space:];&|]|env[[:space:]]+|export[[:space:]]+)roboco_agent_id[[:space:]]*='; then
-    echo "Denied: ROBOCO_AGENT_ID is your injected identity — overriding it forges another agent's identity. Never set or export it. Call your MCP verbs with your real identity instead." >&2
+if echo "$low" | grep -qE '(^|[[:space:];&|]|env[[:space:]]+|export[[:space:]]+)robofleet_agent_id[[:space:]]*='; then
+    echo "Denied: ROBOFLEET_AGENT_ID is your injected identity — overriding it forges another agent's identity. Never set or export it. Call your MCP verbs with your real identity instead." >&2
     exit 2
 fi
 
@@ -359,7 +359,7 @@ fi
 # package-mutation verb AND a target that resolves to /app's environment
 # (cd /app, --project/--directory /app, /app/.venv, UV_PROJECT_ENVIRONMENT=/app).
 # Reads of /app (cat/ls/grep) and workspace installs are untouched. Deliberately
-# NOT gated by ROBOCO_GUARD_SKIP_GIT, so it fires for every provider — the Claude
+# NOT gated by ROBOFLEET_GUARD_SKIP_GIT, so it fires for every provider — the Claude
 # PreToolUse hook AND the grok exfil hook (and future provider hooks).
 if echo "$low" | grep -qE '(^|[[:space:];&|])(uv[[:space:]]+(sync|lock|add|remove)|uv[[:space:]]+pip[[:space:]]+(install|uninstall)|pip3?[[:space:]]+(install|uninstall))' && \
    echo "$low" | grep -qE '(/app/\.venv|--project[[:space:]=]+"?/app([^a-z]|$)|--directory[[:space:]=]+"?/app([^a-z]|$)|uv_project_environment="?/app([^a-z]|$)|(^|[[:space:];&|])cd[[:space:]]+"?/app([^a-z]|$))'; then
@@ -396,10 +396,10 @@ fi
 # `make`-internal uv (hook inspects the agent's command string, not
 # subprocesses) and WorkspaceService's uv sync (subprocess, not the agent Bash
 # tool) are untouched. On grok a deny cancels the whole run, so
-# ROBOCO_GUARD_SKIP_PM=1 nudges (exit 0) instead.
+# ROBOFLEET_GUARD_SKIP_PM=1 nudges (exit 0) instead.
 if test -f Makefile && grep -qE '^(quality|gate|lint|test):' Makefile && \
    echo "$low" | grep -qE '(^|[[:space:];&|])(uv[[:space:]]+(run|sync|pip[[:space:]]+(install|uninstall)|lock|add|remove)|pip3?[[:space:]]+(install|uninstall)|conda[[:space:]]+(install|create|run)|poetry[[:space:]]+(run|install|add))([[:space:]]|$)'; then
-    if [ -n "${ROBOCO_GUARD_SKIP_PM:-}" ]; then
+    if [ -n "${ROBOFLEET_GUARD_SKIP_PM:-}" ]; then
         echo "Nudge: raw package-manager commands are blocked — use \`make quality\` / \`make gate\` / \`make lint\` / \`make test\`. The Makefile sets UV_NO_SYNC=1 + a private cache; bare \`uv run\` bypasses that." >&2
         exit 0
     fi

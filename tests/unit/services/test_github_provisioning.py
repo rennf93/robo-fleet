@@ -150,7 +150,7 @@ async def test_create_repo_other_422_still_raises(
 
 
 def test_default_provider_builds_github_provider() -> None:
-    """Regression guard: no provider_name/ROBOCO_PROVISIONING_PROVIDER override
+    """Regression guard: no provider_name/ROBOFLEET_PROVISIONING_PROVIDER override
     => the service still builds a plain GitHubProvider, byte-for-byte the
     Phase-1 default."""
     svc = GitHubProvisioningService(token="tok", org="acme")

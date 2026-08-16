@@ -41,7 +41,7 @@ async def test_mcp_config_uses_disposable_api_url_when_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """With ``settings.api_url`` patched to a disposable URL, the generated
-    MCP config's ROBOCO_API_URL / ROBOCO_ORCHESTRATOR_URL point at the
+    MCP config's ROBOFLEET_API_URL / ROBOFLEET_ORCHESTRATOR_URL point at the
     disposable URL — not the production hostname or 127.0.0.1:port."""
     monkeypatch.setattr(settings, "api_url", _DISPOSABLE_URL)
     orch = AgentOrchestrator.__new__(AgentOrchestrator)
@@ -49,10 +49,10 @@ async def test_mcp_config_uses_disposable_api_url_when_set(
     config = json.loads(Path(config_path).read_text())
     # Every MCP server shares the same env dict; sample the first one.
     first_env = next(iter(config["mcpServers"].values()))["env"]
-    assert first_env["ROBOCO_API_URL"] == _DISPOSABLE_URL
-    assert first_env["ROBOCO_ORCHESTRATOR_URL"] == _DISPOSABLE_URL
-    assert "roboco-orchestrator" not in first_env["ROBOCO_API_URL"]
-    assert "127.0.0.1" not in first_env["ROBOCO_API_URL"]
+    assert first_env["ROBOFLEET_API_URL"] == _DISPOSABLE_URL
+    assert first_env["ROBOFLEET_ORCHESTRATOR_URL"] == _DISPOSABLE_URL
+    assert "roboco-orchestrator" not in first_env["ROBOFLEET_API_URL"]
+    assert "127.0.0.1" not in first_env["ROBOFLEET_API_URL"]
 
 
 async def test_mcp_config_preserves_real_agent_uuid(
@@ -75,4 +75,4 @@ async def test_mcp_config_preserves_real_agent_uuid(
     config = json.loads(Path(config_path).read_text())
     first_env = next(iter(config["mcpServers"].values()))["env"]
     expected_uuid = str(_foundation.AGENTS[_AGENT_SLUG].uuid)
-    assert first_env["ROBOCO_AGENT_ID"] == expected_uuid
+    assert first_env["ROBOFLEET_AGENT_ID"] == expected_uuid

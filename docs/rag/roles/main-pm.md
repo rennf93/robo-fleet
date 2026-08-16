@@ -79,7 +79,7 @@ triage_all()  # actionable tasks across all teams (Main PM only)
 | `roboco-do`           | `note`, `dm`, `notify`, `evidence`, `pr_update` |
 | `roboco-docs`         | `roboco_docs_write`, `roboco_docs_read`, `roboco_docs_list` |
 | `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-search`       | `web_search`, `web_fetch` (only when `ROBOCO_RESEARCH_ENABLED`, default on) |
+| `roboco-search`       | `web_search`, `web_fetch` (only when `ROBOFLEET_RESEARCH_ENABLED`, default on) |
 | `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
 
 Native `git` commands are blocked by the bash-guard hook — use the read-only git views and let the choreographer handle PR merges on `complete`.

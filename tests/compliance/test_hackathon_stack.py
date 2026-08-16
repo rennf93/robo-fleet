@@ -12,7 +12,7 @@ three mandatory All Things Agentic / Fortified Enterprise Fleet items:
 
 Items 1-3 FAIL (not skip) if the underlying dependency is missing - this is the
 proof artifact, not an optional check. The live-GCP assertion (item 4) skips
-unless ``ROBOCO_GCP_E2E=1`` is set, since it probes the deployed stack.
+unless ``ROBOFLEET_GCP_E2E=1`` is set, since it probes the deployed stack.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ def test_agent_model_resolves_to_gemini_3_5(
 ) -> None:
     """The agent model resolves to a ``gemini-3.5-*`` id.
 
-    Sets ``ROBOCO_AGENT_MODEL`` to a Gemini 3.5 id, reloads ``adk_entry`` so the
+    Sets ``ROBOFLEET_AGENT_MODEL`` to a Gemini 3.5 id, reloads ``adk_entry`` so the
     module-level ``_MODEL`` re-reads the env, and asserts the prefix. Importing
     ``adk_entry`` requires ADK (covered by ``test_adk_runner_is_importable``);
     if ADK is missing this test also fails with the ImportError, which is the
@@ -53,7 +53,7 @@ def test_agent_model_resolves_to_gemini_3_5(
     """
     from robofleet.agent import adk_entry
 
-    monkeypatch.setenv("ROBOCO_AGENT_MODEL", "gemini-3.5-flash")
+    monkeypatch.setenv("ROBOFLEET_AGENT_MODEL", "gemini-3.5-flash")
     importlib.reload(adk_entry)
     try:
         assert adk_entry._MODEL.startswith("gemini-3.5-"), (
@@ -104,12 +104,12 @@ def test_cloudsql_engine_factory_is_wired(
 def test_live_gcp_cloudsql_instance_configured() -> None:
     """Live-GCP: the deployed stack has ``gcp_cloudsql_instance`` set.
 
-    Skipped without ``ROBOCO_GCP_E2E=1``; the import/symbol assertions above
+    Skipped without ``ROBOFLEET_GCP_E2E=1``; the import/symbol assertions above
     run unconditionally. This probes the real deployed config, not the repo
     wiring.
     """
-    if os.environ.get("ROBOCO_GCP_E2E") != "1":
-        pytest.skip("set ROBOCO_GCP_E2E=1 to run the live-GCP assertions")
+    if os.environ.get("ROBOFLEET_GCP_E2E") != "1":
+        pytest.skip("set ROBOFLEET_GCP_E2E=1 to run the live-GCP assertions")
     from robofleet.config import settings
 
     assert settings.gcp_cloudsql_instance, (

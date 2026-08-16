@@ -188,7 +188,7 @@ async def test_write_doc_user_facing_refused(docs_setup: dict) -> None:
 def test_refused_doc_types_uses_configured_docs_site(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A deployer's own docs-site slug/URL (ROBOCO_DOCS_SITE_*) reaches the
+    """A deployer's own docs-site slug/URL (ROBOFLEET_DOCS_SITE_*) reaches the
     refusal message instead of RoboCo's own docs site."""
     monkeypatch.setattr(settings, "docs_site_project_slug", "acme-docs")
     monkeypatch.setattr(settings, "docs_site_public_url", "docs.acme.example")

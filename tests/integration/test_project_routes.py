@@ -218,7 +218,7 @@ async def test_get_project_by_id_includes_spend_when_budgets_enabled(
     project_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """monthly_spend_usd is populated (0.0 with no spawn sessions yet) once
-    ROBOCO_TASK_BUDGETS_ENABLED is on — the extra DB read only runs then."""
+    ROBOFLEET_TASK_BUDGETS_ENABLED is on — the extra DB read only runs then."""
     monkeypatch.setattr(settings, "task_budgets_enabled", True)
     create = await project_client.post("/api/projects", json=_payload(), headers=_HDR)
     pid = create.json()["id"]

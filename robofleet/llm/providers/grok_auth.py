@@ -53,7 +53,7 @@ _refresh_lock = threading.Lock()
 _DEFAULT_ISSUER = "https://auth.x.ai"
 # Refresh when the token expires within this window: a run that starts inside it
 # could outlive the token, so refresh proactively rather than at the last second.
-REFRESH_SKEW_SECONDS = int(os.environ.get("ROBOCO_GROK_AUTH_REFRESH_SKEW", "1800"))
+REFRESH_SKEW_SECONDS = int(os.environ.get("ROBOFLEET_GROK_AUTH_REFRESH_SKEW", "1800"))
 # grok writes ``expires_at`` with nanosecond precision + ``Z``; datetime only
 # parses up to microseconds, so trim the fractional part to 6 digits.
 _FRACTIONAL = re.compile(r"^(?P<head>.*\.\d{6})\d*(?P<tz>[+-]\d{2}:\d{2})?$")

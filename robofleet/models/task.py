@@ -166,7 +166,7 @@ class Task(TimestampMixin):
         default=2, ge=0, le=3, description="0=P0(highest), 3=P3(lowest)"
     )
 
-    # Cost budget (feature-flagged: ROBOCO_TASK_BUDGETS_ENABLED). Null = no
+    # Cost budget (feature-flagged: ROBOFLEET_TASK_BUDGETS_ENABLED). Null = no
     # cap — budgets enforce only when explicitly set (see
     # foundation/policy/agent_loop.py effective_task_budget_usd); a no-op off.
     budget_usd: float | None = Field(

@@ -15,7 +15,7 @@ def _client(handler: Any) -> httpx.AsyncClient:
 
 @pytest.mark.asyncio
 async def test_post_draft_posts_to_the_relay(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_API_URL", "http://orch:8000")
+    monkeypatch.setenv("ROBOFLEET_API_URL", "http://orch:8000")
     seen: dict[str, Any] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -40,7 +40,7 @@ async def test_post_draft_forwards_batch_collision_descriptors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A batch draft carries its collision surface through to the relay intact."""
-    monkeypatch.setenv("ROBOCO_API_URL", "http://orch:8000")
+    monkeypatch.setenv("ROBOFLEET_API_URL", "http://orch:8000")
     seen: dict[str, Any] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -109,7 +109,7 @@ async def test_propose_batch_result_string_includes_relay_detail(
         }
 
     monkeypatch.setattr(intake_server, "post_batch", _relay_rejected)
-    monkeypatch.setenv("ROBOCO_PROMPTER_SESSION_ID", "sess-1")
+    monkeypatch.setenv("ROBOFLEET_PROMPTER_SESSION_ID", "sess-1")
     msg = await intake_server.propose_batch([{"title": "A"}], "MegaTask")
     assert "Could not submit the MegaTask to the panel" in msg
     assert "session not in MegaTask scope" in msg
@@ -130,7 +130,7 @@ async def test_post_draft_reports_request_failure() -> None:
 async def test_post_batch_posts_a_batch_event(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_API_URL", "http://orch:8000")
+    monkeypatch.setenv("ROBOFLEET_API_URL", "http://orch:8000")
     seen: dict[str, Any] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -151,7 +151,7 @@ async def test_post_batch_posts_a_batch_event(
 
 @pytest.mark.asyncio
 async def test_propose_batch_acks_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_PROMPTER_SESSION_ID", "sess-1")
+    monkeypatch.setenv("ROBOFLEET_PROMPTER_SESSION_ID", "sess-1")
 
     async def _ok(_sid: str, _batch: dict[str, Any]) -> dict[str, Any]:
         return {"ok": True}
@@ -165,7 +165,7 @@ async def test_propose_batch_acks_on_success(monkeypatch: pytest.MonkeyPatch) ->
 async def test_propose_batch_requires_a_live_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("ROBOCO_PROMPTER_SESSION_ID", raising=False)
+    monkeypatch.delenv("ROBOFLEET_PROMPTER_SESSION_ID", raising=False)
     msg = await intake_server.propose_batch([{"title": "A"}], "MegaTask")
     assert "No live session id" in msg
 
@@ -174,7 +174,7 @@ async def test_propose_batch_requires_a_live_session(
 async def test_propose_batch_refuses_empty_without_posting(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_PROMPTER_SESSION_ID", "sess-1")
+    monkeypatch.setenv("ROBOFLEET_PROMPTER_SESSION_ID", "sess-1")
     posted = False
 
     async def _spy(_sid: str, _batch: dict[str, Any]) -> dict[str, Any]:
@@ -201,7 +201,7 @@ async def test_propose_batch_accepts_name_as_title(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A draft using ``name`` instead of ``title`` is well-formed (#163)."""
-    monkeypatch.setenv("ROBOCO_PROMPTER_SESSION_ID", "sess-1")
+    monkeypatch.setenv("ROBOFLEET_PROMPTER_SESSION_ID", "sess-1")
     captured: dict[str, Any] = {}
 
     async def _spy(_sid: str, batch: dict[str, Any]) -> dict[str, Any]:
@@ -226,7 +226,7 @@ async def test_propose_batch_reports_dropped_count(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A mixed batch posts the well-formed drafts and reports how many dropped."""
-    monkeypatch.setenv("ROBOCO_PROMPTER_SESSION_ID", "sess-1")
+    monkeypatch.setenv("ROBOFLEET_PROMPTER_SESSION_ID", "sess-1")
     captured: dict[str, Any] = {}
 
     async def _spy(_sid: str, batch: dict[str, Any]) -> dict[str, Any]:
@@ -250,7 +250,7 @@ async def test_propose_batch_malformed_message_mentions_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """When every draft is malformed, the hint names ``name`` as an alternative."""
-    monkeypatch.setenv("ROBOCO_PROMPTER_SESSION_ID", "sess-1")
+    monkeypatch.setenv("ROBOFLEET_PROMPTER_SESSION_ID", "sess-1")
     posted = False
 
     async def _spy(_sid: str, _batch: dict[str, Any]) -> dict[str, Any]:
@@ -270,7 +270,7 @@ async def test_propose_batch_does_not_mutate_caller_drafts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A ``name``-only draft is normalized onto a copy, not the caller's dict."""
-    monkeypatch.setenv("ROBOCO_PROMPTER_SESSION_ID", "sess-1")
+    monkeypatch.setenv("ROBOFLEET_PROMPTER_SESSION_ID", "sess-1")
 
     async def _spy(_sid: str, _batch: dict[str, Any]) -> dict[str, Any]:
         return {"ok": True}
@@ -286,14 +286,14 @@ async def test_propose_batch_does_not_mutate_caller_drafts(
 async def test_propose_draft_requires_a_live_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("ROBOCO_PROMPTER_SESSION_ID", raising=False)
+    monkeypatch.delenv("ROBOFLEET_PROMPTER_SESSION_ID", raising=False)
     msg = await intake_server.propose_draft({"title": "X"})
     assert "No live session id" in msg
 
 
 @pytest.mark.asyncio
 async def test_propose_draft_acks_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_PROMPTER_SESSION_ID", "sess-1")
+    monkeypatch.setenv("ROBOFLEET_PROMPTER_SESSION_ID", "sess-1")
 
     async def _ok(_sid: str, _draft: dict[str, Any]) -> dict[str, Any]:
         return {"ok": True}
@@ -307,7 +307,7 @@ async def test_propose_draft_acks_on_success(monkeypatch: pytest.MonkeyPatch) ->
 async def test_propose_draft_reports_relay_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_PROMPTER_SESSION_ID", "sess-1")
+    monkeypatch.setenv("ROBOFLEET_PROMPTER_SESSION_ID", "sess-1")
 
     async def _fail(_sid: str, _draft: dict[str, Any]) -> dict[str, Any]:
         return {"error": "http_503"}
@@ -328,7 +328,7 @@ async def test_propose_draft_reports_relay_failure(
 async def test_query_past_tasks_success_sends_q_and_limit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_API_URL", "http://orch:8000")
+    monkeypatch.setenv("ROBOFLEET_API_URL", "http://orch:8000")
     seen: dict[str, Any] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -461,14 +461,14 @@ def test_format_search_results_renders_lines() -> None:
 async def test_search_past_tasks_requires_a_live_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("ROBOCO_PROMPTER_SESSION_ID", raising=False)
+    monkeypatch.delenv("ROBOFLEET_PROMPTER_SESSION_ID", raising=False)
     msg = await intake_server.search_past_tasks("login")
     assert "No live session id" in msg
 
 
 @pytest.mark.asyncio
 async def test_search_past_tasks_success_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_PROMPTER_SESSION_ID", "sess-1")
+    monkeypatch.setenv("ROBOFLEET_PROMPTER_SESSION_ID", "sess-1")
     stub_result = {
         "results": [{"id": "x", "title": "T", "status": "s", "team": "t", "date": "d"}]
     }

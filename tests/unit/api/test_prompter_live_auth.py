@@ -73,8 +73,8 @@ async def auth_client(
 ) -> AsyncIterator[AsyncClient]:
     """Mounted router + fake orchestrator + empty registry; no auth env set.
 
-    Each test monkeypatches ``ROBOCO_AGENT_AUTH_SECRET`` and
-    ``ROBOCO_AGENT_AUTH_REQUIRED`` to pick dev vs strict mode. The registry is
+    Each test monkeypatches ``ROBOFLEET_AGENT_AUTH_SECRET`` and
+    ``ROBOFLEET_AGENT_AUTH_REQUIRED`` to pick dev vs strict mode. The registry is
     empty so the SSE stream over an unknown session yields nothing (200),
     ``status`` reports dead, ``messages`` 404s, and ``/events`` reports
     ``pushed: false`` — all non-401, which is what the "gate passed" assertions
@@ -106,13 +106,13 @@ async def auth_client(
 
 
 def _strict(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
 
 
 def _dev(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
 
 
 def _start_body() -> dict[str, Any]:

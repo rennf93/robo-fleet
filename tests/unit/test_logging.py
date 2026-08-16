@@ -167,14 +167,14 @@ def test_setup_logging_handles_log_dir_oserror() -> None:
 
 def test_resolve_log_dir_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     custom_dir = "/tmp/custom-logs"
-    monkeypatch.setenv("ROBOCO_LOG_DIR", custom_dir)
+    monkeypatch.setenv("ROBOFLEET_LOG_DIR", custom_dir)
     out = _resolve_log_dir()
     assert out == Path(custom_dir)
 
 
 def test_resolve_log_dir_container_path(monkeypatch: pytest.MonkeyPatch) -> None:
     """When /data/logs exists, prefer it."""
-    monkeypatch.delenv("ROBOCO_LOG_DIR", raising=False)
+    monkeypatch.delenv("ROBOFLEET_LOG_DIR", raising=False)
     with patch("robofleet.logging.Path") as mock_path_cls:
         # Make Path("/data/logs").is_dir() return True
         container = mock_path_cls.return_value
@@ -199,8 +199,8 @@ def test_resolve_log_dir_dev_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     """When neither override nor container path exist, fall back to the data dir's
     logs (./data/logs) — the SAME directory the compose mount maps to /data/logs,
     so a host-side run never creates a separate ./logs at the repo root."""
-    monkeypatch.delenv("ROBOCO_LOG_DIR", raising=False)
-    monkeypatch.delenv("ROBOCO_DATA_DIR", raising=False)
+    monkeypatch.delenv("ROBOFLEET_LOG_DIR", raising=False)
+    monkeypatch.delenv("ROBOFLEET_DATA_DIR", raising=False)
 
     real_path = Path
 
@@ -218,9 +218,9 @@ def test_resolve_log_dir_dev_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_resolve_log_dir_dev_fallback_honors_data_dir(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The host-side fallback honors $ROBOCO_DATA_DIR so it matches the mount."""
-    monkeypatch.delenv("ROBOCO_LOG_DIR", raising=False)
-    monkeypatch.setenv("ROBOCO_DATA_DIR", "/srv/robofleet/data")
+    """The host-side fallback honors $ROBOFLEET_DATA_DIR so it matches the mount."""
+    monkeypatch.delenv("ROBOFLEET_LOG_DIR", raising=False)
+    monkeypatch.setenv("ROBOFLEET_DATA_DIR", "/srv/robofleet/data")
 
     real_path = Path
 

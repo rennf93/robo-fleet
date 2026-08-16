@@ -21,7 +21,7 @@ def _configured_encryption_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """Supply a valid Fernet key for the tests that exercise real crypto.
 
     The round-trip tests need a configured key; without this they depend on
-    ``ROBOCO_ENCRYPTION_KEY`` being set in the environment — it is not in agent
+    ``ROBOFLEET_ENCRYPTION_KEY`` being set in the environment — it is not in agent
     gate containers, which is exactly why they failed there. The patch-based
     tests below replace ``settings`` wholesale inside their ``with`` blocks, so
     this autouse default never interferes with them.
@@ -80,7 +80,7 @@ def test_get_fernet_raises_when_key_unset() -> None:
     """_get_fernet must fail-closed when settings.encryption_key is empty."""
     with (
         patch("robofleet.utils.crypto.settings") as mock_settings,
-        pytest.raises(EncryptionError, match="ROBOCO_ENCRYPTION_KEY"),
+        pytest.raises(EncryptionError, match="ROBOFLEET_ENCRYPTION_KEY"),
     ):
         mock_settings.encryption_key = ""
         mock_settings.gcp_project_id = ""

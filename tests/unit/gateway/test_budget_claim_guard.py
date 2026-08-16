@@ -1,4 +1,4 @@
-"""Per-project monthly-budget claim guard (ROBOCO_TASK_BUDGETS_ENABLED).
+"""Per-project monthly-budget claim guard (ROBOFLEET_TASK_BUDGETS_ENABLED).
 
 Two layers: the pure predicate ``project_budget_exceeded_guard`` (over/under/
 null cap) and the Choreographer's ``_project_budget_claim_guard`` wiring

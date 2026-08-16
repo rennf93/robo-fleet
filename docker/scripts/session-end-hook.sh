@@ -9,7 +9,7 @@
 
 set -u
 
-SDK_URL="${ROBOCO_SDK_URL:-http://localhost:9000}"
+SDK_URL="${ROBOFLEET_SDK_URL:-http://localhost:9000}"
 
 budget=$(curl -sf -m 2 "$SDK_URL/budget/status" 2>/dev/null || echo "")
 terminal=$(curl -sf -m 2 "$SDK_URL/terminal/status" 2>/dev/null || echo "")

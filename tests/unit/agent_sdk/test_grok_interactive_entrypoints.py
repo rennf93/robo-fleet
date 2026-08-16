@@ -40,8 +40,8 @@ def test_intake_render_wires_roboco_intake_mcp(
         "robofleet.mcp.intake_server",
     ]
     assert server["env"]["UV_PROJECT_ENVIRONMENT"] == "/app/.venv"
-    assert server["env"]["ROBOCO_API_URL"] == "http://orch:8000"
-    assert server["env"]["ROBOCO_PROMPTER_SESSION_ID"] == "sess-1"
+    assert server["env"]["ROBOFLEET_API_URL"] == "http://orch:8000"
+    assert server["env"]["ROBOFLEET_PROMPTER_SESSION_ID"] == "sess-1"
 
 
 def test_secretary_render_wires_mcp_and_hmac_identity(
@@ -49,9 +49,9 @@ def test_secretary_render_wires_mcp_and_hmac_identity(
 ) -> None:
     cfg = tmp_path / ".grok" / "config.toml"
     monkeypatch.setattr(grok_secretary_main, "GROK_CONFIG_PATH", cfg)
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "uuid-sec")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "secretary")
-    monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "hmac-xyz")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "uuid-sec")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "secretary")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "hmac-xyz")
     grok_secretary_main._render_grok_config("http://orch:8000")
     parsed = tomllib.loads(cfg.read_text())
     server = parsed["mcp_servers"]["roboco-secretary"]
@@ -65,7 +65,7 @@ def test_secretary_render_wires_mcp_and_hmac_identity(
         "robofleet.mcp.secretary_server",
     ]
     # The HMAC identity the directive tools authenticate with must flow through.
-    assert server["env"]["ROBOCO_AGENT_TOKEN"] == "hmac-xyz"
-    assert server["env"]["ROBOCO_AGENT_ID"] == "uuid-sec"
-    assert server["env"]["ROBOCO_AGENT_ROLE"] == "secretary"
+    assert server["env"]["ROBOFLEET_AGENT_TOKEN"] == "hmac-xyz"
+    assert server["env"]["ROBOFLEET_AGENT_ID"] == "uuid-sec"
+    assert server["env"]["ROBOFLEET_AGENT_ROLE"] == "secretary"
     assert server["env"]["UV_PROJECT_ENVIRONMENT"] == "/app/.venv"

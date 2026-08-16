@@ -2,23 +2,23 @@
 #
 # This is the REFERENCE shape: the CloudRunJobsProvider (Task 2.2,
 # roboco/llm/providers/cloudrun_jobs.py) creates the real per-agent Job in
-# code via the run_v2 client, setting ROBOCO_AGENT_ID / ROBOCO_AGENT_MODEL /
-# ROBOCO_INITIAL_PROMPT / ROBOCO_TOOL_MANIFEST_PATH from the spawn call. This
+# code via the run_v2 client, setting ROBOFLEET_AGENT_ID / ROBOFLEET_AGENT_MODEL /
+# ROBOFLEET_INITIAL_PROMPT / ROBOFLEET_TOOL_MANIFEST_PATH from the spawn call. This
 # YAML documents the full field set an operator can also apply manually with
 # `gcloud run jobs replace infra/agent-job-template.yaml` for debugging or a
 # one-off spawn. Plain hyphens only, no em-dashes.
 #
 # Per-agent fields the provider fills at spawn time (left as placeholders here):
 #   metadata.name                    -> roboco-agent-<agent-slug>
-#   ROBOCO_AGENT_ID                  -> agent UUID (not the slug; gateway
+#   ROBOFLEET_AGENT_ID                  -> agent UUID (not the slug; gateway
 #                                       X-Agent-ID is Annotated[UUID, Header])
-#   ROBOCO_AGENT_ROLE                -> role slug (developer, qa, cell_pm, ...)
-#   ROBOCO_AGENT_TOKEN               -> HMAC token issued by the orchestrator
+#   ROBOFLEET_AGENT_ROLE                -> role slug (developer, qa, cell_pm, ...)
+#   ROBOFLEET_AGENT_TOKEN               -> HMAC token issued by the orchestrator
 #                                       at spawn (issue_agent_token over the
 #                                       UUID); NOT a Secret Manager ref.
-#   ROBOCO_INITIAL_PROMPT            -> the composed task prompt
-#   ROBOCO_TOOL_MANIFEST_PATH        -> gs://<bucket>/manifests/<agent-id>.json
-#   ROBOCO_GIT_TOKEN                 -> per-project decrypted PAT (the provider
+#   ROBOFLEET_INITIAL_PROMPT            -> the composed task prompt
+#   ROBOFLEET_TOOL_MANIFEST_PATH        -> gs://<bucket>/manifests/<agent-id>.json
+#   ROBOFLEET_GIT_TOKEN                 -> per-project decrypted PAT (the provider
 #                                       resolves it via ProjectService when the
 #                                       task carries a git_context project slug)
 #
@@ -48,43 +48,43 @@ spec:
               image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/roboco-agent-adk:latest
               env:
                 # --- Agent identity (filled by CloudRunJobsProvider at spawn) ---
-                # ROBOCO_AGENT_ID is the agent UUID, not the slug: the gateway
+                # ROBOFLEET_AGENT_ID is the agent UUID, not the slug: the gateway
                 # declares X-Agent-ID as Annotated[UUID, Header] and 422s on a
                 # non-UUID value.
-                - name: ROBOCO_AGENT_ID
+                - name: ROBOFLEET_AGENT_ID
                   value: "__AGENT_UUID__"
-                - name: ROBOCO_AGENT_ROLE
+                - name: ROBOFLEET_AGENT_ROLE
                   value: "__AGENT_ROLE__"
-                - name: ROBOCO_AGENT_MODEL
+                - name: ROBOFLEET_AGENT_MODEL
                   value: "gemini-3.5-flash"
-                - name: ROBOCO_INITIAL_PROMPT
+                - name: ROBOFLEET_INITIAL_PROMPT
                   value: "__INITIAL_PROMPT__"
-                - name: ROBOCO_TOOL_MANIFEST_PATH
+                - name: ROBOFLEET_TOOL_MANIFEST_PATH
                   value: "__TOOL_MANIFEST_GS_URI__"
 
                 # --- Orchestrator URL (agent calls the gateway over HTTP) ---
-                - name: ROBOCO_ORCHESTRATOR_URL
+                - name: ROBOFLEET_ORCHESTRATOR_URL
                   value: "__ORCHESTRATOR_URL__"
-                - name: ROBOCO_API_URL
+                - name: ROBOFLEET_API_URL
                   value: "__ORCHESTRATOR_URL__"
 
                 # --- Agent auth (issued HMAC token, NOT a Secret Manager ref) ---
-                # The orchestrator signs ROBOCO_AGENT_TOKEN at spawn via
+                # The orchestrator signs ROBOFLEET_AGENT_TOKEN at spawn via
                 # issue_agent_token(uuid, role, team) and injects it as a plain
                 # env var. The raw signing secret stays server-side; the agent
                 # never receives it. Placeholder below for the manual-deploy
                 # reference only, the provider computes the real value.
-                - name: ROBOCO_AGENT_TOKEN
+                - name: ROBOFLEET_AGENT_TOKEN
                   value: "__AGENT_TOKEN__"
 
                 # --- Flow verb timeouts (mirror the server-side budgets) ---
-                - name: ROBOCO_FLOW_VERB_TIMEOUT_SECONDS
+                - name: ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS
                   value: "120"
-                - name: ROBOCO_FLOW_VERB_SLOW_TIMEOUT_SECONDS
+                - name: ROBOFLEET_FLOW_VERB_SLOW_TIMEOUT_SECONDS
                   value: "900"
 
                 # --- Git token (per-project decrypted PAT) ---
-                # The provider sets ROBOCO_GIT_TOKEN directly from the project's
+                # The provider sets ROBOFLEET_GIT_TOKEN directly from the project's
                 # decrypted PAT (ProjectService.get_decrypted_token_by_slug)
                 # when the task carries a git_context project slug. The ADK
                 # git_push tool reads it and pushes via x-access-token

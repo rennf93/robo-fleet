@@ -1,6 +1,6 @@
 ## Purpose
 
-The Obsidian vault (V1+V2): a rebuildable, human-readable DB projection of the org's memory (tasks, journal entries, A2A thread digests) as wikilinked markdown, plus a default-off inbox watcher that turns `#roboco`-tagged vault notes into board-review intake drafts. V2 adds three things on top of the V1 projection: materialize-on-create (a task's note exists from the moment it's created, not just at curation/rebuild), a drift janitor (hourly-ticked, daily/weekly-gated: re-projects changed tasks, verifies a random sample, archives old terminal tasks, writes the weekly org-report), and KB ingest (the CEO's own `RoboCo/Notes/` notes become one more RAG corpus the fleet can retrieve). Default-off (`ROBOCO_OBSIDIAN_VAULT_ENABLED`; both compose files arm it `true`). Still structurally different from the other default-off engines: the projection never originates delivery work itself — the ONE writer-side effect that reaches delivery (the intake watcher) rides the existing board-review path, not a held-artifact queue.
+The Obsidian vault (V1+V2): a rebuildable, human-readable DB projection of the org's memory (tasks, journal entries, A2A thread digests) as wikilinked markdown, plus a default-off inbox watcher that turns `#roboco`-tagged vault notes into board-review intake drafts. V2 adds three things on top of the V1 projection: materialize-on-create (a task's note exists from the moment it's created, not just at curation/rebuild), a drift janitor (hourly-ticked, daily/weekly-gated: re-projects changed tasks, verifies a random sample, archives old terminal tasks, writes the weekly org-report), and KB ingest (the CEO's own `RoboCo/Notes/` notes become one more RAG corpus the fleet can retrieve). Default-off (`ROBOFLEET_OBSIDIAN_VAULT_ENABLED`; both compose files arm it `true`). Still structurally different from the other default-off engines: the projection never originates delivery work itself — the ONE writer-side effect that reaches delivery (the intake watcher) rides the existing board-review path, not a held-artifact queue.
 
 ## Files
 
@@ -41,15 +41,15 @@ The Obsidian vault (V1+V2): a rebuildable, human-readable DB projection of the o
 
 ## Config Flags
 
-- `ROBOCO_OBSIDIAN_VAULT_ENABLED` — master switch; off = `VaultWriter` is never invoked from any seam, `curate_vault` returns `invalid_state`, the janitor/KB loops return immediately, and `python -m roboco.vault` refuses. Config default `false`; both compose files set it `true`.
-- `ROBOCO_VAULT_PATH` (default `/data/vault`) — root directory the vault materializes into; bind-mounted in both compose files.
-- `ROBOCO_VAULT_INTAKE_ENABLED` — independent switch for `_vault_intake_loop`; inert unless the master switch is ALSO on. Config default `false`; both compose files set it `true`.
-- `ROBOCO_VAULT_INTAKE_INTERVAL_SECONDS` / `ROBOCO_VAULT_INTAKE_DIR` / `ROBOCO_VAULT_INTAKE_MAX_PER_CYCLE` / `ROBOCO_VAULT_INTAKE_MAX_OPEN_DRAFTS` — cadence, inbox subfolder, per-cycle origination cap, rolling open-draft cap.
-- `ROBOCO_VAULT_ARCHIVE_DAYS` (default `30`, `0` disables) — age past which a terminal task's note archives during the janitor sweep. Checked only under the master switch — no separate enable flag.
-- `ROBOCO_VAULT_REPORT_ENABLED` (default `true`) — the janitor's weekly org-report + CEO notification. Config default `true` in both compose files (deterministic, no LLM, cheap to leave on).
-- `ROBOCO_VAULT_KB_ENABLED` (default `false`) — master switch for KB ingest; off = `_vault_kb_loop` returns immediately and `IndexType.VAULT_NOTES` stays empty. NAS compose (`docker-compose.yml`) sets it `true`; the public registry compose (`docker-compose.registry.yml`) leaves it `false` (optional engines ship off).
-- `ROBOCO_VAULT_KB_DIRS` (default `RoboCo/Notes`, CSV) — vault-relative folders the KB engine scans. Rejected at config load if absolute, `..`-carrying, or overlapping `vault_intake_dir`/`Tasks`/`Journals`/`A2A`/`Agents`/`Archive`/`Reports`/`_meta`/`.obsidian`.
-- `ROBOCO_VAULT_KB_INTERVAL_SECONDS` (default `900`, min `60`) — KB-engine scan cadence.
+- `ROBOFLEET_OBSIDIAN_VAULT_ENABLED` — master switch; off = `VaultWriter` is never invoked from any seam, `curate_vault` returns `invalid_state`, the janitor/KB loops return immediately, and `python -m roboco.vault` refuses. Config default `false`; both compose files set it `true`.
+- `ROBOFLEET_VAULT_PATH` (default `/data/vault`) — root directory the vault materializes into; bind-mounted in both compose files.
+- `ROBOFLEET_VAULT_INTAKE_ENABLED` — independent switch for `_vault_intake_loop`; inert unless the master switch is ALSO on. Config default `false`; both compose files set it `true`.
+- `ROBOFLEET_VAULT_INTAKE_INTERVAL_SECONDS` / `ROBOFLEET_VAULT_INTAKE_DIR` / `ROBOFLEET_VAULT_INTAKE_MAX_PER_CYCLE` / `ROBOFLEET_VAULT_INTAKE_MAX_OPEN_DRAFTS` — cadence, inbox subfolder, per-cycle origination cap, rolling open-draft cap.
+- `ROBOFLEET_VAULT_ARCHIVE_DAYS` (default `30`, `0` disables) — age past which a terminal task's note archives during the janitor sweep. Checked only under the master switch — no separate enable flag.
+- `ROBOFLEET_VAULT_REPORT_ENABLED` (default `true`) — the janitor's weekly org-report + CEO notification. Config default `true` in both compose files (deterministic, no LLM, cheap to leave on).
+- `ROBOFLEET_VAULT_KB_ENABLED` (default `false`) — master switch for KB ingest; off = `_vault_kb_loop` returns immediately and `IndexType.VAULT_NOTES` stays empty. NAS compose (`docker-compose.yml`) sets it `true`; the public registry compose (`docker-compose.registry.yml`) leaves it `false` (optional engines ship off).
+- `ROBOFLEET_VAULT_KB_DIRS` (default `RoboCo/Notes`, CSV) — vault-relative folders the KB engine scans. Rejected at config load if absolute, `..`-carrying, or overlapping `vault_intake_dir`/`Tasks`/`Journals`/`A2A`/`Agents`/`Archive`/`Reports`/`_meta`/`.obsidian`.
+- `ROBOFLEET_VAULT_KB_INTERVAL_SECONDS` (default `900`, min `60`) — KB-engine scan cadence.
 
 ## Health
 

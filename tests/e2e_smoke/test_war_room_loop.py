@@ -41,7 +41,7 @@ def _seed_system_hom_and_secretary(stack: E2EStack) -> tuple[Any, str]:
     on the unique agent slug), and ``XEngine._originate_post`` assigns every
     materialized draft to ``secretary-1``'s fixed UUID — both FKs need real
     rows there. Returns ``(project_id, project_slug)`` — the id scopes every
-    read below to THIS test's own rows: ``ROBOCO_TEST_DB_*`` is the same
+    read below to THIS test's own rows: ``ROBOFLEET_TEST_DB_*`` is the same
     physical Postgres a non-e2e suite run earlier in the same invocation
     also wrote to (e.g. test_board_programs_api.py's own war_room run-now
     test leaves a CANCELLED ``board_war_room`` row behind, cleaned up but

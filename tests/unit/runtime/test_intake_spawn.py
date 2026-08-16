@@ -98,17 +98,17 @@ class TestBuildIntakeRunCmd:
     def test_no_workdir_settings_or_manifest_mounts(self) -> None:
         cmd = AgentOrchestrator._build_intake_run_cmd(_spec())
         joined = " ".join(cmd)
-        assert "-w" not in cmd  # driver sets cwd via ROBOCO_WORKSPACE/the SDK
+        assert "-w" not in cmd  # driver sets cwd via ROBOFLEET_WORKSPACE/the SDK
         assert "settings.json" not in joined  # no hook mount (driver owns 9000)
         assert "mcp-config.json" not in joined  # MCP-free live agent
         assert "tool-manifest.json" not in joined
 
     def test_env_carries_session_workspace_and_api(self) -> None:
         cmd = AgentOrchestrator._build_intake_run_cmd(_spec())
-        assert "ROBOCO_PROMPTER_SESSION_ID=sess-abc" in cmd
-        assert "ROBOCO_WORKSPACE=/data/workspaces/roboco/board/intake-1" in cmd
-        assert "ROBOCO_API_URL=http://roboco-orchestrator:8000" in cmd
-        assert "ROBOCO_AGENT_ID=intake-1" in cmd
+        assert "ROBOFLEET_PROMPTER_SESSION_ID=sess-abc" in cmd
+        assert "ROBOFLEET_WORKSPACE=/data/workspaces/roboco/board/intake-1" in cmd
+        assert "ROBOFLEET_API_URL=http://roboco-orchestrator:8000" in cmd
+        assert "ROBOFLEET_AGENT_ID=intake-1" in cmd
         assert "CLAUDE_CODE_SUBAGENT_MODEL=claude-opus-5" in cmd
 
     def test_mounts_prompt_and_workspaces(self) -> None:
@@ -790,7 +790,9 @@ class TestSpawnIntakeSession:
         assert orch._instances[INTAKE_AGENT_ID] is instance
         assert instance.container_id == "containerid0123456789"
         # The cloned cwd reached the docker cmd.
-        assert "ROBOCO_WORKSPACE=/data/workspaces/roboco/board/intake-1" in run_calls[0]
+        assert (
+            "ROBOFLEET_WORKSPACE=/data/workspaces/roboco/board/intake-1" in run_calls[0]
+        )
 
     @pytest.mark.asyncio
     async def test_spawn_adds_compose_labels_before_image(

@@ -243,7 +243,7 @@ def test_get_agent_skills_unknown_agent() -> None:
 def test_issue_agent_token_returns_unsigned_when_secret_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_SECRET", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_SECRET", raising=False)
     assert issue_agent_token("be-dev-1", "developer", "backend") == "UNSIGNED"
 
 
@@ -253,7 +253,7 @@ _SHA256_HEX_LEN = 64
 def test_issue_agent_token_signs_when_secret_present(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "test-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "test-secret")
     tok = issue_agent_token("be-dev-1", "developer", "backend")
     assert tok != "UNSIGNED"
     # 64 hex chars from sha256
@@ -261,7 +261,7 @@ def test_issue_agent_token_signs_when_secret_present(
 
 
 def test_verify_agent_token_round_trips(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "rt-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "rt-secret")
     tok = issue_agent_token("be-dev-1", "developer", "backend")
     assert verify_agent_token(tok, "be-dev-1", "developer", "backend") is True
 
@@ -269,28 +269,28 @@ def test_verify_agent_token_round_trips(monkeypatch: pytest.MonkeyPatch) -> None
 def test_verify_agent_token_rejects_when_secret_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_SECRET", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_SECRET", raising=False)
     assert verify_agent_token("anything", "be-dev-1", "developer", "backend") is False
 
 
 def test_verify_agent_token_rejects_unsigned_sentinel(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "any-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "any-secret")
     assert verify_agent_token("UNSIGNED", "be-dev-1", "developer", "backend") is False
 
 
 def test_verify_agent_token_rejects_empty_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "any-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "any-secret")
     assert verify_agent_token("", "be-dev-1", "developer", "backend") is False
 
 
 def test_verify_agent_token_rejects_mismatched_signature(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "real-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "real-secret")
     tok = issue_agent_token("be-dev-1", "developer", "backend")
     # Verify with different role → mismatch.
     assert verify_agent_token(tok, "be-dev-1", "qa", "backend") is False
@@ -306,7 +306,7 @@ def test_issue_panel_token_verifies_under_panel_headers(
 ) -> None:
     """The panel token must verify under the EXACT headers the panel sends:
     X-Agent-Id = CEO uuid, X-Agent-Role = ceo, and NO team (empty)."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "panel-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "panel-secret")
     tok = issue_panel_token()
     assert verify_agent_token(tok, CEO_AGENT_ID, "ceo", "") is True
 
@@ -314,7 +314,7 @@ def test_issue_panel_token_verifies_under_panel_headers(
 def test_issue_panel_token_unsigned_without_secret(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_SECRET", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_SECRET", raising=False)
     assert issue_panel_token() == "UNSIGNED"
 
 
@@ -323,7 +323,7 @@ def test_panel_token_does_not_grant_other_roles_or_identities(
 ) -> None:
     """The panel token is bound to the CEO identity — it cannot be replayed to
     claim a different role or agent id."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "panel-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "panel-secret")
     tok = issue_panel_token()
     assert verify_agent_token(tok, CEO_AGENT_ID, "developer", "") is False
     assert verify_agent_token(tok, "be-dev-1", "ceo", "") is False
@@ -343,7 +343,7 @@ def _payload_of(token: str) -> dict[str, object]:
 def test_issue_agent_token_with_ttl_uses_expiring_format(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "exp-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "exp-secret")
     tok = issue_agent_token("be-dev-1", "developer", "backend", ttl_seconds=3600)
     assert "." in tok
     payload = _payload_of(tok)
@@ -355,7 +355,7 @@ def test_issue_agent_token_with_ttl_uses_expiring_format(
 
 
 def test_verify_accepts_unexpired_ttl_token(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "exp-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "exp-secret")
     tok = issue_agent_token(
         "be-dev-1", "developer", "backend", ttl_seconds=3600, now=1_000_000.0
     )
@@ -366,7 +366,7 @@ def test_verify_accepts_unexpired_ttl_token(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_verify_rejects_expired_ttl_token(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "exp-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "exp-secret")
     tok = issue_agent_token(
         "be-dev-1", "developer", "backend", ttl_seconds=3600, now=1_000_000.0
     )
@@ -380,7 +380,7 @@ def test_verify_rejects_expired_ttl_token(monkeypatch: pytest.MonkeyPatch) -> No
 def test_verify_ttl_token_rejects_tampered_payload(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "exp-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "exp-secret")
     tok = issue_agent_token("be-dev-1", "developer", "backend", ttl_seconds=3600)
     pb, sig = tok.split(".", 1)
     # Flip the first payload char's case — JSON base64url payloads start with
@@ -394,15 +394,15 @@ def test_verify_ttl_token_rejects_tampered_payload(
 
 
 def test_verify_ttl_token_rejects_wrong_role(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "exp-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "exp-secret")
     tok = issue_agent_token("be-dev-1", "developer", "backend", ttl_seconds=3600)
     assert verify_agent_token(tok, "be-dev-1", "qa", "backend") is False
 
 
 def test_verify_ttl_token_rejects_wrong_secret(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "secret-a")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "secret-a")
     tok = issue_agent_token("be-dev-1", "developer", "backend", ttl_seconds=3600)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "secret-b")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "secret-b")
     assert verify_agent_token(tok, "be-dev-1", "developer", "backend") is False
 
 
@@ -410,7 +410,7 @@ def test_issue_agent_token_without_ttl_keeps_static_format(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Backward compat: no ttl_seconds ⇒ old 64-hex static digest (panel path)."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "static-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "static-secret")
     tok = issue_agent_token("be-dev-1", "developer", "backend")
     assert "." not in tok
     assert len(tok) == _SHA256_HEX_LEN

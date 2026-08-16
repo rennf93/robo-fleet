@@ -30,11 +30,11 @@ A **pitch** is a proposal for new product work. Its lifecycle is small:
 | `provisioned` | Approved — turned into a product / project(s) |
 | `rejected` | Declined |
 
-When a pitch is approved and **provisioning is enabled** (`ROBOCO_PROVISIONING_ENABLED` plus a GitHub token and org), it can auto-create the product and its repositories (recorded in `provisioned_product_id` / `provisioned_project_ids`). With provisioning off, approval just records the decision.
+When a pitch is approved and **provisioning is enabled** (`ROBOFLEET_PROVISIONING_ENABLED` plus a GitHub token and org), it can auto-create the product and its repositories (recorded in `provisioned_product_id` / `provisioned_project_ids`). With provisioning off, approval just records the decision.
 
 ## Strategy Engine
 
-The Strategy Engine is a **notify-only** background watcher (`ROBOCO_STRATEGY_ENGINE_ENABLED`, default off). Each cycle it `assess()`es the company against its standing goals and emits `StrategyObservation`s — each a `kind`, a `summary`, and a `detail` — for example `idle` (capacity sitting unused) or `stranded_blocked` (work stuck in `blocked`). Mostly it only **observes and surfaces**, but `idle` is now also a Board Program trigger: `run_cycle` calls `BoardProgramEngine.open_program_cycle("roadmap")` (enabled + dedup checked there, so a still-open cycle is a harmless no-op) and folds the outcome into the CEO notification instead of only describing the drift. `stranded_blocked` stays notify-only — Coroner is triggered by its own dedicated event hooks (a bounce past `revision_count>=3`, a cancel-after-work-started, or a budget block; see `docs/rag/architecture/board-programs.md`), not by this engine.
+The Strategy Engine is a **notify-only** background watcher (`ROBOFLEET_STRATEGY_ENGINE_ENABLED`, default off). Each cycle it `assess()`es the company against its standing goals and emits `StrategyObservation`s — each a `kind`, a `summary`, and a `detail` — for example `idle` (capacity sitting unused) or `stranded_blocked` (work stuck in `blocked`). Mostly it only **observes and surfaces**, but `idle` is now also a Board Program trigger: `run_cycle` calls `BoardProgramEngine.open_program_cycle("roadmap")` (enabled + dedup checked there, so a still-open cycle is a harmless no-op) and folds the outcome into the CEO notification instead of only describing the drift. `stranded_blocked` stays notify-only — Coroner is triggered by its own dedicated event hooks (a bounce past `revision_count>=3`, a cancel-after-work-started, or a budget block; see `docs/rag/architecture/board-programs.md`), not by this engine.
 
 Those observations are the "needs your attention" signals shown on the Dashboard, served by `GET /api/cockpit/signals`.
 
@@ -62,9 +62,9 @@ The CEO's chief-of-staff reads this layer (`read_company_state` returns the char
 
 | Env | Default | Enables |
 |-----|---------|---------|
-| `ROBOCO_RESEARCH_ENABLED` | **on** | Board / PM web research |
-| `ROBOCO_STRATEGY_ENGINE_ENABLED` | off | The strategy watcher loop |
-| `ROBOCO_PROVISIONING_ENABLED` | on (inert without a token/org) | Pitch → auto-provisioned repos |
-| `ROBOCO_ROADMAP_ENGINE_ENABLED` | off | Legacy alias arming Printer only — every other Board Program is settings-store-only, no env flag (see `docs/rag/architecture/board-programs.md`) |
+| `ROBOFLEET_RESEARCH_ENABLED` | **on** | Board / PM web research |
+| `ROBOFLEET_STRATEGY_ENGINE_ENABLED` | off | The strategy watcher loop |
+| `ROBOFLEET_PROVISIONING_ENABLED` | on (inert without a token/org) | Pitch → auto-provisioned repos |
+| `ROBOFLEET_ROADMAP_ENGINE_ENABLED` | off | Legacy alias arming Printer only — every other Board Program is settings-store-only, no env flag (see `docs/rag/architecture/board-programs.md`) |
 
 With every toggle off, the company layer is just the charter plus the pitch record — research and provisioning ship on by default but degrade gracefully (no key/token configured) rather than doing anything until set up.

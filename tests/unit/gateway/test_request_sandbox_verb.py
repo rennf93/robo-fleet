@@ -202,8 +202,8 @@ async def test_success_returns_creds_in_evidence_with_env_subdict(
     assert payload["user"] == "sandbox"
     assert payload["password"] == "pw"
     assert payload["database"] == "sandbox"
-    assert payload["env"]["ROBOCO_TEST_DB_HOST"] == "roboco-sandbox-pg-dev-1"
-    assert payload["env"]["ROBOCO_TEST_DB_PASSWORD"] == "pw"
+    assert payload["env"]["ROBOFLEET_TEST_DB_HOST"] == "roboco-sandbox-pg-dev-1"
+    assert payload["env"]["ROBOFLEET_TEST_DB_PASSWORD"] == "pw"
     task_svc.heartbeat.assert_awaited_once()
 
 

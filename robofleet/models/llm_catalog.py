@@ -87,8 +87,8 @@ MODEL_CATALOG: tuple[CatalogEntry, ...] = (
     # --- Gemini (Google, official gemini CLI) ---
     # Routes to the GEMINI provider → GeminiCliProvider spawn (OAuth login, not
     # a metered key — see robofleet.llm.providers.gemini). One-shot delivery roles
-    # only (V1). All three GA ids, most-capable (and default, ROBOCO_GEMINI_CLI_MODEL)
-    # first, down to the cheapest.
+    # only (V1). All three GA ids, most-capable (and default,
+    # ROBOFLEET_GEMINI_CLI_MODEL) first, down to the cheapest.
     CatalogEntry("gemini-2.5-pro", ModelProvider.GEMINI, "Gemini 2.5 Pro"),
     CatalogEntry("gemini-2.5-flash", ModelProvider.GEMINI, "Gemini 2.5 Flash"),
     CatalogEntry(
@@ -99,7 +99,7 @@ MODEL_CATALOG: tuple[CatalogEntry, ...] = (
     # (~/.kimi-code, from `kimi login`), no metered API key — parity with
     # Grok/Codex. Aliases are namespaced under the login-managed "kimi-code"
     # provider (see robofleet.llm.providers.kimi_cli_config); default
-    # (ROBOCO_KIMI_CLI_MODEL) is k3 first, down to the cheaper K2.7 Code tier.
+    # (ROBOFLEET_KIMI_CLI_MODEL) is k3 first, down to the cheaper K2.7 Code tier.
     CatalogEntry("kimi-code/k3", ModelProvider.KIMI, "Kimi K3"),
     CatalogEntry("kimi-code/k3-256k", ModelProvider.KIMI, "Kimi K3 (256k)"),
     CatalogEntry(

@@ -51,8 +51,8 @@ async def test_subscribe_rejects_missing_token_when_required(
     a2a_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Strict mode + no X-Agent-Token => 401, never reaches the generator."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     r = await a2a_client.get(
         "/api/a2a/tasks/some-task/subscribe",
         headers={"X-Agent-ID": _AGENT_ID, "X-Agent-Role": "developer"},
@@ -65,8 +65,8 @@ async def test_subscribe_rejects_forged_token_even_in_dev(
     a2a_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A presented-but-forged token is rejected even in header-trust mode."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     r = await a2a_client.get(
         "/api/a2a/tasks/some-task/subscribe",
         headers={
@@ -85,8 +85,8 @@ async def test_subscribe_accepts_valid_token_then_404s_unknown_task(
     """A valid token passes the gate; the route then 404s on the initial
     task-existence check (no DB seeded). 404 (not 401) proves the gate let
     the request through."""
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     token = issue_agent_token(_AGENT_ID, "developer")
     # get_task returns None -> 404. Patch A2AService.get_task to return None
     # so the route doesn't need a real DB.
@@ -147,8 +147,8 @@ async def test_subscribe_opens_a_short_lived_session_per_poll(
     lifetime. Asserts more than one session open (one per poll, not one for
     the lifetime)."""
 
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     token = issue_agent_token(_AGENT_ID, "developer")
 
     # Count session opens across the SSE lifetime.

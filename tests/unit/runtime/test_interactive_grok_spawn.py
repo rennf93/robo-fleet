@@ -58,14 +58,14 @@ def test_intake_grok_uses_grok_cli_usage_mount_and_env() -> None:
     )
     # The per-agent usage dir is mounted so finalize reads usage.json back.
     assert "/h/gu/intake-1:/home/agent/.grok-usage" in cmd
-    assert "ROBOCO_AGENT_MODEL=grok-build" in cmd
-    assert "ROBOCO_GROK_USAGE_FILE=/home/agent/.grok-usage/usage.json" in cmd
+    assert "ROBOFLEET_AGENT_MODEL=grok-build" in cmd
+    assert "ROBOFLEET_GROK_USAGE_FILE=/home/agent/.grok-usage/usage.json" in cmd
     assert cmd[-1] == GROK_PROMPTER_IMAGE
     # No metered xAI key, no Anthropic mislabelling, no stale opencode contract.
     assert not any(c.startswith("XAI_") for c in cmd)
     assert not any(c.startswith("ANTHROPIC_") for c in cmd)
-    assert not any(c.startswith("ROBOCO_GROK_VARIANT") for c in cmd)
-    assert not any(c.startswith("ROBOCO_GROK_EDIT_PERMISSION") for c in cmd)
+    assert not any(c.startswith("ROBOFLEET_GROK_VARIANT") for c in cmd)
+    assert not any(c.startswith("ROBOFLEET_GROK_EDIT_PERMISSION") for c in cmd)
     assert "/home/agent/.local/share/opencode" not in " ".join(cmd)
 
 
@@ -93,7 +93,7 @@ def test_intake_anthropic_keeps_anthropic_env() -> None:
     assert "ANTHROPIC_BASE_URL=https://api.anthropic.com" in cmd
     assert "ANTHROPIC_AUTH_TOKEN=sk-ant" in cmd
     assert not any(c.startswith("XAI_") for c in cmd)
-    assert not any(c.startswith("ROBOCO_GROK_USAGE_FILE") for c in cmd)
+    assert not any(c.startswith("ROBOFLEET_GROK_USAGE_FILE") for c in cmd)
     assert cmd[-1] == "roboco-agent-prompter"
 
 
@@ -119,9 +119,9 @@ def test_secretary_grok_uses_grok_cli_env_and_keeps_hmac() -> None:
     )
     cmd = AgentOrchestrator._build_secretary_run_cmd(spec)
     assert "/h/gu/sec-1:/home/agent/.grok-usage" in cmd
-    assert "ROBOCO_AGENT_MODEL=grok-build" in cmd
+    assert "ROBOFLEET_AGENT_MODEL=grok-build" in cmd
     # The HMAC identity the directive tools authenticate with survives.
-    assert "ROBOCO_AGENT_TOKEN=hmac-secretary" in cmd
+    assert "ROBOFLEET_AGENT_TOKEN=hmac-secretary" in cmd
     assert cmd[-1] == GROK_SECRETARY_IMAGE
     assert not any(c.startswith("XAI_") for c in cmd)
     assert not any(c.startswith("ANTHROPIC_") for c in cmd)

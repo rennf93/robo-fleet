@@ -21,14 +21,14 @@ def test_x_engine_disabled_by_default() -> None:
 
 
 def test_x_engine_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_X_ENGINE_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_X_ENGINE_ENABLED": "true"}):
         assert Settings().x_engine_enabled is True
 
 
 def test_x_mentions_interval_reads_env_var() -> None:
     override = 900
     with mock.patch.dict(
-        os.environ, {"ROBOCO_X_MENTIONS_INTERVAL_SECONDS": str(override)}
+        os.environ, {"ROBOFLEET_X_MENTIONS_INTERVAL_SECONDS": str(override)}
     ):
         assert Settings().x_mentions_interval_seconds == override
 

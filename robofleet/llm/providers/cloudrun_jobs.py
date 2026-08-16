@@ -9,7 +9,7 @@ stays intact for local dev; this provider is only resolved for agents whose
 
 The orchestrator writes the tool manifest (flow/do tools + system prompt) to a
 local file and hands its ``Path`` here; this provider uploads it to GCS and
-points the job at the ``gs://`` URI via ``ROBOCO_TOOL_MANIFEST_PATH``, so the
+points the job at the ``gs://`` URI via ``ROBOFLEET_TOOL_MANIFEST_PATH``, so the
 orchestrator itself never touches GCS.
 """
 
@@ -81,13 +81,13 @@ def _resolve_api_url() -> str:
     """Resolve the orchestrator URL the agent's gateway shim calls.
 
     Mirrors the MCP env block: settings.api_url wins (GCP sets it to the
-    orchestrator's Cloud Run URL); ROBOCO_HOST_PROJECT_DIR -> the container
+    orchestrator's Cloud Run URL); ROBOFLEET_HOST_PROJECT_DIR -> the container
     hostname; else localhost. Unconditional: the agent needs gateway
     reachability regardless of deploy target.
     """
     if settings.api_url:
         return settings.api_url
-    if os.environ.get("ROBOCO_HOST_PROJECT_DIR", ""):
+    if os.environ.get("ROBOFLEET_HOST_PROJECT_DIR", ""):
         return "http://roboco-orchestrator:8000"
     return f"http://127.0.0.1:{settings.port}"
 
@@ -95,9 +95,9 @@ def _resolve_api_url() -> str:
 async def _append_git_token_env(
     env_vars: list[run_v2.EnvVar], config: AgentConfig
 ) -> None:
-    """Append ROBOCO_GIT_TOKEN from the project's decrypted PAT when the task
+    """Append ROBOFLEET_GIT_TOKEN from the project's decrypted PAT when the task
     carries a git_context project slug. Best-effort: a missing/failed lookup
-    skips the env var (the agent surfaces "ROBOCO_GIT_TOKEN not set" on push).
+    skips the env var (the agent surfaces "ROBOFLEET_GIT_TOKEN not set" on push).
     """
     if not config.git_context or not config.git_context.project_slug:
         return
@@ -117,7 +117,7 @@ async def _append_git_token_env(
         )
         return
     if token:
-        env_vars.append(run_v2.EnvVar(name="ROBOCO_GIT_TOKEN", value=token))
+        env_vars.append(run_v2.EnvVar(name="ROBOFLEET_GIT_TOKEN", value=token))
 
 
 class CloudRunJobsProvider(AgentProvider):
@@ -166,42 +166,42 @@ class CloudRunJobsProvider(AgentProvider):
         api_url = _resolve_api_url()
 
         env_vars = [
-            run_v2.EnvVar(name="ROBOCO_INITIAL_PROMPT", value=initial_prompt or ""),
-            run_v2.EnvVar(name="ROBOCO_AGENT_ID", value=agent_uuid),
-            run_v2.EnvVar(name="ROBOCO_AGENT_MODEL", value=_GEMINI_MODEL),
-            run_v2.EnvVar(name="ROBOCO_AGENT_TOKEN", value=token),
-            run_v2.EnvVar(name="ROBOCO_AGENT_ROLE", value=role),
-            run_v2.EnvVar(name="ROBOCO_ORCHESTRATOR_URL", value=api_url),
-            run_v2.EnvVar(name="ROBOCO_API_URL", value=api_url),
+            run_v2.EnvVar(name="ROBOFLEET_INITIAL_PROMPT", value=initial_prompt or ""),
+            run_v2.EnvVar(name="ROBOFLEET_AGENT_ID", value=agent_uuid),
+            run_v2.EnvVar(name="ROBOFLEET_AGENT_MODEL", value=_GEMINI_MODEL),
+            run_v2.EnvVar(name="ROBOFLEET_AGENT_TOKEN", value=token),
+            run_v2.EnvVar(name="ROBOFLEET_AGENT_ROLE", value=role),
+            run_v2.EnvVar(name="ROBOFLEET_ORCHESTRATOR_URL", value=api_url),
+            run_v2.EnvVar(name="ROBOFLEET_API_URL", value=api_url),
             run_v2.EnvVar(
-                name="ROBOCO_FLOW_VERB_TIMEOUT_SECONDS",
+                name="ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS",
                 value=str(settings.flow_verb_timeout_seconds),
             ),
             run_v2.EnvVar(
-                name="ROBOCO_FLOW_VERB_SLOW_TIMEOUT_SECONDS",
+                name="ROBOFLEET_FLOW_VERB_SLOW_TIMEOUT_SECONDS",
                 value=str(settings.flow_verb_slow_timeout_seconds),
             ),
         ]
         # The orchestrator writes the ADK tool manifest to config.mcp_config_path
         # (via _generate_adk_manifest); upload THAT to GCS, not the Claude-Code
         # settings.json (agent_settings_path, irrelevant for ADK). The entrypoint
-        # fetches it via ROBOCO_TOOL_MANIFEST_PATH.
+        # fetches it via ROBOFLEET_TOOL_MANIFEST_PATH.
         manifest_uri = await _upload_manifest(config.mcp_config_path, config.agent_id)
         if manifest_uri:
             env_vars.append(
-                run_v2.EnvVar(name="ROBOCO_TOOL_MANIFEST_PATH", value=manifest_uri)
+                run_v2.EnvVar(name="ROBOFLEET_TOOL_MANIFEST_PATH", value=manifest_uri)
             )
 
-        # ROBOCO_GIT_TOKEN: the ADK git_push tool (git_tools.py) reads it env
+        # ROBOFLEET_GIT_TOKEN: the ADK git_push tool (git_tools.py) reads it env
         # and pushes via the x-access-token extraheader against the remote, so
         # a task with a project needs the decrypted PAT. Best-effort: a
         # missing/failed lookup skips the env var (the agent surfaces a clear
-        # "ROBOCO_GIT_TOKEN not set" on push, never a crash).
+        # "ROBOFLEET_GIT_TOKEN not set" on push, never a crash).
         await _append_git_token_env(env_vars, config)
 
-        # Workspace cwd + ROBOCO_WORKSPACE_DIR env (developer / product_owner /
+        # Workspace cwd + ROBOFLEET_WORKSPACE_DIR env (developer / product_owner /
         # head_marketing / documenter). The git/file FunctionTools in
-        # git_tools._worktree() read ROBOCO_WORKSPACE_DIR to resolve every
+        # git_tools._worktree() read ROBOFLEET_WORKSPACE_DIR to resolve every
         # read_file / write_file / git op; setting both working_dir (so the
         # process cwd IS the workspace) and the env var (so the tools resolve
         # even if cwd drifts) keeps the two in lockstep. Roles without a
@@ -216,7 +216,7 @@ class CloudRunJobsProvider(AgentProvider):
         if workspace_cwd is not None:
             container_kwargs["working_dir"] = workspace_cwd
             env_vars.append(
-                run_v2.EnvVar(name="ROBOCO_WORKSPACE_DIR", value=workspace_cwd)
+                run_v2.EnvVar(name="ROBOFLEET_WORKSPACE_DIR", value=workspace_cwd)
             )
         volumes: list[run_v2.Volume] = []
         # Filestore NFS workspace volume (GCP only). Mounted at the workspaces

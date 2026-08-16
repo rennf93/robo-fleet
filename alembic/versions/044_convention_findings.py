@@ -2,7 +2,7 @@
 
 Persists architectural-conventions validator findings per task so the panel
 can show recent block/warn violations across a project. Pure schema change;
-no backfill. Inert until ``ROBOCO_CONVENTIONS_ENABLED``.
+no backfill. Inert until ``ROBOFLEET_CONVENTIONS_ENABLED``.
 
 Revision ID: 044_convention_findings
 Revises: 043_conventions_cache

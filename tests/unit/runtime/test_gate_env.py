@@ -27,11 +27,11 @@ def test_gate_env_injects_test_db_when_flag_on(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(settings, "database_password", "s3cret")
     cmd: list[str] = []
     AgentOrchestrator._append_gate_env(cmd)
-    assert "ROBOCO_TEST_DB_HOST=roboco-postgres" in cmd
-    assert "ROBOCO_TEST_DB_PORT=5432" in cmd
-    assert "ROBOCO_TEST_DB_USER=roboco" in cmd
-    assert "ROBOCO_TEST_DB_PASSWORD=s3cret" in cmd
-    assert "ROBOCO_TEST_DB_ADMIN_DB=postgres" in cmd
+    assert "ROBOFLEET_TEST_DB_HOST=roboco-postgres" in cmd
+    assert "ROBOFLEET_TEST_DB_PORT=5432" in cmd
+    assert "ROBOFLEET_TEST_DB_USER=roboco" in cmd
+    assert "ROBOFLEET_TEST_DB_PASSWORD=s3cret" in cmd
+    assert "ROBOFLEET_TEST_DB_ADMIN_DB=postgres" in cmd
 
 
 def test_gate_env_inert_when_flag_off(monkeypatch: pytest.MonkeyPatch) -> None:

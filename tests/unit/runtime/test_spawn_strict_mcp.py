@@ -113,9 +113,9 @@ class TestMcpConfigPinsBakedVenv:
         config_path = await orch._generate_mcp_config("be-dev-1")
         config = json.loads(Path(config_path).read_text())
         env = config["mcpServers"]["roboco-flow"]["env"]
-        assert env["ROBOCO_FLOW_VERB_TIMEOUT_SECONDS"] == str(
+        assert env["ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS"] == str(
             settings.flow_verb_timeout_seconds
         )
-        assert env["ROBOCO_FLOW_VERB_SLOW_TIMEOUT_SECONDS"] == str(
+        assert env["ROBOFLEET_FLOW_VERB_SLOW_TIMEOUT_SECONDS"] == str(
             settings.flow_verb_slow_timeout_seconds
         )

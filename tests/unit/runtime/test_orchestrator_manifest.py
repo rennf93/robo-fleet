@@ -41,7 +41,7 @@ class TestGatewayEnabledRoles:
     def test_pr_reviewer_enabled(self) -> None:
         """The PR reviewer is a spawned delivery agent — it must be enabled.
 
-        Without this it gets ROBOCO_GATEWAY_ENABLED=false and no manifest, so
+        Without this it gets ROBOFLEET_GATEWAY_ENABLED=false and no manifest, so
         none of its flow verbs (claim_pr_review/post_pr_review) are registered;
         it can never claim its task and the dispatcher respawns it forever.
         """

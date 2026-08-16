@@ -11,7 +11,7 @@ from google.adk.tools import FunctionTool
 
 @pytest.fixture
 def worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A temp git worktree the tools operate on, set as ROBOCO_WORKSPACE_DIR."""
+    """A temp git worktree the tools operate on, set as ROBOFLEET_WORKSPACE_DIR."""
     # Neutralize the operator's global core.hooksPath (identity hook) so the
     # test commits with the synthetic Test identity below succeed.
     monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
@@ -29,7 +29,7 @@ def worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         ["git", "-C", str(wt), "config", "user.email", "t@t.test"], check=True
     )
     subprocess.run(["git", "-C", str(wt), "config", "user.name", "Test"], check=True)
-    monkeypatch.setenv("ROBOCO_WORKSPACE_DIR", str(wt))
+    monkeypatch.setenv("ROBOFLEET_WORKSPACE_DIR", str(wt))
     return wt
 
 
@@ -91,7 +91,7 @@ async def test_git_status_returns_porcelain(worktree: Path) -> None:
 def test_build_git_tools_returns_functiontools(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("ROBOCO_WORKSPACE_DIR", str(tmp_path))
+    monkeypatch.setenv("ROBOFLEET_WORKSPACE_DIR", str(tmp_path))
     from robofleet.agent.git_tools import build_git_tools
 
     tools = build_git_tools()
@@ -107,7 +107,7 @@ async def test_git_push_missing_token_errors_clean(
     worktree: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """git_push without a token returns an error envelope, does not hang."""
-    monkeypatch.delenv("ROBOCO_GIT_TOKEN", raising=False)
+    monkeypatch.delenv("ROBOFLEET_GIT_TOKEN", raising=False)
     from robofleet.agent.git_tools import git_push
 
     res = await git_push(remote="origin", branch="HEAD")
@@ -117,11 +117,11 @@ async def test_git_push_missing_token_errors_clean(
 def test_worktree_falls_back_to_cwd_when_env_unset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """_worktree() falls back to the process cwd when ROBOCO_WORKSPACE_DIR is
+    """_worktree() falls back to the process cwd when ROBOFLEET_WORKSPACE_DIR is
     unset. This is the root-cause fix for the latent 3.2 bug: every ADK git/file
     tool KeyErrored before this fallback because no production path sets the
     env var (docker only sets cwd via -w, Cloud Run sets working_dir)."""
-    monkeypatch.delenv("ROBOCO_WORKSPACE_DIR", raising=False)
+    monkeypatch.delenv("ROBOFLEET_WORKSPACE_DIR", raising=False)
     monkeypatch.chdir(tmp_path)
     from robofleet.agent.git_tools import _worktree
 
@@ -134,7 +134,7 @@ async def test_read_file_works_via_cwd_fallback(
 ) -> None:
     """read_file resolves against the cwd fallback when the env var is unset,
     proving the fallback makes the file tools functional without the env var."""
-    monkeypatch.delenv("ROBOCO_WORKSPACE_DIR", raising=False)
+    monkeypatch.delenv("ROBOFLEET_WORKSPACE_DIR", raising=False)
     monkeypatch.chdir(tmp_path)
     (tmp_path / "notes.txt").write_text("hello via cwd")
     from robofleet.agent.git_tools import read_file
@@ -147,11 +147,11 @@ async def test_read_file_works_via_cwd_fallback(
 def test_worktree_env_var_wins_over_cwd_when_set(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """When ROBOCO_WORKSPACE_DIR IS set, it takes precedence over cwd (the
+    """When ROBOFLEET_WORKSPACE_DIR IS set, it takes precedence over cwd (the
     existing setenv path stays unchanged)."""
     explicit = tmp_path / "explicit"
     explicit.mkdir()
-    monkeypatch.setenv("ROBOCO_WORKSPACE_DIR", str(explicit))
+    monkeypatch.setenv("ROBOFLEET_WORKSPACE_DIR", str(explicit))
     monkeypatch.chdir(tmp_path)
     from robofleet.agent.git_tools import _worktree
 

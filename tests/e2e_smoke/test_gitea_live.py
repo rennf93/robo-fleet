@@ -10,8 +10,8 @@ claim the provider docstring makes.
 
 Skipped unless both env vars are set:
 
-    ROBOCO_GITEA_E2E_URL    e.g. http://localhost:3310
-    ROBOCO_GITEA_E2E_TOKEN  an admin PAT (scopes: all)
+    ROBOFLEET_GITEA_E2E_URL    e.g. http://localhost:3310
+    ROBOFLEET_GITEA_E2E_TOKEN  an admin PAT (scopes: all)
 
 Local run: `docker run -d -p 3310:3000 -e GITEA__security__INSTALL_LOCK=true
 gitea/gitea:1.22`, create an admin + token (`gitea admin user create` /
@@ -36,14 +36,14 @@ from robofleet.services.forge.gitea import GiteaProvider
 if TYPE_CHECKING:
     from pathlib import Path
 
-_URL = os.environ.get("ROBOCO_GITEA_E2E_URL", "")
-_TOKEN = os.environ.get("ROBOCO_GITEA_E2E_TOKEN", "")
+_URL = os.environ.get("ROBOFLEET_GITEA_E2E_URL", "")
+_TOKEN = os.environ.get("ROBOFLEET_GITEA_E2E_TOKEN", "")
 
 pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.skipif(
         not (_URL and _TOKEN),
-        reason="ROBOCO_GITEA_E2E_URL / ROBOCO_GITEA_E2E_TOKEN not set",
+        reason="ROBOFLEET_GITEA_E2E_URL / ROBOFLEET_GITEA_E2E_TOKEN not set",
     ),
 ]
 

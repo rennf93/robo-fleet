@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 # Where the entrypoint writes the captured usage for the orchestrator to read.
 USAGE_OUT_PATH = Path(
-    os.environ.get("ROBOCO_CODEX_USAGE_FILE")
+    os.environ.get("ROBOFLEET_CODEX_USAGE_FILE")
     or Path(tempfile.gettempdir()) / "roboco-codex-usage.json"
 )
 
@@ -163,10 +163,10 @@ def capture_run_usage(
 
 def main() -> int:
     """Entrypoint: write ``usage.json`` (tokens split + cost) for the run."""
-    model = os.environ.get("ROBOCO_AGENT_MODEL", "gpt-5.3-codex")
-    run_log = os.environ.get("ROBOCO_CODEX_RUN_LOG", "")
+    model = os.environ.get("ROBOFLEET_AGENT_MODEL", "gpt-5.3-codex")
+    run_log = os.environ.get("ROBOFLEET_CODEX_RUN_LOG", "")
     if not run_log:
-        logger.warning("ROBOCO_CODEX_RUN_LOG not set; usage will read 0")
+        logger.warning("ROBOFLEET_CODEX_RUN_LOG not set; usage will read 0")
         return 0
     tin, tout, _cr, _cw = capture_run_usage(
         run_log=Path(run_log), model=model, out_path=USAGE_OUT_PATH

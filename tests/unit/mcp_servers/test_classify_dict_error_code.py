@@ -42,10 +42,10 @@ _MINIMAL_MANIFEST = {
 def _seed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     manifest_path = tmp_path / "tool-manifest.json"
     manifest_path.write_text(json.dumps(_MINIMAL_MANIFEST))
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "00000000-0000-0000-0000-000000000042")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "00000000-0000-0000-0000-000000000042")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest_path))
     return manifest_path
 
 

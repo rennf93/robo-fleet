@@ -195,7 +195,7 @@ metrics-observability
 - **Panel surface**: `panel/src/components/metrics/delivery-tab.tsx`'s `ProvenanceCard` (Metrics page → Delivery tab, alongside `ReworkCard`): human-rate percentage plus the raw `human_authored`/`agent_authored`/`total` counts, distinct loading/error/empty states. Client wiring: `observabilityApi.getProvenance` (`panel/src/lib/api/observability.ts`) → `useProvenance` (`panel/src/hooks/use-observability.ts`, 60s poll, same as its `useRework`/`useBottlenecks` siblings) → `ProvenanceReport` (`panel/src/types/index.ts`). Placed on the Delivery tab, not the Business page's Company Scorecard, because it is a `MetricsService`-computed rolling-window aggregate parallel to rework/cycle-time/bottlenecks, not a `CockpitService`/charter-objective figure.
 - **HTTP routes** (`roboco/api/routes/cockpit.py`): `/api/cockpit/{summary,signals}` → `get_cockpit_service`.
 - **Orchestrator loop tick**: `runtime/orchestrator.py` token sweep (~line 5270) → `calculate_cost` + `publish_usage_snapshot`; runs per dispatch tick on active agents.
-- **Self-heal / CI-watch loop ticks**: `services/self_heal_engine.py` and `services/ci_watch_engine.py` construct their telemetry source and call `fetch()` each cycle; armed by their respective ROBOCO_* flags.
+- **Self-heal / CI-watch loop ticks**: `services/self_heal_engine.py` and `services/ci_watch_engine.py` construct their telemetry source and call `fetch()` each cycle; armed by their respective ROBOFLEET_* flags.
 - **Grok usage path**: `llm/providers/grok_cli_usage.py` calls `calculate_cost` per grok session (line 110).
 - **Lifespan/CLI**: none directly; this slice is pulled on-demand by routes/loops.
 
@@ -203,12 +203,12 @@ metrics-observability
 
 No flags live *inside* this slice's files, but the slice's behavior is gated/parameterized by flags held in `roboco/config.py` and consumed here:
 
-- `settings.self_heal_project_slug` (`ROBOCO_SELF_HEAL_PROJECT_SLUG`) — empty → `GitHubCITelemetrySource.fetch` returns no samples (telemetry/source.py:83).
-- `settings.self_heal_ci_workflow` (`ROBOCO_SELF_HEAL_CI_WORKFLOW`) — workflow filter for self-heal CI lookup (source.py:86).
-- `settings.ci_watch_default_workflow` (`ROBOCO_CI_WATCH_DEFAULT_WORKFLOW`) — fallback workflow for `MultiProjectCITelemetrySource` (source.py:152).
+- `settings.self_heal_project_slug` (`ROBOFLEET_SELF_HEAL_PROJECT_SLUG`) — empty → `GitHubCITelemetrySource.fetch` returns no samples (telemetry/source.py:83).
+- `settings.self_heal_ci_workflow` (`ROBOFLEET_SELF_HEAL_CI_WORKFLOW`) — workflow filter for self-heal CI lookup (source.py:86).
+- `settings.ci_watch_default_workflow` (`ROBOFLEET_CI_WATCH_DEFAULT_WORKFLOW`) — fallback workflow for `MultiProjectCITelemetrySource` (source.py:152).
 - `projects.ci_watch_enabled` (DB column, migration 048) — per-project opt-in read by the CI-watch engine that drives `MultiProjectCITelemetrySource`.
-- `ROBOCO_SELF_HEAL_ENABLED` / `ROBOCO_CI_WATCH_ENABLED` — arm the loops that call these sources (held in config, consumed by engines, not by source.py itself).
-- Cockpit indirectly honors `ROBOCO_STRATEGY_ENGINE_ENABLED` / `ROBOCO_PROVISIONING_*` via the strategy/pitch services it composes.
+- `ROBOFLEET_SELF_HEAL_ENABLED` / `ROBOFLEET_CI_WATCH_ENABLED` — arm the loops that call these sources (held in config, consumed by engines, not by source.py itself).
+- Cockpit indirectly honors `ROBOFLEET_STRATEGY_ENGINE_ENABLED` / `ROBOFLEET_PROVISIONING_*` via the strategy/pitch services it composes.
 
 ## Gotchas
 

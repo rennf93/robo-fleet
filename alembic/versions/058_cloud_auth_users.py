@@ -1,6 +1,6 @@
 """Add the users table — the single seeded CEO login for cloud auth.
 
-Cloud auth (default off, ROBOCO_CLOUD_AUTH_ENABLED) needs a FastAPI Users
+Cloud auth (default off, ROBOFLEET_CLOUD_AUTH_ENABLED) needs a FastAPI Users
 schema to back the cookie-session login. Additive and unused while the flag
 is off; the one row is idempotently upserted at startup, never via a
 registration route.

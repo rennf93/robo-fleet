@@ -12,9 +12,9 @@ It replaces — never coexists with — the legacy `_append_gate_env` behavior t
 
 The service set is a **pluggable engine registry**, not a hardcoded postgres+redis pair. `roboco/models/sandbox.py` defines a `SandboxEngine` ABC (image, container port, readiness probe, tmpfs paths, env emission) and the concrete engines:
 
-- `_PostgresEngine` — `postgres:16-alpine`, tmpfs `/var/lib/postgresql/data`, `pg_isready` probe (60s), env `ROBOCO_TEST_DB_*` (incl. `ROBOCO_TEST_DB_ADMIN_DB`).
-- `_RedisEngine` — `redis:8-alpine`, no tmpfs, `redis-cli -a … ping` probe (15s), env `ROBOCO_TEST_REDIS_*`.
-- `_MongoEngine` — `mongo:8` (MongoDB ships no Alpine variant), tmpfs `/data/db`, `mongosh` ping against auth db `admin` (60s), env `ROBOCO_TEST_MONGO_*` (incl. `ROBOCO_TEST_MONGO_AUTH_DB=admin`).
+- `_PostgresEngine` — `postgres:16-alpine`, tmpfs `/var/lib/postgresql/data`, `pg_isready` probe (60s), env `ROBOFLEET_TEST_DB_*` (incl. `ROBOFLEET_TEST_DB_ADMIN_DB`).
+- `_RedisEngine` — `redis:8-alpine`, no tmpfs, `redis-cli -a … ping` probe (15s), env `ROBOFLEET_TEST_REDIS_*`.
+- `_MongoEngine` — `mongo:8` (MongoDB ships no Alpine variant), tmpfs `/data/db`, `mongosh` ping against auth db `admin` (60s), env `ROBOFLEET_TEST_MONGO_*` (incl. `ROBOFLEET_TEST_MONGO_AUTH_DB=admin`).
 
 `SANDBOX_ENGINES: dict[str, SandboxEngine]` registers them by name; `VALID_SANDBOX_SERVICES = frozenset(SANDBOX_ENGINES)` is the single source of truth the provisioner, the orchestrator's env injection, and `projects.sandbox_services` validation all consult. **Adding an engine is one class + one registry line** — no branch edited in the provisioner or the env emitter, which both iterate the registry.
 
@@ -22,7 +22,7 @@ The service set is a **pluggable engine registry**, not a hardcoded postgres+red
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `ROBOCO_SANDBOX_DB_ENABLED` | `false` | Master switch. Off = spawning behaves exactly as today (the legacy prod-creds gate-env injection, itself gated by `ROBOCO_TOOLCHAIN_MATCH_ENABLED`), and `request_sandbox` refuses. Panel-toggleable (Settings → Feature Flags). |
+| `ROBOFLEET_SANDBOX_DB_ENABLED` | `false` | Master switch. Off = spawning behaves exactly as today (the legacy prod-creds gate-env injection, itself gated by `ROBOFLEET_TOOLCHAIN_MATCH_ENABLED`), and `request_sandbox` refuses. Panel-toggleable (Settings → Feature Flags). |
 
 A second, per-project gate applies even when the flag is on: only a project with its `sandbox_services` column set (e.g. `["postgres", "redis", "mongo"]`; migration `057`, nullable/additive) participates. Every other project's spawns are byte-for-byte unaffected. Mongo rides the same column — no new migration, no new feature flag; it is just another registry entry. `request_sandbox` may request any subset of the opted-in set (or omit `services` for the whole set); anything outside it is rejected naming the allowed set.
 
@@ -39,7 +39,7 @@ request_sandbox(
 
 `services` omitted means the project's whole opted-in set. `extensions` is an optional per-service map of extensions/modules to activate (see "Extensions and modules (on the fly)" below); it unions with the project's standing set. Guards fire in order, each with a clean `invalid_state` envelope + `remediate`:
 
-1. `ROBOCO_SANDBOX_DB_ENABLED` off → refused before any DB lookup.
+1. `ROBOFLEET_SANDBOX_DB_ENABLED` off → refused before any DB lookup.
 2. No active, project-bound task (agent hasn't `give_me_work`'d) → refused.
 3. Project has no `sandbox_services` opted in → refused.
 4. A requested service outside the project's opted set → refused, remediate **names the allowed set**.
@@ -59,17 +59,17 @@ On success, creds return in the ok-envelope's `evidence`, one entry per service 
     "password": "<random>",
     "database": "sandbox",
     "env": {
-      "ROBOCO_TEST_DB_HOST": "roboco-sandbox-pg-be-dev-1",
-      "ROBOCO_TEST_DB_PORT": "5432",
-      "ROBOCO_TEST_DB_USER": "sandbox",
-      "ROBOCO_TEST_DB_PASSWORD": "<random>",
-      "ROBOCO_TEST_DB_ADMIN_DB": "sandbox"
+      "ROBOFLEET_TEST_DB_HOST": "roboco-sandbox-pg-be-dev-1",
+      "ROBOFLEET_TEST_DB_PORT": "5432",
+      "ROBOFLEET_TEST_DB_USER": "sandbox",
+      "ROBOFLEET_TEST_DB_PASSWORD": "<random>",
+      "ROBOFLEET_TEST_DB_ADMIN_DB": "sandbox"
     }
   }
 }
 ```
 
-The `env` sub-dict (`SandboxInfo.as_payload()`, `roboco/models/sandbox.py`) carries the exact same variable names the legacy env-injection path used, so an agent can `export` them verbatim for gate tooling that reads `ROBOCO_TEST_*`. Networking needs no extra step: sandboxes join `roboco_default` at `docker run`, the same network every agent is on, so DNS resolves the moment the sibling starts.
+The `env` sub-dict (`SandboxInfo.as_payload()`, `roboco/models/sandbox.py`) carries the exact same variable names the legacy env-injection path used, so an agent can `export` them verbatim for gate tooling that reads `ROBOFLEET_TEST_*`. Networking needs no extra step: sandboxes join `roboco_default` at `docker run`, the same network every agent is on, so DNS resolves the moment the sibling starts.
 
 `ensure_sandbox` always provisions the project's **whole opted-in set** on first call, regardless of what a given `request_sandbox` call named — so calling it again for any subset or superset of that opted set is a guaranteed cache hit (same creds, no docker calls), and a live container is never torn down mid-session by a later, broader request. `services` only scopes what comes back in this call's `evidence`; the response payload is filtered down to that subset even though the full set was provisioned. A cache hit is also re-verified live (`SandboxProvisioner.is_live`) before being trusted — a container OOM-killed or removed out-of-band evicts the stale entry and triggers a fresh full-set provision with new creds. Concurrent calls for the same agent (e.g. a client timeout + retry) are serialized behind a per-agent-slug `asyncio.Lock` so they can't race `provision()`/`teardown()` against each other. `ensure_sandbox` is always called with the **caller's own** authenticated agent slug — a caller can never reach another agent's sandbox.
 
@@ -107,7 +107,7 @@ All are labeled `roboco.sandbox=1` plus an owner label (`roboco.sandbox.owner=ro
 
 ## Spawn-time availability probe
 
-Spawn itself no longer provisions anything. For an opted-in project, `AgentOrchestrator._sandbox_available_services` is a cheap DB lookup (best-effort — a hiccup degrades to "no sandbox" rather than blocking the spawn) that returns the project's opted-in service list, and the spawn path injects a marker env `ROBOCO_SANDBOX_SERVICES_AVAILABLE=postgres,redis` (never creds) plus one line in the agent's session briefing naming `request_sandbox()` explicitly — cheap and kills a discovery failure mode where an agent doesn't know the tool exists. `AgentConfig.sandbox_info` and the old eager `_append_sandbox_env` are gone; `_append_sandbox_marker_env` runs **instead of** `_append_gate_env` for an opted-in project's spawn (never both).
+Spawn itself no longer provisions anything. For an opted-in project, `AgentOrchestrator._sandbox_available_services` is a cheap DB lookup (best-effort — a hiccup degrades to "no sandbox" rather than blocking the spawn) that returns the project's opted-in service list, and the spawn path injects a marker env `ROBOFLEET_SANDBOX_SERVICES_AVAILABLE=postgres,redis` (never creds) plus one line in the agent's session briefing naming `request_sandbox()` explicitly — cheap and kills a discovery failure mode where an agent doesn't know the tool exists. `AgentConfig.sandbox_info` and the old eager `_append_sandbox_env` are gone; `_append_sandbox_marker_env` runs **instead of** `_append_gate_env` for an opted-in project's spawn (never both).
 
 ## Lifetime and teardown
 

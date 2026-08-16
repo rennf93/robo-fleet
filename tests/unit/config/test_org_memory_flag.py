@@ -20,13 +20,13 @@ def test_org_memory_disabled_by_default() -> None:
 
 
 def test_org_memory_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_ORG_MEMORY_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_ORG_MEMORY_ENABLED": "true"}):
         assert Settings().org_memory_enabled is True
 
 
 def test_org_memory_top_k_reads_env_var() -> None:
     override = 5
-    with mock.patch.dict(os.environ, {"ROBOCO_ORG_MEMORY_TOP_K": str(override)}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_ORG_MEMORY_TOP_K": str(override)}):
         assert Settings().org_memory_top_k == override
 
 

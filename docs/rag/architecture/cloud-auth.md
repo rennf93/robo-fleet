@@ -8,11 +8,11 @@ A cookie-session login for the **single human CEO user**, built on FastAPI Users
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `ROBOCO_CLOUD_AUTH_ENABLED` | `false` | Master switch. Off: `get_agent_context` (the single dependency every API route resolves its caller through) behaves byte-for-byte as today's header-trust. On: no registration router is mounted — exactly one user, seeded from `ROBOCO_CLOUD_AUTH_EMAIL` / `_PASSWORD`. |
-| `ROBOCO_CLOUD_AUTH_EMAIL` | (unset) | Email for the single seeded user. |
-| `ROBOCO_CLOUD_AUTH_PASSWORD` | (unset) | Password for the single seeded user. Hashed at startup (bcrypt via `PasswordHelper`), never stored in plain text. |
-| `ROBOCO_CLOUD_AUTH_SECRET` | (unset) | JWT signing secret for the session cookie. **Fails loud at startup** — `Settings._validate_cloud_auth` raises before the app boots — if `cloud_auth_enabled=true` without this set. |
-| `ROBOCO_CLOUD_AUTH_COOKIE_MAX_AGE` | `2592000` (30 days) | Sliding session lifetime in seconds. |
+| `ROBOFLEET_CLOUD_AUTH_ENABLED` | `false` | Master switch. Off: `get_agent_context` (the single dependency every API route resolves its caller through) behaves byte-for-byte as today's header-trust. On: no registration router is mounted — exactly one user, seeded from `ROBOFLEET_CLOUD_AUTH_EMAIL` / `_PASSWORD`. |
+| `ROBOFLEET_CLOUD_AUTH_EMAIL` | (unset) | Email for the single seeded user. |
+| `ROBOFLEET_CLOUD_AUTH_PASSWORD` | (unset) | Password for the single seeded user. Hashed at startup (bcrypt via `PasswordHelper`), never stored in plain text. |
+| `ROBOFLEET_CLOUD_AUTH_SECRET` | (unset) | JWT signing secret for the session cookie. **Fails loud at startup** — `Settings._validate_cloud_auth` raises before the app boots — if `cloud_auth_enabled=true` without this set. |
+| `ROBOFLEET_CLOUD_AUTH_COOKIE_MAX_AGE` | `2592000` (30 days) | Sliding session lifetime in seconds. |
 
 ## Single seeded user, no registration
 
@@ -37,7 +37,7 @@ Agent HMAC auth and the orchestrator's `system` self-PATCH are untouched in both
 
 `panel/src/proxy.ts` (the Next.js middleware entry) probes `GET /api/auth/status` on every non-API, non-static request; if `cloud_auth_enabled` is true and the `roboco_session` cookie is absent, it redirects to `/login`. The probe fails open (treats a slow/unreachable backend as "cloud auth off") within a 1.5s timeout — a stuck backend must never turn into a stuck redirect loop.
 
-A second route mints this same session cookie without a password: `POST /api/telegram/webapp-auth` validates a Telegram Mini App's signed `initData` instead, gated by its own `ROBOCO_TELEGRAM_MINIAPP_ENABLED` (which itself requires `cloud_auth_enabled`) — see `docs/map/api-routes-schemas.md`.
+A second route mints this same session cookie without a password: `POST /api/telegram/webapp-auth` validates a Telegram Mini App's signed `initData` instead, gated by its own `ROBOFLEET_TELEGRAM_MINIAPP_ENABLED` (which itself requires `cloud_auth_enabled`) — see `docs/map/api-routes-schemas.md`.
 
 ## Related
 

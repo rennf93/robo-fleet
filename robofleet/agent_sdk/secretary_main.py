@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
-_RECEIVER_PORT = 9000  # ROBOCO_SDK_PORT — the orchestrator delivers messages here
+_RECEIVER_PORT = 9000  # ROBOFLEET_SDK_PORT — the orchestrator delivers messages here
 
 
 def make_relay_sink(
@@ -71,9 +71,9 @@ async def main() -> None:  # pragma: no cover - needs the live container + SDK
         except OSError as exc:
             logger.warning("Could not pre-create ~/.claude.json", error=str(exc))
 
-    session_id = os.environ["ROBOCO_SECRETARY_SESSION_ID"]
-    base_url = os.environ.get("ROBOCO_API_URL", "http://roboco-orchestrator:8000")
-    cwd = os.environ.get("ROBOCO_WORKSPACE", "/app")
+    session_id = os.environ["ROBOFLEET_SECRETARY_SESSION_ID"]
+    base_url = os.environ.get("ROBOFLEET_API_URL", "http://roboco-orchestrator:8000")
+    cwd = os.environ.get("ROBOFLEET_WORKSPACE", "/app")
     system_prompt = Path("/app/system-prompt.md").read_text(encoding="utf-8")
     model = os.environ.get("CLAUDE_CODE_SUBAGENT_MODEL") or None
 
@@ -93,7 +93,7 @@ async def main() -> None:  # pragma: no cover - needs the live container + SDK
         make_relay_sink(base_url, session_id, client),
     )
 
-    bind_host = os.environ.get("ROBOCO_SDK_BIND_HOST", ".".join(["0"] * 4))
+    bind_host = os.environ.get("ROBOFLEET_SDK_BIND_HOST", ".".join(["0"] * 4))
     server = uvicorn.Server(
         uvicorn.Config(
             build_receiver(queue),

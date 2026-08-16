@@ -46,15 +46,15 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
-_DEFAULT_MODEL = os.environ.get("ROBOCO_AGENT_MODEL", "grok-build")
+_DEFAULT_MODEL = os.environ.get("ROBOFLEET_AGENT_MODEL", "grok-build")
 # Per-turn watchdog default (seconds). A grok turn reasons + may call tools, so
 # this is generous; it only exists to recover a truly wedged process.
 _DEFAULT_TURN_TIMEOUT_SECONDS = 600.0
 
 
 def _turn_timeout_seconds() -> float:
-    """Per-turn grok watchdog timeout (ROBOCO_GROK_TURN_TIMEOUT_SECONDS)."""
-    raw = os.environ.get("ROBOCO_GROK_TURN_TIMEOUT_SECONDS", "").strip()
+    """Per-turn grok watchdog timeout (ROBOFLEET_GROK_TURN_TIMEOUT_SECONDS)."""
+    raw = os.environ.get("ROBOFLEET_GROK_TURN_TIMEOUT_SECONDS", "").strip()
     try:
         value = float(raw)
     except ValueError:
@@ -181,16 +181,16 @@ class GrokCliSession:  # pragma: no cover - needs the live grok binary
         self._cwd = cwd
         self._agent_id = agent_id
         self._model = model
-        self._usage_file = usage_file or os.environ.get("ROBOCO_GROK_USAGE_FILE")
-        # The secretary's ROBOCO_AGENT_ID is its UUID (not a slug), so resolve the
+        self._usage_file = usage_file or os.environ.get("ROBOFLEET_GROK_USAGE_FILE")
+        # The secretary's ROBOFLEET_AGENT_ID is its UUID (not a slug), so resolve the
         # role from the id when it maps to a real one, else the container's
-        # ROBOCO_AGENT_ROLE. get_agent_role returns the sentinel "unknown" (not
+        # ROBOFLEET_AGENT_ROLE. get_agent_role returns the sentinel "unknown" (not
         # None) for an unmapped id, so treat that as a miss.
         resolved = get_agent_role(agent_id)
         role = (
             resolved
             if resolved and resolved != "unknown"
-            else os.environ.get("ROBOCO_AGENT_ROLE", "")
+            else os.environ.get("ROBOFLEET_AGENT_ROLE", "")
         )
         self._role_args = grok_cli_args_for_role(role)
         self._extra_args = list(extra_args or [])

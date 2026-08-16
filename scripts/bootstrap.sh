@@ -13,7 +13,7 @@
 #     nginx itself only proxies literal /health (and /ready) unauthenticated
 #     straight to the orchestrator.
 #   - GET /api/auth/status is ALWAYS mounted, unauthenticated regardless of
-#     ROBOCO_AGENT_AUTH_REQUIRED (roboco/api/auth/routes.py — "always
+#     ROBOFLEET_AGENT_AUTH_REQUIRED (roboco/api/auth/routes.py — "always
 #     available probe; the panel's middleware gates on this"), so it's a
 #     reliable second 200 that exercises the nginx -> /api/ -> orchestrator
 #     path end to end, independent of /health's simpler direct route.
@@ -24,12 +24,12 @@
 #     verifies (docker-compose.registry.yml): `ollama list` naming both
 #     qwen3-embedding and glm-5.2.
 #
-# ROBOCO_PANEL_AGENT_TOKEN is a standing CEO credential (see .env.example) —
+# ROBOFLEET_PANEL_AGENT_TOKEN is a standing CEO credential (see .env.example) —
 # minted here whether or not cloud auth is armed, because docker-compose.
-# registry.yml's `${ROBOCO_PANEL_AGENT_TOKEN:?...}` refuses an EMPTY value
+# registry.yml's `${ROBOFLEET_PANEL_AGENT_TOKEN:?...}` refuses an EMPTY value
 # exactly like an unset one, unconditionally (verified: setting
-# ROBOCO_CLOUD_AUTH_ENABLED=true alongside an empty token still fails `docker
-# compose config` — the `:?` message's "unless ROBOCO_CLOUD_AUTH_ENABLED=true"
+# ROBOFLEET_CLOUD_AUTH_ENABLED=true alongside an empty token still fails `docker
+# compose config` — the `:?` message's "unless ROBOFLEET_CLOUD_AUTH_ENABLED=true"
 # is documentation, not encoded logic). Blanking it is not currently an option
 # that lets the stack start; quickstart mints it and warns loudly instead.
 set -euo pipefail
@@ -52,8 +52,8 @@ BASE_URL="http://localhost:3000"
 # System sentinel + CEO"), used only to derive the panel token below.
 CEO_AGENT_ID="00000000-0000-0000-0000-000000000001"
 
-TIMEOUT_SECONDS="${ROBOCO_BOOTSTRAP_TIMEOUT:-300}"
-POLL_INTERVAL_SECONDS="${ROBOCO_BOOTSTRAP_POLL_INTERVAL:-5}"
+TIMEOUT_SECONDS="${ROBOFLEET_BOOTSTRAP_TIMEOUT:-300}"
+POLL_INTERVAL_SECONDS="${ROBOFLEET_BOOTSTRAP_POLL_INTERVAL:-5}"
 
 log() {
     echo "[bootstrap] $(date -u -Iseconds) $*"
@@ -144,21 +144,21 @@ log "Docker reachable: $(docker info --format '{{.ServerVersion}}' 2>/dev/null |
 
 if [ -f "$ENV_FILE" ]; then
     log "Reusing existing ${ENV_FILE} (left untouched)."
-    require_nonempty_env_var ROBOCO_ENCRYPTION_KEY \
+    require_nonempty_env_var ROBOFLEET_ENCRYPTION_KEY \
         "Generate: python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
-    require_nonempty_env_var ROBOCO_AGENT_AUTH_SECRET \
+    require_nonempty_env_var ROBOFLEET_AGENT_AUTH_SECRET \
         "Generate: python3 -c 'import secrets; print(secrets.token_hex(32))'"
-    require_nonempty_env_var ROBOCO_PANEL_AGENT_TOKEN \
-        "Mint with 'make panel-token' (after ROBOCO_AGENT_AUTH_SECRET is set) — see .env.example. Required even with cloud auth armed; docker-compose.registry.yml refuses an empty value either way."
-    require_host_path_var ROBOCO_HOST_PROJECT_DIR \
+    require_nonempty_env_var ROBOFLEET_PANEL_AGENT_TOKEN \
+        "Mint with 'make panel-token' (after ROBOFLEET_AGENT_AUTH_SECRET is set) — see .env.example. Required even with cloud auth armed; docker-compose.registry.yml refuses an empty value either way."
+    require_host_path_var ROBOFLEET_HOST_PROJECT_DIR \
         "$REPO_ROOT" "$COMPOSE_DEFAULT_HOST_PROJECT_DIR"
-    require_host_path_var ROBOCO_HOST_DATA_DIR \
+    require_host_path_var ROBOFLEET_HOST_DATA_DIR \
         "${REPO_ROOT}/data" "$COMPOSE_DEFAULT_HOST_DATA_DIR"
 else
     [ -f "$ENV_EXAMPLE" ] || fail "${ENV_EXAMPLE} not found — can't scaffold a fresh ${ENV_FILE}."
 
     command -v python3 >/dev/null 2>&1 \
-        || fail "python3 not found on PATH — required to generate the secrets a fresh ${ENV_FILE} needs (ROBOCO_ENCRYPTION_KEY, ROBOCO_AGENT_AUTH_SECRET, ROBOCO_PANEL_AGENT_TOKEN). Install python3, or copy ${ENV_EXAMPLE} to ${ENV_FILE} yourself and fill those in (see the generation one-liners documented next to each in ${ENV_EXAMPLE}; ROBOCO_PANEL_AGENT_TOKEN can also be minted later with 'make panel-token' once ROBOCO_AGENT_AUTH_SECRET is set)."
+        || fail "python3 not found on PATH — required to generate the secrets a fresh ${ENV_FILE} needs (ROBOFLEET_ENCRYPTION_KEY, ROBOFLEET_AGENT_AUTH_SECRET, ROBOFLEET_PANEL_AGENT_TOKEN). Install python3, or copy ${ENV_EXAMPLE} to ${ENV_FILE} yourself and fill those in (see the generation one-liners documented next to each in ${ENV_EXAMPLE}; ROBOFLEET_PANEL_AGENT_TOKEN can also be minted later with 'make panel-token' once ROBOFLEET_AGENT_AUTH_SECRET is set)."
 
     cp "$ENV_EXAMPLE" "$ENV_FILE"
     log "Created ${ENV_FILE} from ${ENV_EXAMPLE}."
@@ -168,26 +168,26 @@ else
     # call out the standing-credential conflict specifically, not just as a
     # generic footnote.
     CLOUD_AUTH_HINT=false
-    if grep -qE '^ROBOCO_CLOUD_AUTH_ENABLED=true$' "$ENV_FILE" 2>/dev/null \
-        || [ "${ROBOCO_CLOUD_AUTH_ENABLED:-}" = "true" ]; then
+    if grep -qE '^ROBOFLEET_CLOUD_AUTH_ENABLED=true$' "$ENV_FILE" 2>/dev/null \
+        || [ "${ROBOFLEET_CLOUD_AUTH_ENABLED:-}" = "true" ]; then
         CLOUD_AUTH_HINT=true
     fi
 
     # The exact one-liners documented in .env.example, next to each var.
     if ! ENCRYPTION_KEY="$(python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"; then
         rm -f "$ENV_FILE"
-        fail "Could not generate ROBOCO_ENCRYPTION_KEY (python3 -c 'from cryptography.fernet import Fernet; ...' failed above). Is the 'cryptography' package installed for this python3 (pip install cryptography)? ${ENV_FILE} removed — re-run once fixed."
+        fail "Could not generate ROBOFLEET_ENCRYPTION_KEY (python3 -c 'from cryptography.fernet import Fernet; ...' failed above). Is the 'cryptography' package installed for this python3 (pip install cryptography)? ${ENV_FILE} removed — re-run once fixed."
     fi
     if ! AGENT_AUTH_SECRET="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"; then
         rm -f "$ENV_FILE"
-        fail "Could not generate ROBOCO_AGENT_AUTH_SECRET (python3 -c 'import secrets; ...' failed above). ${ENV_FILE} removed — re-run once fixed."
+        fail "Could not generate ROBOFLEET_AGENT_AUTH_SECRET (python3 -c 'import secrets; ...' failed above). ${ENV_FILE} removed — re-run once fixed."
     fi
 
     # docker-compose.registry.yml's nginx service hard-requires
-    # ROBOCO_PANEL_AGENT_TOKEN non-empty (`${VAR:?...}`) unconditionally — an
+    # ROBOFLEET_PANEL_AGENT_TOKEN non-empty (`${VAR:?...}`) unconditionally — an
     # .env copied verbatim from .env.example fails `up -d` before a single
     # container starts, and (verified above) an empty value is refused the
-    # same way even with ROBOCO_CLOUD_AUTH_ENABLED=true set alongside it, so
+    # same way even with ROBOFLEET_CLOUD_AUTH_ENABLED=true set alongside it, so
     # there is no "leave it blank for cloud auth" option today. Mint it the
     # same way `make panel-token` does (roboco/agents_config.py
     # issue_panel_token: hex HMAC-SHA256 of "<ceo-id>:ceo:" keyed by the auth
@@ -201,40 +201,40 @@ msg = sys.argv[2].encode()
 print(hmac.new(secret, msg, hashlib.sha256).hexdigest())
 " "$AGENT_AUTH_SECRET" "${CEO_AGENT_ID}:ceo:")"; then
         rm -f "$ENV_FILE"
-        fail "Could not derive ROBOCO_PANEL_AGENT_TOKEN from the generated secret. ${ENV_FILE} removed — re-run once fixed."
+        fail "Could not derive ROBOFLEET_PANEL_AGENT_TOKEN from the generated secret. ${ENV_FILE} removed — re-run once fixed."
     fi
 
-    sed -i.bak "s/^ROBOCO_ENCRYPTION_KEY=$/ROBOCO_ENCRYPTION_KEY=${ENCRYPTION_KEY}/" "$ENV_FILE"
-    sed -i.bak "s/^ROBOCO_AGENT_AUTH_SECRET=$/ROBOCO_AGENT_AUTH_SECRET=${AGENT_AUTH_SECRET}/" "$ENV_FILE"
-    sed -i.bak "s/^ROBOCO_PANEL_AGENT_TOKEN=$/ROBOCO_PANEL_AGENT_TOKEN=${PANEL_TOKEN}/" "$ENV_FILE"
+    sed -i.bak "s/^ROBOFLEET_ENCRYPTION_KEY=$/ROBOFLEET_ENCRYPTION_KEY=${ENCRYPTION_KEY}/" "$ENV_FILE"
+    sed -i.bak "s/^ROBOFLEET_AGENT_AUTH_SECRET=$/ROBOFLEET_AGENT_AUTH_SECRET=${AGENT_AUTH_SECRET}/" "$ENV_FILE"
+    sed -i.bak "s/^ROBOFLEET_PANEL_AGENT_TOKEN=$/ROBOFLEET_PANEL_AGENT_TOKEN=${PANEL_TOKEN}/" "$ENV_FILE"
 
     # Pin the host paths to THIS checkout (see require_host_path_var above for
     # why the /opt/roboco fallback is a silent, total spawn failure anywhere
     # else). .env.example ships both commented out, so uncomment-and-set. `|`
     # delimiters — these values contain slashes.
     sed -i.bak \
-        "s|^# *ROBOCO_HOST_PROJECT_DIR=.*$|ROBOCO_HOST_PROJECT_DIR=${REPO_ROOT}|" \
+        "s|^# *ROBOFLEET_HOST_PROJECT_DIR=.*$|ROBOFLEET_HOST_PROJECT_DIR=${REPO_ROOT}|" \
         "$ENV_FILE"
     sed -i.bak \
-        "s|^# *ROBOCO_HOST_DATA_DIR=.*$|ROBOCO_HOST_DATA_DIR=${REPO_ROOT}/data|" \
+        "s|^# *ROBOFLEET_HOST_DATA_DIR=.*$|ROBOFLEET_HOST_DATA_DIR=${REPO_ROOT}/data|" \
         "$ENV_FILE"
     rm -f "${ENV_FILE}.bak"
 
-    log "Generated ROBOCO_ENCRYPTION_KEY, ROBOCO_AGENT_AUTH_SECRET, and ROBOCO_PANEL_AGENT_TOKEN into ${ENV_FILE}."
-    log "Pinned ROBOCO_HOST_PROJECT_DIR=${REPO_ROOT} and ROBOCO_HOST_DATA_DIR=${REPO_ROOT}/data (host-side bind-mount sources for spawned agents)."
-    log "Edit ${ENV_FILE} now if you want a pinned ROBOCO_VERSION, Grok, or other optional settings — quickstart won't touch it again."
+    log "Generated ROBOFLEET_ENCRYPTION_KEY, ROBOFLEET_AGENT_AUTH_SECRET, and ROBOFLEET_PANEL_AGENT_TOKEN into ${ENV_FILE}."
+    log "Pinned ROBOFLEET_HOST_PROJECT_DIR=${REPO_ROOT} and ROBOFLEET_HOST_DATA_DIR=${REPO_ROOT}/data (host-side bind-mount sources for spawned agents)."
+    log "Edit ${ENV_FILE} now if you want a pinned ROBOFLEET_VERSION, Grok, or other optional settings — quickstart won't touch it again."
 
     if [ "$CLOUD_AUTH_HINT" = "true" ]; then
-        log "WARNING: ROBOCO_CLOUD_AUTH_ENABLED=true detected, but docker-compose.registry.yml's nginx service still hard-requires a non-empty ROBOCO_PANEL_AGENT_TOKEN just to start (an empty value is refused the same as unset, cloud auth or not — verified). quickstart minted one anyway so 'up -d' doesn't fail outright, but THIS TOKEN IS A STANDING CEO CREDENTIAL THAT BYPASSES YOUR LOGIN PAGE. Once cloud auth (TLS + creds) is fully live, blank ROBOCO_PANEL_AGENT_TOKEN= in ${ENV_FILE} and restart the stack."
+        log "WARNING: ROBOFLEET_CLOUD_AUTH_ENABLED=true detected, but docker-compose.registry.yml's nginx service still hard-requires a non-empty ROBOFLEET_PANEL_AGENT_TOKEN just to start (an empty value is refused the same as unset, cloud auth or not — verified). quickstart minted one anyway so 'up -d' doesn't fail outright, but THIS TOKEN IS A STANDING CEO CREDENTIAL THAT BYPASSES YOUR LOGIN PAGE. Once cloud auth (TLS + creds) is fully live, blank ROBOFLEET_PANEL_AGENT_TOKEN= in ${ENV_FILE} and restart the stack."
     fi
-    log "Note: ROBOCO_PANEL_AGENT_TOKEN is a standing CEO credential — blank it if you later arm cloud auth (see ${ENV_EXAMPLE})."
+    log "Note: ROBOFLEET_PANEL_AGENT_TOKEN is a standing CEO credential — blank it if you later arm cloud auth (see ${ENV_EXAMPLE})."
 fi
 
 # --- Stage 2: pull + up ------------------------------------------------------
 
 log "Pulling images (docker compose -f ${COMPOSE_FILE} pull)..."
 docker compose -f "$COMPOSE_FILE" pull \
-    || fail "'docker compose -f ${COMPOSE_FILE} pull' failed. Check network access to ghcr.io/rennf93 and docker.io/renzof93, or that ROBOCO_REGISTRY/ROBOCO_VERSION in ${ENV_FILE} name a reachable registry/tag."
+    || fail "'docker compose -f ${COMPOSE_FILE} pull' failed. Check network access to ghcr.io/rennf93 and docker.io/renzof93, or that ROBOFLEET_REGISTRY/ROBOFLEET_VERSION in ${ENV_FILE} name a reachable registry/tag."
 
 log "Starting the stack (docker compose -f ${COMPOSE_FILE} up -d)..."
 docker compose -f "$COMPOSE_FILE" up -d \

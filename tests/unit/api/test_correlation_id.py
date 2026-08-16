@@ -139,9 +139,9 @@ def _reload_mcp_module(monkeypatch: pytest.MonkeyPatch, dotted: str) -> ModuleTy
     Also writes a stub manifest file and points the MCP server at it,
     since both servers now refuse to register any tools without one.
     """
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "00000000-0000-0000-0000-000000000001")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "00000000-0000-0000-0000-000000000001")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
 
     manifest_path = Path(tempfile.mkdtemp()) / "tool-manifest.json"
     manifest_path.write_text(
@@ -171,7 +171,7 @@ def _reload_mcp_module(monkeypatch: pytest.MonkeyPatch, dotted: str) -> ModuleTy
             }
         )
     )
-    monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
+    monkeypatch.setenv("ROBOFLEET_TOOL_MANIFEST_PATH", str(manifest_path))
 
     module = importlib.import_module(dotted)
     return importlib.reload(module)

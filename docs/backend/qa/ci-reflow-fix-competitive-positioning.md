@@ -10,7 +10,7 @@ The failure was initially suspected to be CI staleness (a prior `sync_branch` re
 
 ## Solution Applied
 
-Reflowed the hard-wrapped prose to one line per paragraph throughout `docs/backend/analysis/port-ai-builder-competitive-positioning.md`. This is a formatting-only change: no content, wording, or citations were modified. The verified wording at line 11 (`require_ceo_role()`) and line 37 (`ROBOCO_CONVENTIONS_ENABLED`) is intact.
+Reflowed the hard-wrapped prose to one line per paragraph throughout `docs/backend/analysis/port-ai-builder-competitive-positioning.md`. This is a formatting-only change: no content, wording, or citations were modified. The verified wording at line 11 (`require_ceo_role()`) and line 37 (`ROBOFLEET_CONVENTIONS_ENABLED`) is intact.
 
 All other quality-gate steps were already clean: ruff format, ruff check, mypy, xenon, vulture, bandit, deptry, alembic, lint-imports, compose-sync, pip-audit.
 

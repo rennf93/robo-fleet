@@ -9694,7 +9694,7 @@ class TaskService(BaseService):
     async def project_month_spend_usd(self, project_id: UUID) -> float:
         """This calendar month's summed agent-spawn cost for a project's tasks.
 
-        Backs the claim-time monthly-budget guard (``ROBOCO_TASK_BUDGETS_ENABLED``).
+        Backs the claim-time monthly-budget guard (``ROBOFLEET_TASK_BUDGETS_ENABLED``).
         ``agent_spawn_sessions.task_id`` is a plain ``String(36)``, not a real
         FK (see ``AgentSpawnSessionTable``), so the join casts ``tasks.id`` to
         text. A still-open session's ``estimated_cost_usd`` stays null until

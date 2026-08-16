@@ -17,17 +17,17 @@ set -euo pipefail
 # sys.path front (the same ModuleNotFound lesson the grok entrypoint documents).
 ( cd /app && python -m robofleet.llm.providers.codex_cli_config )
 
-CODEX_ARGS_FILE="${ROBOCO_CODEX_ARGS_FILE:-/tmp/roboco-codex-args}"
+CODEX_ARGS_FILE="${ROBOFLEET_CODEX_ARGS_FILE:-/tmp/roboco-codex-args}"
 mapfile -t CODEX_ARGS < "$CODEX_ARGS_FILE"
 
-CODEX_PROMPT_FILE="${ROBOCO_CODEX_PROMPT_FILE:-/tmp/roboco-codex-prompt.txt}"
+CODEX_PROMPT_FILE="${ROBOFLEET_CODEX_PROMPT_FILE:-/tmp/roboco-codex-prompt.txt}"
 
 # Prompt-injection guard (parity with the Claude/grok path): the task prompt is
 # DATA, not instructions — refuse a poisoned one before the model ever sees the
 # combined prompt file the render step above wrote. Screens the RAW task
 # prompt only (the composed role blueprint folded into that file is already
 # trusted), same scope as the grok guard call. Run from /app too.
-if ! ( cd /app && python -m robofleet.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
+if ! ( cd /app && python -m robofleet.agent_sdk.prompt_guard "${ROBOFLEET_INITIAL_PROMPT:-}" ); then
   echo "Refusing to run: task prompt matched a prompt-injection pattern." >&2
   exit 1
 fi
@@ -74,7 +74,7 @@ COMBINED_PROMPT="$(cat "$CODEX_PROMPT_FILE" 2>/dev/null || true)"
 # surfaced after the run.
 set +e
 codex exec "$COMBINED_PROMPT" \
-  -m "${ROBOCO_AGENT_MODEL:-gpt-5.3-codex}" \
+  -m "${ROBOFLEET_AGENT_MODEL:-gpt-5.3-codex}" \
   --json \
   "${CODEX_ARGS[@]}" \
   < /dev/null 2> "$ERR_LOG" | tee "$RUN_LOG"
@@ -86,7 +86,7 @@ set -e
 # carries a real input/output/cache split — see codex_cli_usage). Best-effort;
 # never fails the run. Run from /app for the same module-resolution reason as
 # the render above.
-( cd /app && ROBOCO_CODEX_RUN_LOG="$RUN_LOG" \
+( cd /app && ROBOFLEET_CODEX_RUN_LOG="$RUN_LOG" \
     python -m robofleet.llm.providers.codex_cli_usage ) || true
 
 # Codex has NO exit-code taxonomy — every failure exits 1, so a rate-limit or

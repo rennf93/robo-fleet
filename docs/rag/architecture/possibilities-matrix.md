@@ -1,6 +1,6 @@
 # Possibilities Matrix (work-already-done fast path)
 
-A fast path on `i_am_done`: when a dev's work already looks done, the choreographer submits straight to `awaiting_qa` in one call instead of walking the standard verify/journal turn. Gated by `ROBOCO_POSSIBILITIES_MATRIX_ENABLED` (default off — panel-toggleable, Settings → Feature Flags). Fully inert when off: `i_am_done` behaves exactly as it always has.
+A fast path on `i_am_done`: when a dev's work already looks done, the choreographer submits straight to `awaiting_qa` in one call instead of walking the standard verify/journal turn. Gated by `ROBOFLEET_POSSIBILITIES_MATRIX_ENABLED` (default off — panel-toggleable, Settings → Feature Flags). Fully inert when off: `i_am_done` behaves exactly as it always has.
 
 ## You don't opt in — it's transparent
 
@@ -48,7 +48,7 @@ What IS skipped versus the standard path: the retroactive rich-plan derivation, 
 
 - **CI green** → trusted outright; no local gate runs at all.
 - **CI red** → the fast path refuses outright: "fast path refused — PR CI is failing; QA reviews working code, not a red build." Fix CI (or route through the standard path) — the fast path will not ship a known-red build to QA.
-- **No CI signal at all** (not configured, pending, or unresolvable) → falls back to the local `make quality`-style gate (plus the toolchain-match guard, when `ROBOCO_TOOLCHAIN_MATCH_ENABLED` is also armed).
+- **No CI signal at all** (not configured, pending, or unresolvable) → falls back to the local `make quality`-style gate (plus the toolchain-match guard, when `ROBOFLEET_TOOLCHAIN_MATCH_ENABLED` is also armed).
 
 ## See also
 

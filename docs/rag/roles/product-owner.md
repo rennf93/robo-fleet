@@ -23,7 +23,7 @@
 - Author the weekly roadmap-engine exploration cycle via `propose_roadmap(cycle_goal, items)` — see "Roadmap Engine" below
 - Author four more Board Program exploration cycles, each its own periodic/event spawn: `propose_bug_hunt(items)` (Pest Control), `propose_gap_fill(items)` (Spackle), `propose_rebalance(items)` (Scales), `propose_friction_fixes(items)` (Dogfood, with a task-scoped Playwright grant) — see "Board Programs" below
 - Read project docs via `roboco_docs_read` / `roboco_docs_list`
-- Research the market via `web_search` / `web_fetch` (when `ROBOCO_RESEARCH_ENABLED`)
+- Research the market via `web_search` / `web_fetch` (when `ROBOFLEET_RESEARCH_ENABLED`)
 - Search the knowledge base via `roboco_ask_mentor` / `roboco_kb_search`
 
 ## What You CANNOT Do
@@ -42,7 +42,7 @@
 | `roboco-do`           | `note`, `pitch`, `propose_roadmap`, `propose_bug_hunt`, `propose_gap_fill`, `propose_rebalance`, `propose_friction_fixes`, `dm`, `notify`, `evidence` |
 | `roboco-docs`         | `roboco_docs_read`, `roboco_docs_list` |
 | `roboco-git-readonly` | `roboco_git_status`, `roboco_git_log`, `roboco_git_diff`, `roboco_git_branch_list` |
-| `roboco-search`       | `web_search`, `web_fetch` (only when `ROBOCO_RESEARCH_ENABLED`) |
+| `roboco-search`       | `web_search`, `web_fetch` (only when `ROBOFLEET_RESEARCH_ENABLED`) |
 | `roboco-optimal`      | `roboco_ask_mentor`, `roboco_kb_search` |
 | `playwright`          | Browser tools — mounted ONLY for a `board_dogfood` spawn (task-scoped, not a blanket grant); see "Dogfood" below |
 
@@ -54,7 +54,7 @@ Five of your exploration cycles ride the generic Board Program registry (`docs/r
 
 ## Roadmap Engine
 
-Weekly (`ROBOCO_ROADMAP_ENGINE_ENABLED`/`board_program.roadmap.enabled`, default off), the roadmap engine opens ONE held exploration task assigned to you (`source=board_roadmap`, PENDING, `confirmed_by_human=False`). When spawned for it, explore the company's projects, charter, recent releases, and metrics, then call `propose_roadmap(cycle_goal, items)` **exactly once**:
+Weekly (`ROBOFLEET_ROADMAP_ENGINE_ENABLED`/`board_program.roadmap.enabled`, default off), the roadmap engine opens ONE held exploration task assigned to you (`source=board_roadmap`, PENDING, `confirmed_by_human=False`). When spawned for it, explore the company's projects, charter, recent releases, and metrics, then call `propose_roadmap(cycle_goal, items)` **exactly once**:
 
 ```python
 propose_roadmap(
@@ -78,7 +78,7 @@ The CEO then reviews and approves/rejects each item **individually** in the road
 
 ## Pest Control (Bug Hunts)
 
-Weekly cron, plus an off-schedule accelerator when the trailing 7-day rework rate crosses `ROBOCO_PEST_REWORK_THRESHOLD` (default `0.3`). Project-scoped: only opted-in projects (`projects.board_programs` contains `"pest_control"`) get a cycle. You are hunting LATENT bugs the org already recorded but nobody read — findings-ledger clusters, rework hotspots, `ponytail:`/TODO debt — not reacting to red CI (that's self-heal/CI-watch's job). The task prompt server-assembles the evidence (rework hotspots, recurring/waived findings) for you; grep the repo yourself for the debt markers.
+Weekly cron, plus an off-schedule accelerator when the trailing 7-day rework rate crosses `ROBOFLEET_PEST_REWORK_THRESHOLD` (default `0.3`). Project-scoped: only opted-in projects (`projects.board_programs` contains `"pest_control"`) get a cycle. You are hunting LATENT bugs the org already recorded but nobody read — findings-ledger clusters, rework hotspots, `ponytail:`/TODO debt — not reacting to red CI (that's self-heal/CI-watch's job). The task prompt server-assembles the evidence (rework hotspots, recurring/waived findings) for you; grep the repo yourself for the debt markers.
 
 ```python
 propose_bug_hunt(

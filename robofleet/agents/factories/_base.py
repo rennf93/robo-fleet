@@ -228,7 +228,7 @@ def ponytail_doctrine_layer(prompts_path: Path, role: "AgentRole") -> str | None
     ethos-only cut (``doctrine/ponytail-ethos.md``, no code-mechanics rungs)
     so the ladder can't leak into prose artifacts. For developers only, the
     configured intensity (``settings.ponytail_intensity``,
-    ``ROBOCO_PONYTAIL_INTENSITY``, default ``full``) is appended as a one-line
+    ``ROBOFLEET_PONYTAIL_INTENSITY``, default ``full``) is appended as a one-line
     operative-intensity directive that the doctrine's Intensity table resolves
     into concrete behavior; non-developers get no dial (ultra is wrong for
     prose artifacts). Static content with no DB/project dependency — resolves

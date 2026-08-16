@@ -1,5 +1,5 @@
-"""Startup self-heal: kill agent containers whose baked-in ROBOCO_AGENT_TOKEN
-no longer verifies against the current ``ROBOCO_AGENT_AUTH_SECRET``.
+"""Startup self-heal: kill agent containers whose baked-in ROBOFLEET_AGENT_TOKEN
+no longer verifies against the current ``ROBOFLEET_AGENT_AUTH_SECRET``.
 
 A token is signed once at spawn. If the secret drifts afterwards (a `.env`
 change, a compose recreate that reloads the orchestrator's env without
@@ -37,13 +37,13 @@ async def test_heal_kills_stale_token_containers(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     secret = secrets.token_hex(32)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", secret)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", secret)
     orch = _orch()
     # be-dev-1 holds a token signed with a DIFFERENT secret (rotated after spawn).
     stale_token = issue_agent_token(
         "00000000-0000-0000-0001-000000000001", "developer", "backend"
     )
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", secrets.token_hex(32))
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", secrets.token_hex(32))
 
     async def inspect(name: str) -> tuple[bool, int | None]:
         return (name == "roboco-agent-be-dev-1", 0)
@@ -71,7 +71,7 @@ async def test_heal_kills_stale_token_containers(
 async def test_heal_leaves_valid_token_containers(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", secrets.token_hex(32))
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", secrets.token_hex(32))
     orch = _orch()
     be_dev_1 = "00000000-0000-0000-0001-000000000001"
     valid_token = issue_agent_token(be_dev_1, "developer", "backend")
@@ -97,7 +97,7 @@ async def test_heal_inert_when_secret_unset(
 ) -> None:
     # Dev mode (no secret): verify_agent_token fails for every token, so an
     # ungated heal would kill the whole fleet. The heal must short-circuit.
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_SECRET", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_SECRET", raising=False)
     orch = _orch()
     orch._inspect_container_state = AsyncMock(return_value=(True, 0))
     orch._read_container_auth_env = AsyncMock(
@@ -115,7 +115,7 @@ async def test_heal_inert_when_secret_unset(
 async def test_heal_skips_when_env_probe_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", secrets.token_hex(32))
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", secrets.token_hex(32))
     orch = _orch()
     orch._inspect_container_state = AsyncMock(return_value=(True, 0))
     # docker exec fails (container mid-shutdown, etc.) → None → skip, don't kill.
@@ -132,7 +132,7 @@ async def test_heal_skips_when_env_probe_fails(
 async def test_heal_kills_slug_env_container_with_slug_signed_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A pre-fix container carries a slug ROBOCO_AGENT_ID + a slug-signed token.
+    """A pre-fix container carries a slug ROBOFLEET_AGENT_ID + a slug-signed token.
 
     The MCP servers send X-Agent-ID as the UUID (gateway v1 parses it as
     Annotated[UUID]), so the middleware verifies the token against the UUID
@@ -142,7 +142,7 @@ async def test_heal_kills_slug_env_container_with_slug_signed_token(
     container-env slug would PASS and leave the stale container 401ing.
     """
     secret = secrets.token_hex(32)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", secret)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", secret)
     orch = _orch()
     be_dev_1_slug = "be-dev-1"
     # Token signed over the slug (the pre-fix _append_agent_auth_env behaviour).
@@ -174,7 +174,7 @@ def test_heal_accepts_expiring_format_token(
     Task 1 made verify_agent_token format-agnostic; this pins it at the heal
     call site so a post-deploy respawn with a ttl token isn't killed.
     """
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "heal-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "heal-secret")
     uuid = AGENT_UUIDS.get("be-dev-1", "be-dev-1")
     tok = issue_agent_token(uuid, "developer", "backend", ttl_seconds=3600)
     assert verify_agent_token(tok, uuid, "developer", "backend") is True

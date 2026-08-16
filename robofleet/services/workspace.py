@@ -61,8 +61,8 @@ _REF_OBJECT_ID_RE = re.compile(r"\A[0-9a-f]{40}\Z|\A[0-9a-f]{64}\Z")
 # Debian's `useradd -m` defaults to uid 1000 when that uid is free.
 # Overridable via env so operators can customize if they rebuild agent-base
 # with a different id.
-_AGENT_UID = int(os.environ.get("ROBOCO_AGENT_UID", "1000"))
-_AGENT_GID = int(os.environ.get("ROBOCO_AGENT_GID", "1000"))
+_AGENT_UID = int(os.environ.get("ROBOFLEET_AGENT_UID", "1000"))
+_AGENT_GID = int(os.environ.get("ROBOFLEET_AGENT_GID", "1000"))
 
 # Large, gitignored, agent-regenerated trees we never need to chown — they are
 # either absent or already agent-owned (the agent created them), and walking
@@ -1359,7 +1359,7 @@ class WorkspaceService:
         except EncryptionError as e:
             raise WorkspaceError(
                 f"Failed to decrypt git token for project '{project_slug}'. "
-                "The ROBOCO_ENCRYPTION_KEY may have been rotated or the "
+                "The ROBOFLEET_ENCRYPTION_KEY may have been rotated or the "
                 "stored token is corrupted. Re-set the project token."
             ) from e
 

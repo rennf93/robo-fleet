@@ -1,6 +1,6 @@
 """Scheduled audit trigger in _dispatch_audit_work.
 
-Covers the interval cooldown (ROBOCO_AUDIT_INTERVAL_SECONDS) and the
+Covers the interval cooldown (ROBOFLEET_AUDIT_INTERVAL_SECONDS) and the
 active-agent breaker that prevents auditor spawn storms.
 """
 
@@ -198,7 +198,7 @@ async def test_reactive_alert_acks_so_it_cannot_rotate(
 
 @pytest.mark.anyio
 async def test_cooldown_zero_disables_scheduled_sweeps(orch: AgentOrchestrator) -> None:
-    """ROBOCO_AUDIT_INTERVAL_SECONDS=0 disables scheduled sweeps entirely."""
+    """ROBOFLEET_AUDIT_INTERVAL_SECONDS=0 disables scheduled sweeps entirely."""
     now = datetime.now(UTC)
     with (
         patch.object(settings, "audit_interval_seconds", 0),
@@ -220,9 +220,9 @@ async def test_cooldown_zero_disables_scheduled_sweeps(orch: AgentOrchestrator) 
 
 
 def test_env_override_zero_is_accepted() -> None:
-    """ROBOCO_AUDIT_INTERVAL_SECONDS=0 is valid Pydantic input, matching the
+    """ROBOFLEET_AUDIT_INTERVAL_SECONDS=0 is valid Pydantic input, matching the
     documented disable sentinel and the runtime gate in _audit_spawn_cooled().
     """
-    with patch.dict(os.environ, {"ROBOCO_AUDIT_INTERVAL_SECONDS": "0"}, clear=False):
+    with patch.dict(os.environ, {"ROBOFLEET_AUDIT_INTERVAL_SECONDS": "0"}, clear=False):
         s = Settings()
     assert s.audit_interval_seconds == 0

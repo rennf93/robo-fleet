@@ -34,7 +34,7 @@ class TestBuildForRole:
         assert m.subagent_allowed is False
         assert m.subagent_model is None  # devs don't dispatch
         assert m.bash_allowed is True
-        assert "ROBOCO_SDK_URL" in m.env or "ROBOCO_PUBLIC_BASE_URL" in m.env
+        assert "ROBOFLEET_SDK_URL" in m.env or "ROBOFLEET_PUBLIC_BASE_URL" in m.env
 
     def test_main_pm_manifest_denies_subagents(self) -> None:
         m = build_for_role(

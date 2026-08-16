@@ -13,5 +13,5 @@ def test_conventions_disabled_by_default() -> None:
 
 
 def test_conventions_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_CONVENTIONS_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_CONVENTIONS_ENABLED": "true"}):
         assert Settings().conventions_enabled is True

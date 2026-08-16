@@ -20,21 +20,21 @@ if TYPE_CHECKING:
 
 
 def _token_from_cmd(cmd: list[str]) -> str:
-    # The injector uses cmd.extend(["-e", "ROBOCO_AGENT_TOKEN=<value>"]).
+    # The injector uses cmd.extend(["-e", "ROBOFLEET_AGENT_TOKEN=<value>"]).
     for i, flag in enumerate(cmd):
         if (
             flag == "-e"
             and i + 1 < len(cmd)
-            and cmd[i + 1].startswith("ROBOCO_AGENT_TOKEN=")
+            and cmd[i + 1].startswith("ROBOFLEET_AGENT_TOKEN=")
         ):
             return cmd[i + 1].split("=", 1)[1]
-    raise AssertionError("ROBOCO_AGENT_TOKEN not found in cmd")
+    raise AssertionError("ROBOFLEET_AGENT_TOKEN not found in cmd")
 
 
 def test_append_agent_auth_env_mints_expiring_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "spawn-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "spawn-secret")
     monkeypatch.setattr(settings, "agent_token_ttl_seconds", 3600)
 
     cmd: list[str] = []

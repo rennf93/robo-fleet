@@ -20,7 +20,10 @@ _SAMPLE_MCP = {
         "roboco-flow": {
             "command": "uv",
             "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
-            "env": {"ROBOCO_AGENT_ID": "be-dev-1", "ROBOCO_AGENT_TOKEN": "tok-123"},
+            "env": {
+                "ROBOFLEET_AGENT_ID": "be-dev-1",
+                "ROBOFLEET_AGENT_TOKEN": "tok-123",
+            },
         },
         "roboco-do": {"command": "uv", "args": ["run", "x"]},
     }
@@ -187,7 +190,7 @@ def test_render_mcp_json_injects_env_and_omits_empty_env() -> None:
     flow = rendered["mcpServers"]["roboco-flow"]
     assert flow["command"] == "uv"
     assert flow["args"][:2] == ["run", "--no-sync"]
-    assert flow["env"]["ROBOCO_AGENT_TOKEN"] == "tok-123"
+    assert flow["env"]["ROBOFLEET_AGENT_TOKEN"] == "tok-123"
     assert "env" not in rendered["mcpServers"]["roboco-do"]
 
 
@@ -295,17 +298,17 @@ def test_main_writes_config_mcp_and_agents_md(
     monkeypatch.setattr(kc, "KIMI_MCP_PATH", mcp_out_path)
     monkeypatch.setattr(kc, "KIMI_AGENTS_MD_PATH", agents_md_path)
     monkeypatch.setattr(kc, "SYSTEM_PROMPT_PATH", system_prompt)
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "be-dev-1")
-    monkeypatch.setenv("ROBOCO_MCP_CONFIG", str(mcp_path))
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "be-dev-1")
+    monkeypatch.setenv("ROBOFLEET_MCP_CONFIG", str(mcp_path))
 
     assert kc.main([]) == 0
 
     parsed = tomllib.loads(config_path.read_text(encoding="utf-8"))
     assert parsed["providers"]["managed:kimi-code"]["type"] == "kimi"
     rendered_mcp = json.loads(mcp_out_path.read_text(encoding="utf-8"))
-    assert rendered_mcp["mcpServers"]["roboco-flow"]["env"]["ROBOCO_AGENT_TOKEN"] == (
-        "tok-123"
-    )
+    assert rendered_mcp["mcpServers"]["roboco-flow"]["env"][
+        "ROBOFLEET_AGENT_TOKEN"
+    ] == ("tok-123")
     assert agents_md_path.read_text(encoding="utf-8") == "blueprint"
 
 

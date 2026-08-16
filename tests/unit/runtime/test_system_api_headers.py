@@ -39,10 +39,10 @@ def test_system_identity_is_authorized_for_task_writes() -> None:
 def test_system_api_headers_carry_signed_token(monkeypatch: pytest.MonkeyPatch) -> None:
     # F038/F039: the orchestrator's self-API calls must carry a signed
     # X-Agent-Token for the system identity, or arming
-    # ROBOCO_AGENT_AUTH_REQUIRED=true 401s every silent recovery op
+    # ROBOFLEET_AGENT_AUTH_REQUIRED=true 401s every silent recovery op
     # (auto-block / auto-resume / auto-recover / SLA annotation) and wedges
     # paused/blocked parents — the self-PATCH 401 fix is incomplete without it.
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", secrets.token_hex(32))
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", secrets.token_hex(32))
 
     headers = _system_api_headers()
     token = headers["X-Agent-Token"]
@@ -56,7 +56,7 @@ def test_system_api_headers_unsigned_when_secret_unset(
     # Dev fallback: with no secret set, the token is the UNSIGNED sentinel and
     # auth is not required, so the self-call still succeeds. The header is
     # present either way so a future arm-when-secret-set doesn't silently break.
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_SECRET", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_SECRET", raising=False)
     headers = _system_api_headers()
     assert headers["X-Agent-Token"] == "UNSIGNED"
 
@@ -65,10 +65,10 @@ def test_agent_api_headers_carry_signed_token_and_team(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # The cell-PM auto-submit self-API call acts as a specific PM. A hand-built
-    # {X-Agent-ID, X-Agent-Role} dict 401s under ROBOCO_AGENT_AUTH_REQUIRED —
+    # {X-Agent-ID, X-Agent-Role} dict 401s under ROBOFLEET_AGENT_AUTH_REQUIRED —
     # same F038/F039 gap as the system self-call. _agent_api_headers must carry
     # a token signed for that PM's (id, role, team) plus the team header.
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", secrets.token_hex(32))
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", secrets.token_hex(32))
     be_pm = _foundation.AGENTS["be-pm"]
     be_pm_uuid = str(be_pm.uuid)
     role = be_pm.role.value  # "cell_pm"
@@ -93,7 +93,7 @@ def test_agent_api_headers_omit_token_when_secret_unset(
     # Sending UNSIGNED would 401 the cell-PM auto-submit self-call in every dev
     # run (the e2e test_auto_submit_cuts_the_pm_turn regression), so the token
     # header is omitted entirely when the secret is unset.
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_SECRET", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_SECRET", raising=False)
     be_pm = _foundation.AGENTS["be-pm"]
     headers = _agent_api_headers(str(be_pm.uuid), be_pm.role.value)
     assert "X-Agent-Token" not in headers

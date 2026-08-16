@@ -8,17 +8,17 @@ RoboCo's HTTP request layer is protected by `fastapi-guard` (7.6.0, on `guard-co
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `ROBOCO_GUARD_ENABLED` | `false` | Master switch. Off = completely inert — no middleware is mounted, the request path is entirely unchanged, and nothing is logged or blocked. |
-| `ROBOCO_GUARD_PASSIVE_MODE` | see below | When the guard is enabled, controls whether it blocks matching requests or only logs them. |
-| `ROBOCO_GUARD_EMERGENCY_WHITELIST` | `` (empty) | Comma-separated IPs/CIDRs always allowed through in an active `ROBOCO_GUARD_EMERGENCY` lockdown, in addition to loopback. Empty = loopback only. |
-| `ROBOCO_GUARD_TRUSTED_CHAIN_PEERS` | `` (empty) | Comma-separated exact IP address(es) — never a CIDR range — trusted to appear as a recorded proxy hop inside `X-Forwarded-For` beyond loopback, e.g. the docker bridge gateway a host-proxied Tailscale Serve chain terminates behind, so the resolved client is the real tailnet/LAN peer instead of that hop's own address. Empty = only a loopback rightmost hop ever peels. |
-| `ROBOCO_GUARD_SCAN_RESPONSE_BODY` | `false` | Lets `return_pattern` behavior rules read the response body, not just the status code. Roboco's own status:404/status:401 rules never need it (see below); off by default is byte-for-byte unchanged behavior. |
+| `ROBOFLEET_GUARD_ENABLED` | `false` | Master switch. Off = completely inert — no middleware is mounted, the request path is entirely unchanged, and nothing is logged or blocked. |
+| `ROBOFLEET_GUARD_PASSIVE_MODE` | see below | When the guard is enabled, controls whether it blocks matching requests or only logs them. |
+| `ROBOFLEET_GUARD_EMERGENCY_WHITELIST` | `` (empty) | Comma-separated IPs/CIDRs always allowed through in an active `ROBOFLEET_GUARD_EMERGENCY` lockdown, in addition to loopback. Empty = loopback only. |
+| `ROBOFLEET_GUARD_TRUSTED_CHAIN_PEERS` | `` (empty) | Comma-separated exact IP address(es) — never a CIDR range — trusted to appear as a recorded proxy hop inside `X-Forwarded-For` beyond loopback, e.g. the docker bridge gateway a host-proxied Tailscale Serve chain terminates behind, so the resolved client is the real tailnet/LAN peer instead of that hop's own address. Empty = only a loopback rightmost hop ever peels. |
+| `ROBOFLEET_GUARD_SCAN_RESPONSE_BODY` | `false` | Lets `return_pattern` behavior rules read the response body, not just the status code. Roboco's own status:404/status:401 rules never need it (see below); off by default is byte-for-byte unchanged behavior. |
 
-As of 2026-07-19 the guard is gated off by default in config, but the NAS build compose arms it ON in ACTIVE enforcement (`ROBOCO_GUARD_PASSIVE_MODE=false`) — passive/log-only calibration came back clean, and the CEO approved the flip now that cloud auth + Tailscale are armed. A matching request on that deploy is actually blocked, not just logged. The registry compose still ships it fully off (see Enforcement Posture below).
+As of 2026-07-19 the guard is gated off by default in config, but the NAS build compose arms it ON in ACTIVE enforcement (`ROBOFLEET_GUARD_PASSIVE_MODE=false`) — passive/log-only calibration came back clean, and the CEO approved the flip now that cloud auth + Tailscale are armed. A matching request on that deploy is actually blocked, not just logged. The registry compose still ships it fully off (see Enforcement Posture below).
 
 ## When Armed
 
-With `ROBOCO_GUARD_ENABLED=true`, a `SecurityMiddleware` sits outermost in the middleware stack, and per-route decorators add rate limits, request-size caps, content-type filters, a signature-based WAF (detects SQL injection, XSS, path traversal, and suspicious URL patterns), security response headers, cloud-provider/honeypot checks, and an emergency lockdown switch.
+With `ROBOFLEET_GUARD_ENABLED=true`, a `SecurityMiddleware` sits outermost in the middleware stack, and per-route decorators add rate limits, request-size caps, content-type filters, a signature-based WAF (detects SQL injection, XSS, path traversal, and suspicious URL patterns), security response headers, cloud-provider/honeypot checks, and an emergency lockdown switch.
 
 On top of those generic checks, three RoboCo-specific custom validators run against request bodies:
 
@@ -30,7 +30,7 @@ On top of those generic checks, three RoboCo-specific custom validators run agai
 
 ## Enforcement Posture
 
-`ROBOCO_GUARD_PASSIVE_MODE` decides what happens on a match: `true` (passive) detects and logs only, and never blocks a request. `false` (enforce) actually blocks the matching request — this is how the NAS build compose is armed today (its default flipped from `true` to `false` once passive-mode calibration reviewed clean). The registry compose omits the guard trio entirely, leaving a fresh third-party deploy on the safe config default (guard off).
+`ROBOFLEET_GUARD_PASSIVE_MODE` decides what happens on a match: `true` (passive) detects and logs only, and never blocks a request. `false` (enforce) actually blocks the matching request — this is how the NAS build compose is armed today (its default flipped from `true` to `false` once passive-mode calibration reviewed clean). The registry compose omits the guard trio entirely, leaving a fresh third-party deploy on the safe config default (guard off).
 
 A blocked request gets a generic `400` or `403` response — no rule or signature detail is returned, so the response body can't be used to fingerprint what tripped the guard.
 
@@ -48,7 +48,7 @@ A separate layer targets automated scanners (not agents — agents run on Docker
 
 Agents reach the orchestrator DIRECTLY on the docker bridge (no nginx hop), HMAC-authenticated — the guard's WAF/IP-ban/rate-limit is meant for the EXTERNAL attack surface arriving through nginx, not for that already-authenticated internal traffic. A `whitelist` of loopback (`127.0.0.1`/`::1`) plus docker's default bridge address-pool range (`172.16.0.0/12`) skips WAF/ban/rate-limit checks entirely for requests from those addresses — without it, an ordinary journal/note body tripping a WAF signature would IP-ban the whole agent container, wedging every subsequent verb call (`dm`, `i_am_idle`, ...) behind it.
 
-This whitelist is deliberately narrow — NOT the full RFC1918 range. `10.0.0.0/8` and `192.168.0.0/16` are excluded on purpose: those also cover any real LAN client hitting nginx, not just the docker mesh, and with `trusted_proxy_depth=1` a genuine LAN browser's real IP survives the one XFF hop, so including them would let real external traffic skip the WAF right alongside agent traffic. A known ceiling remains: this can't distinguish a real docker-bridge peer from host-loopback/NAT'd traffic landing on the same address family, so a host-proxied chain (e.g. Tailscale Serve terminating on the host before nginx) can still resolve into this range and ride the exemption — see `ROBOCO_GUARD_TRUSTED_CHAIN_PEERS` above for the separate mechanism that scopes that specific shape.
+This whitelist is deliberately narrow — NOT the full RFC1918 range. `10.0.0.0/8` and `192.168.0.0/16` are excluded on purpose: those also cover any real LAN client hitting nginx, not just the docker mesh, and with `trusted_proxy_depth=1` a genuine LAN browser's real IP survives the one XFF hop, so including them would let real external traffic skip the WAF right alongside agent traffic. A known ceiling remains: this can't distinguish a real docker-bridge peer from host-loopback/NAT'd traffic landing on the same address family, so a host-proxied chain (e.g. Tailscale Serve terminating on the host before nginx) can still resolve into this range and ride the exemption — see `ROBOFLEET_GUARD_TRUSTED_CHAIN_PEERS` above for the separate mechanism that scopes that specific shape.
 
 ## `trusted_proxies` Must Track the Whitelist
 
@@ -74,7 +74,7 @@ In practice: a whitelisted client (the internal agent mesh, or an allowlisted ta
 
 Two log-only `global_behavior_rules` watch every route for calibration signal, never bans: a `return_pattern` rule on `status:404` (threshold 30 in 300s) flags a scanner-style sweep hitting nonexistent endpoints, and a companion rule on `status:401` (threshold 20 in 300s) flags credential-probing. Both are `action="log"` deliberately, since an internal agent with a stale HMAC token must never earn a ban, and bans override the whitelist.
 
-The pattern is `status:404` / `status:401`, not a bare `404` / `401` substring. guard-core 3.12.0 validates `return_pattern` rules at `SecurityConfig` construction (and again on any later reassignment): a bare-substring or `json:`/`regex:` pattern requires reading the response body and is rejected unless `behavior_scan_response_body=True` (`ROBOCO_GUARD_SCAN_RESPONSE_BODY`, off by default, see the table above). `status:` patterns match the response status code directly and are exempt from that requirement. Before fastapi-guard 7.6.0 the body-based form was silently dead code (the adapter's `.body` raised, guard-core swallowed it), so switching to `status:` is a strict fix, not a behavior change: the 404 rule always meant to count 404 responses, but the bare form never fired at all.
+The pattern is `status:404` / `status:401`, not a bare `404` / `401` substring. guard-core 3.12.0 validates `return_pattern` rules at `SecurityConfig` construction (and again on any later reassignment): a bare-substring or `json:`/`regex:` pattern requires reading the response body and is rejected unless `behavior_scan_response_body=True` (`ROBOFLEET_GUARD_SCAN_RESPONSE_BODY`, off by default, see the table above). `status:` patterns match the response status code directly and are exempt from that requirement. Before fastapi-guard 7.6.0 the body-based form was silently dead code (the adapter's `.body` raised, guard-core swallowed it), so switching to `status:` is a strict fix, not a behavior change: the 404 rule always meant to count 404 responses, but the bare form never fired at all.
 
 ## Behavioral Rule Redis Fail-Open Patch
 
@@ -92,4 +92,4 @@ guard-core 3.12.0 freezes ten `SecurityConfig` collection fields after construct
 
 ## Telemetry: Sensitive Headers
 
-When `ROBOCO_GUARD_TELEMETRY_ENABLED` is armed, `_agent_kwargs()` sets `agent_sensitive_headers` to `x-agent-token`, `authorization`, `cookie`, and `x-api-key`, so HMAC/session material never leaves the box in a telemetry payload. Inert while telemetry is off (the whole `_agent_kwargs()` dict is empty).
+When `ROBOFLEET_GUARD_TELEMETRY_ENABLED` is armed, `_agent_kwargs()` sets `agent_sensitive_headers` to `x-agent-token`, `authorization`, `cookie`, and `x-api-key`, so HMAC/session material never leaves the box in a telemetry payload. Inert while telemetry is off (the whole `_agent_kwargs()` dict is empty).

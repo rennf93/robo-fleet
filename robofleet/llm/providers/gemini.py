@@ -1,7 +1,7 @@
 """Gemini CLI provider — Google Gemini via the official ``gemini`` CLI.
 
 Google ships an official terminal coding agent (the ``gemini`` CLI)
-authenticated by an OAuth login (``ROBOCO_HOST_GEMINI_DIR``, subscription-style
+authenticated by an OAuth login (``ROBOFLEET_HOST_GEMINI_DIR``, subscription-style
 daily quota caps — the OAuth-login analogue of grok's SuperGrok subscription).
 RoboCo runs Gemini agents on it the same way it runs grok agents: the
 orchestrator's shared container assembly mounts the RoboCo MCP gateway
@@ -68,7 +68,7 @@ _log = logging.getLogger(__name__)
 # The Gemini agent image (own image, like every other agent role). Overridable
 # for tests / staged rollout.
 _DEFAULT_GEMINI_IMAGE = os.environ.get(
-    "ROBOCO_GEMINI_AGENT_IMAGE", "roboco-agent-gemini:latest"
+    "ROBOFLEET_GEMINI_AGENT_IMAGE", "roboco-agent-gemini:latest"
 )
 
 # The gemini CLI model id. GA ids: gemini-2.5-pro / gemini-2.5-flash /
@@ -81,7 +81,7 @@ _GEMINI_CLI_MODEL = settings.gemini_cli_model
 # like the grok path mounts ``~/.grok``. Override for docker-in-docker / NAS
 # deploys (the orchestrator's home is not the host's).
 GEMINI_AUTH_HOST_PATH = os.environ.get(
-    "ROBOCO_HOST_GEMINI_DIR", str(Path.home() / ".gemini")
+    "ROBOFLEET_HOST_GEMINI_DIR", str(Path.home() / ".gemini")
 )
 
 # In-container paths.
@@ -216,7 +216,7 @@ class GeminiCliProvider(AgentProvider):
                 "gemini host oauth_creds.json not found at %s — spawn will start "
                 "the container but it is doomed to exit 41 (no OAuth credential). "
                 "Run `gemini` interactively once on the host (or set "
-                "ROBOCO_HOST_GEMINI_DIR to the directory holding oauth_creds.json) "
+                "ROBOFLEET_HOST_GEMINI_DIR to the directory holding oauth_creds.json) "
                 "before spawning Gemini agents.",
                 auth_dir / "oauth_creds.json",
             )
@@ -239,22 +239,22 @@ class GeminiCliProvider(AgentProvider):
     ) -> None:
         """Append the runtime env the gemini-cli entrypoint + renderer read.
 
-        ``ROBOCO_AGENT_ID`` lets the renderer compute the per-role
-        settings/policy; ``ROBOCO_MCP_CONFIG`` points it at the mounted gateway
+        ``ROBOFLEET_AGENT_ID`` lets the renderer compute the per-role
+        settings/policy; ``ROBOFLEET_MCP_CONFIG`` points it at the mounted gateway
         config; the prompt travels as an env var (never an argv positional).
         """
         cmd.extend(
             [
                 "-e",
-                f"ROBOCO_AGENT_ID={config.agent_id}",
+                f"ROBOFLEET_AGENT_ID={config.agent_id}",
                 "-e",
-                f"ROBOCO_AGENT_MODEL={_GEMINI_CLI_MODEL}",
+                f"ROBOFLEET_AGENT_MODEL={_GEMINI_CLI_MODEL}",
                 "-e",
-                f"ROBOCO_MCP_CONFIG={_MCP_CONFIG_IN_CONTAINER}",
+                f"ROBOFLEET_MCP_CONFIG={_MCP_CONFIG_IN_CONTAINER}",
                 "-e",
-                f"ROBOCO_INITIAL_PROMPT={initial_prompt or ''}",
+                f"ROBOFLEET_INITIAL_PROMPT={initial_prompt or ''}",
                 "-e",
-                f"ROBOCO_GEMINI_USAGE_FILE={_GEMINI_USAGE_FILE_IN_CONTAINER}",
+                f"ROBOFLEET_GEMINI_USAGE_FILE={_GEMINI_USAGE_FILE_IN_CONTAINER}",
             ]
         )
 

@@ -28,7 +28,7 @@ You still cannot claim tasks, initiate a message to a peer agent, or write code 
 
 The Auditor is also spawned on a periodic sweep:
 
-- `ROBOCO_AUDIT_INTERVAL_SECONDS` (default 6 hours) controls the cadence. `0` disables scheduled sweeps.
+- `ROBOFLEET_AUDIT_INTERVAL_SECONDS` (default 6 hours) controls the cadence. `0` disables scheduled sweeps.
 - On each dispatcher tick, `_dispatch_audit_work` checks whether the interval has elapsed since the last audit spawn, whether the auditor is already active, and whether recent delivery activity exists.
 - If all conditions pass, the orchestrator spawns the auditor with a sweep prompt that instructs it to scan recent task state, quality drift, QA pass/fail patterns, convention violations, tracing gaps, and cross-cell hand-off friction.
 - This path is **best-effort** and shares the same interval throttle with reactive alert spawns.
@@ -45,7 +45,7 @@ You still cannot claim tasks, initiate a message to a peer agent, or write code 
 - Waive one open **minor/nit** revision-findings-ledger finding via `waive_finding(finding_id, note)` — see below
 - Curate the KB's playbook queue via `approve_playbook` / `reject_playbook` / `archive_playbook` — a deliberate, bounded expansion of your read-only surface (KB curation, not agent-initiated comms)
 - Read `dm`s and reply in-thread when the CEO opens a DM with you (`read_a2a` / `dm`) — reachable mid-task if you're stuck, but you still never *initiate* to a peer agent
-- Curate the Obsidian vault's narrative for a just-completed root task-tree via `curate_vault(task_id, narrative)` — see below (only when `ROBOCO_OBSIDIAN_VAULT_ENABLED`)
+- Curate the Obsidian vault's narrative for a just-completed root task-tree via `curate_vault(task_id, narrative)` — see below (only when `ROBOFLEET_OBSIDIAN_VAULT_ENABLED`)
 - Author three Board Program exploration cycles, each its own periodic/event spawn: `propose_postmortem(...)` (Coroner, event-only), `propose_playbook_drafts(drafts)` (Librarian, the one exception to "you curate but don't draft"), `propose_quality_report(headline, items, overall_assessment)` (Sentinel) — see "Board Programs" below
 
 ## What You CANNOT Do

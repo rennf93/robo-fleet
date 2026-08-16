@@ -1,6 +1,6 @@
 """``python -m robofleet.vault`` — rebuild / relocate, on a tmp vault.
 
-Flag-gated: both subcommands refuse when ROBOCO_OBSIDIAN_VAULT_ENABLED is off.
+Flag-gated: both subcommands refuse when ROBOFLEET_OBSIDIAN_VAULT_ENABLED is off.
 """
 
 from __future__ import annotations

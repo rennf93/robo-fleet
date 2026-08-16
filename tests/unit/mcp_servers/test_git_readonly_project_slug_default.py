@@ -1,4 +1,4 @@
-"""project_slug defaults to ROBOCO_PROJECT_SLUG when omitted on every
+"""project_slug defaults to ROBOFLEET_PROJECT_SLUG when omitted on every
 roboco-git-readonly tool — agents no longer need to guess a slug, and the
 RAG-taught literal "roboco" example (a non-existent slug) can't 404 them.
 """
@@ -17,10 +17,10 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def git_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "00000000-0000-0000-0000-000000000042")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.delenv("ROBOCO_PROJECT_SLUG", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "00000000-0000-0000-0000-000000000042")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.delenv("ROBOFLEET_PROJECT_SLUG", raising=False)
     import robofleet.mcp.git_readonly as srv
 
     importlib.reload(srv)
@@ -30,7 +30,7 @@ def git_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
 def test_resolve_omitted_falls_back_to_env(
     git_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("ROBOCO_PROJECT_SLUG", "roboco-api")
+    monkeypatch.setenv("ROBOFLEET_PROJECT_SLUG", "roboco-api")
     assert git_module._resolve_project_slug(None) == "roboco-api"
     assert git_module._resolve_project_slug("") == "roboco-api"
 
@@ -38,7 +38,7 @@ def test_resolve_omitted_falls_back_to_env(
 def test_resolve_supplied_passes_through(
     git_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("ROBOCO_PROJECT_SLUG", "roboco-api")
+    monkeypatch.setenv("ROBOFLEET_PROJECT_SLUG", "roboco-api")
     assert git_module._resolve_project_slug("roboco-panel") == "roboco-panel"
 
 
@@ -48,7 +48,7 @@ def test_resolve_neither_present_returns_clear_error(
     result = git_module._resolve_project_slug(None)
     assert isinstance(result, dict)
     assert result["error"] == "missing_project_slug"
-    assert "ROBOCO_PROJECT_SLUG" in result["detail"]
+    assert "ROBOFLEET_PROJECT_SLUG" in result["detail"]
 
 
 def _mock_response(payload: dict) -> MagicMock:
@@ -61,7 +61,7 @@ def _mock_response(payload: dict) -> MagicMock:
 def test_git_status_omitted_slug_uses_env(
     git_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("ROBOCO_PROJECT_SLUG", "roboco-api")
+    monkeypatch.setenv("ROBOFLEET_PROJECT_SLUG", "roboco-api")
     with patch("httpx.Client") as client_cls:
         client = client_cls.return_value.__enter__.return_value
         client.get.return_value = _mock_response({"branch": "main"})

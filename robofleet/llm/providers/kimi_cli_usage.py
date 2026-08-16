@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 
 # Where the entrypoint writes the captured usage for the orchestrator to read.
 USAGE_OUT_PATH = Path(
-    os.environ.get("ROBOCO_KIMI_USAGE_FILE")
+    os.environ.get("ROBOFLEET_KIMI_USAGE_FILE")
     or Path(tempfile.gettempdir()) / "roboco-kimi-usage.json"
 )
 
@@ -248,11 +248,11 @@ def capture_run_usage(
 
 def main() -> int:
     """Entrypoint: write ``usage.json`` (tokens split + cost) for the run."""
-    model = os.environ.get("ROBOCO_AGENT_MODEL", _DEFAULT_MODEL)
-    run_log = os.environ.get("ROBOCO_KIMI_RUN_LOG", "")
-    workdir = os.environ.get("ROBOCO_KIMI_WORKDIR", "")
+    model = os.environ.get("ROBOFLEET_AGENT_MODEL", _DEFAULT_MODEL)
+    run_log = os.environ.get("ROBOFLEET_KIMI_RUN_LOG", "")
+    workdir = os.environ.get("ROBOFLEET_KIMI_WORKDIR", "")
     if not run_log:
-        logger.warning("ROBOCO_KIMI_RUN_LOG not set; usage will read 0")
+        logger.warning("ROBOFLEET_KIMI_RUN_LOG not set; usage will read 0")
         return 0
     # kimi_code_home passed explicitly (not relying on capture_run_usage's own
     # default, which binds at function-definition time and would go stale if

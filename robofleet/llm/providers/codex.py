@@ -189,7 +189,7 @@ class CodexCliProvider(AgentProvider):
             _log.warning(
                 "codex host auth.json not found at %s — spawn will start the "
                 "container but it is doomed to exit 78 (no Codex credential). "
-                "Run `codex login` on the host (or set ROBOCO_HOST_CODEX_DIR to "
+                "Run `codex login` on the host (or set ROBOFLEET_HOST_CODEX_DIR to "
                 "the directory holding auth.json) before spawning Codex agents.",
                 auth_dir / "auth.json",
             )
@@ -211,23 +211,23 @@ class CodexCliProvider(AgentProvider):
     ) -> None:
         """Append the runtime env the codex-cli entrypoint + renderer read.
 
-        ``ROBOCO_AGENT_ID`` lets the renderer compute the per-role sandbox
-        flag; ``ROBOCO_MCP_CONFIG`` points it at the mounted gateway config;
+        ``ROBOFLEET_AGENT_ID`` lets the renderer compute the per-role sandbox
+        flag; ``ROBOFLEET_MCP_CONFIG`` points it at the mounted gateway config;
         the prompt travels as an env var (never an argv positional) and the
         renderer folds it into the combined system+task prompt file.
         """
         cmd.extend(
             [
                 "-e",
-                f"ROBOCO_AGENT_ID={config.agent_id}",
+                f"ROBOFLEET_AGENT_ID={config.agent_id}",
                 "-e",
-                f"ROBOCO_AGENT_MODEL={_CODEX_CLI_MODEL}",
+                f"ROBOFLEET_AGENT_MODEL={_CODEX_CLI_MODEL}",
                 "-e",
-                f"ROBOCO_MCP_CONFIG={_MCP_CONFIG_IN_CONTAINER}",
+                f"ROBOFLEET_MCP_CONFIG={_MCP_CONFIG_IN_CONTAINER}",
                 "-e",
-                f"ROBOCO_INITIAL_PROMPT={initial_prompt or ''}",
+                f"ROBOFLEET_INITIAL_PROMPT={initial_prompt or ''}",
                 "-e",
-                f"ROBOCO_CODEX_USAGE_FILE={_CODEX_USAGE_FILE_IN_CONTAINER}",
+                f"ROBOFLEET_CODEX_USAGE_FILE={_CODEX_USAGE_FILE_IN_CONTAINER}",
             ]
         )
 

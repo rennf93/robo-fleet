@@ -284,7 +284,7 @@ async def test_get_task_by_id_includes_spend_when_budgets_enabled(
     task_client: dict, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """spend_usd is populated (0.0 with no spawn sessions yet) once
-    ROBOCO_TASK_BUDGETS_ENABLED is on — the extra DB read only runs then."""
+    ROBOFLEET_TASK_BUDGETS_ENABLED is on — the extra DB read only runs then."""
     monkeypatch.setattr(settings, "task_budgets_enabled", True)
     client = task_client["client"]
     task = _seed_task(task_client)

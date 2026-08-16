@@ -3,7 +3,7 @@
 The grok CLI exposes no live usage hook, so the budget kill-switch lives in the
 orchestrator: it reads each live GROK container's captured cost (from its
 usage.json, via ``_grok_cost_usd``) and kills + evicts it past
-ROBOCO_GROK_MAX_COST_USD (also catching runaway-loop token burn). The usage.json
+ROBOFLEET_GROK_MAX_COST_USD (also catching runaway-loop token burn). The usage.json
 read is covered in the grok usage tests; here ``_grok_cost_usd`` is stubbed so the
 kill DECISION is exercised deterministically.
 """

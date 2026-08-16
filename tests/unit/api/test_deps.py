@@ -190,7 +190,7 @@ async def test_get_optional_agent_id_returns_none_on_lookup_failure() -> None:
 
 def test_auth_required_truthy_values(monkeypatch: pytest.MonkeyPatch) -> None:
     for v in ("1", "true", "yes", "TRUE", "Yes"):
-        monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", v)
+        monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", v)
         assert _auth_required() is True
 
 
@@ -198,12 +198,12 @@ def test_auth_required_explicit_false_values(monkeypatch: pytest.MonkeyPatch) ->
     # An explicit opt-out is honored in every environment (trusted private net).
     monkeypatch.setattr(_deps.settings, "environment", "production")
     for v in ("0", "no", "false"):
-        monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", v)
+        monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", v)
         assert _auth_required() is False
 
 
 def test_auth_required_unset_fails_open_in_dev(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     monkeypatch.setattr(_deps.settings, "environment", "development")
     assert _auth_required() is False
 
@@ -213,7 +213,7 @@ def test_auth_required_unset_fails_closed_in_production(
 ) -> None:
     # GHSA-4f7g-w95g-5q2c: an unset flag must not leave a production deploy in
     # header-trust mode where any client can claim X-Agent-Role: ceo.
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     monkeypatch.setattr(_deps.settings, "environment", "production")
     assert _auth_required() is True
 
@@ -221,7 +221,7 @@ def test_auth_required_unset_fails_closed_in_production(
 def test_check_agent_auth_token_no_token_in_dev_passes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "false")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "false")
     # No raise.
     _check_agent_auth_token("a", "developer", "backend", x_agent_token=None)
 
@@ -229,7 +229,7 @@ def test_check_agent_auth_token_no_token_in_dev_passes(
 def test_check_agent_auth_token_missing_when_required_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     with pytest.raises(HTTPException) as exc:
         _check_agent_auth_token("a", "developer", "backend", x_agent_token=None)
     assert exc.value.status_code == _HTTP_401
@@ -255,7 +255,7 @@ def test_check_agent_auth_token_missing_under_cloud_auth_raises(
 ) -> None:
     """cloud_auth on + agent_auth_required off: token still mandatory."""
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     with pytest.raises(HTTPException) as exc:
         _check_agent_auth_token("a", "developer", "backend", x_agent_token=None)
     assert exc.value.status_code == _HTTP_401
@@ -274,7 +274,7 @@ def test_check_agent_auth_token_dev_mode_no_token_passes(
 ) -> None:
     """cloud_auth off + agent_auth_required off: dev unchanged."""
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", False)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     _check_agent_auth_token("a", "developer", "backend", x_agent_token=None)
 
 
@@ -283,7 +283,7 @@ def test_check_agent_auth_token_agent_auth_required_no_token_raises(
 ) -> None:
     """cloud_auth off + agent_auth_required on: existing behavior unchanged."""
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", False)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "true")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "true")
     with pytest.raises(HTTPException) as exc:
         _check_agent_auth_token("a", "developer", "backend", x_agent_token=None)
     assert exc.value.status_code == _HTTP_401
@@ -299,7 +299,7 @@ async def test_require_panel_token_cloud_auth_no_token_no_cookie_rejects(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     with pytest.raises(HTTPException) as exc:
         await _deps.require_panel_token(x_agent_token=None, session_cookie=None)
     assert exc.value.status_code == _HTTP_401
@@ -373,7 +373,7 @@ async def test_require_panel_token_dev_mode_no_token_passes(
 ) -> None:
     """cloud_auth off + agent_auth_required off: dev unchanged."""
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", False)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     await _deps.require_panel_token(x_agent_token=None, session_cookie=None)
 
 
@@ -526,7 +526,7 @@ async def test_get_agent_context_missing_role_raises() -> None:
 
 @pytest.mark.asyncio
 async def test_get_agent_context_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "false")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "false")
     aid = uuid4()
     with patch(
         "robofleet.api.deps.resolve_agent_identity",

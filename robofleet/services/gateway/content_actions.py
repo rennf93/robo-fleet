@@ -1397,7 +1397,7 @@ class ContentActions:
         if not settings.obsidian_vault_enabled:
             return Envelope.invalid_state(
                 message="the Obsidian vault is disabled",
-                remediate="ROBOCO_OBSIDIAN_VAULT_ENABLED is off — nothing to curate.",
+                remediate="ROBOFLEET_OBSIDIAN_VAULT_ENABLED is off, nothing to curate.",
                 context_briefing={},
             )
         task = await self.task.get(task_id)
@@ -1422,7 +1422,7 @@ class ContentActions:
             )
             return Envelope.invalid_state(
                 message=f"vault write failed: {exc}",
-                remediate="retry curate_vault; check ROBOCO_VAULT_PATH is writable",
+                remediate="retry curate_vault; check ROBOFLEET_VAULT_PATH is writable",
                 context_briefing={},
             )
         return Envelope.ok(
@@ -5828,7 +5828,7 @@ class ContentActions:
             return Envelope.invalid_state(
                 message="sandbox provisioning is disabled",
                 remediate=(
-                    "ROBOCO_SANDBOX_DB_ENABLED is off — ask the CEO to arm "
+                    "ROBOFLEET_SANDBOX_DB_ENABLED is off — ask the CEO to arm "
                     "it, or rely on the legacy gate env if this project "
                     "isn't sandboxed"
                 ),
@@ -6277,7 +6277,7 @@ class ContentActions:
         if not settings.video_engine_enabled:
             return Envelope.invalid_state(
                 message="the video engine is disabled",
-                remediate="ROBOCO_VIDEO_ENGINE_ENABLED is off — nothing to render",
+                remediate="ROBOFLEET_VIDEO_ENGINE_ENABLED is off — nothing to render",
                 context_briefing={},
             )
         t, rejection = await self._render_active_video_task(agent_id)
@@ -6288,7 +6288,7 @@ class ContentActions:
             if settings.video_renderer_base_url.strip()
             else Envelope.invalid_state(
                 message="the video-renderer sidecar is not configured",
-                remediate="ask the CEO to set ROBOCO_VIDEO_RENDERER_BASE_URL",
+                remediate="ask the CEO to set ROBOFLEET_VIDEO_RENDERER_BASE_URL",
                 context_briefing={},
             )
         )

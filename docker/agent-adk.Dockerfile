@@ -3,7 +3,7 @@
 # Runs an agent as a Cloud Run Job execution: the orchestrator writes the tool
 # manifest (flow_tools + do_tools + the composed system_prompt, inlined) to a
 # local file, the CloudRunJobsProvider uploads it to GCS and sets
-# ROBOCO_TOOL_MANIFEST_PATH to the gs:// URI, and this image's entrypoint
+# ROBOFLEET_TOOL_MANIFEST_PATH to the gs:// URI, and this image's entrypoint
 # (roboco.agent.adk_entry) fetches it, builds an ADK LlmAgent with the gateway
 # tool-shim (roboco.agent.gateway_shim) + git/file FunctionTools
 # (roboco.agent.git_tools), runs it to completion on Gemini, and POSTs usage

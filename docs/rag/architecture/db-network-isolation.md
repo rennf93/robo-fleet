@@ -8,11 +8,11 @@ A compose-topology hardening: two user-defined Docker bridges instead of one. `r
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `ROBOCO_DB_NETWORK_ISOLATED` | `false` | **Not a panel feature flag** — it must travel with the compose file's `networks:` stanzas (it describes topology, not a runtime-toggleable behavior), so it is deliberately absent from `roboco/services/settings.py`'s `FEATURE_FLAGS`. Set `true` only by the compose files that actually carry the two-bridge topology. |
+| `ROBOFLEET_DB_NETWORK_ISOLATED` | `false` | **Not a panel feature flag** — it must travel with the compose file's `networks:` stanzas (it describes topology, not a runtime-toggleable behavior), so it is deliberately absent from `roboco/services/settings.py`'s `FEATURE_FLAGS`. Set `true` only by the compose files that actually carry the two-bridge topology. |
 
 ## What flipping it changes
 
-`ROBOCO_DB_NETWORK_ISOLATED=true` suppresses the legacy `_append_gate_env` prod-creds injection (`roboco/runtime/orchestrator.py`) — the one that would otherwise hand an agent `ROBOCO_TEST_DB_HOST=roboco-postgres` credentials for a host it cannot reach. A connect timeout is worse than no credentials at all (the test suite's DB-reachability check skips cleanly on a fast refusal, but hangs on a dead-end timeout), so the flag makes that injection a no-op rather than let it happen and fail slow. Projects that need a real DB for their gate opt into the sandboxed dev DB/Redis/Mongo instead (`docs/rag/architecture/sandbox-db.md`) — sandbox replaces, never coexists with, the prod-creds path.
+`ROBOFLEET_DB_NETWORK_ISOLATED=true` suppresses the legacy `_append_gate_env` prod-creds injection (`roboco/runtime/orchestrator.py`) — the one that would otherwise hand an agent `ROBOFLEET_TEST_DB_HOST=roboco-postgres` credentials for a host it cannot reach. A connect timeout is worse than no credentials at all (the test suite's DB-reachability check skips cleanly on a fast refusal, but hangs on a dead-end timeout), so the flag makes that injection a no-op rather than let it happen and fail slow. Projects that need a real DB for their gate opt into the sandboxed dev DB/Redis/Mongo instead (`docs/rag/architecture/sandbox-db.md`) — sandbox replaces, never coexists with, the prod-creds path.
 
 ## What is unaffected
 

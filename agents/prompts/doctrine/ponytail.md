@@ -42,7 +42,7 @@ The ladder is a reflex, not a research project — but it runs *after* you under
 
 ## Intensity
 
-`ponytail_doctrine_layer` appends one operative-intensity directive naming the configured level (`settings.ponytail_intensity`, env `ROBOCO_PONYTAIL_INTENSITY`, default `full`). Apply the matching row; every row is bounded by the RoboCo preamble above (reviewer feedback and explicit requests always win).
+`ponytail_doctrine_layer` appends one operative-intensity directive naming the configured level (`settings.ponytail_intensity`, env `ROBOFLEET_PONYTAIL_INTENSITY`, default `full`). Apply the matching row; every row is bounded by the RoboCo preamble above (reviewer feedback and explicit requests always win).
 
 | Level | What changes |
 |-------|-------------|

@@ -16,7 +16,10 @@ _SAMPLE_MCP = {
         "roboco-flow": {
             "command": "uv",
             "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
-            "env": {"ROBOCO_AGENT_ID": "be-dev-1", "ROBOCO_AGENT_TOKEN": "tok-123"},
+            "env": {
+                "ROBOFLEET_AGENT_ID": "be-dev-1",
+                "ROBOFLEET_AGENT_TOKEN": "tok-123",
+            },
         },
         "roboco-do": {"command": "uv", "args": ["run", "x"]},
         "roboco-optimal": {"command": "uv", "args": ["run", "y"]},
@@ -29,7 +32,7 @@ def test_render_config_toml_is_valid_toml_and_injects_env() -> None:
     flow = parsed["mcp_servers"]["roboco-flow"]
     assert flow["command"] == "uv"
     assert flow["args"][:2] == ["run", "--no-sync"]
-    assert flow["env"]["ROBOCO_AGENT_TOKEN"] == "tok-123"
+    assert flow["env"]["ROBOFLEET_AGENT_TOKEN"] == "tok-123"
     assert "env" not in parsed["mcp_servers"]["roboco-do"]
 
 

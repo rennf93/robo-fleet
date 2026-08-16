@@ -69,14 +69,14 @@ GEMINI_SETTINGS_PATH = Path.home() / ".gemini" / "settings.json"
 GEMINI_MEMORY_PATH = Path.home() / ".gemini" / "GEMINI.md"
 # The composed role blueprint the orchestrator mounts into every agent container.
 SYSTEM_PROMPT_PATH = Path(
-    os.environ.get("ROBOCO_SYSTEM_PROMPT", "/app/system-prompt.md")
+    os.environ.get("ROBOFLEET_SYSTEM_PROMPT", "/app/system-prompt.md")
 )
 # The TOML Policy Engine reads every ``*.toml`` file under this directory.
 GEMINI_POLICIES_DIR = Path.home() / ".gemini" / "policies"
 _POLICY_FILE_NAME = "robofleet.toml"
 
 # Hard ceiling on agentic turns (loop guard) — parity with grok's
-# _DEFAULT_MAX_TURNS. Operator-tunable via ROBOCO_GEMINI_MAX_TURNS (main()).
+# _DEFAULT_MAX_TURNS. Operator-tunable via ROBOFLEET_GEMINI_MAX_TURNS (main()).
 _DEFAULT_MAX_TURNS = 200
 
 # The auth mode a headless run must declare in settings.json, else the CLI
@@ -91,7 +91,7 @@ _AUTH_SELECTED_TYPE = "oauth-personal"
 # from this file. Defaults under the system temp dir (not a hardcoded /tmp
 # literal) — mirrors grok_cli_config.GROK_ARGS_PATH.
 GEMINI_ARGS_PATH = Path(
-    os.environ.get("ROBOCO_GEMINI_ARGS_FILE")
+    os.environ.get("ROBOFLEET_GEMINI_ARGS_FILE")
     or Path(tempfile.gettempdir()) / "roboco-gemini-args"
 )
 
@@ -275,12 +275,12 @@ def write_policy_toml(role: str, *, policies_dir: Path = GEMINI_POLICIES_DIR) ->
 
 def main() -> int:
     """Entrypoint: write ``~/.gemini/settings.json`` + GEMINI.md + policy TOML."""
-    agent_id = os.environ.get("ROBOCO_AGENT_ID", "")
-    mcp_path = os.environ.get("ROBOCO_MCP_CONFIG", "/app/mcp-config.json")
+    agent_id = os.environ.get("ROBOFLEET_AGENT_ID", "")
+    mcp_path = os.environ.get("ROBOFLEET_MCP_CONFIG", "/app/mcp-config.json")
     role = get_agent_role(agent_id) or ""
     try:
         max_turns = int(
-            os.environ.get("ROBOCO_GEMINI_MAX_TURNS", str(_DEFAULT_MAX_TURNS))
+            os.environ.get("ROBOFLEET_GEMINI_MAX_TURNS", str(_DEFAULT_MAX_TURNS))
         )
     except ValueError:
         max_turns = _DEFAULT_MAX_TURNS

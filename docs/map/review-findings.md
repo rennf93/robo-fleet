@@ -151,7 +151,7 @@ review-findings slice
 
 ## Config Flags
 
-None — always-on, core lifecycle (no `ROBOCO_*` gate). The only tunables are compile-time constants: `FINDINGS_NUDGE_COUNT=5` / `FINDINGS_HARD_CAP=10` (`choreographer/findings.py`), the per-field char caps on `Finding` (`content/models.py`), and `_FINDINGS_CAP=20` (vault section, `vault_writer.py`).
+None — always-on, core lifecycle (no `ROBOFLEET_*` gate). The only tunables are compile-time constants: `FINDINGS_NUDGE_COUNT=5` / `FINDINGS_HARD_CAP=10` (`choreographer/findings.py`), the per-field char caps on `Finding` (`content/models.py`), and `_FINDINGS_CAP=20` (vault section, `vault_writer.py`).
 
 ## Gotchas
 

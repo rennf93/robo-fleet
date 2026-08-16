@@ -16,13 +16,13 @@ from robofleet.services.gateway.role_config import ROLE_CONFIGS
 
 def test_every_granted_do_tool_is_registered(monkeypatch: pytest.MonkeyPatch) -> None:
     # do_server reads agent/orchestrator env + a manifest at import; the
-    # ROBOCO_ALLOW_FULL_TOOLSET escape hatch lets it register the full _TOOLS
+    # ROBOFLEET_ALLOW_FULL_TOOLSET escape hatch lets it register the full _TOOLS
     # set without a manifest file.
-    monkeypatch.setenv("ROBOCO_AGENT_ID", "00000000-0000-0000-0000-000000000099")
-    monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
-    monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
-    monkeypatch.setenv("ROBOCO_SDK_URL", "http://test-sdk:9000")
-    monkeypatch.setenv("ROBOCO_ALLOW_FULL_TOOLSET", "1")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "00000000-0000-0000-0000-000000000099")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
+    monkeypatch.setenv("ROBOFLEET_SDK_URL", "http://test-sdk:9000")
+    monkeypatch.setenv("ROBOFLEET_ALLOW_FULL_TOOLSET", "1")
 
     from robofleet.mcp import do_server
 

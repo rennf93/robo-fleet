@@ -8,7 +8,7 @@ RoboCo can draft posts for the company's X (Twitter) account — release announc
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `ROBOCO_X_ENGINE_ENABLED` | `false` | Master switch. Off = no draft is originated and no X API call is ever made — the release-post hook and the mentions poll are both no-ops. Panel-toggleable (Settings → Feature Flags). |
+| `ROBOFLEET_X_ENGINE_ENABLED` | `false` | Master switch. Off = no draft is originated and no X API call is ever made — the release-post hook and the mentions poll are both no-ops. Panel-toggleable (Settings → Feature Flags). |
 
 Even when enabled, the engine only drafts once stored credentials are present AND acts only through the CEO's explicit per-post approval — two independent gates beyond the flag.
 
@@ -18,7 +18,7 @@ Six X draft sources share one held-draft pipeline. Each sets a `source` string o
 
 **Release posts** (`X_POST_SOURCE`, event-driven). `XEngine.draft_release_post(version, highlights)` is called from `ReleaseProposalService.approve()`'s publish-success branch — a release post is only ever drafted for a release that actually shipped. Dedup by version: a retry never drafts twice for the same `version`. Marker: `x_release_version`.
 
-**Mention replies** (`X_REPLY_SOURCE`, periodic poll). `XEngine.run_cycle()` fetches mentions via the X API, filters for "meaningful" ones (not a bare retweet, real text, and an engagement floor — `like + reply + retweet counts >= ROBOCO_X_MENTIONS_MIN_ENGAGEMENT`), and dedups against `x_seen_mentions` (migration `059`) so a mention is never turned into a second held reply. Marker: `x_mention_ref` (`{id, text}`).
+**Mention replies** (`X_REPLY_SOURCE`, periodic poll). `XEngine.run_cycle()` fetches mentions via the X API, filters for "meaningful" ones (not a bare retweet, real text, and an engagement floor — `like + reply + retweet counts >= ROBOFLEET_X_MENTIONS_MIN_ENGAGEMENT`), and dedups against `x_seen_mentions` (migration `059`) so a mention is never turned into a second held reply. Marker: `x_mention_ref` (`{id, text}`).
 
 **Feature spotlights** (`X_FEATURE_SOURCE`, Board Program). `XEngine.materialize_feature_spotlight` is called from the Head-of-Marketing-only `propose_feature_spotlight` content verb after a one-shot exploration spawn investigates an under-publicized shipped feature. Marker: `x_feature_ref` (`{slug, title}`).
 
@@ -28,11 +28,11 @@ Six X draft sources share one held-draft pipeline. Each sets a `source` string o
 
 **Barfly replies** (`X_BARFLY_SOURCE`, Barfly Board Program). `XEngine.materialize_barfly_reply` is called from the `propose_conversation_replies` content verb. Materialized as standalone link-posts (commentary + the conversation URL), never threaded replies. Marker: `barfly_reply_ref` (`{tweet_id, text}`).
 
-All sources are bounded by `ROBOCO_X_MAX_OPEN_POSTS` (rolling cap on concurrently-open held drafts, all sources combined); the mentions poll additionally by `ROBOCO_X_MENTIONS_MAX_PER_CYCLE` (per-cycle origination cap).
+All sources are bounded by `ROBOFLEET_X_MAX_OPEN_POSTS` (rolling cap on concurrently-open held drafts, all sources combined); the mentions poll additionally by `ROBOFLEET_X_MENTIONS_MAX_PER_CYCLE` (per-cycle origination cap).
 
 ## Drafting
 
-Draft bodies are written by a **local-model** chat call (`_chat`, hitting `ROBOCO_LOCAL_LLM_BASE_URL` — never a cloud LLM in the hot path), in a full Head-of-Marketing voice prompt (the reasoning-backed VOICE GUIDE plus a banned-word/AI-slop list and style exemplars — no em dashes, no "game-changer"/"seamless"/etc., no exclamation pileups, aimed well under 240 characters so the 280 clamp never truncates mid-sentence), then hard-clamped to 280 characters (`_clamp_tweet`). A release-post local-model failure still falls back to a plain template body (a release announcement always has something real to say); a failed reply draft instead skips origination entirely rather than shipping a generic "Thanks for the mention!". Drafting is **not** an agent spawn — no agent (including Head of Marketing) is spawned to write these; see `docs/rag/roles/head-marketing.md` for why the HoM's tool surface doesn't change.
+Draft bodies are written by a **local-model** chat call (`_chat`, hitting `ROBOFLEET_LOCAL_LLM_BASE_URL` — never a cloud LLM in the hot path), in a full Head-of-Marketing voice prompt (the reasoning-backed VOICE GUIDE plus a banned-word/AI-slop list and style exemplars — no em dashes, no "game-changer"/"seamless"/etc., no exclamation pileups, aimed well under 240 characters so the 280 clamp never truncates mid-sentence), then hard-clamped to 280 characters (`_clamp_tweet`). A release-post local-model failure still falls back to a plain template body (a release announcement always has something real to say); a failed reply draft instead skips origination entirely rather than shipping a generic "Thanks for the mention!". Drafting is **not** an agent spawn — no agent (including Head of Marketing) is spawned to write these; see `docs/rag/roles/head-marketing.md` for why the HoM's tool surface doesn't change.
 
 ## IMPACT BAR
 
@@ -76,7 +76,7 @@ A redraft is deduped by identity: while one redraft is already open for the same
 
 ## Credentials and signing
 
-Credentials are entered in the **panel only** — never in `.env` or an agent-visible setting. The four OAuth 1.0a user-context secrets (`api_key`, `api_secret`, `access_token`, `access_token_secret`) are Fernet-encrypted (`ROBOCO_ENCRYPTION_KEY`) in the singleton `x_credentials` table (migration `059`); `get_decrypted()` is called only server-side, by `x_post_service` / `x_engine` — the API surface is write-only (`has_credentials` boolean, matching the `has_git_token` pattern for per-project git tokens).
+Credentials are entered in the **panel only** — never in `.env` or an agent-visible setting. The four OAuth 1.0a user-context secrets (`api_key`, `api_secret`, `access_token`, `access_token_secret`) are Fernet-encrypted (`ROBOFLEET_ENCRYPTION_KEY`) in the singleton `x_credentials` table (migration `059`); `get_decrypted()` is called only server-side, by `x_post_service` / `x_engine` — the API surface is write-only (`has_credentials` boolean, matching the `has_git_token` pattern for per-project git tokens).
 
 Requests are signed with a **hand-rolled OAuth 1.0a HMAC-SHA1** signer (`roboco/services/x_client.py`, no new dependency) — no library does this signing for X's v2 API in the project's existing dependency set. Without credentials, `build_x_client` returns a `NullXClient` that never raises and never egresses, exactly like the research `NullProvider`.
 

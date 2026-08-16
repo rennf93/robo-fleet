@@ -1366,7 +1366,7 @@ class Choreographer:
     async def _project_budget_claim_guard(self, task: Any) -> Envelope | None:
         """Refuse claim once the task's project has spent its monthly cap.
 
-        Inert unless ``ROBOCO_TASK_BUDGETS_ENABLED`` is on AND the task's
+        Inert unless ``ROBOFLEET_TASK_BUDGETS_ENABLED`` is on AND the task's
         project has ``monthly_budget_usd`` set — a task with no project (a
         branchless coordination root) or a project with no cap never even
         reaches the spend query.
@@ -1387,7 +1387,7 @@ class Choreographer:
     async def _budget_unblock_guard(self, t: Any) -> Envelope | None:
         """Refuse ``unblock`` on a budget-blocked task while still over cap.
 
-        Inert unless ``ROBOCO_TASK_BUDGETS_ENABLED`` is on AND the task
+        Inert unless ``ROBOFLEET_TASK_BUDGETS_ENABLED`` is on AND the task
         carries the ``BUDGET_BLOCKED`` marker (stamped by the orchestrator's
         task-budget sweep at breach time — see
         ``AgentOrchestrator._handle_task_budget_breach``); a task blocked for

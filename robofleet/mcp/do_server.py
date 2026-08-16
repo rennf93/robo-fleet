@@ -26,13 +26,13 @@ from mcp.server.fastmcp import FastMCP
 from robofleet.agents_config import get_agent_team
 
 ORCHESTRATOR_URL = os.environ.get(
-    "ROBOCO_ORCHESTRATOR_URL",
+    "ROBOFLEET_ORCHESTRATOR_URL",
     "http://roboco-orchestrator:8000",
 )
 # Per-agent SDK loopback for the per-verb circuit breaker.
-SDK_URL = os.environ.get("ROBOCO_SDK_URL", "http://localhost:9000")
-AGENT_ID = os.environ["ROBOCO_AGENT_ID"]
-AGENT_ROLE = os.environ["ROBOCO_AGENT_ROLE"]
+SDK_URL = os.environ.get("ROBOFLEET_SDK_URL", "http://localhost:9000")
+AGENT_ID = os.environ["ROBOFLEET_AGENT_ID"]
+AGENT_ROLE = os.environ["ROBOFLEET_AGENT_ROLE"]
 
 _TIMEOUT = 30
 # commit() stages + `git commit`s in-process (no push — push is the flow
@@ -248,7 +248,7 @@ def _build_headers() -> dict[str, str]:
     and the envelope echoes it back to the agent.
     """
     # X-Agent-Token + X-Agent-Team must travel with every do verb or the
-    # API's ROBOCO_AGENT_AUTH_REQUIRED gate 401s — mirrors flow_server and
+    # API's ROBOFLEET_AGENT_AUTH_REQUIRED gate 401s — mirrors flow_server and
     # the ApiClient header path used by the other MCP servers.
     headers = {
         "X-Agent-ID": AGENT_ID,
@@ -258,7 +258,7 @@ def _build_headers() -> dict[str, str]:
     team = get_agent_team(AGENT_ID)
     if team:
         headers["X-Agent-Team"] = team
-    token = os.environ.get("ROBOCO_AGENT_TOKEN")
+    token = os.environ.get("ROBOFLEET_AGENT_TOKEN")
     # See flow_server._build_headers: forwarding the "UNSIGNED" sentinel 401s
     # even in dev mode; omit so a missing token is accepted in dev.
     if token and token != "UNSIGNED":
@@ -1069,7 +1069,7 @@ def request_sandbox(
     the opted set + the allowlist — a name outside the allowlist (e.g.
     ``plpython3u``) is rejected with the allowed set named. Creds come back in
     ``evidence``, one entry per service: ``{host, port, user, password,
-    database, env: {ROBOCO_TEST_*: value}, available_extensions?: [...]}`` —
+    database, env: {ROBOFLEET_TEST_*: value}, available_extensions?: [...]}`` —
     export the ``env`` values verbatim for gate tooling that reads them. The
     whole opted-in set is provisioned on first call, so calling this again for
     any subset or superset of it is a cheap no-op (same creds, no
@@ -1365,7 +1365,7 @@ def _load_manifest_do_tools() -> list[str] | None:
     fall back to registering the full tool set. Never raises.
     """
     manifest_path = Path(
-        os.environ.get("ROBOCO_TOOL_MANIFEST_PATH", "/app/tool-manifest.json"),
+        os.environ.get("ROBOFLEET_TOOL_MANIFEST_PATH", "/app/tool-manifest.json"),
     )
     if not manifest_path.exists():
         return None
@@ -1395,7 +1395,7 @@ def _register_tools() -> list[str]:
     missing rather than silently exposing the full do-tool set (which
     includes ``commit`` — the role-gate would reject it server-side, but
     the agent shouldn't see it on its tool palette in the first place).
-    ``ROBOCO_ALLOW_FULL_TOOLSET`` is a dev/test escape hatch that registers
+    ``ROBOFLEET_ALLOW_FULL_TOOLSET`` is a dev/test escape hatch that registers
     the full tool set instead of raising (#162); default-off.
 
     Returns the list of tool names actually registered.
@@ -1403,11 +1403,11 @@ def _register_tools() -> list[str]:
     allowed = _load_manifest_do_tools()
     if allowed is None:
         manifest_path = os.environ.get(
-            "ROBOCO_TOOL_MANIFEST_PATH", "/app/tool-manifest.json"
+            "ROBOFLEET_TOOL_MANIFEST_PATH", "/app/tool-manifest.json"
         )
-        if os.environ.get("ROBOCO_ALLOW_FULL_TOOLSET"):
+        if os.environ.get("ROBOFLEET_ALLOW_FULL_TOOLSET"):
             log.warning(
-                "do_server: manifest missing — ROBOCO_ALLOW_FULL_TOOLSET set,"
+                "do_server: manifest missing — ROBOFLEET_ALLOW_FULL_TOOLSET set,"
                 " registering the full tool set (dev/test only)",
                 role=AGENT_ROLE,
                 path=manifest_path,

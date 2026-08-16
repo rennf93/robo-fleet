@@ -60,7 +60,7 @@ class ProjectResponse(BaseModel):
     monthly_budget_usd: float | None = None
     # This calendar month's summed agent-spawn spend across this project's
     # tasks (TaskService.project_month_spend_usd). Only populated by
-    # GET /projects/{id} (an extra DB read) when ROBOCO_TASK_BUDGETS_ENABLED
+    # GET /projects/{id} (an extra DB read) when ROBOFLEET_TASK_BUDGETS_ENABLED
     # is on; null everywhere else (list views, flag-off).
     monthly_spend_usd: float | None = None
     sandbox_services: list[str] | None = None

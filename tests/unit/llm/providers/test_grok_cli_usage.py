@@ -97,10 +97,10 @@ def test_main_writes_usage_file(
     out = tmp_path / "usage.json"
     monkeypatch.setattr(gu, "USAGE_OUT_PATH", out)
     monkeypatch.setenv("GROK_HOME", str(home))
-    monkeypatch.setenv("ROBOCO_GROK_RUN_CWD", cwd)
-    monkeypatch.delenv("ROBOCO_GROK_RUN_LOG", raising=False)
-    monkeypatch.setenv("ROBOCO_AGENT_SESSION_ID", sid)
-    monkeypatch.setenv("ROBOCO_AGENT_MODEL", "grok-build")
+    monkeypatch.setenv("ROBOFLEET_GROK_RUN_CWD", cwd)
+    monkeypatch.delenv("ROBOFLEET_GROK_RUN_LOG", raising=False)
+    monkeypatch.setenv("ROBOFLEET_AGENT_SESSION_ID", sid)
+    monkeypatch.setenv("ROBOFLEET_AGENT_MODEL", "grok-build")
     assert gu.main() == 0
     data = json.loads(out.read_text())
     assert data["total_tokens"] == 1234  # noqa: PLR2004
@@ -173,7 +173,7 @@ def test_main_prefers_run_log_session_id(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # grok ignores a requested id, so the real id comes from the run log — it must
-    # win over the ROBOCO_AGENT_SESSION_ID fallback (which points at no store).
+    # win over the ROBOFLEET_AGENT_SESSION_ID fallback (which points at no store).
     home = tmp_path / ".grok"
     cwd = "/ws/be-dev-1"
     real_sid = "real-sid"
@@ -185,10 +185,10 @@ def test_main_prefers_run_log_session_id(
     out = tmp_path / "usage.json"
     monkeypatch.setattr(gu, "USAGE_OUT_PATH", out)
     monkeypatch.setenv("GROK_HOME", str(home))
-    monkeypatch.setenv("ROBOCO_GROK_RUN_CWD", cwd)
-    monkeypatch.setenv("ROBOCO_GROK_RUN_LOG", str(run_log))
-    monkeypatch.setenv("ROBOCO_AGENT_SESSION_ID", "ignored-fallback")
-    monkeypatch.setenv("ROBOCO_AGENT_MODEL", "grok-build")
+    monkeypatch.setenv("ROBOFLEET_GROK_RUN_CWD", cwd)
+    monkeypatch.setenv("ROBOFLEET_GROK_RUN_LOG", str(run_log))
+    monkeypatch.setenv("ROBOFLEET_AGENT_SESSION_ID", "ignored-fallback")
+    monkeypatch.setenv("ROBOFLEET_AGENT_MODEL", "grok-build")
     assert gu.main() == 0
     assert json.loads(out.read_text())["total_tokens"] == 777  # noqa: PLR2004
 
@@ -202,10 +202,10 @@ def test_main_warns_when_run_log_yields_no_session_id(
     bad_log.write_text("not json", encoding="utf-8")
     monkeypatch.setattr(gu, "USAGE_OUT_PATH", tmp_path / "usage.json")
     monkeypatch.setenv("GROK_HOME", str(tmp_path / ".grok"))
-    monkeypatch.setenv("ROBOCO_GROK_RUN_CWD", "/ws/be-dev-1")
-    monkeypatch.setenv("ROBOCO_GROK_RUN_LOG", str(bad_log))
-    monkeypatch.setenv("ROBOCO_AGENT_SESSION_ID", "fallback-sid")
-    monkeypatch.setenv("ROBOCO_AGENT_MODEL", "grok-build")
+    monkeypatch.setenv("ROBOFLEET_GROK_RUN_CWD", "/ws/be-dev-1")
+    monkeypatch.setenv("ROBOFLEET_GROK_RUN_LOG", str(bad_log))
+    monkeypatch.setenv("ROBOFLEET_AGENT_SESSION_ID", "fallback-sid")
+    monkeypatch.setenv("ROBOFLEET_AGENT_MODEL", "grok-build")
     with caplog.at_level("WARNING", logger="robofleet.llm.providers.grok_cli_usage"):
         assert gu.main() == 0
     assert any("run log" in r.message.lower() for r in caplog.records)

@@ -15,5 +15,5 @@ def test_toolchain_match_disabled_by_default() -> None:
 
 
 def test_toolchain_match_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ROBOCO_TOOLCHAIN_MATCH_ENABLED", "true")
+    monkeypatch.setenv("ROBOFLEET_TOOLCHAIN_MATCH_ENABLED", "true")
     assert Settings().toolchain_match_enabled is True

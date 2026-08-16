@@ -29,11 +29,11 @@ def _get_agent_headers(agent_id: str) -> dict[str, str]:
     Build the standard headers ApiClient sends with every request.
 
     Returns headers dict with X-Agent-ID, X-Agent-Role, optionally
-    X-Agent-Team, and X-Agent-Token when ROBOCO_AGENT_TOKEN is set in the
+    X-Agent-Team, and X-Agent-Token when ROBOFLEET_AGENT_TOKEN is set in the
     environment (injected by the orchestrator at spawn time).
 
     The API middleware verifies token == HMAC(agent_id:role:team,
-    ROBOCO_AGENT_AUTH_SECRET), which stops an agent on the Docker network
+    ROBOFLEET_AGENT_AUTH_SECRET), which stops an agent on the Docker network
     from spoofing another agent's role via header.
     """
     headers = {
@@ -43,7 +43,7 @@ def _get_agent_headers(agent_id: str) -> dict[str, str]:
     team = get_agent_team(agent_id)
     if team:
         headers["X-Agent-Team"] = team
-    token = os.environ.get("ROBOCO_AGENT_TOKEN")
+    token = os.environ.get("ROBOFLEET_AGENT_TOKEN")
     if token and token != "UNSIGNED":
         headers["X-Agent-Token"] = token
     return headers

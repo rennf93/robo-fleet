@@ -23,14 +23,14 @@ def test_roadmap_engine_disabled_by_default() -> None:
 
 
 def test_roadmap_engine_reads_env_var() -> None:
-    with mock.patch.dict(os.environ, {"ROBOCO_ROADMAP_ENGINE_ENABLED": "true"}):
+    with mock.patch.dict(os.environ, {"ROBOFLEET_ROADMAP_ENGINE_ENABLED": "true"}):
         assert Settings().roadmap_engine_enabled is True
 
 
 def test_roadmap_interval_reads_env_var() -> None:
     override = 3600
     with mock.patch.dict(
-        os.environ, {"ROBOCO_ROADMAP_INTERVAL_SECONDS": str(override)}
+        os.environ, {"ROBOFLEET_ROADMAP_INTERVAL_SECONDS": str(override)}
     ):
         assert Settings().roadmap_interval_seconds == override
 

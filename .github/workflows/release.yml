@@ -166,16 +166,16 @@ jobs:
     # literal command a user runs, against the tag that was just published,
     # catches a missing/mistagged image before anyone else does.
     env:
-      ROBOCO_REGISTRY: ghcr.io/rennf93
-      ROBOCO_VERSION: ${{ needs.publish-images.outputs.version }}
+      ROBOFLEET_REGISTRY: ghcr.io/rennf93
+      ROBOFLEET_VERSION: ${{ needs.publish-images.outputs.version }}
       # docker-compose.registry.yml hard-requires these three non-empty
       # (`${VAR:?...}` on the orchestrator/nginx services) just to
       # INTERPOLATE the file — `pull` never touches their runtime values, so
       # placeholders are enough to get past that gate (see scripts/bootstrap.sh
       # for what a real deploy generates here).
-      ROBOCO_ENCRYPTION_KEY: pull-smoke-placeholder-not-a-real-key
-      ROBOCO_AGENT_AUTH_SECRET: pull-smoke-placeholder-not-a-real-secret
-      ROBOCO_PANEL_AGENT_TOKEN: pull-smoke-placeholder-not-a-real-token
+      ROBOFLEET_ENCRYPTION_KEY: pull-smoke-placeholder-not-a-real-key
+      ROBOFLEET_AGENT_AUTH_SECRET: pull-smoke-placeholder-not-a-real-secret
+      ROBOFLEET_PANEL_AGENT_TOKEN: pull-smoke-placeholder-not-a-real-token
 
     steps:
       - name: Checkout code
@@ -197,5 +197,5 @@ jobs:
 
       - name: Pull every image docker-compose.registry.yml references
         run: |
-          echo "Pulling ${ROBOCO_REGISTRY}/roboco-*:${ROBOCO_VERSION} (+ upstream deps) — failing on any missing image..."
+          echo "Pulling ${ROBOFLEET_REGISTRY}/roboco-*:${ROBOFLEET_VERSION} (+ upstream deps) — failing on any missing image..."
           docker compose -f docker-compose.registry.yml pull

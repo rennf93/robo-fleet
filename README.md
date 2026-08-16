@@ -21,11 +21,11 @@ See `docs/architecture.mmd` (render to `docs/architecture.png` with `npx -y @mer
 - `gcloud` CLI authenticated to a GCP project (`gcloud auth login` and `gcloud auth application-default login`).
 - `terraform` (the `infra/` directory is a terraform root module).
 - The GCP project with billing enabled and the hackathon credit request approved.
-- A Gemini API key (set as `ROBOCO_GEMINI_API_KEY` when seeding secrets).
+- A Gemini API key (set as `ROBOFLEET_GEMINI_API_KEY` when seeding secrets).
 
 ## Spin-up
 
-A judge with the prerequisites above and credits approved reaches a running stack by following these steps in order. Every script reads its GCP references from `ROBOCO_GCP_*` env vars and `terraform output`; no values are hardcoded.
+A judge with the prerequisites above and credits approved reaches a running stack by following these steps in order. Every script reads its GCP references from `ROBOFLEET_GCP_*` env vars and `terraform output`; no values are hardcoded.
 
 ```bash
 # 1. Provision the infra (Cloud SQL, Memorystore, Filestore, GCS, Artifact
@@ -36,25 +36,25 @@ terraform apply
 cd ..
 
 # 2. Seed the four Secret Manager secrets (Fernet key, agent-auth HMAC secret,
-#    cloud-auth secret, Gemini API key). Requires ROBOCO_GEMINI_API_KEY.
-ROBOCO_GEMINI_API_KEY=your-key ./infra/seed-secrets.sh PROJECT_ID
+#    cloud-auth secret, Gemini API key). Requires ROBOFLEET_GEMINI_API_KEY.
+ROBOFLEET_GEMINI_API_KEY=your-key ./infra/seed-secrets.sh PROJECT_ID
 
 # 3. Build the three images (roboco-orchestrator, roboco-panel, roboco-agent-adk)
-#    into Artifact Registry via Cloud Build. Reads ROBOCO_GCP_PROJECT_ID and
-#    ROBOCO_GCP_REGION; uses cloudbuild.yaml at the repo root.
-export ROBOCO_GCP_PROJECT_ID=your-project
-export ROBOCO_GCP_REGION=your-region
+#    into Artifact Registry via Cloud Build. Reads ROBOFLEET_GCP_PROJECT_ID and
+#    ROBOFLEET_GCP_REGION; uses cloudbuild.yaml at the repo root.
+export ROBOFLEET_GCP_PROJECT_ID=your-project
+export ROBOFLEET_GCP_REGION=your-region
 ./infra/build-images.sh
 
 # 4. Deploy the orchestrator to Cloud Run. Pulls Cloud SQL connection name,
 #    Memorystore host, Filestore IP/share, and GCS bucket from terraform output,
 #    substitutes the __PLACEHOLDER__ tokens in orchestrator-service.yaml, and
-#    calls `gcloud run services replace`. Needs ROBOCO_DATABASE_PASSWORD,
-#    ROBOCO_REDIS_PASSWORD, and the seeded cloud-auth CEO login.
-export ROBOCO_DATABASE_PASSWORD=...
-export ROBOCO_REDIS_PASSWORD=...
-export ROBOCO_CLOUD_AUTH_EMAIL=ceo@example.com
-export ROBOCO_CLOUD_AUTH_PASSWORD=...
+#    calls `gcloud run services replace`. Needs ROBOFLEET_DATABASE_PASSWORD,
+#    ROBOFLEET_REDIS_PASSWORD, and the seeded cloud-auth CEO login.
+export ROBOFLEET_DATABASE_PASSWORD=...
+export ROBOFLEET_REDIS_PASSWORD=...
+export ROBOFLEET_CLOUD_AUTH_EMAIL=ceo@example.com
+export ROBOFLEET_CLOUD_AUTH_PASSWORD=...
 ./infra/deploy-orchestrator.sh
 
 # 5. Deploy the panel to Cloud Run. Discovers the orchestrator's Cloud Run URL
@@ -68,20 +68,20 @@ export ROBOCO_CLOUD_AUTH_PASSWORD=...
 #    ADK on Gemini 3.5 Flash.
 ```
 
-A single judge-reproducible env template lives at `.env.gcp.example`; copy it to `.env.gcp` and fill the values from `terraform output` and Secret Manager. It documents every `ROBOCO_GCP_*` var, the DB/Redis connection details, the agent image registry/tag, and the feature flags armed (or deliberately off) for the GCP deploy.
+A single judge-reproducible env template lives at `.env.gcp.example`; copy it to `.env.gcp` and fill the values from `terraform output` and Secret Manager. It documents every `ROBOFLEET_GCP_*` var, the DB/Redis connection details, the agent image registry/tag, and the feature flags armed (or deliberately off) for the GCP deploy.
 
 ## Env vars
 
 See `.env.gcp.example` for the full set. One-line-per-section summary:
 
-- **Database (Cloud SQL):** `ROBOCO_DATABASE_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_NAME` point at the Cloud SQL Auth Proxy sidecar.
-- **Redis (Memorystore):** `ROBOCO_REDIS_HOST` / `_PORT` / `_PASSWORD` / `_DB` for the Memorystore instance.
-- **GCP infra references:** `ROBOCO_GCP_PROJECT_ID`, `ROBOCO_GCP_REGION`, `ROBOCO_GCP_CLOUDSQL_INSTANCE`, `ROBOCO_GCP_MEMORYSTORE_HOST` / `_PORT`, `ROBOCO_GCP_FILESTORE_SHARE`, `ROBOCO_GCP_GCS_BUCKET`, `ROBOCO_GCP_ARTIFACT_REGISTRY_REPO`, `ROBOCO_GCP_CLOUD_RUN_AGENT_JOB_PREFIX`.
-- **Secrets (Secret Manager):** `ROBOCO_ENCRYPTION_KEY`, `ROBOCO_AGENT_AUTH_SECRET`, `ROBOCO_AGENT_AUTH_REQUIRED=true`, `ROBOCO_CLOUD_AUTH_SECRET`.
-- **Cloud auth (armed on GCP):** `ROBOCO_CLOUD_AUTH_ENABLED=true`, `ROBOCO_CLOUD_AUTH_EMAIL` / `_PASSWORD` (the seeded CEO login).
-- **URLs:** `ROBOCO_PUBLIC_BASE_URL` (the Cloud Run panel URL), `ROBOCO_API_URL` / `ROBOCO_ORCHESTRATOR_URL` (localhost in the orchestrator container).
-- **Agent images:** `ROBOCO_AGENT_IMAGE_REGISTRY`, `ROBOCO_AGENT_IMAGE_TAG`.
-- **Gemini:** `ROBOCO_GEMINI_API_KEY`, `ROBOCO_AGENT_MODEL` (defaults to `gemini-3.5-flash` in `roboco.agent.adk_entry`).
+- **Database (Cloud SQL):** `ROBOFLEET_DATABASE_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_NAME` point at the Cloud SQL Auth Proxy sidecar.
+- **Redis (Memorystore):** `ROBOFLEET_REDIS_HOST` / `_PORT` / `_PASSWORD` / `_DB` for the Memorystore instance.
+- **GCP infra references:** `ROBOFLEET_GCP_PROJECT_ID`, `ROBOFLEET_GCP_REGION`, `ROBOFLEET_GCP_CLOUDSQL_INSTANCE`, `ROBOFLEET_GCP_MEMORYSTORE_HOST` / `_PORT`, `ROBOFLEET_GCP_FILESTORE_SHARE`, `ROBOFLEET_GCP_GCS_BUCKET`, `ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO`, `ROBOFLEET_GCP_CLOUD_RUN_AGENT_JOB_PREFIX`.
+- **Secrets (Secret Manager):** `ROBOFLEET_ENCRYPTION_KEY`, `ROBOFLEET_AGENT_AUTH_SECRET`, `ROBOFLEET_AGENT_AUTH_REQUIRED=true`, `ROBOFLEET_CLOUD_AUTH_SECRET`.
+- **Cloud auth (armed on GCP):** `ROBOFLEET_CLOUD_AUTH_ENABLED=true`, `ROBOFLEET_CLOUD_AUTH_EMAIL` / `_PASSWORD` (the seeded CEO login).
+- **URLs:** `ROBOFLEET_PUBLIC_BASE_URL` (the Cloud Run panel URL), `ROBOFLEET_API_URL` / `ROBOFLEET_ORCHESTRATOR_URL` (localhost in the orchestrator container).
+- **Agent images:** `ROBOFLEET_AGENT_IMAGE_REGISTRY`, `ROBOFLEET_AGENT_IMAGE_TAG`.
+- **Gemini:** `ROBOFLEET_GEMINI_API_KEY`, `ROBOFLEET_AGENT_MODEL` (defaults to `gemini-3.5-flash` in `roboco.agent.adk_entry`).
 
 ## The 7 fleet properties
 
@@ -90,7 +90,7 @@ The Fortified Enterprise Fleet track scores seven fleet properties; all already 
 1. **Agent registry** = the agent registry in `agents_config` / the `agents` DB table (25 agents + the human CEO), loaded at orchestrator startup.
 2. **Runtime** = Cloud Run Jobs (one execution per agent task) running the ADK `Runner` + `LlmAgent` on Gemini 3.5 Flash in the `roboco-agent-adk` image.
 3. **Memory bank** = the pgvector knowledge base (in-house RAG engine) on Cloud SQL plus the organizational-memory loop (learnings + playbooks, captured on task completion and injected into the next claim's briefing).
-4. **Identity** = per-agent HMAC tokens (`X-Agent-Token`, signed with `ROBOCO_AGENT_AUTH_SECRET`) for the agent gateway, plus FastAPI Users cloud auth (cookie + JWT) for the human CEO on the public panel.
+4. **Identity** = per-agent HMAC tokens (`X-Agent-Token`, signed with `ROBOFLEET_AGENT_AUTH_SECRET`) for the agent gateway, plus FastAPI Users cloud auth (cookie + JWT) for the human CEO on the public panel.
 5. **Gateway** = the Choreographer + the `roboco-flow` / `roboco-do` v1 routes (`/api/v1/flow/{role}/{verb}` and `/api/v1/do`); agents never call domain services directly, only through intent verbs that return a standardized Envelope.
 6. **Model armor** = the task-content guardrails (prompt-injection guard, forbidden-content screening, per-role tool manifests) + the architectural-conventions standard, enforced at `i_am_done` and the in-path PR-review gate.
 7. **Observability** = the `audit_log` transition journal + `MetricsService` (cycle time, rework, spawn-waste) surfaced in the panel, plus Cloud Logging for the Cloud Run services and jobs.

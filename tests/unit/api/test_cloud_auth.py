@@ -1,4 +1,4 @@
-"""Cloud auth dual-path coverage (ROBOCO_CLOUD_AUTH_ENABLED, default off).
+"""Cloud auth dual-path coverage (ROBOFLEET_CLOUD_AUTH_ENABLED, default off).
 
 Proves the survival guarantee — off mode is byte-for-byte today's
 header-trust behavior — and the on-mode enforcement: header-trust dies for
@@ -61,7 +61,7 @@ async def test_off_mode_ceo_header_spoof_still_works(
     """The survival guarantee: flag off, a bare X-Agent-Role: ceo header
     (no token, no session) authenticates exactly like it does today."""
     monkeypatch.setattr(settings, "cloud_auth_enabled", False)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "false")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "false")
     aid = UUID(CEO_AGENT_ID)
     with patch(
         "robofleet.api.deps.resolve_agent_identity",
@@ -82,7 +82,7 @@ async def test_off_mode_developer_header_trust_unchanged(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "cloud_auth_enabled", False)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "false")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_REQUIRED", "false")
     aid = uuid4()
     with patch(
         "robofleet.api.deps.resolve_agent_identity",
@@ -184,7 +184,7 @@ async def test_on_mode_agent_hmac_still_works(
 ) -> None:
     """The agent-fleet HMAC path is untouched by the cloud-auth flag."""
     monkeypatch.setattr(settings, "cloud_auth_enabled", True)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
     aid = uuid4()
     token = issue_agent_token(str(aid), "developer", "backend")
     with patch(
@@ -209,7 +209,7 @@ async def test_on_mode_system_self_patch_still_works(
 ) -> None:
     """The orchestrator's own `system` self-PATCH identity is untouched."""
     monkeypatch.setattr(settings, "cloud_auth_enabled", True)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
     token = issue_agent_token(_SYSTEM_AGENT_ID, "system", "")
     ctx = await get_agent_context(
         db=MagicMock(),
@@ -225,7 +225,7 @@ async def test_on_mode_system_self_patch_still_works(
 @pytest.mark.asyncio
 async def test_on_mode_forged_agent_token_401(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "cloud_auth_enabled", True)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
     with pytest.raises(HTTPException) as exc:
         await get_agent_context(
             db=MagicMock(),
@@ -244,7 +244,7 @@ async def test_on_mode_spoofed_non_ceo_role_without_token_401(
     """Header-trust is dead in cloud-auth mode for EVERY privileged role, not
     just ceo: a bare X-Agent-Role: main_pm with no token is a spoof and 401s
     (this closes the LAN hole for PM/board roles too, independent of
-    ROBOCO_AGENT_AUTH_REQUIRED)."""
+    ROBOFLEET_AGENT_AUTH_REQUIRED)."""
     monkeypatch.setattr(settings, "cloud_auth_enabled", True)
     with pytest.raises(HTTPException) as exc:
         await get_agent_context(
@@ -404,7 +404,7 @@ def _mock_ws(
 @pytest.mark.asyncio
 async def test_ws_off_mode_unaffected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "cloud_auth_enabled", False)
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_REQUIRED", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_REQUIRED", raising=False)
     ws = _mock_ws()
     assert await ws_module._require_panel_token(ws) is True
 
@@ -414,7 +414,7 @@ async def test_ws_on_mode_valid_hmac_token_accepted(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "cloud_auth_enabled", True)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
     token = issue_agent_token(CEO_AGENT_ID, "ceo", "")
     ws = _mock_ws(headers={"x-agent-token": token})
     assert await ws_module._require_panel_token(ws) is True
@@ -425,7 +425,7 @@ async def test_ws_on_mode_forged_hmac_token_rejected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "cloud_auth_enabled", True)
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", _SECRET)
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", _SECRET)
     ws = _mock_ws(headers={"x-agent-token": "forged"})
     assert await ws_module._require_panel_token(ws) is False
 

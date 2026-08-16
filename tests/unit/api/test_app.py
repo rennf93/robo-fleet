@@ -324,7 +324,7 @@ async def test_lifespan_warns_in_header_trust_mode() -> None:
 
 @pytest.mark.asyncio
 async def test_lifespan_no_header_trust_warning_when_auth_required() -> None:
-    """No header-trust warning when ROBOCO_AGENT_AUTH_REQUIRED enforces tokens."""
+    """No header-trust warning when ROBOFLEET_AGENT_AUTH_REQUIRED enforces tokens."""
     logger_mock = MagicMock()
     await _run_lifespan_with(auth_required=True, logger_mock=logger_mock)
     assert not _header_trust_warnings(logger_mock)

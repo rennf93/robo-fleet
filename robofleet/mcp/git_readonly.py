@@ -21,17 +21,17 @@ from mcp.server.fastmcp import FastMCP
 from robofleet.agents_config import get_agent_team
 
 ORCHESTRATOR_URL = os.environ.get(
-    "ROBOCO_ORCHESTRATOR_URL",
+    "ROBOFLEET_ORCHESTRATOR_URL",
     "http://roboco-orchestrator:8000",
 )
-AGENT_ID = os.environ["ROBOCO_AGENT_ID"]
-AGENT_ROLE = os.environ["ROBOCO_AGENT_ROLE"]
+AGENT_ID = os.environ["ROBOFLEET_AGENT_ID"]
+AGENT_ROLE = os.environ["ROBOFLEET_AGENT_ROLE"]
 
 
 def _headers() -> dict[str, str]:
     """Identity + HMAC token headers for the orchestrator git reads.
 
-    The git routes sit behind the same ``ROBOCO_AGENT_AUTH_REQUIRED`` gate as
+    The git routes sit behind the same ``ROBOFLEET_AGENT_AUTH_REQUIRED`` gate as
     the rest of ``/api/`` — a static ``{X-Agent-ID, X-Agent-Role}`` dict 401s
     with "Missing X-Agent-Token" once auth is armed. Built per call (token is
     stable per container, but mirroring flow/do/server keeps the pattern).
@@ -40,7 +40,7 @@ def _headers() -> dict[str, str]:
     team = get_agent_team(AGENT_ID)
     if team:
         headers["X-Agent-Team"] = team
-    token = os.environ.get("ROBOCO_AGENT_TOKEN")
+    token = os.environ.get("ROBOFLEET_AGENT_TOKEN")
     # See flow_server._build_headers: forwarding the "UNSIGNED" sentinel 401s
     # even in dev mode; omit so a missing token is accepted in dev.
     if token and token != "UNSIGNED":
@@ -70,7 +70,7 @@ def _get(path: str, params: dict[str, Any]) -> dict[str, Any]:
         return result
 
 
-_PROJECT_SLUG_ENV = "ROBOCO_PROJECT_SLUG"
+_PROJECT_SLUG_ENV = "ROBOFLEET_PROJECT_SLUG"
 
 
 def _resolve_project_slug(project_slug: str | None) -> str | dict[str, Any]:

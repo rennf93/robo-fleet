@@ -59,19 +59,19 @@ CODEX_RULES_DIR = Path.home() / ".codex" / "rules"
 CODEX_RULES_PATH = CODEX_RULES_DIR / "default.rules"
 # The composed role blueprint the orchestrator mounts into every agent container.
 SYSTEM_PROMPT_PATH = Path(
-    os.environ.get("ROBOCO_SYSTEM_PROMPT", "/app/system-prompt.md")
+    os.environ.get("ROBOFLEET_SYSTEM_PROMPT", "/app/system-prompt.md")
 )
 # The combined system+task prompt the entrypoint feeds to `codex exec` as its
 # positional argument (see the module docstring — no verified system-prompt
 # file mechanism exists for Codex, so the blueprint travels IN the prompt).
 CODEX_PROMPT_PATH = Path(
-    os.environ.get("ROBOCO_CODEX_PROMPT_FILE")
+    os.environ.get("ROBOFLEET_CODEX_PROMPT_FILE")
     or Path(tempfile.gettempdir()) / "roboco-codex-prompt.txt"
 )
 # The entrypoint reads the computed per-role flags (one token per line) from
 # this file, mirroring grok_cli_config's GROK_ARGS_PATH handoff.
 CODEX_ARGS_PATH = Path(
-    os.environ.get("ROBOCO_CODEX_ARGS_FILE")
+    os.environ.get("ROBOFLEET_CODEX_ARGS_FILE")
     or Path(tempfile.gettempdir()) / "roboco-codex-args"
 )
 
@@ -281,15 +281,15 @@ def _load_mcp_config(path: str) -> dict[str, Any]:
 
 def main() -> int:
     """Entrypoint: write config.toml + execpolicy rules + prompt + per-role args."""
-    agent_id = os.environ.get("ROBOCO_AGENT_ID", "")
-    mcp_path = os.environ.get("ROBOCO_MCP_CONFIG", "/app/mcp-config.json")
+    agent_id = os.environ.get("ROBOFLEET_AGENT_ID", "")
+    mcp_path = os.environ.get("ROBOFLEET_MCP_CONFIG", "/app/mcp-config.json")
 
     CODEX_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     CODEX_CONFIG_PATH.write_text(
         render_config_toml(_load_mcp_config(mcp_path)), encoding="utf-8"
     )
     write_execpolicy_rules()
-    write_combined_prompt(task_prompt=os.environ.get("ROBOCO_INITIAL_PROMPT", ""))
+    write_combined_prompt(task_prompt=os.environ.get("ROBOFLEET_INITIAL_PROMPT", ""))
     CODEX_ARGS_PATH.write_text(
         "\n".join(codex_cli_args(agent_id)) + "\n", encoding="utf-8"
     )

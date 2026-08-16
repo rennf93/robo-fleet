@@ -83,7 +83,7 @@ def test_auth_secret_uses_secret_manager_when_prefix_set(
     monkeypatch.setattr(ac.settings, "gcp_project_id", "my-proj")
     monkeypatch.setattr(ac.settings, "gcp_secret_manager_prefix", "roboco")
     ac._auth_secret_cache.clear()
-    monkeypatch.delenv("ROBOCO_AGENT_AUTH_SECRET", raising=False)
+    monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_SECRET", raising=False)
     monkeypatch.setattr(
         sm,
         "access_secret",
@@ -99,7 +99,7 @@ def test_auth_secret_env_path_when_prefix_empty(
     import robofleet.agents_config as ac
 
     monkeypatch.setattr(ac.settings, "gcp_project_id", "")
-    monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "env-secret")
+    monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", "env-secret")
     val = ac._auth_secret()
     assert val == b"env-secret"
 

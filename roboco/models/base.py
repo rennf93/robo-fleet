@@ -234,6 +234,7 @@ class ModelProvider(StrEnum):
     GROK = "grok"
     GEMINI = "gemini"
     KIMI = "kimi"
+    ADK_CLOUD_RUN = "adk_cloud_run"
 
 
 class AssignmentScope(StrEnum):

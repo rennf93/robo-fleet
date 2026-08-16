@@ -16,7 +16,7 @@ from typing import Literal
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import Field, computed_field, field_validator, model_validator
+from pydantic import Field, ValidationInfo, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -254,6 +254,10 @@ class Settings(BaseSettings):
         description="Local LLM for RAG answer synthesis "
         "(non-thinking models are faster)",
     )
+    local_llm_base_url_allow_external: bool = Field(
+        default=False,
+        description="Allow a non-internal local_llm_base_url (cloud endpoints).",
+    )
     local_llm_base_url: str = Field(
         default="http://roboco-ollama:11434/v1",
         description="Base URL for local LLM (Ollama OpenAI-compat API)",
@@ -261,10 +265,14 @@ class Settings(BaseSettings):
 
     @field_validator("local_llm_base_url")
     @classmethod
-    def _local_llm_base_url_internal_only(cls, v: str) -> str:
+    def _local_llm_base_url_internal_only(cls, v: str, info: ValidationInfo) -> str:
         # The fire-and-forget hot path (distillation, RAG synthesis, X/video
         # drafting) reads this verbatim. Reject non-internal hosts so a one-line
         # env mistake can't route quiet generation through a paid cloud LLM.
+        # Cloud endpoints (Vertex AI, a GCE Ollama node) opt out via the
+        # allow-external flag so the GCP port can point at a public host.
+        if info.data.get("local_llm_base_url_allow_external"):
+            return v
         host = (urlparse(v).hostname or "").lower()
         if not host:
             raise ValueError("local_llm_base_url must have a host")

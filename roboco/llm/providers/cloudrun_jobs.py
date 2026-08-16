@@ -16,8 +16,10 @@ orchestrator itself never touches GCS.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+import os
+from typing import TYPE_CHECKING, Any
 
+import structlog
 from google.cloud import run_v2
 
 from roboco.config import settings
@@ -35,6 +37,12 @@ _GEMINI_MODEL = "gemini-3.5-flash"
 
 # Job max runtime. Cloud Run Jobs caps an execution at this wall-clock.
 _JOB_TIMEOUT_SECONDS = 1800
+
+# VpcAccess.Egress PRIVATE_RANGES_ONLY (the run_v2 proto enum has no
+# pythonic alias; 2 is the numeric value of PRIVATE_RANGES_ONLY).
+_VPC_EGRESS_PRIVATE_RANGES_ONLY = 2
+
+_log = structlog.get_logger(__name__)
 
 
 def _jobs_client() -> run_v2.JobsClient:
@@ -69,6 +77,49 @@ async def _upload_manifest(path: Path | None, agent_id: str) -> str | None:
     return f"gs://{settings.gcp_gcs_bucket}/manifests/{agent_id}.json"
 
 
+def _resolve_api_url() -> str:
+    """Resolve the orchestrator URL the agent's gateway shim calls.
+
+    Mirrors the MCP env block: settings.api_url wins (GCP sets it to the
+    orchestrator's Cloud Run URL); ROBOCO_HOST_PROJECT_DIR -> the container
+    hostname; else localhost. Unconditional: the agent needs gateway
+    reachability regardless of deploy target.
+    """
+    if settings.api_url:
+        return settings.api_url
+    if os.environ.get("ROBOCO_HOST_PROJECT_DIR", ""):
+        return "http://roboco-orchestrator:8000"
+    return f"http://127.0.0.1:{settings.port}"
+
+
+async def _append_git_token_env(
+    env_vars: list[run_v2.EnvVar], config: AgentConfig
+) -> None:
+    """Append ROBOCO_GIT_TOKEN from the project's decrypted PAT when the task
+    carries a git_context project slug. Best-effort: a missing/failed lookup
+    skips the env var (the agent surfaces "ROBOCO_GIT_TOKEN not set" on push).
+    """
+    if not config.git_context or not config.git_context.project_slug:
+        return
+    from roboco.db.base import get_db_context
+    from roboco.services.project import get_project_service
+
+    try:
+        async with get_db_context() as db:
+            token = await get_project_service(db).get_decrypted_token_by_slug(
+                config.git_context.project_slug
+            )
+    except Exception as exc:
+        _log.warning(
+            "git token lookup failed; agent will push without a PAT",
+            project_slug=config.git_context.project_slug,
+            error=str(exc),
+        )
+        return
+    if token:
+        env_vars.append(run_v2.EnvVar(name="ROBOCO_GIT_TOKEN", value=token))
+
+
 class CloudRunJobsProvider(AgentProvider):
     """Spawn agents as Cloud Run Job executions."""
 
@@ -84,12 +135,52 @@ class CloudRunJobsProvider(AgentProvider):
         initial_prompt: str | None = None,
         agent_settings_path: Path | None = None,
     ) -> SpawnResult:
+        from roboco.agents_config import (
+            get_agent_role as _get_role,
+        )
+        from roboco.agents_config import (
+            get_agent_team as _get_team,
+        )
+        from roboco.agents_config import (
+            issue_agent_token,
+        )
+        from roboco.seeds.initial_data import AGENT_UUIDS
+
         name = _job_name(config.agent_id)
         client = _jobs_client()
+
+        # Agent identity: sign the HMAC token over the UUID (not the slug) so
+        # the gateway's X-Agent-ID (Annotated[UUID, Header]) parses and the
+        # token signature matches. Mirrors orchestrator._append_agent_auth_env.
+        role = _get_role(config.agent_id)
+        team = _get_team(config.agent_id) or ""
+        agent_uuid = AGENT_UUIDS.get(config.agent_id, config.agent_id)
+        token = issue_agent_token(
+            agent_uuid,
+            role,
+            team,
+            ttl_seconds=settings.agent_token_ttl_seconds,
+        )
+
+        # api_url resolution mirrors the MCP env block (orchestrator.py).
+        api_url = _resolve_api_url()
+
         env_vars = [
             run_v2.EnvVar(name="ROBOCO_INITIAL_PROMPT", value=initial_prompt or ""),
-            run_v2.EnvVar(name="ROBOCO_AGENT_ID", value=config.agent_id),
+            run_v2.EnvVar(name="ROBOCO_AGENT_ID", value=agent_uuid),
             run_v2.EnvVar(name="ROBOCO_AGENT_MODEL", value=_GEMINI_MODEL),
+            run_v2.EnvVar(name="ROBOCO_AGENT_TOKEN", value=token),
+            run_v2.EnvVar(name="ROBOCO_AGENT_ROLE", value=role),
+            run_v2.EnvVar(name="ROBOCO_ORCHESTRATOR_URL", value=api_url),
+            run_v2.EnvVar(name="ROBOCO_API_URL", value=api_url),
+            run_v2.EnvVar(
+                name="ROBOCO_FLOW_VERB_TIMEOUT_SECONDS",
+                value=str(settings.flow_verb_timeout_seconds),
+            ),
+            run_v2.EnvVar(
+                name="ROBOCO_FLOW_VERB_SLOW_TIMEOUT_SECONDS",
+                value=str(settings.flow_verb_slow_timeout_seconds),
+            ),
         ]
         # The orchestrator writes the ADK tool manifest to config.mcp_config_path
         # (via _generate_adk_manifest); upload THAT to GCS, not the Claude-Code
@@ -100,10 +191,53 @@ class CloudRunJobsProvider(AgentProvider):
             env_vars.append(
                 run_v2.EnvVar(name="ROBOCO_TOOL_MANIFEST_PATH", value=manifest_uri)
             )
+
+        # ROBOCO_GIT_TOKEN: the ADK git_push tool (git_tools.py) reads it env
+        # and pushes via the x-access-token extraheader against the remote, so
+        # a task with a project needs the decrypted PAT. Best-effort: a
+        # missing/failed lookup skips the env var (the agent surfaces a clear
+        # "ROBOCO_GIT_TOKEN not set" on push, never a crash).
+        await _append_git_token_env(env_vars, config)
+
+        container_kwargs: dict[str, Any] = {"image": self._image, "env": env_vars}
+        volumes: list[run_v2.Volume] = []
+        # Filestore NFS workspace volume (GCP only). Mounted at the workspaces
+        # root so the agent's per-agent clone resolves to the shared Filestore.
+        # Guarded: local-dev (ip/path empty) gets no volume, byte-for-byte
+        # unchanged from the prior shape.
+        if settings.gcp_filestore_ip and settings.gcp_filestore_nfs_path:
+            container_kwargs["volume_mounts"] = [
+                run_v2.VolumeMount(
+                    mount_path=settings.workspaces_root,
+                    name="filestore",
+                )
+            ]
+            volumes.append(
+                run_v2.Volume(
+                    name="filestore",
+                    nfs=run_v2.NFSVolumeSource(
+                        server=settings.gcp_filestore_ip,
+                        path=settings.gcp_filestore_nfs_path,
+                        read_only=False,
+                    ),
+                )
+            )
+
         template = run_v2.TaskTemplate(
-            containers=[run_v2.Container(image=self._image, env=env_vars)],
+            containers=[run_v2.Container(**container_kwargs)],
             timeout={"seconds": _JOB_TIMEOUT_SECONDS},
+            volumes=volumes,
         )
+        # VPC connector (GCP only): lets the Job reach Cloud SQL + Memorystore
+        # on the roboco-net VPC. The v2-native VpcAccess.connector is the
+        # equivalent of the v1 run.googleapis.com/vpc-access-connector
+        # annotation used in the manual-deploy template.
+        if settings.gcp_vpc_connector_name:
+            template.vpc_access = run_v2.VpcAccess(
+                connector=settings.gcp_vpc_connector_name,
+                egress=_VPC_EGRESS_PRIVATE_RANGES_ONLY,
+            )
+
         job = run_v2.Job(template=run_v2.ExecutionTemplate(template=template))
         # Idempotent create-or-update: create first, fall back to update if the
         # job already exists from a prior spawn of the same agent.

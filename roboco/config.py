@@ -253,6 +253,20 @@ class Settings(BaseSettings):
     gcp_cloud_run_agent_job_prefix: str = Field(
         default="roboco-agent", description="Cloud Run Jobs name prefix."
     )
+    gcp_filestore_ip: str = Field(
+        default="",
+        description="Filestore NFS server IP for the agent Job volume.",
+    )
+    gcp_filestore_nfs_path: str = Field(
+        default="",
+        description=(
+            "Filestore NFS export path (e.g. /workspaces) for the agent Job volume."
+        ),
+    )
+    gcp_vpc_connector_name: str = Field(
+        default="",
+        description="Serverless VPC Access connector name for Cloud Run Jobs.",
+    )
 
     # ==========================================================================
     # RAG (in-house engine with pgvector)

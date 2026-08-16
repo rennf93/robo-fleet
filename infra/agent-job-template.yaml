@@ -10,11 +10,17 @@
 #
 # Per-agent fields the provider fills at spawn time (left as placeholders here):
 #   metadata.name                    -> roboco-agent-<agent-slug>
-#   ROBOCO_AGENT_ID                  -> agent UUID
+#   ROBOCO_AGENT_ID                  -> agent UUID (not the slug; gateway
+#                                       X-Agent-ID is Annotated[UUID, Header])
 #   ROBOCO_AGENT_ROLE                -> role slug (developer, qa, cell_pm, ...)
+#   ROBOCO_AGENT_TOKEN               -> HMAC token issued by the orchestrator
+#                                       at spawn (issue_agent_token over the
+#                                       UUID); NOT a Secret Manager ref.
 #   ROBOCO_INITIAL_PROMPT            -> the composed task prompt
 #   ROBOCO_TOOL_MANIFEST_PATH        -> gs://<bucket>/manifests/<agent-id>.json
-#   ROBOCO_GIT_TOKEN                 -> per-project git PAT (or secretRef)
+#   ROBOCO_GIT_TOKEN                 -> per-project decrypted PAT (the provider
+#                                       resolves it via ProjectService when the
+#                                       task carries a git_context project slug)
 #
 # Infra placeholders the deploy script (or terraform output) fills:
 #   __AR_HOST__ / __PROJECT_ID__ / __AR_REPO__  -> image path
@@ -42,8 +48,11 @@ spec:
               image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/roboco-agent-adk:latest
               env:
                 # --- Agent identity (filled by CloudRunJobsProvider at spawn) ---
+                # ROBOCO_AGENT_ID is the agent UUID, not the slug: the gateway
+                # declares X-Agent-ID as Annotated[UUID, Header] and 422s on a
+                # non-UUID value.
                 - name: ROBOCO_AGENT_ID
-                  value: "__AGENT_ID__"
+                  value: "__AGENT_UUID__"
                 - name: ROBOCO_AGENT_ROLE
                   value: "__AGENT_ROLE__"
                 - name: ROBOCO_AGENT_MODEL
@@ -56,24 +65,30 @@ spec:
                 # --- Orchestrator URL (agent calls the gateway over HTTP) ---
                 - name: ROBOCO_ORCHESTRATOR_URL
                   value: "__ORCHESTRATOR_URL__"
+                - name: ROBOCO_API_URL
+                  value: "__ORCHESTRATOR_URL__"
 
-                # --- Agent auth (Secret Manager) ---
-                - name: ROBOCO_AGENT_AUTH_SECRET
-                  valueFrom:
-                    secretRef:
-                      name: roboco-agent-auth-secret
-                      key: latest
+                # --- Agent auth (issued HMAC token, NOT a Secret Manager ref) ---
+                # The orchestrator signs ROBOCO_AGENT_TOKEN at spawn via
+                # issue_agent_token(uuid, role, team) and injects it as a plain
+                # env var. The raw signing secret stays server-side; the agent
+                # never receives it. Placeholder below for the manual-deploy
+                # reference only, the provider computes the real value.
+                - name: ROBOCO_AGENT_TOKEN
+                  value: "__AGENT_TOKEN__"
 
-                # --- Git token (Secret Manager, per-project PAT) ---
-                # Mount as a secret volume at /secrets/git-token and have the
-                # agent read it, or set it as an env var. The provider sets
-                # ROBOCO_GIT_TOKEN directly from the project's encrypted PAT
-                # when available; this secretRef is the manual-deploy fallback.
-                - name: ROBOCO_GIT_TOKEN
-                  valueFrom:
-                    secretRef:
-                      name: roboco-git-token
-                      key: latest
+                # --- Flow verb timeouts (mirror the server-side budgets) ---
+                - name: ROBOCO_FLOW_VERB_TIMEOUT_SECONDS
+                  value: "120"
+                - name: ROBOCO_FLOW_VERB_SLOW_TIMEOUT_SECONDS
+                  value: "900"
+
+                # --- Git token (per-project decrypted PAT) ---
+                # The provider sets ROBOCO_GIT_TOKEN directly from the project's
+                # decrypted PAT (ProjectService.get_decrypted_token_by_slug)
+                # when the task carries a git_context project slug. The ADK
+                # git_push tool reads it and pushes via x-access-token
+                # extraheader. Omit for tasks without a project.
 
               volumeMounts:
                 - mountPath: /data/workspaces

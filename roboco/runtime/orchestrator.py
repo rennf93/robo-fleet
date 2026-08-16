@@ -2752,7 +2752,10 @@ class AgentOrchestrator:
 
         await self._ensure_agent_image(agent_id)
         mcp_config_path = await self._generate_mcp_config(
-            agent_id, git_context, task_id=task_id
+            agent_id,
+            git_context,
+            task_id=task_id,
+            provider_type=route.provider_type.value,
         )
 
         from uuid import uuid4
@@ -4087,6 +4090,8 @@ class AgentOrchestrator:
         agent_id: str,
         git_context: SpawnGitContext | None = None,
         task_id: str | None = None,
+        *,
+        provider_type: str | None = None,
     ) -> Path:
         """Generate MCP config for an agent.
 
@@ -4109,6 +4114,17 @@ class AgentOrchestrator:
         not-authorized error rather than 404. Git context is forwarded
         only as a fallback for tools that resolve project/branch from env.
         """
+        # ADK agents (Cloud Run Jobs) have no MCP servers: the gateway shim
+        # calls the orchestrator HTTP directly. Instead of an mcpServers config,
+        # write the tool manifest (flow_tools + do_tools + the composed
+        # system_prompt inlined) to a local file. The CloudRunJobsProvider
+        # uploads it to GCS and sets ROBOCO_TOOL_MANIFEST_PATH to the gs:// URI;
+        # the entrypoint fetches it and uses system_prompt as the LlmAgent
+        # instruction. Early-return keeps the docker/ANTHROPIC mcpServers path
+        # below byte-for-byte unchanged.
+        if provider_type == ModelProvider.ADK_CLOUD_RUN.value:
+            return await self._generate_adk_manifest(agent_id, git_context, task_id)
+
         # MCP servers run inside agent containers, need to connect to the
         # orchestrator API. Prefer an explicit settings.api_url override —
         # production sets it to the container hostname, and the eval harness
@@ -4242,6 +4258,60 @@ class AgentOrchestrator:
         config_path.write_text(json.dumps(config, indent=2))
 
         return config_path
+
+    async def _generate_adk_manifest(
+        self,
+        agent_id: str,
+        git_context: SpawnGitContext | None,
+        task_id: str | None,
+    ) -> Path:
+        """Write the ADK tool manifest for a Cloud Run Jobs agent.
+
+        Shape: ``{"flow_tools": [...], "do_tools": [...], "system_prompt": <text>}``.
+        ``flow_tools``/``do_tools`` come from ``get_role_config`` (the same
+        source ``build_for_role`` uses for the docker path's
+        /app/tool-manifest.json); ``system_prompt`` is the composed prompt text
+        (``compose_prompt`` + the conventions ambient block, the same two
+        helpers ``_generate_composed_prompt`` uses for /app/system-prompt.md).
+        Reuses both helpers rather than re-deriving. The provider uploads this
+        file to GCS and sets ROBOCO_TOOL_MANIFEST_PATH to its gs:// URI.
+        """
+        from roboco.services.gateway.role_config import get_role_config
+
+        agent_role = get_agent_role(agent_id) or ""
+        team_str = get_agent_team(agent_id)
+        role_enum = AgentRole(agent_role) if agent_role else None
+        team_enum = Team(team_str) if team_str else None
+        if not role_enum:
+            raise ValueError(f"Unknown role for agent: {agent_id}")
+
+        cfg = get_role_config(agent_role)
+        project_slug = (
+            git_context.project_slug
+            if git_context and git_context.project_slug
+            else "default"
+        )
+        ambient = await self._resolve_conventions_ambient(project_slug, task_id)
+        system_prompt = compose_prompt(role_enum, team_enum, agent_id, ambient=ambient)
+
+        manifest: dict[str, Any] = {
+            "flow_tools": list(cfg.flow_tools),
+            "do_tools": list(cfg.do_tools),
+            "system_prompt": system_prompt,
+        }
+
+        # Same dir logic as the mcpServers path: shared mount in container,
+        # temp dir on host. Basename-sanitized; agent ids are orchestrator
+        # slugs but the filename must not traverse anyway.
+        if DATA_HOST_PATH:
+            config_dir = Path("/app/mcp-configs")
+            config_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            config_dir = Path(tempfile.gettempdir())
+        safe_agent_id = os.path.basename(agent_id)
+        manifest_path = config_dir / f"roboco-adk-{safe_agent_id}.json"
+        manifest_path.write_text(json.dumps(manifest, indent=2))
+        return manifest_path
 
     def _append_role_scoped_mcp_servers(
         self,

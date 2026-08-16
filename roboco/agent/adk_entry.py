@@ -22,12 +22,27 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from roboco.agent.gateway_shim import build_gateway_tools
+from roboco.agent.gateway_shim import _load_manifest, build_gateway_tools
 from roboco.agent.git_tools import build_git_tools
 
 _MODEL = os.environ.get("ROBOCO_AGENT_MODEL", "gemini-3.5-flash")
 _APP_NAME = "robo-fleet"
 _SYSTEM_PROMPT_PATH = "/app/system-prompt.md"
+
+
+def _instruction() -> str:
+    """Resolve the LlmAgent instruction text.
+
+    Fallback chain: manifest ``system_prompt`` -> /app/system-prompt.md -> "".
+    """
+    manifest = _load_manifest()
+    text = manifest.get("system_prompt")
+    if isinstance(text, str) and text:
+        return text
+    prompt_path = Path(_SYSTEM_PROMPT_PATH)
+    if prompt_path.exists():
+        return prompt_path.read_text()
+    return ""
 
 
 def _headers() -> dict[str, str]:
@@ -80,8 +95,7 @@ def _classify(exc: BaseException) -> int | None:
 
 
 async def main() -> int:
-    prompt_path = Path(_SYSTEM_PROMPT_PATH)
-    instruction = prompt_path.read_text() if prompt_path.exists() else ""
+    instruction = _instruction()
     initial = os.environ.get("ROBOCO_INITIAL_PROMPT", "")
     tools: list[Any] = build_gateway_tools() + build_git_tools()
     agent = LlmAgent(

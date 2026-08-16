@@ -94,8 +94,33 @@ async def call_do(tool: str, body: dict[str, Any]) -> dict[str, Any]:
 
 
 def _load_manifest() -> dict[str, Any]:
+    """Load the tool manifest from ROBOCO_TOOL_MANIFEST_PATH.
+
+    Supports ``gs://`` URIs (fetched lazily from GCS) and local paths. Falls
+    back to ``{}`` when the default local path is absent (local-dev with no
+    manifest mounted): callers degrade to no tools / empty system_prompt
+    rather than crashing on a missing file. A genuine parse error on a present
+    file still raises. Shared by gateway_shim (tool registration) and
+    adk_entry (system_prompt) so the gs://-or-local fetch logic is not
+    duplicated.
+    """
     path = os.environ.get("ROBOCO_TOOL_MANIFEST_PATH", _DEFAULT_MANIFEST)
-    return cast("dict[str, Any]", json.loads(Path(path).read_text()))
+    if path.startswith("gs://"):
+        return _load_manifest_from_gcs(path)
+    local = Path(path)
+    if not local.exists():
+        return {}
+    return cast("dict[str, Any]", json.loads(local.read_text()))
+
+
+def _load_manifest_from_gcs(gs_uri: str) -> dict[str, Any]:
+    """Fetch and parse the manifest JSON blob from a ``gs://`` URI."""
+    import google.cloud.storage  # lazy: only needed on the Cloud Run path
+
+    bucket_name, _, blob_path = gs_uri[len("gs://") :].partition("/")
+    client = google.cloud.storage.Client()
+    blob = client.bucket(bucket_name).blob(blob_path)
+    return cast("dict[str, Any]", json.loads(blob.download_as_text()))
 
 
 def _make_flow_tool(verb: str) -> FunctionTool:

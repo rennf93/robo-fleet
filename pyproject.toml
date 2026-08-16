@@ -291,6 +291,9 @@ select = [
 # pay the import cost, the same intentional-lazy-import sanction applied to
 # roboco/services/*.py.
 "roboco/llm/providers/cloudrun_jobs.py" = ["ARG002", "PLC0415"]
+# ADK gateway shim: lazy `google.cloud.storage` import is Cloud-Run-only, kept
+# out of the local-dev import path the same way cloudrun_jobs.py sanctions it.
+"roboco/agent/gateway_shim.py" = ["PLC0415"]
 # Collision-builder test helpers mirror the builder's many keyword inputs
 # (parent/project/intends/migration/shared/sequence) — bundling them would
 # hurt readability more than the arg count hurts.

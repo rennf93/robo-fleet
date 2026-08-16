@@ -91,7 +91,11 @@ class CloudRunJobsProvider(AgentProvider):
             run_v2.EnvVar(name="ROBOCO_AGENT_ID", value=config.agent_id),
             run_v2.EnvVar(name="ROBOCO_AGENT_MODEL", value=_GEMINI_MODEL),
         ]
-        manifest_uri = await _upload_manifest(agent_settings_path, config.agent_id)
+        # The orchestrator writes the ADK tool manifest to config.mcp_config_path
+        # (via _generate_adk_manifest); upload THAT to GCS, not the Claude-Code
+        # settings.json (agent_settings_path, irrelevant for ADK). The entrypoint
+        # fetches it via ROBOCO_TOOL_MANIFEST_PATH.
+        manifest_uri = await _upload_manifest(config.mcp_config_path, config.agent_id)
         if manifest_uri:
             env_vars.append(
                 run_v2.EnvVar(name="ROBOCO_TOOL_MANIFEST_PATH", value=manifest_uri)

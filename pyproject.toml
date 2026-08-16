@@ -164,6 +164,10 @@ select = [
 # standard test shape; pytest is imported for type hints only; lazy imports
 # control mock ordering (the wiring tests patch the module before importing).
 "tests/unit/infra/*.py" = ["ARG001", "ARG005", "PLR2004", "TC001", "TC002", "TC003", "PLC0415"]
+# tests/compliance/* - the hackathon-stack checklist uses lazy imports inside
+# test bodies (importlib + module reloads) to prove ADK/Gemini wiring, and
+# monkeypatch fixtures with unused _settings args; same shape as tests/unit/infra.
+"tests/compliance/*.py" = ["ARG001", "PLC0415", "TC001", "TC002", "TC003"]
 # MCP tool surfaces ARE the LLM-facing contract — every parameter must be
 # top-level + typed so the SDK exposes it as a discrete schema field with
 # enum constraints. Bundling into a dataclass would hide enum hints from

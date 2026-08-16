@@ -1,0 +1,156 @@
+# Cloud Run v2 Service manifest for roboco-orchestrator.
+# Consumed by `gcloud run services replace infra/orchestrator-service.yaml`.
+# Deploy via infra/deploy-orchestrator.sh, which reads terraform outputs and
+# sed-substitutes the __PLACEHOLDER__ tokens below into a temp copy before
+# replacing the service. Plain hyphens only, no em-dashes.
+#
+# The full ROBOCO_* env surface from .env.gcp.example is carried here. The four
+# Secret Manager secrets (fernet, agent-auth, cloud-auth, gemini-api-key) are
+# mounted as env vars via secretRef. The DB/Redis/cloud-auth passwords are set
+# by the deploy script via --update-env-vars (they are not in the 4-seed set).
+#
+# No docker socket: the orchestrator on Cloud Run spawns agents as Cloud Run
+# Jobs (CloudRunJobsProvider), not as sibling containers. ROBOCO_TOOLCHAIN_MATCH
+# is false (it relied on the docker socket).
+
+apiVersion: run.googleapis.com/v1
+kind: Service
+metadata:
+  name: roboco-orchestrator
+  labels:
+    run.googleapis.com/managed-by: gcloud
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.googleapis.com/min-scale: "1"
+        autoscaling.googleapis.com/max-scale: "3"
+        run.googleapis.com/cloudsql-instances: __CLOUDSQL_INSTANCE__
+        run.googleapis.com/vpc-access-connector: __VPC_CONNECTOR_PATH__
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - name: orchestrator
+          image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/roboco-orchestrator:latest
+          ports:
+            - name: http1
+              containerPort: 8000
+          env:
+            # --- Database (Cloud SQL via the cloudsql-instances annotation) ---
+            - name: ROBOCO_DATABASE_HOST
+              value: "127.0.0.1"
+            - name: ROBOCO_DATABASE_PORT
+              value: "5432"
+            - name: ROBOCO_DATABASE_USER
+              value: "roboco"
+            - name: ROBOCO_DATABASE_NAME
+              value: "roboco"
+            # ROBOCO_DATABASE_PASSWORD: set by deploy script via --update-env-vars.
+
+            # --- Redis (Memorystore, reached over the VPC connector) ---
+            - name: ROBOCO_REDIS_HOST
+              value: "__MEMORYSTORE_HOST__"
+            - name: ROBOCO_REDIS_PORT
+              value: "6379"
+            - name: ROBOCO_REDIS_DB
+              value: "0"
+            # ROBOCO_REDIS_PASSWORD: set by deploy script via --update-env-vars.
+
+            # --- GCP infra references (from terraform output) ---
+            - name: ROBOCO_GCP_PROJECT_ID
+              value: "__PROJECT_ID__"
+            - name: ROBOCO_GCP_REGION
+              value: "__REGION__"
+            - name: ROBOCO_GCP_CLOUDSQL_INSTANCE
+              value: "__CLOUDSQL_INSTANCE__"
+            - name: ROBOCO_GCP_MEMORYSTORE_HOST
+              value: "__MEMORYSTORE_HOST__"
+            - name: ROBOCO_GCP_MEMORYSTORE_PORT
+              value: "6379"
+            - name: ROBOCO_GCP_FILESTORE_SHARE
+              value: "__FILESTORE_SHARE__"
+            - name: ROBOCO_GCP_GCS_BUCKET
+              value: "__GCS_BUCKET__"
+            - name: ROBOCO_GCP_ARTIFACT_REGISTRY_REPO
+              value: "__AR_REPO__"
+            - name: ROBOCO_GCP_SECRET_MANAGER_PREFIX
+              value: "roboco"
+            - name: ROBOCO_GCP_CLOUD_RUN_AGENT_JOB_PREFIX
+              value: "roboco-agent"
+
+            # --- Agent auth ---
+            - name: ROBOCO_AGENT_AUTH_REQUIRED
+              value: "true"
+
+            # --- Cloud auth (armed: panel is publicly reachable) ---
+            - name: ROBOCO_CLOUD_AUTH_ENABLED
+              value: "true"
+            # ROBOCO_CLOUD_AUTH_EMAIL / _PASSWORD: set by deploy script.
+
+            # --- URLs ---
+            - name: ROBOCO_PUBLIC_BASE_URL
+              value: "https://roboco.run.app"
+            - name: ROBOCO_API_URL
+              value: "http://localhost:8000"
+            - name: ROBOCO_ORCHESTRATOR_URL
+              value: "http://localhost:8000"
+
+            # --- Agent images ---
+            - name: ROBOCO_AGENT_IMAGE_REGISTRY
+              value: "__AR_HOST__/__PROJECT_ID__/__AR_REPO__"
+            - name: ROBOCO_AGENT_IMAGE_TAG
+              value: "latest"
+
+            # --- Validator / local LLM ---
+            - name: ROBOCO_LOCAL_LLM_BASE_URL
+              value: "http://localhost:11434/v1"
+            - name: ROBOCO_LOCAL_LLM_BASE_URL_ALLOW_EXTERNAL
+              value: "true"
+            - name: ROBOCO_LOCAL_LLM_MODEL
+              value: "gemini-2.5-flash"
+
+            # --- Feature flags armed for GCP ---
+            - name: ROBOCO_ORG_MEMORY_ENABLED
+              value: "true"
+            - name: ROBOCO_TOOLCHAIN_MATCH_ENABLED
+              value: "false"
+            - name: ROBOCO_GATEWAY_HEALTH_ENABLED
+              value: "true"
+            - name: ROBOCO_OVERLOAD_BREAK_ENABLED
+              value: "true"
+
+            # --- Secrets (Secret Manager, mounted as env via secretRef) ---
+            - name: ROBOCO_ENCRYPTION_KEY
+              valueFrom:
+                secretRef:
+                  name: roboco-fernet-key
+                  key: latest
+            - name: ROBOCO_AGENT_AUTH_SECRET
+              valueFrom:
+                secretRef:
+                  name: roboco-agent-auth-secret
+                  key: latest
+            - name: ROBOCO_CLOUD_AUTH_SECRET
+              valueFrom:
+                secretRef:
+                  name: roboco-cloud-auth-secret
+                  key: latest
+            - name: ROBOCO_GEMINI_API_KEY
+              valueFrom:
+                secretRef:
+                  name: roboco-gemini-api-key
+                  key: latest
+
+          volumeMounts:
+            - mountPath: /data/workspaces
+              name: filestore
+              readOnly: false
+
+      volumes:
+        - name: filestore
+          nfs:
+            server: __FILESTORE_IP__
+            path: /__FILESTORE_SHARE__
+            readOnly: false

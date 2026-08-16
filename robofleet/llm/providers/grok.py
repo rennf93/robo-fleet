@@ -6,7 +6,7 @@ same way it runs Claude agents on ``claude``: the orchestrator's shared containe
 assembly mounts the RoboCo MCP gateway (``mcp-config.json``), the agent HMAC
 identity, and the git context; this provider adds the subscription auth mount
 (``~/.grok``) and the runtime env the grok-cli entrypoint reads, then launches
-the ``roboco-agent-grok`` image — whose entrypoint renders ``~/.grok/config.toml``
+the ``robofleet-agent-grok`` image — whose entrypoint renders ``~/.grok/config.toml``
 + per-role flags (see :mod:`robofleet.llm.providers.grok_cli_config`) and runs
 ``grok -p`` headless.
 
@@ -16,7 +16,7 @@ Two things differ from the Claude Code spawn:
      never used. The provider routing fields are blanked before the shared mount
      step so the shared builder never injects them as ``ANTHROPIC_*`` (the wrong
      runtime) — grok authenticates from the mounted ``~/.grok``.
-  2. **Runtime** — the ``roboco-agent-grok`` image (grok CLI) instead of
+  2. **Runtime** — the ``robofleet-agent-grok`` image (grok CLI) instead of
      ``claude``.
 
 The initial prompt is passed via an **env var, not a positional CLI arg**, which
@@ -44,7 +44,7 @@ _log = logging.getLogger(__name__)
 # The Grok agent image (own image, like every other agent role). Overridable for
 # tests / staged rollout.
 _DEFAULT_GROK_IMAGE = os.environ.get(
-    "ROBOFLEET_GROK_AGENT_IMAGE", "roboco-agent-grok:latest"
+    "ROBOFLEET_GROK_AGENT_IMAGE", "robofleet-agent-grok:latest"
 )
 
 # The grok CLI model id (the CLI uses ``grok-build``, verified live).
@@ -73,7 +73,7 @@ _GROK_USAGE_FILE_IN_CONTAINER = f"{_GROK_USAGE_DIR_IN_CONTAINER}/usage.json"
 
 
 def _container_name(agent_id: str) -> str:
-    return f"roboco-agent-{agent_id}"
+    return f"robofleet-agent-{agent_id}"
 
 
 class _GrokHost(Protocol):

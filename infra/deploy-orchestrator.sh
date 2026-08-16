@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy roboco-orchestrator to Cloud Run.
+# Deploy robofleet-orchestrator to Cloud Run.
 # Reads project/region/repo from ROBOFLEET_GCP_* env vars (no hardcoded values).
 # Pulls infra references (Cloud SQL connection name, Memorystore host, Filestore
 # IP/share, GCS bucket) from terraform output, sed-substitutes the
@@ -16,13 +16,13 @@
 #   ROBOFLEET_CLOUD_AUTH_EMAIL     (seeded CEO login)
 #   ROBOFLEET_CLOUD_AUTH_PASSWORD  (seeded CEO login password)
 # Env (optional):
-#   ROBOFLEET_GCP_VPC_CONNECTOR_NAME (default roboco-connector)
+#   ROBOFLEET_GCP_VPC_CONNECTOR_NAME (default robofleet-connector)
 set -euo pipefail
 
 PROJECT="${ROBOFLEET_GCP_PROJECT_ID:?set ROBOFLEET_GCP_PROJECT_ID}"
 REGION="${ROBOFLEET_GCP_REGION:?set ROBOFLEET_GCP_REGION}"
 REPO="${ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO:-robo-fleet}"
-CONNECTOR="${ROBOFLEET_GCP_VPC_CONNECTOR_NAME:-roboco-connector}"
+CONNECTOR="${ROBOFLEET_GCP_VPC_CONNECTOR_NAME:-robofleet-connector}"
 AR_HOST="${REGION}-docker.pkg.dev"
 
 cd "$(dirname "$0")/.."
@@ -60,7 +60,7 @@ sed \
   -e "s|__VPC_CONNECTOR_PATH__|${VPC_CONNECTOR_PATH}|g" \
   "${TF_DIR}/orchestrator-service.yaml" > "${TMP_MANIFEST}"
 
-echo "Replacing roboco-orchestrator service..."
+echo "Replacing robofleet-orchestrator service..."
 gcloud run services replace "${TMP_MANIFEST}" \
   --region="${REGION}" \
   --project="${PROJECT}"
@@ -70,11 +70,11 @@ gcloud run services replace "${TMP_MANIFEST}" \
 # vars. For a production deploy, move them into Secret Manager and switch the
 # manifest to secretRef.
 echo "Updating env vars (passwords, cloud auth creds)..."
-gcloud run services update roboco-orchestrator \
+gcloud run services update robofleet-orchestrator \
   --region="${REGION}" \
   --project="${PROJECT}" \
   --update-env-vars="^@^ROBOFLEET_DATABASE_PASSWORD=${ROBOFLEET_DATABASE_PASSWORD:?set ROBOFLEET_DATABASE_PASSWORD}@ROBOFLEET_REDIS_PASSWORD=${ROBOFLEET_REDIS_PASSWORD:?set ROBOFLEET_REDIS_PASSWORD}@ROBOFLEET_CLOUD_AUTH_EMAIL=${ROBOFLEET_CLOUD_AUTH_EMAIL:?set ROBOFLEET_CLOUD_AUTH_EMAIL}@ROBOFLEET_CLOUD_AUTH_PASSWORD=${ROBOFLEET_CLOUD_AUTH_PASSWORD:?set ROBOFLEET_CLOUD_AUTH_PASSWORD}"
 
-echo "Deployed roboco-orchestrator to ${REGION}."
-echo "Verify: gcloud run services describe roboco-orchestrator --region=${REGION} --project=${PROJECT}"
-echo "Health: gcloud run services describe roboco-orchestrator --region=${REGION} --project=${PROJECT} --format='value(status.url)'"
+echo "Deployed robofleet-orchestrator to ${REGION}."
+echo "Verify: gcloud run services describe robofleet-orchestrator --region=${REGION} --project=${PROJECT}"
+echo "Health: gcloud run services describe robofleet-orchestrator --region=${REGION} --project=${PROJECT} --format='value(status.url)'"

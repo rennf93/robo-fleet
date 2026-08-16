@@ -13,7 +13,7 @@
 # the Claude/grok paths.
 # =============================================================================
 
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 USER root
 

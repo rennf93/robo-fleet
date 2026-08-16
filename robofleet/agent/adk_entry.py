@@ -63,7 +63,7 @@ def _headers() -> dict[str, str]:
 
 async def _post_usage(usage: dict[str, Any], exit_reason: str) -> None:
     base = os.environ.get(
-        "ROBOFLEET_ORCHESTRATOR_URL", "http://roboco-orchestrator:8000"
+        "ROBOFLEET_ORCHESTRATOR_URL", "http://robofleet-orchestrator:8000"
     )
     payload = {**usage, "exit_reason": exit_reason}
     async with httpx.AsyncClient(timeout=10.0) as client:

@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     )
     api_url: str | None = Field(
         default=None,
-        description="Override API URL for containerized agents (e.g., http://roboco-orchestrator:8000)",
+        description="Override API URL for containerized agents (e.g., http://robofleet-orchestrator:8000)",
     )
     # CORS
     cors_origins: list[str] = Field(
@@ -251,7 +251,7 @@ class Settings(BaseSettings):
         default="roboco", description="Secret Manager secret name prefix."
     )
     gcp_cloud_run_agent_job_prefix: str = Field(
-        default="roboco-agent", description="Cloud Run Jobs name prefix."
+        default="robofleet-agent", description="Cloud Run Jobs name prefix."
     )
     gcp_filestore_ip: str = Field(
         default="",
@@ -325,7 +325,7 @@ class Settings(BaseSettings):
         description="Allow a non-internal local_llm_base_url (cloud endpoints).",
     )
     local_llm_base_url: str = Field(
-        default="http://roboco-ollama:11434/v1",
+        default="http://robofleet-ollama:11434/v1",
         description="Base URL for local LLM (Ollama OpenAI-compat API)",
     )
 
@@ -342,7 +342,7 @@ class Settings(BaseSettings):
         host = (urlparse(v).hostname or "").lower()
         if not host:
             raise ValueError("local_llm_base_url must have a host")
-        if host in {"localhost", "127.0.0.1", "::1", "roboco-ollama"}:
+        if host in {"localhost", "127.0.0.1", "::1", "robofleet-ollama"}:
             return v
         if host.endswith(".svc.cluster.local"):
             return v
@@ -357,7 +357,7 @@ class Settings(BaseSettings):
         raise ValueError(f"local_llm_base_url host {host!r} is not an internal address")
 
     ollama_base_url: str = Field(
-        default="http://roboco-ollama:11434",
+        default="http://robofleet-ollama:11434",
         description="Base URL for Ollama native API (embeddings, model mgmt)",
     )
 
@@ -1495,7 +1495,7 @@ class Settings(BaseSettings):
         description="Per-request timeout for outbound video-engine HTTP calls.",
     )
     video_renderer_base_url: str = Field(
-        default="http://roboco-video-renderer:3001",
+        default="http://robofleet-video-renderer:3001",
         description=(
             "Base URL of the video-renderer sidecar. The orchestrator tars "
             "the merged motion/ source and POSTs it here; the sidecar returns "
@@ -1533,7 +1533,7 @@ class Settings(BaseSettings):
     minio_endpoint: str = Field(
         default="",
         description=(
-            "MinIO endpoint, e.g. http://roboco-minio:9000. Empty = disabled "
+            "MinIO endpoint, e.g. http://robofleet-minio:9000. Empty = disabled "
             "(FileResponse fallback)."
         ),
     )
@@ -1546,7 +1546,7 @@ class Settings(BaseSettings):
         description="MinIO secret key. Required when minio_endpoint is set.",
     )
     minio_bucket: str = Field(
-        default="roboco-video-renders",
+        default="robofleet-video-renders",
         description="MinIO bucket for rendered videos.",
     )
     minio_region: str = Field(
@@ -1645,7 +1645,7 @@ class Settings(BaseSettings):
         ),
     )
 
-    # Set by the compose file that carries the roboco_data topology
+    # Set by the compose file that carries the robofleet_data topology
     # (postgres/redis on a data-only network agents never join). NOT a panel
     # feature flag: it must travel with the compose networks: stanzas, and a
     # runtime toggle cannot change network membership.
@@ -1653,7 +1653,7 @@ class Settings(BaseSettings):
         default=False,
         description=(
             "True when the deployment's compose topology isolates "
-            "postgres/redis from agent containers (roboco_data network). "
+            "postgres/redis from agent containers (robofleet_data network). "
             "Suppresses the legacy prod-creds gate-env injection, which "
             "would hand agents credentials for an unreachable host."
         ),
@@ -1732,7 +1732,7 @@ class Settings(BaseSettings):
     # from docker/agent-*.Dockerfile the first time it spawns that role (the
     # build/test flow). Set a registry to run the PRE-BUILT images the release
     # workflow publishes instead — the orchestrator then pulls
-    # `{registry}/roboco-agent-*[:tag]` rather than building, so a deployment
+    # `{registry}/robofleet-agent-*[:tag]` rather than building, so a deployment
     # never needs the source tree or a build toolchain. Empty = local build
     # (unchanged behavior).
     agent_image_registry: str = Field(

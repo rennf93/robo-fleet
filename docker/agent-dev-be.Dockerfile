@@ -1,7 +1,7 @@
 # Backend Developer Agent
 # Python/FastAPI development tools
 
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 USER root
 

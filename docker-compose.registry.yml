@@ -53,17 +53,17 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: roboco-postgres
+    container_name: robofleet-postgres
     restart: unless-stopped
-    # data-only network: agent containers (on roboco_default) cannot reach
+    # data-only network: agent containers (on robofleet_default) cannot reach
     # the production DB; only the multi-homed orchestrator can. Host port
-    # publishing (15432) is unaffected — roboco_data is a normal bridge.
+    # publishing (15432) is unaffected — robofleet_data is a normal bridge.
     networks:
       - data
     environment:
-      POSTGRES_USER: roboco
-      POSTGRES_PASSWORD: roboco
-      POSTGRES_DB: roboco
+      POSTGRES_USER: robofleet
+      POSTGRES_PASSWORD: robofleet
+      POSTGRES_DB: robofleet
     ports:
       - "15432:5432"
     volumes:
@@ -76,7 +76,7 @@ services:
 
   redis:
     image: redis:8-alpine
-    container_name: roboco-redis
+    container_name: robofleet-redis
     restart: unless-stopped
     # data-only network — see postgres. Redis has no auth, so network
     # membership is its ONLY containment against agent containers.
@@ -98,18 +98,18 @@ services:
   # --------------------------------------------------------------------------
   backup:
     image: pgvector/pgvector:pg16
-    container_name: roboco-backup
+    container_name: robofleet-backup
     restart: unless-stopped
     # data-only network — pg_dump reaches postgres by container name, same
     # as every other data-network consumer; never exposed to the agent mesh.
     networks:
       - data
     environment:
-      POSTGRES_HOST: roboco-postgres
+      POSTGRES_HOST: robofleet-postgres
       POSTGRES_PORT: 5432
-      POSTGRES_USER: roboco
-      POSTGRES_PASSWORD: roboco
-      POSTGRES_DB: roboco
+      POSTGRES_USER: robofleet
+      POSTGRES_PASSWORD: robofleet
+      POSTGRES_DB: robofleet
       # Armed only when ROBOFLEET_BACKUP_MIRROR_DIR is set in .env; that host
       # path must live on a DIFFERENT disk (external/remote mount) — a
       # same-disk mirror protects nothing. Unset → the script skips mirroring.
@@ -128,7 +128,7 @@ services:
 
   ollama:
     image: ollama/ollama:latest
-    container_name: roboco-ollama
+    container_name: robofleet-ollama
     restart: unless-stopped
     environment:
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
@@ -145,7 +145,7 @@ services:
 
   ollama-init:
     image: curlimages/curl:latest
-    container_name: roboco-ollama-init
+    container_name: robofleet-ollama-init
     depends_on:
       ollama:
         condition: service_healthy
@@ -183,8 +183,8 @@ services:
   # work. No DB access, no git, no credentials.
   # --------------------------------------------------------------------------
   video-renderer:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-video-renderer:${ROBOFLEET_VERSION:-latest}
-    container_name: roboco-video-renderer
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-video-renderer:${ROBOFLEET_VERSION:-latest}
+    container_name: robofleet-video-renderer
     restart: unless-stopped
     # Isolated sidecar network: headless Chrome here executes
     # agent-authored composition HTML/JS. Only the orchestrator (also
@@ -209,93 +209,93 @@ services:
   # orchestrator spawns these same images at runtime.
   # --------------------------------------------------------------------------
   agent-base-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-base:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-base:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-base image present'"]
     restart: "no"
 
   agent-pm-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-pm:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-pm:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-pm image present'"]
     restart: "no"
 
   agent-dev-be-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-dev-be:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-dev-be:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-dev-be image present'"]
     restart: "no"
 
   agent-dev-fe-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-dev-fe:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-dev-fe:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-dev-fe image present'"]
     restart: "no"
 
   agent-qa-be-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-qa-be:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-qa-be:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-qa-be image present'"]
     restart: "no"
 
   agent-qa-fe-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-qa-fe:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-qa-fe:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-qa-fe image present'"]
     restart: "no"
 
   agent-ux-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-ux:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-ux:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-ux image present'"]
     restart: "no"
 
   agent-doc-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-doc:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-doc:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-doc image present'"]
     restart: "no"
 
   agent-prompter-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-prompter:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-prompter:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-prompter image present'"]
     restart: "no"
 
   agent-secretary-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-secretary:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-secretary:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-secretary image present'"]
     restart: "no"
 
   agent-pr-reviewer-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-pr-reviewer:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-pr-reviewer:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-pr-reviewer image present'"]
     restart: "no"
 
   agent-grok-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-grok:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-grok:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-grok image present'"]
     restart: "no"
 
   agent-grok-prompter-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-grok-prompter:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-grok-prompter:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-grok-prompter image present'"]
     restart: "no"
 
   agent-grok-secretary-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-grok-secretary:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-grok-secretary:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-grok-secretary image present'"]
     restart: "no"
 
   # Codex (OpenAI, official CLI) — one-shot delivery roles only, no
   # interactive prompter/secretary variant in V1.
   agent-codex-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-codex:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-codex:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-codex image present'"]
     restart: "no"
 
   # Gemini (Google, via the official gemini CLI). One-shot delivery roles
   # only (V1) — no interactive prompter/secretary variant, contrast Grok above.
   agent-gemini-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-gemini:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-gemini:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-gemini image present'"]
     restart: "no"
 
   # Kimi (Moonshot AI, via the official kimi CLI). One-shot delivery roles
   # only (V1) — no interactive prompter/secretary variant, contrast Grok above.
   agent-kimi-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-agent-kimi:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-kimi:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-kimi image present'"]
     restart: "no"
 
@@ -303,7 +303,7 @@ services:
   # into pg extensions. Bare sandboxes use the upstream postgres image, so this
   # is only needed by extension-using projects.
   sandbox-pg-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-sandbox-pg:${ROBOFLEET_VERSION:-latest}
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-sandbox-pg:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'sandbox-pg image present'"]
     restart: "no"
 
@@ -311,8 +311,8 @@ services:
   # Orchestrator — API server + agent spawner
   # --------------------------------------------------------------------------
   orchestrator:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-orchestrator:${ROBOFLEET_VERSION:-latest}
-    container_name: roboco-orchestrator
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-orchestrator:${ROBOFLEET_VERSION:-latest}
+    container_name: robofleet-orchestrator
     restart: unless-stopped
     # Multi-homed: the agent mesh (default) for spawned agents / panel /
     # ollama, the data network for postgres/redis, plus render to reach the
@@ -331,15 +331,15 @@ services:
     environment:
       # DB network isolation is LIVE in this file (postgres/redis on the
       # data-only network): suppress the legacy prod-creds gate-env
-      # injection — agents can't reach roboco-postgres anyway. This flag
+      # injection — agents can't reach robofleet-postgres anyway. This flag
       # must always travel with the networks: topology.
       ROBOFLEET_DB_NETWORK_ISOLATED: ${ROBOFLEET_DB_NETWORK_ISOLATED:-true}
-      ROBOFLEET_DATABASE_HOST: roboco-postgres
+      ROBOFLEET_DATABASE_HOST: robofleet-postgres
       ROBOFLEET_DATABASE_PORT: 5432
       ROBOFLEET_DATABASE_USER: roboco
       ROBOFLEET_DATABASE_PASSWORD: roboco
       ROBOFLEET_DATABASE_NAME: roboco
-      ROBOFLEET_REDIS_HOST: roboco-redis
+      ROBOFLEET_REDIS_HOST: robofleet-redis
       ROBOFLEET_REDIS_PORT: 6379
       ROBOFLEET_HOST: 0.0.0.0
       ROBOFLEET_PORT: 8000
@@ -351,14 +351,14 @@ services:
       # token below so the panel keeps working. Set false only on a trusted
       # private network with no untrusted reach to nginx.
       ROBOFLEET_AGENT_AUTH_REQUIRED: ${ROBOFLEET_AGENT_AUTH_REQUIRED:-true}
-      ROBOFLEET_LOCAL_LLM_BASE_URL: http://roboco-ollama:11434/v1
+      ROBOFLEET_LOCAL_LLM_BASE_URL: http://robofleet-ollama:11434/v1
       ROBOFLEET_LOCAL_LLM_MODEL: glm-5.2:cloud
       ROBOFLEET_DEFAULT_EMBEDDING_MODEL: qwen3-embedding:0.6b
-      ROBOFLEET_OLLAMA_BASE_URL: http://roboco-ollama:11434
+      ROBOFLEET_OLLAMA_BASE_URL: http://robofleet-ollama:11434
       # Video renderer sidecar (use container name). The video engine
       # itself is default-off (video_engine_enabled); this just points the
       # client at the sidecar for when it's armed.
-      ROBOFLEET_VIDEO_RENDERER_BASE_URL: http://roboco-video-renderer:3001
+      ROBOFLEET_VIDEO_RENDERER_BASE_URL: http://robofleet-video-renderer:3001
       # Spawn the PRE-BUILT agent images from the same registry instead of
       # building them from source (the orchestrator pulls any it lacks).
       ROBOFLEET_AGENT_IMAGE_REGISTRY: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}
@@ -566,8 +566,8 @@ services:
   # Next.js control panel (fronted by nginx; not exposed directly)
   # --------------------------------------------------------------------------
   panel:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/roboco-panel:${ROBOFLEET_VERSION:-latest}
-    container_name: roboco-panel
+    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-panel:${ROBOFLEET_VERSION:-latest}
+    container_name: robofleet-panel
     restart: unless-stopped
     expose:
       - "3000"
@@ -579,7 +579,7 @@ services:
   # --------------------------------------------------------------------------
   nginx:
     image: nginx:alpine
-    container_name: roboco-nginx
+    container_name: robofleet-nginx
     restart: unless-stopped
     ports:
       - "3000:80"
@@ -597,17 +597,17 @@ services:
 
 networks:
   default:
-    name: roboco_default
+    name: robofleet_default
   # DB isolation: postgres/redis live ONLY here; the orchestrator is the
   # only service homed on both. Spawned agent containers + sandbox sidecars
-  # join roboco_default (AGENT_NETWORK) and cannot resolve or reach the
+  # join robofleet_default (AGENT_NETWORK) and cannot resolve or reach the
   # production DB/Redis. Normal bridge (not internal) so host-published
   # ports keep working.
   data:
-    name: roboco_data
+    name: robofleet_data
   # Sidecar isolation: video-renderer executes agent-authored composition
   # HTML/JS in headless Chrome. It lives ONLY here, reachable only by the
   # orchestrator (multi-homed onto this network too); it can reach nothing
-  # else on roboco_default or roboco_data.
+  # else on robofleet_default or robofleet_data.
   render:
     name: roboco_render

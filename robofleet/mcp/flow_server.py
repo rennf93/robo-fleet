@@ -45,7 +45,7 @@ StrList = Annotated[list[str], BeforeValidator(coerce_str_list)]
 
 ORCHESTRATOR_URL = os.environ.get(
     "ROBOFLEET_ORCHESTRATOR_URL",
-    "http://roboco-orchestrator:8000",
+    "http://robofleet-orchestrator:8000",
 )
 # Where the per-agent SDK server lives (per-container loopback). The
 # flow server POSTs /verb/attempted here so the per-verb circuit breaker

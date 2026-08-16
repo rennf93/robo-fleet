@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Deploy roboco-panel to Cloud Run.
+# Deploy robofleet-panel to Cloud Run.
 # Reads project/region/repo from ROBOFLEET_GCP_* env vars (no hardcoded values).
 # Discovers the orchestrator's Cloud Run URL from the already-deployed
-# roboco-orchestrator service, sed-substitutes __PLACEHOLDER__ tokens in
+# robofleet-orchestrator service, sed-substitutes __PLACEHOLDER__ tokens in
 # panel-service.yaml into a temp copy, and calls `gcloud run services replace`.
 #
-# Requires: gcloud (authed), roboco-orchestrator already deployed.
+# Requires: gcloud (authed), robofleet-orchestrator already deployed.
 # Env (required):
 #   ROBOFLEET_GCP_PROJECT_ID
 #   ROBOFLEET_GCP_REGION
@@ -25,7 +25,7 @@ AR_HOST="${REGION}-docker.pkg.dev"
 cd "$(dirname "$0")/.."
 
 # --- Discover the orchestrator's Cloud Run URL ---
-ORCHESTRATOR_URL="$(gcloud run services describe roboco-orchestrator \
+ORCHESTRATOR_URL="$(gcloud run services describe robofleet-orchestrator \
   --region="${REGION}" \
   --project="${PROJECT}" \
   --format='value(status.url)')"
@@ -43,17 +43,17 @@ sed \
   -e "s|__PUBLIC_BASE_URL__|${PUBLIC_BASE_URL}|g" \
   infra/panel-service.yaml > "${TMP_MANIFEST}"
 
-echo "Replacing roboco-panel service..."
+echo "Replacing robofleet-panel service..."
 gcloud run services replace "${TMP_MANIFEST}" \
   --region="${REGION}" \
   --project="${PROJECT}"
 
 # --- Set cloud auth creds via env vars (not in Secret Manager's 4-seed set) ---
 echo "Updating env vars (cloud auth creds)..."
-gcloud run services update roboco-panel \
+gcloud run services update robofleet-panel \
   --region="${REGION}" \
   --project="${PROJECT}" \
   --update-env-vars="^@^ROBOFLEET_CLOUD_AUTH_EMAIL=${ROBOFLEET_CLOUD_AUTH_EMAIL:?set ROBOFLEET_CLOUD_AUTH_EMAIL}@ROBOFLEET_CLOUD_AUTH_PASSWORD=${ROBOFLEET_CLOUD_AUTH_PASSWORD:?set ROBOFLEET_CLOUD_AUTH_PASSWORD}"
 
-echo "Deployed roboco-panel to ${REGION}."
-echo "URL: gcloud run services describe roboco-panel --region=${REGION} --project=${PROJECT} --format='value(status.url)'"
+echo "Deployed robofleet-panel to ${REGION}."
+echo "URL: gcloud run services describe robofleet-panel --region=${REGION} --project=${PROJECT} --format='value(status.url)'"

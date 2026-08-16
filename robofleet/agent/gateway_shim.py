@@ -27,7 +27,7 @@ _BOARD_ROLES = {"product_owner", "head_marketing"}
 # intent-verb names emitted by lifecycle.intents_for_role(Role.QA).
 _INTENT_TO_PUBLIC: dict[str, str] = {"pass_review": "pass", "fail_review": "fail"}
 
-_DEFAULT_BASE = "http://roboco-orchestrator:8000"
+_DEFAULT_BASE = "http://robofleet-orchestrator:8000"
 _DEFAULT_MANIFEST = "/app/tool-manifest.json"
 
 

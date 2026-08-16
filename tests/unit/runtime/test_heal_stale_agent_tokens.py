@@ -46,7 +46,7 @@ async def test_heal_kills_stale_token_containers(
     monkeypatch.setenv("ROBOFLEET_AGENT_AUTH_SECRET", secrets.token_hex(32))
 
     async def inspect(name: str) -> tuple[bool, int | None]:
-        return (name == "roboco-agent-be-dev-1", 0)
+        return (name == "robofleet-agent-be-dev-1", 0)
 
     orch._inspect_container_state = AsyncMock(side_effect=inspect)
     orch._read_container_auth_env = AsyncMock(
@@ -64,7 +64,7 @@ async def test_heal_kills_stale_token_containers(
     n = await orch._heal_stale_agent_tokens()
 
     assert n == 1
-    assert removed == ["roboco-agent-be-dev-1"]
+    assert removed == ["robofleet-agent-be-dev-1"]
 
 
 @pytest.mark.asyncio
@@ -77,7 +77,7 @@ async def test_heal_leaves_valid_token_containers(
     valid_token = issue_agent_token(be_dev_1, "developer", "backend")
 
     async def inspect(name: str) -> tuple[bool, int | None]:
-        return (name == "roboco-agent-be-dev-1", 0)
+        return (name == "robofleet-agent-be-dev-1", 0)
 
     orch._inspect_container_state = AsyncMock(side_effect=inspect)
     orch._read_container_auth_env = AsyncMock(
@@ -149,7 +149,7 @@ async def test_heal_kills_slug_env_container_with_slug_signed_token(
     slug_signed_token = issue_agent_token(be_dev_1_slug, "developer", "backend")
 
     async def inspect(name: str) -> tuple[bool, int | None]:
-        return (name == "roboco-agent-be-dev-1", 0)
+        return (name == "robofleet-agent-be-dev-1", 0)
 
     orch._inspect_container_state = AsyncMock(side_effect=inspect)
     orch._read_container_auth_env = AsyncMock(
@@ -163,7 +163,7 @@ async def test_heal_kills_slug_env_container_with_slug_signed_token(
     n = await orch._heal_stale_agent_tokens()
 
     assert n == 1
-    assert removed == ["roboco-agent-be-dev-1"]
+    assert removed == ["robofleet-agent-be-dev-1"]
 
 
 def test_heal_accepts_expiring_format_token(

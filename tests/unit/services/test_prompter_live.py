@@ -202,7 +202,7 @@ async def test_deliver_posts_to_the_container_receiver() -> None:
     reg.open("s1", "intake-1")
 
     assert await reg.deliver("s1", "hello there") is True
-    assert seen["host"] == "roboco-agent-intake-1"
+    assert seen["host"] == "robofleet-agent-intake-1"
     assert seen["path"] == "/turn"
     assert seen["body"] == {"text": "hello there"}
     await client.aclose()

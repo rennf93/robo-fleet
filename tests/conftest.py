@@ -138,9 +138,9 @@ def _no_live_redis(monkeypatch: pytest.MonkeyPatch) -> None:
 # ---------------------------------------------------------------------------
 # Test DB endpoint discovery — env-overridable.
 #
-# Defaults match the project's own running postgres (`roboco-postgres` in
-# `docker-compose.yml`): superuser `roboco`/`roboco`, host-exposed on
-# `localhost:15432` (the container's 5432). `roboco` has CREATEDB, which the
+# Defaults match the project's own running postgres (`robofleet-postgres` in
+# `docker-compose.yml`): superuser `robofleet`/`robofleet`, host-exposed on
+# `localhost:15432` (the container's 5432). `robofleet` has CREATEDB, which the
 # session fixture needs to provision/drop an ephemeral per-run test DB.
 #
 # Previously these defaulted to the OS `$USER` with an empty password on

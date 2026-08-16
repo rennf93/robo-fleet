@@ -111,7 +111,7 @@ class Project(TimestampMixin):
         min_length=1,
         max_length=50,
         pattern=r"^[a-z0-9-]+$",
-        description="URL-safe identifier (e.g., 'roboco', 'roboco-panel')",
+        description="URL-safe identifier (e.g., 'roboco', 'robofleet-panel')",
     )
 
     # Git Configuration

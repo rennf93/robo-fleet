@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Entrypoint for the roboco-agent-grok-cli image (one-shot delivery roles).
+# Entrypoint for the robofleet-agent-grok-cli image (one-shot delivery roles).
 #
 # Runs an agent on xAI's official `grok` CLI (Grok Build), authenticated by the
 # SuperGrok subscription via a mounted ~/.grok/auth.json — the parity analogue of

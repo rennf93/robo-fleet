@@ -21,4 +21,4 @@ gcloud builds submit . \
   --project="${PROJECT}" \
   --substitutions=_AR_HOST="${AR_HOST}",_AR_REPO="${REPO}"
 
-echo "Built roboco-orchestrator, roboco-panel, roboco-agent-adk into ${AR_HOST}/${PROJECT}/${REPO}."
+echo "Built robofleet-orchestrator, robofleet-panel, robofleet-agent-adk into ${AR_HOST}/${PROJECT}/${REPO}."

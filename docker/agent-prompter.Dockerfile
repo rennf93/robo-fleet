@@ -6,7 +6,7 @@
 # and streams each reply back to the panel. `claude-agent-sdk` is already in the
 # base image (it's a main dependency); the SDK drives the same `claude` binary
 # the base ships, using the same mounted ~/.claude auth — no API key.
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 LABEL role="prompter"
 LABEL description="Intake interviewer — a long-lived Claude Agent SDK session driven by the panel"

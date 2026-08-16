@@ -1,7 +1,7 @@
 # PM Agent - Lightweight coordinator
 # PMs don't code, they coordinate and delegate
 
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 # No additional tools needed - PMs use MCP tools only
 # They get: task management, messaging, notifications, journaling

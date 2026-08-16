@@ -9,7 +9,7 @@
 # one-off spawn. Plain hyphens only, no em-dashes.
 #
 # Per-agent fields the provider fills at spawn time (left as placeholders here):
-#   metadata.name                    -> roboco-agent-<agent-slug>
+#   metadata.name                    -> robofleet-agent-<agent-slug>
 #   ROBOFLEET_AGENT_ID                  -> agent UUID (not the slug; gateway
 #                                       X-Agent-ID is Annotated[UUID, Header])
 #   ROBOFLEET_AGENT_ROLE                -> role slug (developer, qa, cell_pm, ...)
@@ -31,7 +31,7 @@
 apiVersion: run.googleapis.com/v1
 kind: Job
 metadata:
-  name: roboco-agent-__AGENT_SLUG__
+  name: robofleet-agent-__AGENT_SLUG__
   labels:
     run.googleapis.com/managed-by: gcloud
 spec:
@@ -45,7 +45,7 @@ spec:
         spec:
           containers:
             - name: agent
-              image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/roboco-agent-adk:latest
+              image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/robofleet-agent-adk:latest
               env:
                 # --- Agent identity (filled by CloudRunJobsProvider at spawn) ---
                 # ROBOFLEET_AGENT_ID is the agent UUID, not the slug: the gateway

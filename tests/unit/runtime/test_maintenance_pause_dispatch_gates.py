@@ -163,7 +163,7 @@ async def test_reap_with_service_kills_wedged_container_even_while_paused(
     await orch._reap_with_service(svc, dispatch_paused=True)
 
     remove_mock.assert_awaited_once_with(
-        "roboco-agent-be-dev-1", stop_reason="reaper_wedged_grok"
+        "robofleet-agent-be-dev-1", stop_reason="reaper_wedged_grok"
     )
     assert "be-dev-1" not in orch._instances  # evicted despite the pause
     svc.unclaim_for_reaper.assert_not_awaited()  # DB-level release stays gated

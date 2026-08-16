@@ -1,6 +1,6 @@
 """Render a Codex CLI agent's runtime config + per-role flags at container start.
 
-The ``roboco-agent-codex`` image's entrypoint runs ``python -m
+The ``robofleet-agent-codex`` image's entrypoint runs ``python -m
 robofleet.llm.providers.codex_cli_config`` to turn the mounted Claude Code
 ``mcp-config.json`` into ``~/.codex/config.toml`` (``[mcp_servers.<name>]``),
 write the execpolicy deny rules the git-push/package-manager parity needs, and

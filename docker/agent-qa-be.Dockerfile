@@ -1,7 +1,7 @@
 # Backend QA Agent
 # Testing and quality assurance tools for backend
 
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 USER root
 

@@ -108,7 +108,7 @@ async def test_internal_ssrf_validator_blocks_metadata_host() -> None:
 
 @pytest.mark.asyncio
 async def test_internal_ssrf_validator_blocks_internal_host() -> None:
-    body = b'{"url":"http://roboco-postgres:5432/"}'
+    body = b'{"url":"http://robofleet-postgres:5432/"}'
     assert await security.internal_ssrf_validator(_req(body)) is not None
 
 

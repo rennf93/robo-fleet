@@ -2,7 +2,7 @@
 (see ``robofleet/eval/runner.py``'s ``_bench_environment``). ``_generate_mcp_config``
 must honor that patch so a spawned container's MCP servers resolve to the
 throwaway orchestrator, never the real production hostname
-(``http://roboco-orchestrator:8000``) or ``127.0.0.1:{port}`` — the
+(``http://robofleet-orchestrator:8000``) or ``127.0.0.1:{port}`` — the
 no-production-reach guarantee. The agent UUID in the config is the REAL fixed
 UUID from ``foundation.identity.AGENTS`` (the harness intentionally uses real
 UUIDs so orchestrator-internal helpers resolve; the isolation is about the
@@ -51,7 +51,7 @@ async def test_mcp_config_uses_disposable_api_url_when_set(
     first_env = next(iter(config["mcpServers"].values()))["env"]
     assert first_env["ROBOFLEET_API_URL"] == _DISPOSABLE_URL
     assert first_env["ROBOFLEET_ORCHESTRATOR_URL"] == _DISPOSABLE_URL
-    assert "roboco-orchestrator" not in first_env["ROBOFLEET_API_URL"]
+    assert "robofleet-orchestrator" not in first_env["ROBOFLEET_API_URL"]
     assert "127.0.0.1" not in first_env["ROBOFLEET_API_URL"]
 
 

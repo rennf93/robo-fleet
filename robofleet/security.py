@@ -486,7 +486,7 @@ def _redis_url() -> str:
 
 # Loopback + docker's bridge pool: the internal agent mesh ONLY. Agents reach
 # the orchestrator DIRECTLY on the docker bridge (172.x →
-# roboco-orchestrator:8000, no nginx hop), HMAC-authenticated — the guard's
+# robofleet-orchestrator:8000, no nginx hop), HMAC-authenticated — the guard's
 # WAF/IP-ban/rate-limit is for the EXTERNAL attack surface arriving through
 # nginx, not for authenticated internal traffic. Without this the guard
 # IP-banned agent containers the moment it went active (2026-07-20): one
@@ -499,7 +499,7 @@ def _redis_url() -> str:
 # it correctly) — so a genuine 192.168.x.x browser would skip WAF/ban/rate-
 # limit right alongside actual agent traffic. 172.16.0.0/12 is docker's
 # default bridge address-pool range: neither compose file pins an explicit
-# `subnet:` for roboco_default/roboco_data, so this has to cover whatever
+# `subnet:` for robofleet_default/robofleet_data, so this has to cover whatever
 # docker allocates them.
 #
 # The variable-depth proxy chain (guard sees a fixed depth) is handled by

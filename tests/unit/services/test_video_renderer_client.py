@@ -288,7 +288,7 @@ def test_get_video_renderer_returns_real_client_when_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        cfg, "video_renderer_base_url", "http://roboco-video-renderer:3001"
+        cfg, "video_renderer_base_url", "http://robofleet-video-renderer:3001"
     )
     renderer = get_video_renderer()
     assert isinstance(renderer, VideoRenderer)

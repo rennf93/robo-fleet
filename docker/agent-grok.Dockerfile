@@ -10,7 +10,7 @@
 # the mounted system prompt / manifest / mcp-config, exactly as on the Claude path.
 # =============================================================================
 
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 USER root
 

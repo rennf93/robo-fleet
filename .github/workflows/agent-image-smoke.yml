@@ -50,7 +50,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build agent-base (shared FROM target for both variants)
-        run: docker build -f docker/agent-base.Dockerfile -t roboco-agent-base .
+        run: docker build -f docker/agent-base.Dockerfile -t robofleet-agent-base .
 
       - name: Build "after" images (this branch)
         run: |

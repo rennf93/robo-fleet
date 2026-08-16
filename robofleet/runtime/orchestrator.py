@@ -109,8 +109,8 @@ AgentState = OrchestratorAgentState
 AgentConfig = OrchestratorAgentConfig
 
 # Docker configuration
-AGENT_NETWORK = "roboco_default"
-AGENT_BASE_IMAGE = "roboco-agent-base"
+AGENT_NETWORK = "robofleet_default"
+AGENT_BASE_IMAGE = "robofleet-agent-base"
 
 # Minutes in an hour, for formatting an elapsed duration as "Xh Ym".
 _MINUTES_PER_HOUR = 60
@@ -398,41 +398,41 @@ def _reject_interactive_unsupported_provider(
 # Specialized images extend the base with role-specific tools
 AGENT_IMAGES: dict[str, str] = {
     # Backend
-    "be-dev-1": "roboco-agent-dev-be",
-    "be-dev-2": "roboco-agent-dev-be",
-    "be-qa": "roboco-agent-qa-be",
-    "be-pm": "roboco-agent-pm",
-    "be-doc": "roboco-agent-doc",
+    "be-dev-1": "robofleet-agent-dev-be",
+    "be-dev-2": "robofleet-agent-dev-be",
+    "be-qa": "robofleet-agent-qa-be",
+    "be-pm": "robofleet-agent-pm",
+    "be-doc": "robofleet-agent-doc",
     # Frontend
-    "fe-dev-1": "roboco-agent-dev-fe",
-    "fe-dev-2": "roboco-agent-dev-fe",
-    "fe-qa": "roboco-agent-qa-fe",
-    "fe-pm": "roboco-agent-pm",
-    "fe-doc": "roboco-agent-doc",
+    "fe-dev-1": "robofleet-agent-dev-fe",
+    "fe-dev-2": "robofleet-agent-dev-fe",
+    "fe-qa": "robofleet-agent-qa-fe",
+    "fe-pm": "robofleet-agent-pm",
+    "fe-doc": "robofleet-agent-doc",
     # UX/UI
-    "ux-dev-1": "roboco-agent-ux",
-    "ux-dev-2": "roboco-agent-ux",
-    "ux-qa": "roboco-agent-ux",  # Uses same as dev for now
-    "ux-pm": "roboco-agent-pm",
-    "ux-doc": "roboco-agent-doc",
+    "ux-dev-1": "robofleet-agent-ux",
+    "ux-dev-2": "robofleet-agent-ux",
+    "ux-qa": "robofleet-agent-ux",  # Uses same as dev for now
+    "ux-pm": "robofleet-agent-pm",
+    "ux-doc": "robofleet-agent-doc",
     # Board
-    "main-pm": "roboco-agent-pm",
-    "product-owner": "roboco-agent-pm",
-    "head-marketing": "roboco-agent-pm",
-    "auditor": "roboco-agent-pm",
+    "main-pm": "robofleet-agent-pm",
+    "product-owner": "robofleet-agent-pm",
+    "head-marketing": "robofleet-agent-pm",
+    "auditor": "robofleet-agent-pm",
     # PR Reviewer — read-only reviewer (diff via API, grep, post one
     # change-request; never runs code). Its own image for parity with the other
     # agents; built FROM the base, no extra toolchain. The three cell reviewers
     # are additional instances of the same role and reuse the same image (as
     # be-dev-1/-2 share one dev image) — the in-path gate adds no new image.
-    "pr-reviewer-1": "roboco-agent-pr-reviewer",
-    "be-pr-reviewer": "roboco-agent-pr-reviewer",
-    "fe-pr-reviewer": "roboco-agent-pr-reviewer",
-    "ux-pr-reviewer": "roboco-agent-pr-reviewer",
+    "pr-reviewer-1": "robofleet-agent-pr-reviewer",
+    "be-pr-reviewer": "robofleet-agent-pr-reviewer",
+    "fe-pr-reviewer": "robofleet-agent-pr-reviewer",
+    "ux-pr-reviewer": "robofleet-agent-pr-reviewer",
     # Intake — persistent Agent-SDK driver, not a one-shot `claude -p`.
-    INTAKE_AGENT_ID: "roboco-agent-prompter",
+    INTAKE_AGENT_ID: "robofleet-agent-prompter",
     # Secretary — persistent Agent-SDK driver with gated CEO authority.
-    SECRETARY_AGENT_ID: "roboco-agent-secretary",
+    SECRETARY_AGENT_ID: "robofleet-agent-secretary",
 }
 
 
@@ -441,7 +441,7 @@ def _qualify_agent_image(bare: str) -> str:
 
     Default (no ``agent_image_registry``, no ``agent_image_tag``) returns the
     bare name unchanged — the local build flow. With a registry set the
-    orchestrator spawns (and ensures) ``{registry}/roboco-agent-*[:tag]``, the
+    orchestrator spawns (and ensures) ``{registry}/robofleet-agent-*[:tag]``, the
     pre-built images the release workflow publishes, instead of building.
     """
     registry = settings.agent_image_registry.rstrip("/")
@@ -475,9 +475,9 @@ CODEX_USAGE_DATA_DIR = os.environ.get("ROBOFLEET_CODEX_USAGE_DIR", "/data/codex-
 
 # Interactive Grok images (grok-CLI conversation drivers) — selected for the
 # intake / secretary roles when their route resolves to GROK, instead of the
-# Claude prompter/secretary images. Their dockerfiles build FROM roboco-agent-grok.
-GROK_PROMPTER_IMAGE = "roboco-agent-grok-prompter"
-GROK_SECRETARY_IMAGE = "roboco-agent-grok-secretary"
+# Claude prompter/secretary images. Their dockerfiles build FROM robofleet-agent-grok.
+GROK_PROMPTER_IMAGE = "robofleet-agent-grok-prompter"
+GROK_SECRETARY_IMAGE = "robofleet-agent-grok-secretary"
 _GROK_INTERACTIVE_DOCKERFILES = {
     GROK_PROMPTER_IMAGE: "agent-grok-prompter.Dockerfile",
     GROK_SECRETARY_IMAGE: "agent-grok-secretary.Dockerfile",
@@ -1299,7 +1299,7 @@ class AgentOrchestrator:
         # Serialize concurrent live-chat starts for the single-id interactive
         # agents (intake / secretary). Each has a fixed agent id, so two
         # concurrent starts race on the container name (``docker run --name
-        # roboco-agent-<id>``) and the ``_instances[<id>]`` write — orphaning a
+        # robofleet-agent-<id>``) and the ``_instances[<id>]`` write — orphaning a
         # container + relay. The lock makes the second start wait for the first
         # to fully register (so the second's reap-prior step sees it) instead of
         # both clobbering the registry. Distinct from ``self._lock`` (which
@@ -1728,16 +1728,16 @@ class AgentOrchestrator:
             if bare != AGENT_BASE_IMAGE:
                 # Map the bare image name to its dockerfile
                 dockerfile_map = {
-                    "roboco-agent-pm": "agent-pm.Dockerfile",
-                    "roboco-agent-dev-be": "agent-dev-be.Dockerfile",
-                    "roboco-agent-dev-fe": "agent-dev-fe.Dockerfile",
-                    "roboco-agent-qa-be": "agent-qa-be.Dockerfile",
-                    "roboco-agent-qa-fe": "agent-qa-fe.Dockerfile",
-                    "roboco-agent-doc": "agent-doc.Dockerfile",
-                    "roboco-agent-ux": "agent-ux.Dockerfile",
-                    "roboco-agent-prompter": "agent-prompter.Dockerfile",
-                    "roboco-agent-secretary": "agent-secretary.Dockerfile",
-                    "roboco-agent-pr-reviewer": "agent-pr-reviewer.Dockerfile",
+                    "robofleet-agent-pm": "agent-pm.Dockerfile",
+                    "robofleet-agent-dev-be": "agent-dev-be.Dockerfile",
+                    "robofleet-agent-dev-fe": "agent-dev-fe.Dockerfile",
+                    "robofleet-agent-qa-be": "agent-qa-be.Dockerfile",
+                    "robofleet-agent-qa-fe": "agent-qa-fe.Dockerfile",
+                    "robofleet-agent-doc": "agent-doc.Dockerfile",
+                    "robofleet-agent-ux": "agent-ux.Dockerfile",
+                    "robofleet-agent-prompter": "agent-prompter.Dockerfile",
+                    "robofleet-agent-secretary": "agent-secretary.Dockerfile",
+                    "robofleet-agent-pr-reviewer": "agent-pr-reviewer.Dockerfile",
                 }
                 dockerfile = dockerfile_map.get(bare)
                 if dockerfile:
@@ -1750,7 +1750,7 @@ class AgentOrchestrator:
     async def _ensure_grok_interactive_image(self, image: str) -> None:
         """Ensure a Grok interactive image and its base→runtime chain exist.
 
-        The grok-prompter / grok-secretary images build FROM roboco-agent-grok,
+        The grok-prompter / grok-secretary images build FROM robofleet-agent-grok,
         which builds FROM the agent base, so the whole chain must be present
         before a local build of the interactive image can succeed (on the
         registry path each is already pulled and this just verifies presence).
@@ -1763,7 +1763,7 @@ class AgentOrchestrator:
             docker_dir = str(self.project_root / "docker")
         chain = [
             (AGENT_BASE_IMAGE, "agent-base.Dockerfile"),
-            ("roboco-agent-grok", "agent-grok.Dockerfile"),
+            ("robofleet-agent-grok", "agent-grok.Dockerfile"),
             (image, _GROK_INTERACTIVE_DOCKERFILES[image]),
         ]
         for img, dockerfile in chain:
@@ -2490,7 +2490,7 @@ class AgentOrchestrator:
         if DATA_HOST_PATH:
             settings_dir = Path("/app/agent-settings")
         else:
-            settings_dir = Path(tempfile.gettempdir()) / "roboco-agent-settings"
+            settings_dir = Path(tempfile.gettempdir()) / "robofleet-agent-settings"
 
         settings_dir.mkdir(parents=True, exist_ok=True)
         settings_path = settings_dir / f"{agent_id}-settings.json"
@@ -3339,7 +3339,7 @@ class AgentOrchestrator:
             # Let spawned containers resolve host.docker.internal so the eval
             # harness's disposable orchestrator (bound 0.0.0.0 on the host) is
             # reachable via host.docker.internal:<port>. Inert in production
-            # where MCP servers use http://roboco-orchestrator:8000. Docker
+            # where MCP servers use http://robofleet-orchestrator:8000. Docker
             # 20.10+ (May 2021) supports host-gateway on Linux.
             "--add-host",
             "host.docker.internal:host-gateway",
@@ -3405,7 +3405,7 @@ class AgentOrchestrator:
             "-e",
             f"ROBOFLEET_AGENT_ROLE={role}",
             "-e",
-            "ROBOFLEET_API_URL=http://roboco-orchestrator:8000",
+            "ROBOFLEET_API_URL=http://robofleet-orchestrator:8000",
             "-e",
             "ROBOFLEET_SDK_PORT=9000",
             "-e",
@@ -3715,23 +3715,27 @@ class AgentOrchestrator:
             # get_agent_image for the Claude path).
             registry.register(
                 ModelProvider.GROK,
-                GrokCliProvider(self, image=_qualify_agent_image("roboco-agent-grok")),
+                GrokCliProvider(
+                    self, image=_qualify_agent_image("robofleet-agent-grok")
+                ),
             )
             registry.register(
                 ModelProvider.OPENAI,
                 CodexCliProvider(
-                    self, image=_qualify_agent_image("roboco-agent-codex")
+                    self, image=_qualify_agent_image("robofleet-agent-codex")
                 ),
             )
             registry.register(
                 ModelProvider.GEMINI,
                 GeminiCliProvider(
-                    self, image=_qualify_agent_image("roboco-agent-gemini")
+                    self, image=_qualify_agent_image("robofleet-agent-gemini")
                 ),
             )
             registry.register(
                 ModelProvider.KIMI,
-                KimiCliProvider(self, image=_qualify_agent_image("roboco-agent-kimi")),
+                KimiCliProvider(
+                    self, image=_qualify_agent_image("robofleet-agent-kimi")
+                ),
             )
             # ADK agents on Cloud Run Jobs: a dedicated spawn backend whose
             # lifecycle (stop/health/remove) is routed through the same provider
@@ -3743,7 +3747,7 @@ class AgentOrchestrator:
             registry.register(
                 ModelProvider.ADK_CLOUD_RUN,
                 CloudRunJobsProvider(
-                    self, image=_qualify_agent_image("roboco-agent-adk")
+                    self, image=_qualify_agent_image("robofleet-agent-adk")
                 ),
             )
             self._provider_registry = registry
@@ -3810,7 +3814,7 @@ class AgentOrchestrator:
             result = await provider.spawn(config, initial_prompt, agent_settings_path)
             return result.instance_id
 
-        container_name = f"roboco-agent-{config.agent_id}"
+        container_name = f"robofleet-agent-{config.agent_id}"
         # teardown_sandbox=False: nothing is provisioned before spawn anymore
         # (sandboxes are on-demand via request_sandbox/ensure_sandbox), so this
         # is now vestigial for THIS spawn — but it still protects a respawn
@@ -3943,7 +3947,7 @@ class AgentOrchestrator:
         """
         if stop_reason is not None:
             self._record_expected_stop(
-                container_name.removeprefix("roboco-agent-"), stop_reason
+                container_name.removeprefix("robofleet-agent-"), stop_reason
             )
         # A dedicated provider backend (Cloud Run Jobs for ADK) has no docker
         # container to inspect/dump/rm: Cloud Logging covers observability and
@@ -3951,7 +3955,7 @@ class AgentOrchestrator:
         # docker block entirely. Pre-spawn stale-clear of a provider-backed
         # agent that isn't registered in _instances yet falls through to the
         # docker path, which is a no-op when no container exists.
-        slug = container_name.removeprefix("roboco-agent-")
+        slug = container_name.removeprefix("robofleet-agent-")
         provider = self._provider_for_instance(slug)
         if provider is not None:
             inst = self._instances[slug]
@@ -3971,7 +3975,7 @@ class AgentOrchestrator:
         exists = (await inspect.wait()) == 0
 
         if exists:
-            slug = container_name.removeprefix("roboco-agent-")
+            slug = container_name.removeprefix("robofleet-agent-")
             try:
                 # slug builds a path under /data/logs/agents — reject a
                 # traversal-shaped slug before the join (defense-in-depth;
@@ -4016,7 +4020,7 @@ class AgentOrchestrator:
         # calls), so skip it when the feature was never on. Never raises
         # (SandboxProvisioner.teardown contract).
         if teardown_sandbox and settings.sandbox_db_enabled:
-            slug = container_name.removeprefix("roboco-agent-")
+            slug = container_name.removeprefix("robofleet-agent-")
             await self._sandbox.teardown(slug)
             # Evict the ensure_sandbox cache so a later request_sandbox call
             # re-provisions instead of handing back creds for a torn-down
@@ -4162,7 +4166,7 @@ class AgentOrchestrator:
         if settings.api_url:
             api_url = settings.api_url
         elif PROJECT_HOST_PATH:
-            api_url = "http://roboco-orchestrator:8000"
+            api_url = "http://robofleet-orchestrator:8000"
         else:
             api_url = f"http://127.0.0.1:{settings.port}"
 
@@ -5613,7 +5617,7 @@ class AgentOrchestrator:
                 route.provider_type.value, route.model_name
             )
             api_url = (
-                "http://roboco-orchestrator:8000"
+                "http://robofleet-orchestrator:8000"
                 if PROJECT_HOST_PATH
                 else f"http://127.0.0.1:{settings.port}"
             )
@@ -5627,7 +5631,7 @@ class AgentOrchestrator:
                 self._ensure_grok_usage_dir(INTAKE_AGENT_ID)
             else:
                 await self._ensure_agent_image(INTAKE_AGENT_ID)
-            container_name = f"roboco-agent-{INTAKE_AGENT_ID}"
+            container_name = f"robofleet-agent-{INTAKE_AGENT_ID}"
             await self._remove_container(
                 container_name, stop_reason="pre_spawn_stale_clear"
             )
@@ -5820,7 +5824,7 @@ class AgentOrchestrator:
                 route.provider_type.value, route.model_name
             )
             api_url = (
-                "http://roboco-orchestrator:8000"
+                "http://robofleet-orchestrator:8000"
                 if PROJECT_HOST_PATH
                 else f"http://127.0.0.1:{settings.port}"
             )
@@ -5834,7 +5838,7 @@ class AgentOrchestrator:
                 self._ensure_grok_usage_dir(SECRETARY_AGENT_ID)
             else:
                 await self._ensure_agent_image(SECRETARY_AGENT_ID)
-            container_name = f"roboco-agent-{SECRETARY_AGENT_ID}"
+            container_name = f"robofleet-agent-{SECRETARY_AGENT_ID}"
             await self._remove_container(
                 container_name, stop_reason="pre_spawn_stale_clear"
             )
@@ -6427,7 +6431,7 @@ class AgentOrchestrator:
             if instance.container_id:
                 self._record_expected_stop(agent_id, stop_reason)
                 instance.state = AgentState.STOPPING
-                container_name = f"roboco-agent-{agent_id}"
+                container_name = f"robofleet-agent-{agent_id}"
 
                 # A dedicated provider backend (Cloud Run Jobs for ADK) handles
                 # its own stop; the docker stop/kill/remove block is the
@@ -7155,7 +7159,7 @@ class AgentOrchestrator:
                 continue
             try:
                 await self._remove_container(
-                    f"roboco-agent-{agent_id}", stop_reason="grok_cost_cap"
+                    f"robofleet-agent-{agent_id}", stop_reason="grok_cost_cap"
                 )
             except Exception as exc:
                 logger.error(
@@ -7288,7 +7292,7 @@ class AgentOrchestrator:
         agent — split out of ``_resolve_final_token_usage`` to keep its own
         xenon budget flat as one-shot-CLI providers accrete."""
         tokens = (0, 0, 0, 0)
-        sdk_url = f"http://roboco-agent-{agent_id}:{SDK_PORT}/usage/status"
+        sdk_url = f"http://robofleet-agent-{agent_id}:{SDK_PORT}/usage/status"
         try:
             async with httpx.AsyncClient(
                 timeout=3.0, headers=_system_api_headers()
@@ -7349,7 +7353,7 @@ class AgentOrchestrator:
             return (0, 0)
 
         turns = tool_calls = 0
-        sdk_url = f"http://roboco-agent-{agent_id}:{SDK_PORT}/usage/status"
+        sdk_url = f"http://robofleet-agent-{agent_id}:{SDK_PORT}/usage/status"
         try:
             async with httpx.AsyncClient(
                 timeout=3.0, headers=_system_api_headers()
@@ -7512,7 +7516,7 @@ class AgentOrchestrator:
         Returns ``(input, output, cache_read, cache_write)`` or ``None`` when the
         agent returns a non-200 status or has not accrued any tokens yet.
         """
-        sdk_url = f"http://roboco-agent-{agent_id}:{SDK_PORT}/usage/status"
+        sdk_url = f"http://robofleet-agent-{agent_id}:{SDK_PORT}/usage/status"
         resp = await client.get(sdk_url)
         if resp.status_code != http_status.HTTP_200_OK:
             return None
@@ -9111,7 +9115,7 @@ Start by:
         $ budget is breached.
 
         Tool-call halt: each agent's SDK server is reachable at
-        `http://roboco-agent-{agent_id}:9000/budget/status` on the shared
+        `http://robofleet-agent-{agent_id}:9000/budget/status` on the shared
         agent network; the task is already being auto-substituted by the
         post-tool hook on the agent side, so a release_claim stop suffices.
 
@@ -9151,7 +9155,7 @@ Start by:
         budget breached. Extracted from ``_sweep_budget_exceeded`` (xenon
         complexity budget) — see that method's docstring for the two triggers.
         """
-        url = f"http://roboco-agent-{agent_id}:{SDK_PORT}/budget/status"
+        url = f"http://robofleet-agent-{agent_id}:{SDK_PORT}/budget/status"
         data = await self._fetch_budget_status(client, url, agent_id)
         task_breach = await self._maybe_task_budget_breach(instance, task_budgets_on)
         tool_call_halt = bool(data and data.get("halt"))
@@ -9312,7 +9316,7 @@ Start by:
             proc = await asyncio.create_subprocess_exec(
                 "docker",
                 "exec",
-                f"roboco-agent-{slug}",
+                f"robofleet-agent-{slug}",
                 "/app/.venv/bin/python",
                 "-c",
                 "import httpx, mcp",
@@ -9539,7 +9543,9 @@ Start by:
         best-effort and never block the log line.
         """
         reason = self._consume_expected_stop(agent_id)
-        diagnostics = await self._inspect_exit_diagnostics(f"roboco-agent-{agent_id}")
+        diagnostics = await self._inspect_exit_diagnostics(
+            f"robofleet-agent-{agent_id}"
+        )
         expected = reason != "none_recorded"
         log = logger.info if expected else logger.warning
         log(
@@ -9621,7 +9627,7 @@ Start by:
             # next tick; skipping is the safe fail-direction.
             try:
                 is_running, exit_code = await self._inspect_container_state(
-                    f"roboco-agent-{agent_id}"
+                    f"robofleet-agent-{agent_id}"
                 )
             except Exception as exc:
                 logger.debug(
@@ -11533,7 +11539,7 @@ Start by:
         )
         if markers is None:
             return None
-        tail = await self._tail_container_logs(f"roboco-agent-{agent_id}")
+        tail = await self._tail_container_logs(f"robofleet-agent-{agent_id}")
         # The SDK server writes model-API errors to /tmp/sdk-server.log, not
         # stdout, so the overload marker may appear only in the durable Claude
         # transcript; without it an overload is missed and the agent
@@ -11566,7 +11572,7 @@ Start by:
         )
         if markers is None:
             return None
-        tail = await self._tail_container_logs(f"roboco-agent-{agent_id}")
+        tail = await self._tail_container_logs(f"robofleet-agent-{agent_id}")
         # The SDK server writes to /tmp/sdk-server.log, not stdout, so the
         # session-limit markers may not appear in docker logs. Search the durable
         # Claude transcript on the host as well.
@@ -13532,13 +13538,13 @@ Start now: evidence(task_id="{task_id}")
         for slug in AGENT_IMAGES:
             try:
                 is_running, _ = await self._inspect_container_state(
-                    f"roboco-agent-{slug}"
+                    f"robofleet-agent-{slug}"
                 )
             except Exception:
                 continue
             if not is_running:
                 continue
-            env = await self._read_container_auth_env(f"roboco-agent-{slug}")
+            env = await self._read_container_auth_env(f"robofleet-agent-{slug}")
             if env is None:
                 continue
             token, agent_id_env, role_env = env
@@ -13562,7 +13568,7 @@ Start now: evidence(task_id="{task_id}")
                 slug=slug,
             )
             await self._remove_container(
-                f"roboco-agent-{slug}",
+                f"robofleet-agent-{slug}",
                 teardown_sandbox=False,
                 stop_reason="stale_token_heal",
             )
@@ -13596,7 +13602,7 @@ Start now: evidence(task_id="{task_id}")
                 continue
             try:
                 is_running, _ = await self._inspect_container_state(
-                    f"roboco-agent-{slug}"
+                    f"robofleet-agent-{slug}"
                 )
             except Exception:
                 continue
@@ -13609,7 +13615,9 @@ Start now: evidence(task_id="{task_id}")
             # degrades to None (reaper's Docker-liveness fallback covers it).
             container_id: str | None = None
             try:
-                container_id = await self._resolve_container_id(f"roboco-agent-{slug}")
+                container_id = await self._resolve_container_id(
+                    f"robofleet-agent-{slug}"
+                )
             except Exception:
                 container_id = None
             # #72: a running container whose slug no longer holds a live claim is
@@ -13660,7 +13668,9 @@ Start now: evidence(task_id="{task_id}")
         if slug in instances:
             return False
         try:
-            is_running, _ = await self._inspect_container_state(f"roboco-agent-{slug}")
+            is_running, _ = await self._inspect_container_state(
+                f"robofleet-agent-{slug}"
+            )
         except Exception:
             return False
         return is_running
@@ -13713,7 +13723,7 @@ Start now: evidence(task_id="{task_id}")
             return False
         try:
             await self._remove_container(
-                f"roboco-agent-{slug}", stop_reason="reaper_wedged_grok"
+                f"robofleet-agent-{slug}", stop_reason="reaper_wedged_grok"
             )
         except Exception as exc:
             logger.error(
@@ -13783,7 +13793,7 @@ Start now: evidence(task_id="{task_id}")
             return False
         try:
             await self._remove_container(
-                f"roboco-agent-{slug}", stop_reason="reaper_stuck_claude"
+                f"robofleet-agent-{slug}", stop_reason="reaper_stuck_claude"
             )
         except Exception as exc:
             logger.error(
@@ -13823,7 +13833,7 @@ Start now: evidence(task_id="{task_id}")
             return False
         try:
             await self._remove_container(
-                f"roboco-agent-{slug}", stop_reason="gateway_health_recovery"
+                f"robofleet-agent-{slug}", stop_reason="gateway_health_recovery"
             )
         except Exception as exc:
             logger.error(

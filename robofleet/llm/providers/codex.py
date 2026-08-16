@@ -6,7 +6,7 @@ Grok agents on ``grok``: the orchestrator's shared container assembly mounts
 the RoboCo MCP gateway (``mcp-config.json``), the agent HMAC identity, and the
 git context; this provider adds the subscription auth mount (``~/.codex``) and
 the runtime env the codex-cli entrypoint reads, then launches the
-``roboco-agent-codex`` image — whose entrypoint renders ``~/.codex/config.toml``
+``robofleet-agent-codex`` image — whose entrypoint renders ``~/.codex/config.toml``
 + execpolicy rules + the per-role sandbox flag (see
 :mod:`robofleet.llm.providers.codex_cli_config`) and runs ``codex exec --json``
 headless.
@@ -18,7 +18,7 @@ Two things differ from the Claude Code spawn (mirroring
      key is used. The provider routing fields are blanked before the shared
      mount step so the shared builder never injects them as ``ANTHROPIC_*``
      (the wrong runtime) — codex authenticates from the mounted ``~/.codex``.
-  2. **Runtime** — the ``roboco-agent-codex`` image (codex CLI) instead of
+  2. **Runtime** — the ``robofleet-agent-codex`` image (codex CLI) instead of
      ``claude``.
 
 The initial prompt is passed via an **env var, not a positional CLI arg**
@@ -27,7 +27,7 @@ structurally avoids a flag-injection vector.
 
 **V1 scope**: one-shot delivery roles only (developer / qa / documenter /
 cell_pm / main_pm / pr_reviewer / board). No interactive intake/secretary
-support — there is no ``roboco-agent-codex-prompter`` / ``-secretary`` image,
+support — there is no ``robofleet-agent-codex-prompter`` / ``-secretary`` image,
 unlike grok's interactive pair.
 """
 
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
 _log = logging.getLogger(__name__)
 
 # The Codex agent image (own image, like every other agent role).
-_DEFAULT_CODEX_IMAGE = "roboco-agent-codex:latest"
+_DEFAULT_CODEX_IMAGE = "robofleet-agent-codex:latest"
 
 # The codex CLI model id, pinned — codex has no reliable default model.
 _CODEX_CLI_MODEL = settings.codex_cli_model
@@ -76,7 +76,7 @@ _CODEX_USAGE_FILE_IN_CONTAINER = f"{_CODEX_USAGE_DIR_IN_CONTAINER}/usage.json"
 
 
 def _container_name(agent_id: str) -> str:
-    return f"roboco-agent-{agent_id}"
+    return f"robofleet-agent-{agent_id}"
 
 
 class _CodexHost(Protocol):

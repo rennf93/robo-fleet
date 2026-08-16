@@ -1,6 +1,6 @@
 """_remove_container validates the slug before building the log-dir path.
 
-The slug (``container_name`` with the ``roboco-agent-`` prefix stripped)
+The slug (``container_name`` with the ``robofleet-agent-`` prefix stripped)
 flows into ``Path("/data/logs/agents") / slug`` and ``mkdir(parents=True)``.
 A traversal-shaped slug (``../../etc``) would mkdir outside the logs root.
 ``spawn_agent`` already validates the agent_id the container name is derived
@@ -47,7 +47,7 @@ async def test_remove_container_skips_log_dump_on_traversal_slug(
     )
 
     # No exception propagates: log-dump is best-effort; removal still runs.
-    await orch._remove_container("roboco-agent-../../etc")
+    await orch._remove_container("robofleet-agent-../../etc")
 
     assert mkdir_paths == [], f"traversal slug must not reach mkdir; got {mkdir_paths}"
 
@@ -69,6 +69,6 @@ async def test_remove_container_normal_slug_dumps_logs(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_FakeProc())
     )
 
-    await orch._remove_container("roboco-agent-be-dev-1")
+    await orch._remove_container("robofleet-agent-be-dev-1")
 
     assert any(p.endswith("/data/logs/agents/be-dev-1") for p in mkdir_paths)

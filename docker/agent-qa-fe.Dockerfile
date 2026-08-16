@@ -1,7 +1,7 @@
 # Frontend QA Agent
 # Accessibility and code-level testing tools
 
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 USER root
 

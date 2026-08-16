@@ -36,10 +36,10 @@ def test_access_secret_decodes_latest_payload(monkeypatch: pytest.MonkeyPatch) -
         return client
 
     monkeypatch.setattr(secretmanager, "_SecretManagerServiceClient", _fake_ctor)
-    val = secretmanager.access_secret("fernet-key", prefix="roboco")
+    val = secretmanager.access_secret("fernet-key", prefix="robofleet")
     client.access_secret_version.assert_called_once()
     name = _secret_name(client.access_secret_version.call_args)
-    assert "roboco-fernet-key" in name
+    assert "robofleet-fernet-key" in name
     assert "latest" in name
     assert val == "super-secret-value"
 
@@ -59,7 +59,7 @@ def test_access_secret_uses_settings_prefix_by_default(
 def test_access_secret_uses_explicit_project(monkeypatch: pytest.MonkeyPatch) -> None:
     client = _fake_client(b"v")
     monkeypatch.setattr(secretmanager, "_SecretManagerServiceClient", lambda: client)
-    secretmanager.access_secret("x", prefix="roboco", project="my-proj-123")
+    secretmanager.access_secret("x", prefix="robofleet", project="my-proj-123")
     # The secret name should embed the project id (projects/my-proj-123/secrets/...).
     name = _secret_name(client.access_secret_version.call_args)
     assert "my-proj-123" in name

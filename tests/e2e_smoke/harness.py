@@ -274,7 +274,7 @@ class E2EStack:
     github: _FakeGitHub
     # URL spawned agent containers use to reach this in-process orchestrator.
     # base_url stays 127.0.0.1 (host-side test clients); container_url is
-    # host.docker.internal so containers on the roboco_default bridge can
+    # host.docker.internal so containers on the robofleet_default bridge can
     # resolve the host's published port (the server binds 0.0.0.0 to accept
     # both). Set by build_e2e_stack alongside base_url.
     container_url: str = ""
@@ -421,7 +421,7 @@ def build_e2e_stack(
     # uvloop when installed, and this in-thread server has crashed CI with a
     # uvloop/asyncpg segfault (uvloop 0.22 + asyncpg 0.31 + Python 3.13) —
     # mirror the production default instead of picking up uvloop implicitly.
-    # Bind 0.0.0.0 so spawned agent containers on the roboco_default bridge
+    # Bind 0.0.0.0 so spawned agent containers on the robofleet_default bridge
     # can reach the server via host.docker.internal (host-gateway). Host-side
     # clients still connect via 127.0.0.1 (base_url) — 0.0.0.0 accepts both.
     server = uvicorn.Server(

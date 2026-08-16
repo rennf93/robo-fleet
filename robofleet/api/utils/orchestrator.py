@@ -81,7 +81,7 @@ def _validated_agent_id(agent_id: str) -> str:
 
     A caller (e.g. the panel) may pass an agent's DB UUID instead of its slug —
     ``_resolve_to_slug`` maps it to the canonical slug so the runtime container
-    (named ``roboco-agent-{slug}``) and instance registry are addressed
+    (named ``robofleet-agent-{slug}``) and instance registry are addressed
     consistently regardless of which identifier form was sent. An unknown UUID
     (not in the seed map) passes through unchanged, same as today.
     """

@@ -214,9 +214,9 @@ fi
 # raw HTTP. Two-step check: (a) is this a curl/wget/http/https/httpie command,
 # AND (b) does the line reference a forbidden internal host. Both must match.
 # This catches all forms uniformly:
-#   - scheme-ful:         `curl http://roboco-orchestrator:8000/api`
-#   - scheme-less:        `curl roboco-orchestrator:8000/api`
-#   - protocol-relative:  `curl //roboco-orchestrator:8000/api`
+#   - scheme-ful:         `curl http://robofleet-orchestrator:8000/api`
+#   - scheme-less:        `curl robofleet-orchestrator:8000/api`
+#   - protocol-relative:  `curl //robofleet-orchestrator:8000/api`
 #   - any flag ordering:  `curl -s -X POST http://localhost:8000/x -d ...`
 # Interpreter / library-driven HTTP is handled by the rule below.
 # KNOWN GAP (still out of scope here):
@@ -224,7 +224,7 @@ fi
 #     sees `curl $URL`, not the expanded URL, so this slips through. The
 #     server-side X-Agent-Role check is the second gate.
 if echo "$low" | grep -qE '(^|[[:space:];&|])(curl|wget|http|https|httpie)[[:space:]]' && \
-   echo "$low" | grep -qE '((http|https)://)?/?(roboco-[a-z0-9_-]+|localhost|127\.0\.0\.1|0\.0\.0\.0)[:/]'; then
+   echo "$low" | grep -qE '((http|https)://)?/?(robofleet-[a-z0-9_-]+|localhost|127\.0\.0\.1|0\.0\.0\.0)[:/]'; then
     echo "Denied: internal API calls bypass the gateway. Use the MCP verbs (roboco-flow / roboco-do / roboco-git-readonly / roboco-optimal / roboco-docs) — they route through the orchestrator with the right auth and tracing." >&2
     exit 2
 fi
@@ -235,7 +235,7 @@ fi
 # identity headers via:
 #   python3 << 'EOF'
 #   import httpx
-#   httpx.post("http://roboco-orchestrator:8000/api/v2/flow/developer/i_will_work_on",
+#   httpx.post("http://robofleet-orchestrator:8000/api/v2/flow/developer/i_will_work_on",
 #              headers={"X-Agent-ID": "<self>", "X-Agent-Role": "developer"})
 #   EOF
 # The binary is python3 (slips the CLI check) and it imports httpx, not
@@ -247,7 +247,7 @@ fi
 # (pypi, docs.python.org, github — github also hits its own rule earlier)
 # has no internal host so it still passes.
 if echo "$low" | grep -qE '(httpx|requests|urllib|aiohttp|http\.client|httplib|http\.request|net/http|net::http|httparty|faraday|lwp|libwww|httpurlconnection|okhttp|node-fetch|axios|xmlhttprequest|websocket|fetch[[:space:]]*\()' && \
-   echo "$low" | grep -qE '((http|https|ws|wss)://)?/?(roboco-[a-z0-9_-]+|localhost|127\.0\.0\.1|0\.0\.0\.0)[:/]'; then
+   echo "$low" | grep -qE '((http|https|ws|wss)://)?/?(robofleet-[a-z0-9_-]+|localhost|127\.0\.0\.1|0\.0\.0\.0)[:/]'; then
     echo "Denied: reaching an internal host via an HTTP client (httpx / requests / urllib / aiohttp / fetch / Net::HTTP / ...) bypasses the gateway, role manifest, tracing and auth — and lets you forge X-Agent-* identity headers. Use your role's MCP verbs (roboco-flow / roboco-do / roboco-git-readonly / roboco-optimal / roboco-docs); they are the only sanctioned path to the orchestrator." >&2
     exit 2
 fi

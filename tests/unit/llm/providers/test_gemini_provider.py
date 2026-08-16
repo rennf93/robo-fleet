@@ -139,12 +139,12 @@ async def test_gemini_spawn_does_not_require_api_key() -> None:
     provider = GeminiCliProvider(host)
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())):
         result = await provider.spawn(_config(provider_auth_token=None))
-    assert result.instance_id == "roboco-agent-be-dev-1"
+    assert result.instance_id == "robofleet-agent-be-dev-1"
 
 
 async def test_gemini_spawn_no_anthropic_leak() -> None:
     host = _FakeHost()
-    provider = GeminiCliProvider(host, image="roboco-agent-gemini:test")
+    provider = GeminiCliProvider(host, image="robofleet-agent-gemini:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -164,7 +164,7 @@ async def test_gemini_spawn_no_anthropic_leak() -> None:
 
 async def test_gemini_spawn_wires_gateway_env_and_image_last() -> None:
     host = _FakeHost()
-    provider = GeminiCliProvider(host, image="roboco-agent-gemini:test")
+    provider = GeminiCliProvider(host, image="robofleet-agent-gemini:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -180,11 +180,11 @@ async def test_gemini_spawn_wires_gateway_env_and_image_last() -> None:
     # Identity wiring from the shared host helpers is present.
     assert "ROBOFLEET_AGENT_TOKEN=hmac-be-dev-1" in cmd
     # The image is the final docker-run argument.
-    assert cmd[-1] == "roboco-agent-gemini:test"
-    assert host.removed == ["roboco-agent-be-dev-1"]
+    assert cmd[-1] == "robofleet-agent-gemini:test"
+    assert host.removed == ["robofleet-agent-be-dev-1"]
     assert host.remove_stop_reasons == ["pre_spawn_stale_clear"]
     assert result == SpawnResult(
-        instance_id="roboco-agent-be-dev-1",
+        instance_id="robofleet-agent-be-dev-1",
         extra={"container_id": "cid", "model": "gemini-2.5-pro"},
     )
 
@@ -204,7 +204,7 @@ async def test_gemini_spawn_adds_compose_labels_before_image(
         "robofleet.llm.providers.gemini.compose_label_args", _fake_label_args
     )
     host = _FakeHost()
-    provider = GeminiCliProvider(host, image="roboco-agent-gemini:test")
+    provider = GeminiCliProvider(host, image="robofleet-agent-gemini:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -212,9 +212,9 @@ async def test_gemini_spawn_adds_compose_labels_before_image(
     cmd = list(exec_mock.call_args.args)
     assert "com.docker.compose.service=be-dev-1" in cmd
     assert cmd.index("com.docker.compose.service=be-dev-1") < cmd.index(
-        "roboco-agent-gemini:test"
+        "robofleet-agent-gemini:test"
     )
-    assert cmd[-1] == "roboco-agent-gemini:test"
+    assert cmd[-1] == "robofleet-agent-gemini:test"
 
 
 async def test_gemini_spawn_mounts_auth_when_present(
@@ -291,5 +291,5 @@ async def test_gemini_spawn_raises_on_docker_failure() -> None:
 async def test_gemini_remove_delegates_to_host() -> None:
     host = _FakeHost()
     provider = GeminiCliProvider(host)
-    await provider.remove("roboco-agent-be-dev-1")
-    assert host.removed == ["roboco-agent-be-dev-1"]
+    await provider.remove("robofleet-agent-be-dev-1")
+    assert host.removed == ["robofleet-agent-be-dev-1"]

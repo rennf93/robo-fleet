@@ -19,9 +19,9 @@ steps:
       - -f
       - docker/orchestrator.Dockerfile
       - -t
-      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-orchestrator:${SHORT_SHA}
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-orchestrator:${SHORT_SHA}
       - -t
-      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-orchestrator:latest
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-orchestrator:latest
       - .
 
   - id: panel
@@ -31,9 +31,9 @@ steps:
       - -f
       - docker/panel.Dockerfile
       - -t
-      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-panel:${SHORT_SHA}
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:${SHORT_SHA}
       - -t
-      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-panel:latest
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:latest
       - .
 
   - id: agent-adk
@@ -43,18 +43,18 @@ steps:
       - -f
       - docker/agent-adk.Dockerfile
       - -t
-      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-agent-adk:${SHORT_SHA}
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-agent-adk:${SHORT_SHA}
       - -t
-      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-agent-adk:latest
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-agent-adk:latest
       - .
 
 images:
-  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-orchestrator:${SHORT_SHA}
-  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-orchestrator:latest
-  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-panel:${SHORT_SHA}
-  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-panel:latest
-  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-agent-adk:${SHORT_SHA}
-  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-agent-adk:latest
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-orchestrator:${SHORT_SHA}
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-orchestrator:latest
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:${SHORT_SHA}
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:latest
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-agent-adk:${SHORT_SHA}
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-agent-adk:latest
 
 options:
   logging: CLOUD_LOGGING_ONLY

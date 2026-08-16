@@ -25,14 +25,14 @@ variable "lb_domain" {
 # -----------------------------------------------------------------------------
 # Serverless VPC Access connector.
 # Lets Cloud Run services + jobs reach Memorystore (and Cloud SQL private IP)
-# on the roboco-net VPC. The orchestrator + agent job manifests reference this
+# on the robofleet-net VPC. The orchestrator + agent job manifests reference this
 # connector by its name via the run.googleapis.com/vpc-access-connector
 # annotation.
 # -----------------------------------------------------------------------------
-resource "google_vpc_access_connector" "roboco" {
-  name          = "roboco-connector"
+resource "google_vpc_access_connector" "robofleet" {
+  name          = "robofleet-connector"
   region        = var.region
-  network       = google_compute_network.roboco.name
+  network       = google_compute_network.robofleet.name
   ip_cidr_range = "10.8.0.0/28"
   machine_type  = "e2-standard-4"
   min_instances = 2
@@ -40,7 +40,7 @@ resource "google_vpc_access_connector" "roboco" {
 }
 
 output "vpc_connector_name" {
-  value       = google_vpc_access_connector.roboco.name
+  value       = google_vpc_access_connector.robofleet.name
   description = "Serverless VPC Access connector name (referenced by Cloud Run services + jobs)."
 }
 
@@ -54,13 +54,13 @@ output "vpc_connector_name" {
 # -----------------------------------------------------------------------------
 resource "google_compute_global_address" "lb" {
   count   = var.lb_domain != "" ? 1 : 0
-  name    = "roboco-lb-ip"
+  name    = "robofleet-lb-ip"
   project = var.project_id
 }
 
 resource "google_compute_managed_ssl_certificate" "lb" {
   count   = var.lb_domain != "" ? 1 : 0
-  name    = "roboco-lb-cert"
+  name    = "robofleet-lb-cert"
   project = var.project_id
   managed {
     domains = [var.lb_domain]
@@ -70,30 +70,30 @@ resource "google_compute_managed_ssl_certificate" "lb" {
 # Serverless NEGs for the two Cloud Run services.
 resource "google_compute_region_network_endpoint_group" "orchestrator" {
   count                 = var.lb_domain != "" ? 1 : 0
-  name                  = "roboco-orchestrator-neg"
+  name                  = "robofleet-orchestrator-neg"
   region                = var.region
   project               = var.project_id
   network_endpoint_type = "SERVERLESS"
   cloud_run {
-    service = "roboco-orchestrator"
+    service = "robofleet-orchestrator"
   }
 }
 
 resource "google_compute_region_network_endpoint_group" "panel" {
   count                 = var.lb_domain != "" ? 1 : 0
-  name                  = "roboco-panel-neg"
+  name                  = "robofleet-panel-neg"
   region                = var.region
   project               = var.project_id
   network_endpoint_type = "SERVERLESS"
   cloud_run {
-    service = "roboco-panel"
+    service = "robofleet-panel"
   }
 }
 
 # Backend services (global, fronting the regional serverless NEGs).
 resource "google_compute_backend_service" "orchestrator" {
   count     = var.lb_domain != "" ? 1 : 0
-  name      = "roboco-orchestrator-backend"
+  name      = "robofleet-orchestrator-backend"
   project   = var.project_id
   protocol  = "HTTPS"
   backend {
@@ -103,7 +103,7 @@ resource "google_compute_backend_service" "orchestrator" {
 
 resource "google_compute_backend_service" "panel" {
   count     = var.lb_domain != "" ? 1 : 0
-  name      = "roboco-panel-backend"
+  name      = "robofleet-panel-backend"
   project   = var.project_id
   protocol  = "HTTPS"
   backend {
@@ -112,9 +112,9 @@ resource "google_compute_backend_service" "panel" {
 }
 
 # URL map: /api/* and /ws/* -> orchestrator, everything else -> panel.
-resource "google_compute_url_map" "roboco" {
+resource "google_compute_url_map" "robofleet" {
   count           = var.lb_domain != "" ? 1 : 0
-  name            = "roboco-url-map"
+  name            = "robofleet-url-map"
   project         = var.project_id
   default_service = google_compute_backend_service.panel[0].id
   host_rule {
@@ -131,19 +131,19 @@ resource "google_compute_url_map" "roboco" {
   }
 }
 
-resource "google_compute_target_https_proxy" "roboco" {
+resource "google_compute_target_https_proxy" "robofleet" {
   count             = var.lb_domain != "" ? 1 : 0
-  name              = "roboco-https-proxy"
+  name              = "robofleet-https-proxy"
   project           = var.project_id
-  url_map           = google_compute_url_map.roboco[0].id
+  url_map           = google_compute_url_map.robofleet[0].id
   ssl_certificates  = [google_compute_managed_ssl_certificate.lb[0].id]
 }
 
 resource "google_compute_global_forwarding_rule" "https" {
   count    = var.lb_domain != "" ? 1 : 0
-  name     = "roboco-https-fw"
+  name     = "robofleet-https-fw"
   project  = var.project_id
-  target   = google_compute_target_https_proxy.roboco[0].id
+  target   = google_compute_target_https_proxy.robofleet[0].id
   port_range = "443"
   ip_address = google_compute_global_address.lb[0].address
 }

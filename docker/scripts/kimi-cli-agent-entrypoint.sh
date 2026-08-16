@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Entrypoint for the roboco-agent-kimi image (one-shot delivery roles only —
+# Entrypoint for the robofleet-agent-kimi image (one-shot delivery roles only —
 # see docker/agent-kimi.Dockerfile for the V1 scope note).
 #
 # Runs an agent on Moonshot's official `kimi` (kimi-code) CLI, authenticated

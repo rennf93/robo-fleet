@@ -27,7 +27,7 @@ from robofleet.agents_config import get_agent_team
 
 ORCHESTRATOR_URL = os.environ.get(
     "ROBOFLEET_ORCHESTRATOR_URL",
-    "http://roboco-orchestrator:8000",
+    "http://robofleet-orchestrator:8000",
 )
 # Per-agent SDK loopback for the per-verb circuit breaker.
 SDK_URL = os.environ.get("ROBOFLEET_SDK_URL", "http://localhost:9000")

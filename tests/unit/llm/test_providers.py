@@ -217,12 +217,12 @@ async def test_grok_spawn_does_not_require_api_key() -> None:
     provider = GrokCliProvider(host)
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())):
         result = await provider.spawn(_config(provider_auth_token=None))
-    assert result.instance_id == "roboco-agent-be-dev-1"
+    assert result.instance_id == "robofleet-agent-be-dev-1"
 
 
 async def test_grok_spawn_no_xai_key_and_no_anthropic_leak() -> None:
     host = _FakeHost()
-    provider = GrokCliProvider(host, image="roboco-agent-grok:test")
+    provider = GrokCliProvider(host, image="robofleet-agent-grok:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -241,7 +241,7 @@ async def test_grok_spawn_no_xai_key_and_no_anthropic_leak() -> None:
 
 async def test_grok_spawn_wires_gateway_env_and_image_last() -> None:
     host = _FakeHost()
-    provider = GrokCliProvider(host, image="roboco-agent-grok:test")
+    provider = GrokCliProvider(host, image="robofleet-agent-grok:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -261,11 +261,11 @@ async def test_grok_spawn_wires_gateway_env_and_image_last() -> None:
     # Identity wiring from the shared host helpers is present.
     assert "ROBOFLEET_AGENT_TOKEN=hmac-be-dev-1" in cmd
     # The image is the final docker-run argument.
-    assert cmd[-1] == "roboco-agent-grok:test"
-    assert host.removed == ["roboco-agent-be-dev-1"]
+    assert cmd[-1] == "robofleet-agent-grok:test"
+    assert host.removed == ["robofleet-agent-be-dev-1"]
     assert host.remove_stop_reasons == ["pre_spawn_stale_clear"]
     assert result == SpawnResult(
-        instance_id="roboco-agent-be-dev-1",
+        instance_id="robofleet-agent-be-dev-1",
         extra={"container_id": "cid", "model": "grok-build"},
     )
 
@@ -285,7 +285,7 @@ async def test_grok_spawn_adds_compose_labels_before_image(
         "robofleet.llm.providers.grok.compose_label_args", _fake_label_args
     )
     host = _FakeHost()
-    provider = GrokCliProvider(host, image="roboco-agent-grok:test")
+    provider = GrokCliProvider(host, image="robofleet-agent-grok:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -293,9 +293,9 @@ async def test_grok_spawn_adds_compose_labels_before_image(
     cmd = list(exec_mock.call_args.args)
     assert "com.docker.compose.service=be-dev-1" in cmd
     assert cmd.index("com.docker.compose.service=be-dev-1") < cmd.index(
-        "roboco-agent-grok:test"
+        "robofleet-agent-grok:test"
     )
-    assert cmd[-1] == "roboco-agent-grok:test"
+    assert cmd[-1] == "robofleet-agent-grok:test"
 
 
 async def test_grok_spawn_mounts_auth_when_present(_isolate_grok_auth: Path) -> None:
@@ -408,12 +408,12 @@ async def test_codex_spawn_does_not_require_api_key() -> None:
     provider = CodexCliProvider(host)
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())):
         result = await provider.spawn(_codex_config(provider_auth_token=None))
-    assert result.instance_id == "roboco-agent-be-dev-1"
+    assert result.instance_id == "robofleet-agent-be-dev-1"
 
 
 async def test_codex_spawn_no_leaked_key_and_no_anthropic_leak() -> None:
     host = _FakeHost()
-    provider = CodexCliProvider(host, image="roboco-agent-codex:test")
+    provider = CodexCliProvider(host, image="robofleet-agent-codex:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -430,7 +430,7 @@ async def test_codex_spawn_no_leaked_key_and_no_anthropic_leak() -> None:
 
 async def test_codex_spawn_wires_gateway_env_and_image_last() -> None:
     host = _FakeHost()
-    provider = CodexCliProvider(host, image="roboco-agent-codex:test")
+    provider = CodexCliProvider(host, image="robofleet-agent-codex:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -444,11 +444,11 @@ async def test_codex_spawn_wires_gateway_env_and_image_last() -> None:
     assert "/host/data/codex-usage/be-dev-1:/home/agent/.codex-usage" in cmd
     assert "ROBOFLEET_CODEX_USAGE_FILE=/home/agent/.codex-usage/usage.json" in cmd
     assert "ROBOFLEET_AGENT_TOKEN=hmac-be-dev-1" in cmd
-    assert cmd[-1] == "roboco-agent-codex:test"
-    assert host.removed == ["roboco-agent-be-dev-1"]
+    assert cmd[-1] == "robofleet-agent-codex:test"
+    assert host.removed == ["robofleet-agent-be-dev-1"]
     assert host.remove_stop_reasons == ["pre_spawn_stale_clear"]
     assert result == SpawnResult(
-        instance_id="roboco-agent-be-dev-1",
+        instance_id="robofleet-agent-be-dev-1",
         extra={"container_id": "cid", "model": "gpt-5.3-codex"},
     )
 
@@ -463,7 +463,7 @@ async def test_codex_spawn_adds_compose_labels_before_image(
         "robofleet.llm.providers.codex.compose_label_args", _fake_label_args
     )
     host = _FakeHost()
-    provider = CodexCliProvider(host, image="roboco-agent-codex:test")
+    provider = CodexCliProvider(host, image="robofleet-agent-codex:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -471,9 +471,9 @@ async def test_codex_spawn_adds_compose_labels_before_image(
     cmd = list(exec_mock.call_args.args)
     assert "com.docker.compose.service=be-dev-1" in cmd
     assert cmd.index("com.docker.compose.service=be-dev-1") < cmd.index(
-        "roboco-agent-codex:test"
+        "robofleet-agent-codex:test"
     )
-    assert cmd[-1] == "roboco-agent-codex:test"
+    assert cmd[-1] == "robofleet-agent-codex:test"
 
 
 async def test_codex_spawn_mounts_auth_when_present(
@@ -581,12 +581,12 @@ async def test_kimi_spawn_does_not_require_api_key() -> None:
     provider = KimiCliProvider(host)
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())):
         result = await provider.spawn(_kimi_config(provider_auth_token=None))
-    assert result.instance_id == "roboco-agent-be-dev-1"
+    assert result.instance_id == "robofleet-agent-be-dev-1"
 
 
 async def test_kimi_spawn_no_leaked_key_and_no_anthropic_leak() -> None:
     host = _FakeHost()
-    provider = KimiCliProvider(host, image="roboco-agent-kimi:test")
+    provider = KimiCliProvider(host, image="robofleet-agent-kimi:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -603,7 +603,7 @@ async def test_kimi_spawn_no_leaked_key_and_no_anthropic_leak() -> None:
 
 async def test_kimi_spawn_wires_gateway_env_and_image_last() -> None:
     host = _FakeHost()
-    provider = KimiCliProvider(host, image="roboco-agent-kimi:test")
+    provider = KimiCliProvider(host, image="robofleet-agent-kimi:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -617,11 +617,11 @@ async def test_kimi_spawn_wires_gateway_env_and_image_last() -> None:
     assert "/host/data/kimi-usage/be-dev-1:/home/agent/.kimi-usage" in cmd
     assert "ROBOFLEET_KIMI_USAGE_FILE=/home/agent/.kimi-usage/usage.json" in cmd
     assert "ROBOFLEET_AGENT_TOKEN=hmac-be-dev-1" in cmd
-    assert cmd[-1] == "roboco-agent-kimi:test"
-    assert host.removed == ["roboco-agent-be-dev-1"]
+    assert cmd[-1] == "robofleet-agent-kimi:test"
+    assert host.removed == ["robofleet-agent-be-dev-1"]
     assert host.remove_stop_reasons == ["pre_spawn_stale_clear"]
     assert result == SpawnResult(
-        instance_id="roboco-agent-be-dev-1",
+        instance_id="robofleet-agent-be-dev-1",
         extra={"container_id": "cid", "model": "kimi-code/k3"},
     )
 
@@ -636,7 +636,7 @@ async def test_kimi_spawn_adds_compose_labels_before_image(
         "robofleet.llm.providers.kimi.compose_label_args", _fake_label_args
     )
     host = _FakeHost()
-    provider = KimiCliProvider(host, image="roboco-agent-kimi:test")
+    provider = KimiCliProvider(host, image="robofleet-agent-kimi:test")
     with patch(
         "asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())
     ) as exec_mock:
@@ -644,9 +644,9 @@ async def test_kimi_spawn_adds_compose_labels_before_image(
     cmd = list(exec_mock.call_args.args)
     assert "com.docker.compose.service=be-dev-1" in cmd
     assert cmd.index("com.docker.compose.service=be-dev-1") < cmd.index(
-        "roboco-agent-kimi:test"
+        "robofleet-agent-kimi:test"
     )
-    assert cmd[-1] == "roboco-agent-kimi:test"
+    assert cmd[-1] == "robofleet-agent-kimi:test"
 
 
 async def test_kimi_spawn_mounts_auth_when_present(_isolate_kimi_auth: Path) -> None:
@@ -729,7 +729,7 @@ async def test_claude_spawn_delegates_to_host() -> None:
     provider = ClaudeCodeProvider(host)
     result = await provider.spawn(_config(provider_type="anthropic"), "prompt")
     assert host.spawn_args is not None
-    assert result.instance_id == "roboco-agent-be-dev-1"
+    assert result.instance_id == "robofleet-agent-be-dev-1"
     assert result.extra["container_id"] == "container-id-abc123"
 
 
@@ -745,5 +745,5 @@ async def test_claude_spawn_wraps_host_error() -> None:
 async def test_claude_remove_delegates_to_host() -> None:
     host = _FakeHost()
     provider = ClaudeCodeProvider(host)
-    await provider.remove("roboco-agent-be-dev-1")
-    assert host.removed == ["roboco-agent-be-dev-1"]
+    await provider.remove("robofleet-agent-be-dev-1")
+    assert host.removed == ["robofleet-agent-be-dev-1"]

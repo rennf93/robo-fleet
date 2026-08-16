@@ -61,7 +61,7 @@ _JANITOR_GRACE_SECONDS = 180.0
 
 SANDBOX_LABEL = "robofleet.sandbox=1"
 _OWNER_LABEL_KEY = "robofleet.sandbox.owner"
-_AGENT_CONTAINER_PREFIX = "roboco-agent-"
+_AGENT_CONTAINER_PREFIX = "robofleet-agent-"
 
 
 async def _default_docker_run(
@@ -98,7 +98,7 @@ class SandboxProvisioner:
 
     ``network`` is caller-supplied (the orchestrator's `AGENT_NETWORK`
     constant) rather than hardcoded here, so a future network-isolation
-    change (agents moved off `roboco_default`) only has to flip the value
+    change (agents moved off `robofleet_default`) only has to flip the value
     the caller passes in — sandboxes ride along automatically.
     """
 

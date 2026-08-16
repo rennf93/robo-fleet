@@ -431,20 +431,20 @@ test-3.14:
 # Stress Test
 .PHONY: stress-test
 stress-test:
-	@COMPOSE_BAKE=true docker compose up --build -d roboco-example redis
+	@COMPOSE_BAKE=true docker compose up --build -d robofleet-example redis
 	@echo "Waiting for services to start up..."
 	@sleep 5
-	@docker compose run --rm roboco-example uv run python examples/testing/stress_test.py --url http://roboco-example:8000 --duration 120 --concurrency 50 --ramp-up 10 --delay 0.02 --test-type standard -v
+	@docker compose run --rm robofleet-example uv run python examples/testing/stress_test.py --url http://robofleet-example:8000 --duration 120 --concurrency 50 --ramp-up 10 --delay 0.02 --test-type standard -v
 	@docker compose down --rmi all --remove-orphans -v
 	@docker system prune -f
 
 # High-load stress test
 .PHONY: high-load-stress-test
 high-load-stress-test:
-	@COMPOSE_BAKE=true docker compose up --build -d roboco-example redis
+	@COMPOSE_BAKE=true docker compose up --build -d robofleet-example redis
 	@echo "Waiting for services to start up..."
 	@sleep 5
-	@docker compose run --rm roboco-example uv run python examples/testing/stress_test.py --url http://roboco-example:8000 --duration 180 --concurrency 100 --ramp-up 15 --delay 0.01 --test-type high_load -v
+	@docker compose run --rm robofleet-example uv run python examples/testing/stress_test.py --url http://robofleet-example:8000 --duration 180 --concurrency 100 --ramp-up 15 --delay 0.01 --test-type high_load -v
 	@docker compose down --rmi all --remove-orphans -v
 	@docker system prune -f
 

@@ -1,6 +1,6 @@
 """Render a Gemini CLI agent's runtime config + per-role policy at container start.
 
-The ``roboco-agent-gemini`` image's entrypoint runs ``python -m
+The ``robofleet-agent-gemini`` image's entrypoint runs ``python -m
 robofleet.llm.providers.gemini_cli_config`` to turn the mounted Claude Code
 ``mcp-config.json`` into ``~/.gemini/settings.json`` (``mcpServers`` +
 auth/experimental/advanced flags) and to render a per-role TOML Policy Engine

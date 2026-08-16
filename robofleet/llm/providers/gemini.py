@@ -7,7 +7,7 @@ RoboCo runs Gemini agents on it the same way it runs grok agents: the
 orchestrator's shared container assembly mounts the RoboCo MCP gateway
 (``mcp-config.json``), the agent HMAC identity, and the git context; this
 provider adds the OAuth credential mount and the runtime env the gemini-cli
-entrypoint reads, then launches the ``roboco-agent-gemini`` image — whose
+entrypoint reads, then launches the ``robofleet-agent-gemini`` image — whose
 entrypoint renders ``~/.gemini/settings.json`` + a Policy Engine TOML from the
 mounted mcp-config.json (see :mod:`robofleet.llm.providers.gemini_cli_config`) and
 runs ``gemini -p`` headless.
@@ -34,7 +34,7 @@ Two things differ from the Claude Code spawn (mirrors ``GrokCliProvider``):
      agent's refreshed token never propagates to (or conflicts with) a
      sibling's). This is why ``gemini_auth.py`` — the grok module this docstring
      contrasts against — has no counterpart here.
-  2. **Runtime** — the ``roboco-agent-gemini`` image (Gemini CLI) instead of
+  2. **Runtime** — the ``robofleet-agent-gemini`` image (Gemini CLI) instead of
      ``claude``.
 
 The initial prompt is passed via an **env var, not a positional CLI arg**,
@@ -68,7 +68,7 @@ _log = logging.getLogger(__name__)
 # The Gemini agent image (own image, like every other agent role). Overridable
 # for tests / staged rollout.
 _DEFAULT_GEMINI_IMAGE = os.environ.get(
-    "ROBOFLEET_GEMINI_AGENT_IMAGE", "roboco-agent-gemini:latest"
+    "ROBOFLEET_GEMINI_AGENT_IMAGE", "robofleet-agent-gemini:latest"
 )
 
 # The gemini CLI model id. GA ids: gemini-2.5-pro / gemini-2.5-flash /
@@ -101,7 +101,7 @@ _GEMINI_USAGE_FILE_IN_CONTAINER = f"{_GEMINI_USAGE_DIR_IN_CONTAINER}/usage.json"
 
 
 def _container_name(agent_id: str) -> str:
-    return f"roboco-agent-{agent_id}"
+    return f"robofleet-agent-{agent_id}"
 
 
 class _GeminiHost(Protocol):

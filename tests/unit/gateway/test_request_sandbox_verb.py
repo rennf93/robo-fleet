@@ -68,7 +68,7 @@ def _sandbox_info(
     return SandboxInfo(
         services={
             "postgres": SandboxConnection(
-                host="roboco-sandbox-pg-dev-1",
+                host="robofleet-sandbox-pg-dev-1",
                 port=5432,
                 password="pw",
                 user="sandbox",
@@ -197,12 +197,12 @@ async def test_success_returns_creds_in_evidence_with_env_subdict(
     assert env.error is None
     assert env.evidence is not None
     payload = env.evidence["postgres"]
-    assert payload["host"] == "roboco-sandbox-pg-dev-1"
+    assert payload["host"] == "robofleet-sandbox-pg-dev-1"
     assert payload["port"] == expected_port
     assert payload["user"] == "sandbox"
     assert payload["password"] == "pw"
     assert payload["database"] == "sandbox"
-    assert payload["env"]["ROBOFLEET_TEST_DB_HOST"] == "roboco-sandbox-pg-dev-1"
+    assert payload["env"]["ROBOFLEET_TEST_DB_HOST"] == "robofleet-sandbox-pg-dev-1"
     assert payload["env"]["ROBOFLEET_TEST_DB_PASSWORD"] == "pw"
     task_svc.heartbeat.assert_awaited_once()
 

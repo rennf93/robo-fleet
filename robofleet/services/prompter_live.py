@@ -263,7 +263,7 @@ class PrompterLiveRegistry:
         if session is None or session.closed:
             return False
         session.last_activity = time.monotonic()  # human turn = activity
-        url = f"http://roboco-agent-{session.agent_id}:{SDK_PORT}/turn"
+        url = f"http://robofleet-agent-{session.agent_id}:{SDK_PORT}/turn"
         client = self._client or httpx.AsyncClient(timeout=10.0)
         try:
             resp = await client.post(url, json={"text": text})

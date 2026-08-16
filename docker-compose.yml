@@ -4,17 +4,17 @@ services:
   # ==========================================================================
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: roboco-postgres
+    container_name: robofleet-postgres
     restart: unless-stopped
-    # data-only network: agent containers (on roboco_default) cannot reach
+    # data-only network: agent containers (on robofleet_default) cannot reach
     # the production DB; only the multi-homed orchestrator can. Host port
-    # publishing (15432) is unaffected — roboco_data is a normal bridge.
+    # publishing (15432) is unaffected — robofleet_data is a normal bridge.
     networks:
       - data
     environment:
-      POSTGRES_USER: roboco
-      POSTGRES_PASSWORD: roboco
-      POSTGRES_DB: roboco
+      POSTGRES_USER: robofleet
+      POSTGRES_PASSWORD: robofleet
+      POSTGRES_DB: robofleet
     ports:
       - "15432:5432"
     volumes:
@@ -30,7 +30,7 @@ services:
   # ==========================================================================
   redis:
     image: redis:8-alpine
-    container_name: roboco-redis
+    container_name: robofleet-redis
     restart: unless-stopped
     # data-only network — see postgres. Redis has no auth, so network
     # membership is its ONLY containment against agent containers.
@@ -52,18 +52,18 @@ services:
   # ==========================================================================
   backup:
     image: pgvector/pgvector:pg16
-    container_name: roboco-backup
+    container_name: robofleet-backup
     restart: unless-stopped
     # data-only network — pg_dump reaches postgres by container name, same
     # as every other data-network consumer; never exposed to the agent mesh.
     networks:
       - data
     environment:
-      POSTGRES_HOST: roboco-postgres
+      POSTGRES_HOST: robofleet-postgres
       POSTGRES_PORT: 5432
-      POSTGRES_USER: roboco
-      POSTGRES_PASSWORD: roboco
-      POSTGRES_DB: roboco
+      POSTGRES_USER: robofleet
+      POSTGRES_PASSWORD: robofleet
+      POSTGRES_DB: robofleet
       # Armed only when ROBOFLEET_BACKUP_MIRROR_DIR is set in .env; that host
       # path must live on a DIFFERENT disk (external/remote mount) — a
       # same-disk mirror protects nothing. Unset → the script skips mirroring.
@@ -85,7 +85,7 @@ services:
   # ==========================================================================
   minio:
     image: minio/minio:latest
-    container_name: roboco-minio
+    container_name: robofleet-minio
     restart: unless-stopped
     # data-only network — keeps MinIO off the agent mesh; the multi-homed
     # orchestrator reaches it via its data NIC. Host ports for debugging.
@@ -112,7 +112,7 @@ services:
   # covers re-runs (bucket already exists).
   minio-init:
     image: minio/mc:latest
-    container_name: roboco-minio-init
+    container_name: robofleet-minio-init
     depends_on:
       minio:
         condition: service_healthy
@@ -122,11 +122,11 @@ services:
     # Note: $$ escapes $ for docker-compose variable substitution so the
     # container's own env vars reach mc.
     command:
-      - mc alias set local http://roboco-minio:9000 $$ROBOFLEET_MINIO_ACCESS_KEY $$ROBOFLEET_MINIO_SECRET_KEY && mc mb -p local/$$ROBOFLEET_MINIO_BUCKET || true
+      - mc alias set local http://robofleet-minio:9000 $$ROBOFLEET_MINIO_ACCESS_KEY $$ROBOFLEET_MINIO_SECRET_KEY && mc mb -p local/$$ROBOFLEET_MINIO_BUCKET || true
     environment:
       ROBOFLEET_MINIO_ACCESS_KEY: ${ROBOFLEET_MINIO_ACCESS_KEY:-minio}
       ROBOFLEET_MINIO_SECRET_KEY: ${ROBOFLEET_MINIO_SECRET_KEY:-minio123}
-      ROBOFLEET_MINIO_BUCKET: ${ROBOFLEET_MINIO_BUCKET:-roboco-video-renders}
+      ROBOFLEET_MINIO_BUCKET: ${ROBOFLEET_MINIO_BUCKET:-robofleet-video-renders}
     restart: "no"
 
   # ==========================================================================
@@ -134,7 +134,7 @@ services:
   # ==========================================================================
   ollama:
     image: ollama/ollama:latest
-    container_name: roboco-ollama
+    container_name: robofleet-ollama
     restart: unless-stopped
     environment:
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
@@ -154,7 +154,7 @@ services:
   # Uses streaming curl to wait for full model download
   ollama-init:
     image: curlimages/curl:latest
-    container_name: roboco-ollama-init
+    container_name: robofleet-ollama-init
     depends_on:
       ollama:
         condition: service_healthy
@@ -196,8 +196,8 @@ services:
     build:
       context: .
       dockerfile: docker/video-renderer.Dockerfile
-    image: roboco-video-renderer
-    container_name: roboco-video-renderer
+    image: robofleet-video-renderer
+    container_name: robofleet-video-renderer
     restart: unless-stopped
     # Isolated sidecar network: headless Chrome here executes
     # agent-authored composition HTML/JS. Only the orchestrator (also
@@ -223,8 +223,8 @@ services:
     build:
       context: .
       dockerfile: docker/agent-base.Dockerfile
-    image: roboco-agent-base
-    container_name: roboco-agent-base-builder
+    image: robofleet-agent-base
+    container_name: robofleet-agent-base-builder
     entrypoint: ["/bin/sh", "-c", "echo 'Agent base image built successfully'"]
     restart: "no"
 
@@ -236,8 +236,8 @@ services:
       context: .
       dockerfile: docker/agent-pm.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-pm
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-pm
     entrypoint: ["/bin/sh", "-c", "echo 'Agent PM image built'"]
     restart: "no"
     depends_on:
@@ -251,8 +251,8 @@ services:
       context: .
       dockerfile: docker/agent-dev-be.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-dev-be
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-dev-be
     entrypoint: ["/bin/sh", "-c", "echo 'Agent Backend Dev image built'"]
     restart: "no"
     depends_on:
@@ -266,8 +266,8 @@ services:
       context: .
       dockerfile: docker/agent-dev-fe.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-dev-fe
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-dev-fe
     entrypoint: ["/bin/sh", "-c", "echo 'Agent Frontend Dev image built'"]
     restart: "no"
     depends_on:
@@ -281,8 +281,8 @@ services:
       context: .
       dockerfile: docker/agent-qa-be.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-qa-be
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-qa-be
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Backend QA image built"']
     restart: "no"
     depends_on:
@@ -296,8 +296,8 @@ services:
       context: .
       dockerfile: docker/agent-qa-fe.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-qa-fe
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-qa-fe
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Frontend QA image built"']
     restart: "no"
     depends_on:
@@ -311,8 +311,8 @@ services:
       context: .
       dockerfile: docker/agent-ux.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-ux
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-ux
     entrypoint: ["/bin/sh", "-c", 'echo "Agent UX/UI image built"']
     restart: "no"
     depends_on:
@@ -326,8 +326,8 @@ services:
       context: .
       dockerfile: docker/agent-doc.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-doc
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-doc
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Documenter image built"']
     restart: "no"
     depends_on:
@@ -342,8 +342,8 @@ services:
       context: .
       dockerfile: docker/agent-prompter.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-prompter
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-prompter
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Intake image built"']
     restart: "no"
     depends_on:
@@ -354,8 +354,8 @@ services:
       context: .
       dockerfile: docker/agent-secretary.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-secretary
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-secretary
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Secretary image built"']
     restart: "no"
     depends_on:
@@ -369,8 +369,8 @@ services:
       context: .
       dockerfile: docker/agent-pr-reviewer.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-pr-reviewer
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-pr-reviewer
     entrypoint: ["/bin/sh", "-c", 'echo "Agent PR Reviewer image built"']
     restart: "no"
     depends_on:
@@ -384,22 +384,22 @@ services:
       context: .
       dockerfile: docker/agent-grok.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-grok
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-grok
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Grok image built"']
     restart: "no"
     depends_on:
       - agent-base-image
 
   # Interactive Grok roles (intake/secretary) — panel-driven grok-CLI sessions;
-  # built FROM roboco-agent-grok, so they depend on the Grok runtime image.
+  # built FROM robofleet-agent-grok, so they depend on the Grok runtime image.
   agent-grok-prompter-image:
     build:
       context: .
       dockerfile: docker/agent-grok-prompter.Dockerfile
       additional_contexts:
-        roboco-agent-grok: "service:agent-grok-image"
-    image: roboco-agent-grok-prompter
+        robofleet-agent-grok: "service:agent-grok-image"
+    image: robofleet-agent-grok-prompter
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Grok Prompter image built"']
     restart: "no"
     depends_on:
@@ -410,8 +410,8 @@ services:
       context: .
       dockerfile: docker/agent-grok-secretary.Dockerfile
       additional_contexts:
-        roboco-agent-grok: "service:agent-grok-image"
-    image: roboco-agent-grok-secretary
+        robofleet-agent-grok: "service:agent-grok-image"
+    image: robofleet-agent-grok-secretary
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Grok Secretary image built"']
     restart: "no"
     depends_on:
@@ -426,8 +426,8 @@ services:
       context: .
       dockerfile: docker/agent-codex.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-codex
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-codex
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Codex image built"']
     restart: "no"
     depends_on:
@@ -443,8 +443,8 @@ services:
       context: .
       dockerfile: docker/agent-gemini.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-gemini
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-gemini
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Gemini image built"']
     restart: "no"
     depends_on:
@@ -460,8 +460,8 @@ services:
       context: .
       dockerfile: docker/agent-kimi.Dockerfile
       additional_contexts:
-        roboco-agent-base: "service:agent-base-image"
-    image: roboco-agent-kimi
+        robofleet-agent-base: "service:agent-base-image"
+    image: robofleet-agent-kimi
     entrypoint: ["/bin/sh", "-c", 'echo "Agent Kimi image built"']
     restart: "no"
     depends_on:
@@ -477,7 +477,7 @@ services:
     build:
       context: .
       dockerfile: docker/sandbox-pg.Dockerfile
-    image: roboco-sandbox-pg
+    image: robofleet-sandbox-pg
     entrypoint: ["/bin/sh", "-c", "echo 'Sandbox PG (kitchen-sink) image built'"]
     restart: "no"
 
@@ -488,8 +488,8 @@ services:
     build:
       context: .
       dockerfile: docker/orchestrator.Dockerfile
-    image: roboco-orchestrator
-    container_name: roboco-orchestrator
+    image: robofleet-orchestrator
+    container_name: robofleet-orchestrator
     restart: unless-stopped
     # Multi-homed: the agent mesh (default) for spawned agents / panel /
     # ollama, the data network for postgres/redis, plus render to reach the
@@ -507,13 +507,13 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       # Database (use container name, not localhost)
-      ROBOFLEET_DATABASE_HOST: roboco-postgres
+      ROBOFLEET_DATABASE_HOST: robofleet-postgres
       ROBOFLEET_DATABASE_PORT: 5432
       ROBOFLEET_DATABASE_USER: roboco
       ROBOFLEET_DATABASE_PASSWORD: roboco
       ROBOFLEET_DATABASE_NAME: roboco
       # Redis (use container name)
-      ROBOFLEET_REDIS_HOST: roboco-redis
+      ROBOFLEET_REDIS_HOST: robofleet-redis
       ROBOFLEET_REDIS_PORT: 6379
       # API
       ROBOFLEET_HOST: 0.0.0.0
@@ -527,21 +527,21 @@ services:
       # Leave unset/false during rollout so the panel + curl still work.
       ROBOFLEET_AGENT_AUTH_REQUIRED: ${ROBOFLEET_AGENT_AUTH_REQUIRED:-false}
       # Ollama (use container name)
-      ROBOFLEET_LOCAL_LLM_BASE_URL: http://roboco-ollama:11434/v1
+      ROBOFLEET_LOCAL_LLM_BASE_URL: http://robofleet-ollama:11434/v1
       ROBOFLEET_LOCAL_LLM_MODEL: glm-5.2:cloud
       ROBOFLEET_DEFAULT_EMBEDDING_MODEL: qwen3-embedding:0.6b
-      ROBOFLEET_OLLAMA_BASE_URL: http://roboco-ollama:11434
+      ROBOFLEET_OLLAMA_BASE_URL: http://robofleet-ollama:11434
       # Video renderer sidecar (use container name). The video engine
       # itself is default-off (video_engine_enabled); this just points the
       # client at the sidecar for when it's armed.
-      ROBOFLEET_VIDEO_RENDERER_BASE_URL: http://roboco-video-renderer:3001
+      ROBOFLEET_VIDEO_RENDERER_BASE_URL: http://robofleet-video-renderer:3001
       # MinIO object storage for rendered videos (use container name). Empty
       # endpoint = disabled (FileResponse fallback); armed here for the NAS
       # deploy, left OFF in docker-compose.registry.yml.
-      ROBOFLEET_MINIO_ENDPOINT: http://roboco-minio:9000
+      ROBOFLEET_MINIO_ENDPOINT: http://robofleet-minio:9000
       ROBOFLEET_MINIO_ACCESS_KEY: ${ROBOFLEET_MINIO_ACCESS_KEY:-minio}
       ROBOFLEET_MINIO_SECRET_KEY: ${ROBOFLEET_MINIO_SECRET_KEY:-minio123}
-      ROBOFLEET_MINIO_BUCKET: ${ROBOFLEET_MINIO_BUCKET:-roboco-video-renders}
+      ROBOFLEET_MINIO_BUCKET: ${ROBOFLEET_MINIO_BUCKET:-robofleet-video-renders}
       ROBOFLEET_MINIO_REGION: ${ROBOFLEET_MINIO_REGION:-us-east-1}
       # Host paths for spawning agent containers (required for Docker-in-Docker)
       # IMPORTANT: These must be ABSOLUTE paths on the host filesystem
@@ -694,7 +694,7 @@ services:
       ROBOFLEET_SANDBOX_DB_ENABLED: ${ROBOFLEET_SANDBOX_DB_ENABLED:-true}
       # DB network isolation is LIVE in this file (postgres/redis on the
       # data-only network): suppress the legacy prod-creds gate-env
-      # injection — agents can't reach roboco-postgres anyway, and handing
+      # injection — agents can't reach robofleet-postgres anyway, and handing
       # out creds that dead-end in a connect timeout is worse than none.
       # This flag must always travel with the networks: topology above.
       ROBOFLEET_DB_NETWORK_ISOLATED: ${ROBOFLEET_DB_NETWORK_ISOLATED:-true}
@@ -866,8 +866,8 @@ services:
     build:
       context: .
       dockerfile: docker/panel.Dockerfile
-    image: roboco-panel
-    container_name: roboco-panel
+    image: robofleet-panel
+    container_name: robofleet-panel
     restart: unless-stopped
     expose:
       - "3000"
@@ -882,7 +882,7 @@ services:
   # else goes to the Next.js panel.
   nginx:
     image: nginx:alpine
-    container_name: roboco-nginx
+    container_name: robofleet-nginx
     restart: unless-stopped
     ports:
       - "3000:80"
@@ -902,18 +902,18 @@ services:
 
 networks:
   default:
-    name: roboco_default
+    name: robofleet_default
   # DB isolation: postgres/redis live ONLY here; the orchestrator is the
   # only service homed on both. Spawned agent containers + sandbox sidecars
-  # join roboco_default (AGENT_NETWORK) and cannot resolve or reach the
+  # join robofleet_default (AGENT_NETWORK) and cannot resolve or reach the
   # production DB/Redis. Normal bridge (not internal) so host-published
   # ports keep working.
   data:
-    name: roboco_data
+    name: robofleet_data
   # Sidecar isolation: video-renderer executes agent-authored composition
   # HTML/JS in headless Chrome. It lives ONLY here, reachable only by the
   # orchestrator (multi-homed onto this network too); it can reach nothing
-  # else on roboco_default or roboco_data.
+  # else on robofleet_default or robofleet_data.
   render:
     name: roboco_render
 

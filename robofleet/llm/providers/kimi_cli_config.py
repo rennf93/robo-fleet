@@ -1,6 +1,6 @@
 """Render a Kimi CLI agent's runtime config + per-role rules at container start.
 
-The ``roboco-agent-kimi`` image's entrypoint runs ``python -m
+The ``robofleet-agent-kimi`` image's entrypoint runs ``python -m
 robofleet.llm.providers.kimi_cli_config`` to write ``~/.kimi-code/config.toml``
 (the login-managed provider/model/service blocks + telemetry/upgrade knobs +
 the per-role ``[[permission.rules]]`` deny set + the bash-guard

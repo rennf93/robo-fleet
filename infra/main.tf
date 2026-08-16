@@ -1,8 +1,8 @@
-resource "google_compute_network" "roboco" {
-  name = "roboco-net"
+resource "google_compute_network" "robofleet" {
+  name = "robofleet-net"
 }
 
-resource "google_sql_database_instance" "roboco" {
+resource "google_sql_database_instance" "robofleet" {
   name             = var.cloudsql_instance_name
   database_version = "POSTGRES_16"
   region           = var.region
@@ -21,19 +21,19 @@ resource "google_sql_database_instance" "roboco" {
   deletion_protection = false
 }
 
-resource "google_sql_database" "roboco" {
-  name     = "roboco"
-  instance = google_sql_database_instance.roboco.name
+resource "google_sql_database" "robofleet" {
+  name     = "robofleet"
+  instance = google_sql_database_instance.robofleet.name
 }
 
-resource "google_sql_user" "roboco" {
-  name     = "roboco"
-  instance = google_sql_database_instance.roboco.name
+resource "google_sql_user" "robofleet" {
+  name     = "robofleet"
+  instance = google_sql_database_instance.robofleet.name
   password = var.db_password
 }
 
-resource "google_redis_instance" "roboco" {
-  name           = "roboco-cache"
+resource "google_redis_instance" "robofleet" {
+  name           = "robofleet-cache"
   region         = var.region
   tier           = "BASIC"
   memory_size_gb = 1
@@ -44,8 +44,8 @@ resource "google_redis_instance" "roboco" {
   depends_on = [google_service_networking_connection.private_service_access]
 }
 
-resource "google_filestore_instance" "roboco" {
-  name     = "roboco-workspaces"
+resource "google_filestore_instance" "robofleet" {
+  name     = "robofleet-workspaces"
   location = var.region
   tier     = "BASIC_HDD"
   file_shares {
@@ -53,18 +53,18 @@ resource "google_filestore_instance" "roboco" {
     capacity_gb = var.filestore_capacity_gb
   }
   networks {
-    network = google_compute_network.roboco.name
+    network = google_compute_network.robofleet.name
     modes   = ["MODE_IPV4"]
   }
 }
 
-resource "google_storage_bucket" "roboco" {
+resource "google_storage_bucket" "robofleet" {
   name                     = var.gcs_bucket
   location                 = var.region
   uniform_bucket_level_access = true
 }
 
-resource "google_artifact_registry_repository" "roboco" {
+resource "google_artifact_registry_repository" "robofleet" {
   location      = var.region
   repository_id = var.ar_repo
   format        = "DOCKER"
@@ -84,15 +84,15 @@ resource "google_secret_manager_secret" "keys" {
 }
 
 resource "google_compute_global_address" "private_service_access" {
-  name          = "roboco-psa-range"
+  name          = "robofleet-psa-range"
   purpose       = "VPC_PEERING"
   address_type  = "INTERNAL"
   prefix_length = 20
-  network       = google_compute_network.roboco.id
+  network       = google_compute_network.robofleet.id
 }
 
 resource "google_service_networking_connection" "private_service_access" {
-  network                 = google_compute_network.roboco.id
+  network                 = google_compute_network.robofleet.id
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_service_access.name]
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Entrypoint for the roboco-agent-codex image (one-shot delivery roles only —
+# Entrypoint for the robofleet-agent-codex image (one-shot delivery roles only —
 # see docker/agent-codex.Dockerfile for the V1 scope note).
 #
 # Runs an agent on OpenAI's official `codex` CLI, authenticated by a ChatGPT

@@ -10,7 +10,7 @@ from robofleet.llm.providers import cloudrun_jobs as mod
 async def test_spawn_submits_job_execution(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_client = MagicMock()
     fake_op = MagicMock()
-    fake_op.name = "projects/p/locations/e/jobs/roboco-agent-x/executions/abc123"
+    fake_op.name = "projects/p/locations/e/jobs/robofleet-agent-x/executions/abc123"
     fake_client.create_job = MagicMock(return_value=MagicMock())
     fake_client.run_job = MagicMock(return_value=fake_op)
     monkeypatch.setattr(mod, "_jobs_client", lambda: fake_client)
@@ -30,7 +30,7 @@ async def test_spawn_submits_job_execution(monkeypatch: pytest.MonkeyPatch) -> N
     assert result.extra["model"] == "gemini-3.5-flash"
     job = result.extra["job"]
     assert isinstance(job, str)
-    assert job.endswith("/jobs/roboco-agent-be-dev-1")
+    assert job.endswith("/jobs/robofleet-agent-be-dev-1")
     fake_client.create_job.assert_called_once()
     fake_client.run_job.assert_called_once()
     # manifest path unset -> no ROBOFLEET_TOOL_MANIFEST_PATH env on the job

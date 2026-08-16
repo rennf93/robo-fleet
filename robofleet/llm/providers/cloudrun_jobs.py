@@ -88,7 +88,7 @@ def _resolve_api_url() -> str:
     if settings.api_url:
         return settings.api_url
     if os.environ.get("ROBOFLEET_HOST_PROJECT_DIR", ""):
-        return "http://roboco-orchestrator:8000"
+        return "http://robofleet-orchestrator:8000"
     return f"http://127.0.0.1:{settings.port}"
 
 
@@ -247,7 +247,7 @@ class CloudRunJobsProvider(AgentProvider):
             volumes=volumes,
         )
         # VPC connector (GCP only): lets the Job reach Cloud SQL + Memorystore
-        # on the roboco-net VPC. The v2-native VpcAccess.connector is the
+        # on the robofleet-net VPC. The v2-native VpcAccess.connector is the
         # equivalent of the v1 run.googleapis.com/vpc-access-connector
         # annotation used in the manual-deploy template.
         if settings.gcp_vpc_connector_name:

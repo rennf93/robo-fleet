@@ -1,6 +1,6 @@
 """Render a Grok CLI agent's runtime config + per-role flags at container start.
 
-The ``roboco-agent-grok-cli`` image's entrypoint runs ``python -m
+The ``robofleet-agent-grok-cli`` image's entrypoint runs ``python -m
 robofleet.llm.providers.grok_cli_config`` to turn the mounted Claude Code
 ``mcp-config.json`` into ``~/.grok/config.toml`` (``[mcp_servers]``) and to
 compute the per-role ``grok -p`` flags (permissions / reasoning effort / turn

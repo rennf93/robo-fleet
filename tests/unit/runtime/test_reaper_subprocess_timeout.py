@@ -157,7 +157,7 @@ async def test_inspect_container_state_times_out_raises_and_kills(
     monkeypatch.setattr(asyncio, "create_subprocess_exec", _exec_returning(proc))
     with pytest.raises(TimeoutError):
         await asyncio.wait_for(
-            AgentOrchestrator._inspect_container_state("roboco-agent-x"), timeout=2.0
+            AgentOrchestrator._inspect_container_state("robofleet-agent-x"), timeout=2.0
         )
     assert proc.killed
 
@@ -173,7 +173,7 @@ async def test_resolve_container_id_times_out_raises_and_kills(
     monkeypatch.setattr(asyncio, "create_subprocess_exec", _exec_returning(proc))
     with pytest.raises(TimeoutError):
         await asyncio.wait_for(
-            AgentOrchestrator._resolve_container_id("roboco-agent-x"), timeout=2.0
+            AgentOrchestrator._resolve_container_id("robofleet-agent-x"), timeout=2.0
         )
     assert proc.killed
 
@@ -211,7 +211,7 @@ async def test_inspect_container_state_green_path_parses(
     proc = _DoneInspectProc(b"true 0\n")
     monkeypatch.setattr(asyncio, "create_subprocess_exec", _exec_returning(proc))
     is_running, exit_code = await asyncio.wait_for(
-        AgentOrchestrator._inspect_container_state("roboco-agent-x"), timeout=2.0
+        AgentOrchestrator._inspect_container_state("robofleet-agent-x"), timeout=2.0
     )
     assert is_running is True
     assert exit_code == 0
@@ -225,7 +225,7 @@ async def test_resolve_container_id_green_path(
     proc = _DoneInspectProc(b"deadbeef1234567890\n")
     monkeypatch.setattr(asyncio, "create_subprocess_exec", _exec_returning(proc))
     cid = await asyncio.wait_for(
-        AgentOrchestrator._resolve_container_id("roboco-agent-x"), timeout=2.0
+        AgentOrchestrator._resolve_container_id("robofleet-agent-x"), timeout=2.0
     )
     assert cid == "deadbeef1234567890"
     assert not proc.killed

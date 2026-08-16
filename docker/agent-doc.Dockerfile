@@ -1,7 +1,7 @@
 # Documenter Agent
 # Lightweight - documentation doesn't need heavy tools
 
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 # No additional tools needed
 # Documenters write markdown, update READMEs, changelogs

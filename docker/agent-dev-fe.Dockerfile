@@ -1,7 +1,7 @@
 # Frontend Developer Agent
 # React/TypeScript development
 
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 USER root
 

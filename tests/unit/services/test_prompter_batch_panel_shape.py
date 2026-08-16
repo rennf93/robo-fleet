@@ -103,7 +103,7 @@ async def test_confirm_live_batch_ignores_vestigial_top_level_slug(
         {
             "title": "B: frontend work",
             "acceptance_criteria": ["b"],
-            "project_id": "roboco-panel",  # slug on the other draft too
+            "project_id": "robofleet-panel",  # slug on the other draft too
             "the_work": [
                 {
                     "team": "frontend",

@@ -39,7 +39,7 @@ mcp = FastMCP("roboco-intake")
 
 def _api_base() -> str:
     return os.environ.get(
-        "ROBOFLEET_API_URL", "http://roboco-orchestrator:8000"
+        "ROBOFLEET_API_URL", "http://robofleet-orchestrator:8000"
     ).rstrip("/")
 
 

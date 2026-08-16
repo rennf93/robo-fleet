@@ -22,7 +22,7 @@ from robofleet.agents_config import get_agent_team
 
 ORCHESTRATOR_URL = os.environ.get(
     "ROBOFLEET_ORCHESTRATOR_URL",
-    "http://roboco-orchestrator:8000",
+    "http://robofleet-orchestrator:8000",
 )
 AGENT_ID = os.environ["ROBOFLEET_AGENT_ID"]
 AGENT_ROLE = os.environ["ROBOFLEET_AGENT_ROLE"]

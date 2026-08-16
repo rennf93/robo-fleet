@@ -54,7 +54,7 @@ async def test_remove_container_tears_down_sandbox_when_flag_on(
     monkeypatch.setattr(asyncio, "create_subprocess_exec", _fake_create_subprocess_exec)
     orch, sandbox = _make_orchestrator()
 
-    await orch._remove_container("roboco-agent-dev-1")
+    await orch._remove_container("robofleet-agent-dev-1")
 
     sandbox.teardown.assert_awaited_once_with("dev-1")
 
@@ -67,7 +67,7 @@ async def test_remove_container_teardown_sandbox_false_skips_even_when_flag_on(
     monkeypatch.setattr(asyncio, "create_subprocess_exec", _fake_create_subprocess_exec)
     orch, sandbox = _make_orchestrator()
 
-    await orch._remove_container("roboco-agent-dev-1", teardown_sandbox=False)
+    await orch._remove_container("robofleet-agent-dev-1", teardown_sandbox=False)
 
     sandbox.teardown.assert_not_called()
 
@@ -80,7 +80,7 @@ async def test_remove_container_skips_sandbox_teardown_when_flag_off(
     monkeypatch.setattr(asyncio, "create_subprocess_exec", _fake_create_subprocess_exec)
     orch, sandbox = _make_orchestrator()
 
-    await orch._remove_container("roboco-agent-dev-1")
+    await orch._remove_container("robofleet-agent-dev-1")
 
     sandbox.teardown.assert_not_called()
 
@@ -134,7 +134,7 @@ async def test_remove_container_evicts_ensure_sandbox_cache(
     orch, _sandbox = _make_orchestrator()
     orch._sandbox_info = {"dev-1": MagicMock(), "dev-2": MagicMock()}
 
-    await orch._remove_container("roboco-agent-dev-1")
+    await orch._remove_container("robofleet-agent-dev-1")
 
     assert "dev-1" not in orch._sandbox_info
     assert "dev-2" in orch._sandbox_info
@@ -149,7 +149,7 @@ async def test_remove_container_teardown_false_spares_cache(
     orch, _sandbox = _make_orchestrator()
     orch._sandbox_info = {"dev-1": MagicMock()}
 
-    await orch._remove_container("roboco-agent-dev-1", teardown_sandbox=False)
+    await orch._remove_container("robofleet-agent-dev-1", teardown_sandbox=False)
 
     assert "dev-1" in orch._sandbox_info
 

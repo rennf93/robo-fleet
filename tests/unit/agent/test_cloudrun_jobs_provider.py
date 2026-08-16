@@ -36,7 +36,7 @@ _TOKEN = "signed-hmac-token"
 
 
 class _FakeOp:
-    name: str = "projects/test/locations/us/jobs/roboco-agent-be-dev-1/executions/1"
+    name: str = "projects/test/locations/us/jobs/robofleet-agent-be-dev-1/executions/1"
 
 
 class _FakeJobsClient:
@@ -154,7 +154,7 @@ async def test_spawn_filestore_volume_and_vpc_when_gcp_armed(
         "robofleet.config.settings.gcp_filestore_nfs_path", "/workspaces"
     )
     monkeypatch.setattr(
-        "robofleet.config.settings.gcp_vpc_connector_name", "roboco-connector"
+        "robofleet.config.settings.gcp_vpc_connector_name", "robofleet-connector"
     )
     _patch_identity(monkeypatch)
     fake = _patch_client(monkeypatch)
@@ -175,7 +175,7 @@ async def test_spawn_filestore_volume_and_vpc_when_gcp_armed(
     assert vol.nfs.path == "/workspaces"
     assert vol.nfs.read_only is False
     # VPC connector wired (v2-native VpcAccess, equivalent of the v1 annotation).
-    assert tmpl.vpc_access.connector == "roboco-connector"
+    assert tmpl.vpc_access.connector == "robofleet-connector"
 
 
 @pytest.mark.asyncio

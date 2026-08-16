@@ -207,7 +207,7 @@ async def test_reaper_kills_and_releases_wedged_grok_container(
     await orch._reap_with_service(svc)
 
     remove_mock.assert_awaited_once_with(
-        "roboco-agent-be-dev-1", stop_reason="reaper_wedged_grok"
+        "robofleet-agent-be-dev-1", stop_reason="reaper_wedged_grok"
     )
     assert "be-dev-1" not in orch._instances  # evicted
     svc.unclaim_for_reaper.assert_awaited_once_with(task_id)  # released
@@ -341,7 +341,7 @@ async def test_reaper_kills_stuck_claude_past_stuck_ttl(
     await orch._reap_with_service(svc)
 
     remove_mock.assert_awaited_once_with(
-        "roboco-agent-be-dev-1", stop_reason="reaper_stuck_claude"
+        "robofleet-agent-be-dev-1", stop_reason="reaper_stuck_claude"
     )
     assert "be-dev-1" not in orch._instances  # evicted
     svc.unclaim_for_reaper.assert_awaited_once_with(stuck.id)  # released

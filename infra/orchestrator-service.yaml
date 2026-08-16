@@ -1,4 +1,4 @@
-# Cloud Run v2 Service manifest for roboco-orchestrator.
+# Cloud Run v2 Service manifest for robofleet-orchestrator.
 # Consumed by `gcloud run services replace infra/orchestrator-service.yaml`.
 # Deploy via infra/deploy-orchestrator.sh, which reads terraform outputs and
 # sed-substitutes the __PLACEHOLDER__ tokens below into a temp copy before
@@ -16,7 +16,7 @@
 apiVersion: run.googleapis.com/v1
 kind: Service
 metadata:
-  name: roboco-orchestrator
+  name: robofleet-orchestrator
   labels:
     run.googleapis.com/managed-by: gcloud
 spec:
@@ -33,7 +33,7 @@ spec:
       timeoutSeconds: 300
       containers:
         - name: orchestrator
-          image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/roboco-orchestrator:latest
+          image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/robofleet-orchestrator:latest
           ports:
             - name: http1
               containerPort: 8000
@@ -78,7 +78,7 @@ spec:
             - name: ROBOFLEET_GCP_SECRET_MANAGER_PREFIX
               value: "roboco"
             - name: ROBOFLEET_GCP_CLOUD_RUN_AGENT_JOB_PREFIX
-              value: "roboco-agent"
+              value: "robofleet-agent"
 
             # --- Agent auth ---
             - name: ROBOFLEET_AGENT_AUTH_REQUIRED
@@ -125,22 +125,22 @@ spec:
             - name: ROBOFLEET_ENCRYPTION_KEY
               valueFrom:
                 secretRef:
-                  name: roboco-fernet-key
+                  name: robofleet-fernet-key
                   key: latest
             - name: ROBOFLEET_AGENT_AUTH_SECRET
               valueFrom:
                 secretRef:
-                  name: roboco-agent-auth-secret
+                  name: robofleet-agent-auth-secret
                   key: latest
             - name: ROBOFLEET_CLOUD_AUTH_SECRET
               valueFrom:
                 secretRef:
-                  name: roboco-cloud-auth-secret
+                  name: robofleet-cloud-auth-secret
                   key: latest
             - name: ROBOFLEET_GEMINI_API_KEY
               valueFrom:
                 secretRef:
-                  name: roboco-gemini-api-key
+                  name: robofleet-gemini-api-key
                   key: latest
 
           volumeMounts:

@@ -39,7 +39,7 @@ def test_resolve_supplied_passes_through(
     git_module: types.ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("ROBOFLEET_PROJECT_SLUG", "roboco-api")
-    assert git_module._resolve_project_slug("roboco-panel") == "roboco-panel"
+    assert git_module._resolve_project_slug("robofleet-panel") == "robofleet-panel"
 
 
 def test_resolve_neither_present_returns_clear_error(

@@ -10,14 +10,14 @@ variable "region" {
 
 variable "cloudsql_instance_name" {
   type        = string
-  default     = "roboco-pg"
+  default     = "robofleet-pg"
   description = "Cloud SQL instance name."
 }
 
 variable "db_password" {
   type        = string
   sensitive   = true
-  description = "Password for the roboco Postgres user."
+  description = "Password for the robofleet Postgres user."
 }
 
 variable "gcs_bucket" {
@@ -33,7 +33,7 @@ variable "ar_repo" {
 
 variable "secret_prefix" {
   type        = string
-  default     = "roboco"
+  default     = "robofleet"
   description = "Prefix applied to every Secret Manager secret id."
 }
 

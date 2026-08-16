@@ -10,7 +10,7 @@
 # (grok CLI + the roboco venv).
 # =============================================================================
 
-FROM roboco-agent-grok
+FROM robofleet-agent-grok
 
 LABEL role="grok-prompter"
 LABEL description="Intake interviewer on Grok — a panel-driven grok-CLI conversation"

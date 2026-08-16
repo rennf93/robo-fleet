@@ -9,7 +9,7 @@ for every upstream image a sandbox engine may run (the bare ``image`` AND any
 ``kitchen_sink_image`` used when extensions/modules are requested) and fails if
 the tag does not actually exist — the check that would have caught it.
 
-Locally-built images (the ``roboco-sandbox-pg`` kitchen-sink, built by the
+Locally-built images (the ``robofleet-sandbox-pg`` kitchen-sink, built by the
 ``sandbox-pg-image`` compose service) are skipped: they aren't on Docker Hub.
 Namespaced upstream images (``redis/redis-stack-server``) use the namespaced
 registry endpoint; bare library images (``postgres``, ``redis``, ``mongo``)
@@ -61,9 +61,9 @@ def test_sandbox_engine_image_tag_exists_on_docker_hub(
     engine_name: str, image: str
 ) -> None:
     name, tag = _split_image(image)
-    # Locally-built project images (no registry namespace, roboco- prefix) are
+    # Locally-built project images (no registry namespace, robofleet- prefix) are
     # built by a compose service, not pulled — skip the Docker Hub check.
-    if "/" not in name and name.startswith("roboco-"):
+    if "/" not in name and name.startswith("robofleet-"):
         pytest.skip(f"{image!r} is a locally-built image (not on Docker Hub)")
     url = (_REGISTRY_URL_NS if "/" in name else _REGISTRY_URL_LIBRARY).format(
         name=name, tag=tag

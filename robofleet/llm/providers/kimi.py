@@ -7,7 +7,7 @@ key — the same posture as Grok (SuperGrok), Codex (ChatGPT), and Gemini
 the orchestrator's shared container assembly mounts the RoboCo MCP gateway
 (``mcp-config.json``), the agent HMAC identity, and the git context; this
 provider adds the subscription auth mount (``~/.kimi-code``) and the runtime
-env the kimi-cli entrypoint reads, then launches the ``roboco-agent-kimi``
+env the kimi-cli entrypoint reads, then launches the ``robofleet-agent-kimi``
 image — whose entrypoint copies the mounted credential in, renders
 ``~/.kimi-code/config.toml`` + ``mcp.json`` + ``AGENTS.md`` from the mounted
 mcp-config.json (see :mod:`robofleet.llm.providers.kimi_cli_config`), and runs
@@ -42,7 +42,7 @@ Two things differ from the Claude Code spawn (mirrors ``CodexCliProvider``):
      blanked before the shared mount step so the shared builder never
      injects them as ``ANTHROPIC_*`` (the wrong runtime) — kimi authenticates
      from the shared credential, not a provider key.
-  2. **Runtime** — the ``roboco-agent-kimi`` image (kimi-code CLI) instead of
+  2. **Runtime** — the ``robofleet-agent-kimi`` image (kimi-code CLI) instead of
      ``claude``.
 
 The initial prompt is passed via an **env var, not a positional CLI arg**
@@ -51,7 +51,7 @@ structurally avoids a flag-injection vector.
 
 **V1 scope**: one-shot delivery roles only (developer / qa / documenter /
 cell_pm / main_pm / pr_reviewer / board). No interactive intake/secretary
-support — there is no ``roboco-agent-kimi-prompter`` / ``-secretary`` image.
+support — there is no ``robofleet-agent-kimi-prompter`` / ``-secretary`` image.
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ if TYPE_CHECKING:
 _log = logging.getLogger(__name__)
 
 # The Kimi agent image (own image, like every other agent role).
-_DEFAULT_KIMI_IMAGE = "roboco-agent-kimi:latest"
+_DEFAULT_KIMI_IMAGE = "robofleet-agent-kimi:latest"
 
 # The kimi CLI model alias, pinned via Settings (parity with codex_cli_model /
 # gemini_cli_model — Kimi's login-managed aliases have no reliable "pick for
@@ -102,7 +102,7 @@ _KIMI_USAGE_FILE_IN_CONTAINER = f"{_KIMI_USAGE_DIR_IN_CONTAINER}/usage.json"
 
 
 def _container_name(agent_id: str) -> str:
-    return f"roboco-agent-{agent_id}"
+    return f"robofleet-agent-{agent_id}"
 
 
 class _KimiHost(Protocol):

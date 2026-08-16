@@ -126,7 +126,7 @@ class SandboxEngine(ABC):
     container_slug: str
 
     def container_name(self, agent_id: str) -> str:
-        return f"roboco-sandbox-{self.container_slug}-{agent_id}"
+        return f"robofleet-sandbox-{self.container_slug}-{agent_id}"
 
     def image_for(self, _features: list[str]) -> str:
         """Image to run for this provision, given the features requested.
@@ -202,7 +202,7 @@ class _PostgresEngine(SandboxEngine):
     # Kitchen-sink image: pgvector base + postgis + contrib (pg_trgm/citext/
     # uuid-ossp). Only pulled when a venture requests extensions — bare
     # provisions stay on the light `image` above (no heavier pull).
-    kitchen_sink_image = "roboco-sandbox-pg:latest"
+    kitchen_sink_image = "robofleet-sandbox-pg:latest"
     container_port = 5432
     ready_deadline = 60.0
     tmpfs = ("/var/lib/postgresql/data",)

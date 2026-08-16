@@ -16,7 +16,7 @@ from robofleet.runtime.orchestrator import AgentOrchestrator
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-_URL = "http://roboco-agent-be-dev-1:9000/budget/status"
+_URL = "http://robofleet-agent-be-dev-1:9000/budget/status"
 
 
 def _client(handler: Callable[[httpx.Request], httpx.Response]) -> httpx.AsyncClient:

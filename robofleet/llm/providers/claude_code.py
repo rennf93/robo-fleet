@@ -43,7 +43,7 @@ class _ClaudeCodeHost(Protocol):
 
 def _container_name(agent_id: str) -> str:
     """The container name the orchestrator uses for an agent."""
-    return f"roboco-agent-{agent_id}"
+    return f"robofleet-agent-{agent_id}"
 
 
 class ClaudeCodeProvider(AgentProvider):

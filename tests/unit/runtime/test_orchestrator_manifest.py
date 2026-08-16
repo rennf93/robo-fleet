@@ -251,7 +251,7 @@ class TestManifestWorkspacePath:
         data = json.loads(result.read_text())
         assert data["workspace_path"] == worktree
 
-    def test_no_override_keeps_roboco_default(self, tmp_path: Path) -> None:
+    def test_no_override_keeps_robofleet_default(self, tmp_path: Path) -> None:
         with patch("robofleet.runtime.orchestrator.settings") as mock_settings:
             mock_settings.manifest_host_dir = str(tmp_path)
             mock_settings.workspaces_root = str(tmp_path / "workspaces")

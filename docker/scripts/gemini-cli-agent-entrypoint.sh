@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Entrypoint for the roboco-agent-gemini image (one-shot delivery roles).
+# Entrypoint for the robofleet-agent-gemini image (one-shot delivery roles).
 #
 # Runs an agent on Google's official `gemini` CLI, authenticated by an OAuth
 # login via a mounted ~/.gemini/oauth_creds.json — the parity analogue of the

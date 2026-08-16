@@ -8,7 +8,7 @@
 set -euo pipefail
 
 PROJECT="${1:?usage: seed-secrets.sh PROJECT_ID}"
-PREFIX="${ROBOFLEET_SECRET_PREFIX:-roboco}"
+PREFIX="${ROBOFLEET_SECRET_PREFIX:-robofleet}"
 
 put() {
   gcloud secrets versions add "${PREFIX}-$1" --data-file=- --project="$PROJECT"

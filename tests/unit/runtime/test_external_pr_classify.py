@@ -26,7 +26,7 @@ def test_projects_one_per_repo_collapses_monorepo() -> None:
     projects = [
         _proj("roboco-uix", "https://github.com/rennf93/roboco.git"),
         _proj("roboco-api", "https://github.com/rennf93/roboco.git"),
-        _proj("roboco-panel", "https://github.com/rennf93/roboco.git"),
+        _proj("robofleet-panel", "https://github.com/rennf93/roboco.git"),
         _proj("other", "https://github.com/rennf93/other-repo.git"),
     ]
     out = AgentOrchestrator._projects_one_per_repo(projects)

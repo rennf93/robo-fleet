@@ -81,7 +81,7 @@ def _build_cmd(config: OrchestratorAgentConfig) -> list[str]:
         for k, v in attrs.items():
             setattr(mock_settings, k, v)
         return AgentOrchestrator._build_mount_args(
-            "roboco-agent-be-dev-1", config, hosts
+            "robofleet-agent-be-dev-1", config, hosts
         )
 
 

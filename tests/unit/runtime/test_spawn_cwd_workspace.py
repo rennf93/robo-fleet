@@ -178,7 +178,7 @@ class TestDeveloperSpawnCwdWorkspace:
     def test_cmd_contains_workdir_flag(self) -> None:
         """docker run for a developer includes -w <workspace_path>."""
         config = _make_dev_config(project_slug="roboco-api")
-        cmd = _build_cmd("roboco-agent-be-dev-1", config)
+        cmd = _build_cmd("robofleet-agent-be-dev-1", config)
 
         assert "-w" in cmd, f"'-w' flag missing from docker run cmd: {cmd}"
         w_idx = cmd.index("-w")
@@ -213,7 +213,7 @@ class TestDeveloperSpawnCwdWorkspace:
 
         # Now build the docker cmd for the same agent/project.
         config = _make_dev_config(project_slug=project_slug)
-        cmd = _build_cmd("roboco-agent-be-dev-1", config)
+        cmd = _build_cmd("robofleet-agent-be-dev-1", config)
 
         workdir = _extract_workdir_from_cmd(cmd)
         assert workdir is not None, f"'-w' flag missing from docker run cmd: {cmd}"
@@ -230,7 +230,7 @@ class TestCellPmSpawnCwdNoWorkdir:
     def test_cmd_does_not_contain_workdir_flag(self) -> None:
         """docker run for a cell_pm omits -w so container falls back to /app."""
         config = _make_cell_pm_config(project_slug="roboco-api")
-        cmd = _build_cmd("roboco-agent-be-pm", config)
+        cmd = _build_cmd("robofleet-agent-be-pm", config)
 
         assert "-w" not in cmd, (
             "cell_pm should not have '-w' in docker run cmd "
@@ -244,7 +244,7 @@ class TestDocumenterSpawnCwdCellWorkspace:
     def test_cmd_contains_cell_workspace_workdir(self) -> None:
         """docker run for a documenter uses -w <cell_workspace_path>."""
         config = _make_documenter_config(project_slug="roboco-api")
-        cmd = _build_cmd("roboco-agent-be-doc", config)
+        cmd = _build_cmd("robofleet-agent-be-doc", config)
 
         # Documenter allowlist scopes to cell_workspace_path:
         # /data/workspaces/<project>/<team>
@@ -264,7 +264,7 @@ class TestProductOwnerSpawnCwdWorkspace:
     def test_cmd_contains_workdir_flag(self) -> None:
         """docker run for a product_owner includes -w <per-agent-workspace>."""
         config = _make_product_owner_config(project_slug="roboco-api")
-        cmd = _build_cmd("roboco-agent-product-owner", config)
+        cmd = _build_cmd("robofleet-agent-product-owner", config)
 
         assert "-w" in cmd, (
             f"'-w' flag missing from product_owner docker run cmd: {cmd}"
@@ -291,7 +291,7 @@ class TestProductOwnerSpawnCwdWorkspace:
         edit_prefix = _extract_edit_allowlist_prefix(permissions)
 
         config = _make_product_owner_config(project_slug=project_slug)
-        cmd = _build_cmd("roboco-agent-product-owner", config)
+        cmd = _build_cmd("robofleet-agent-product-owner", config)
         workdir = _extract_workdir_from_cmd(cmd)
 
         assert workdir is not None, (
@@ -309,7 +309,7 @@ class TestHeadMarketingSpawnCwdWorkspace:
     def test_cmd_contains_workdir_flag(self) -> None:
         """docker run for a head_marketing includes -w <per-agent-workspace>."""
         config = _make_head_marketing_config(project_slug="roboco-api")
-        cmd = _build_cmd("roboco-agent-head-marketing", config)
+        cmd = _build_cmd("robofleet-agent-head-marketing", config)
 
         assert "-w" in cmd, (
             f"'-w' flag missing from head_marketing docker run cmd: {cmd}"
@@ -336,7 +336,7 @@ class TestHeadMarketingSpawnCwdWorkspace:
         edit_prefix = _extract_edit_allowlist_prefix(permissions)
 
         config = _make_head_marketing_config(project_slug=project_slug)
-        cmd = _build_cmd("roboco-agent-head-marketing", config)
+        cmd = _build_cmd("robofleet-agent-head-marketing", config)
         workdir = _extract_workdir_from_cmd(cmd)
 
         assert workdir is not None, (

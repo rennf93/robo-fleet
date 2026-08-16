@@ -1,7 +1,7 @@
 # UX/UI Agent
 # Design tools - future: Figma MCP, image generation
 
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 # Future additions:
 # - Figma MCP server integration

@@ -12,7 +12,7 @@ import pytest
 from robofleet.runtime import sandbox as sandbox_module
 from robofleet.runtime.sandbox import SandboxProvisioner, SandboxProvisionError
 
-_NETWORK = "roboco_default"
+_NETWORK = "robofleet_default"
 _PG_PORT = 5432
 _REDIS_PORT = 6379
 _MONGO_PORT = 27017
@@ -102,12 +102,12 @@ async def test_provision_both_services_happy_path() -> None:
     info = await provisioner.provision("dev-1", ["postgres", "redis"])
 
     pg = info.services["postgres"]
-    assert pg.host == "roboco-sandbox-pg-dev-1"
+    assert pg.host == "robofleet-sandbox-pg-dev-1"
     assert pg.port == _PG_PORT
     assert pg.user == "sandbox"
     assert pg.database == "sandbox"
     rd = info.services["redis"]
-    assert rd.host == "roboco-sandbox-redis-dev-1"
+    assert rd.host == "robofleet-sandbox-redis-dev-1"
     assert rd.port == _REDIS_PORT
     # Passwords are per-sandbox random tokens, not equal to each other.
     assert pg.password != rd.password
@@ -126,7 +126,7 @@ async def test_provision_labels_are_correct() -> None:
     label_indices = [i for i, a in enumerate(run_call) if a == "--label"]
     labels = [run_call[i + 1] for i in label_indices]
     assert sandbox_module.SANDBOX_LABEL in labels
-    assert "robofleet.sandbox.owner=roboco-agent-dev-2" in labels
+    assert "robofleet.sandbox.owner=robofleet-agent-dev-2" in labels
 
 
 @pytest.mark.asyncio
@@ -194,7 +194,7 @@ async def test_provision_mongo_engine() -> None:
     info = await provisioner.provision("dev-mongo", ["mongo"])
 
     mongo = info.services["mongo"]
-    assert mongo.host == "roboco-sandbox-mongo-dev-mongo"
+    assert mongo.host == "robofleet-sandbox-mongo-dev-mongo"
     assert mongo.port == _MONGO_PORT
     assert mongo.user == "sandbox"
     assert mongo.database == "admin"
@@ -219,7 +219,7 @@ async def test_provision_readiness_timeout_tears_down_and_raises() -> None:
     teardown_verbs = {c[0] for c in runner.calls if c[0] in ("stop", "kill", "rm")}
     assert "stop" in teardown_verbs or "rm" in teardown_verbs
     rm_calls = [c for c in runner.calls if c[0] == "rm"]
-    assert any("roboco-sandbox-pg-dev-3" in c for c in rm_calls)
+    assert any("robofleet-sandbox-pg-dev-3" in c for c in rm_calls)
 
 
 @pytest.mark.asyncio
@@ -258,10 +258,10 @@ async def test_teardown_idempotent_on_missing_container() -> None:
 async def test_janitor_removes_orphaned_sandbox_only() -> None:
     # Two sandboxes on the host: one owned by a still-live agent, one orphaned.
     ps_output = (
-        b"roboco-sandbox-pg-alive\troboco-agent-alive\n"
-        b"roboco-sandbox-pg-orphan\troboco-agent-orphan\n"
+        b"robofleet-sandbox-pg-alive\trobofleet-agent-alive\n"
+        b"robofleet-sandbox-pg-orphan\trobofleet-agent-orphan\n"
     )
-    live_output = b"roboco-agent-alive\n"
+    live_output = b"robofleet-agent-alive\n"
     runner = _FakeRunner(ps_output=ps_output, ps_live_output=live_output)
     provisioner = SandboxProvisioner(network=_NETWORK, runner=runner)
 
@@ -269,8 +269,8 @@ async def test_janitor_removes_orphaned_sandbox_only() -> None:
 
     rm_calls = [c for c in runner.calls if c[0] == "rm"]
     torn_down = {c[-1] for c in rm_calls}
-    assert "roboco-sandbox-pg-orphan" in torn_down
-    assert "roboco-sandbox-pg-alive" not in torn_down
+    assert "robofleet-sandbox-pg-orphan" in torn_down
+    assert "robofleet-sandbox-pg-alive" not in torn_down
 
 
 @pytest.mark.asyncio
@@ -296,18 +296,18 @@ async def test_provision_preclears_stale_sandboxes_before_run() -> None:
     preclear_rms = [
         c for c in runner.calls[:first_run] if c[0] == "rm" and c[-1].endswith("dev-6")
     ]
-    assert any("roboco-sandbox-pg-dev-6" in c for c in preclear_rms)
-    assert any("roboco-sandbox-redis-dev-6" in c for c in preclear_rms)
+    assert any("robofleet-sandbox-pg-dev-6" in c for c in preclear_rms)
+    assert any("robofleet-sandbox-redis-dev-6" in c for c in preclear_rms)
 
 
 @pytest.mark.asyncio
 async def test_janitor_grace_skips_freshly_provisioned_owner() -> None:
     """A sandbox is provisioned before its agent container exists — a sweep
     racing that mid-flight spawn must not reap the fresh sandbox."""
-    ps_output = b"roboco-sandbox-pg-fresh\troboco-agent-fresh\n"
+    ps_output = b"robofleet-sandbox-pg-fresh\trobofleet-agent-fresh\n"
     runner = _FakeRunner(ps_output=ps_output, ps_live_output=b"")
     provisioner = SandboxProvisioner(network=_NETWORK, runner=runner)
-    provisioner._provisioned_at = {"roboco-agent-fresh": time.monotonic()}
+    provisioner._provisioned_at = {"robofleet-agent-fresh": time.monotonic()}
 
     await provisioner.janitor_sweep()
 
@@ -316,18 +316,18 @@ async def test_janitor_grace_skips_freshly_provisioned_owner() -> None:
 
 @pytest.mark.asyncio
 async def test_janitor_reaps_after_grace_expiry() -> None:
-    ps_output = b"roboco-sandbox-pg-old\troboco-agent-old\n"
+    ps_output = b"robofleet-sandbox-pg-old\trobofleet-agent-old\n"
     runner = _FakeRunner(ps_output=ps_output, ps_live_output=b"")
     provisioner = SandboxProvisioner(network=_NETWORK, runner=runner)
     provisioner._provisioned_at = {
-        "roboco-agent-old": time.monotonic()
+        "robofleet-agent-old": time.monotonic()
         - 10 * sandbox_module._JANITOR_GRACE_SECONDS
     }
 
     await provisioner.janitor_sweep()
 
     rm_calls = [c for c in runner.calls if c[0] == "rm"]
-    assert any("roboco-sandbox-pg-old" in c for c in rm_calls)
+    assert any("robofleet-sandbox-pg-old" in c for c in rm_calls)
     assert provisioner._provisioned_at == {}
 
 
@@ -538,7 +538,7 @@ async def test_provision_pg_features_uses_kitchen_sink_image() -> None:
     )
 
     joined = " ".join(_run_call(runner))
-    assert "roboco-sandbox-pg:latest" in joined
+    assert "robofleet-sandbox-pg:latest" in joined
     assert "postgres:16-alpine" not in joined
 
 
@@ -552,9 +552,9 @@ async def test_provision_pg_bare_uses_light_image() -> None:
 
     joined = " ".join(_run_call(runner))
     assert "postgres:16-alpine" in joined
-    # The container is named roboco-sandbox-pg-<agent> regardless of image, so
+    # The container is named robofleet-sandbox-pg-<agent> regardless of image, so
     # check the full image ref (with tag) — the name carries no :latest.
-    assert "roboco-sandbox-pg:latest" not in joined
+    assert "robofleet-sandbox-pg:latest" not in joined
 
 
 @pytest.mark.asyncio
@@ -589,7 +589,7 @@ def test_engine_image_for_selects_kitchen_sink_iff_features() -> None:
     mongo (no activatable features) ignores features and returns its base image."""
     pg = sandbox_module.SANDBOX_ENGINES["postgres"]
     assert pg.image_for([]) == "postgres:16-alpine"
-    assert pg.image_for(["vector"]) == "roboco-sandbox-pg:latest"
+    assert pg.image_for(["vector"]) == "robofleet-sandbox-pg:latest"
     redis = sandbox_module.SANDBOX_ENGINES["redis"]
     assert redis.image_for([]) == "redis:8-alpine"
     assert redis.image_for(["search"]) == "redis/redis-stack-server:latest"

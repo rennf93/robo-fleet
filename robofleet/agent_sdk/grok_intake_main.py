@@ -83,7 +83,7 @@ async def main() -> None:  # pragma: no cover - needs the live container + grok
     import uvicorn
 
     session_id = os.environ["ROBOFLEET_PROMPTER_SESSION_ID"]
-    base_url = os.environ.get("ROBOFLEET_API_URL", "http://roboco-orchestrator:8000")
+    base_url = os.environ.get("ROBOFLEET_API_URL", "http://robofleet-orchestrator:8000")
     cwd = os.environ.get("ROBOFLEET_WORKSPACE", "/data/workspace")
 
     _render_grok_config(base_url, session_id)

@@ -32,7 +32,7 @@ def test_get_client_returns_none_when_unconfigured(
 def test_get_client_parses_endpoint_scheme(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """http://roboco-minio:9000 → endpoint=roboco-minio:9000, secure=False."""
+    """http://robofleet-minio:9000 → endpoint=robofleet-minio:9000, secure=False."""
     built: dict[str, Any] = {}
 
     class FakeMinio:
@@ -52,13 +52,13 @@ def test_get_client_parses_endpoint_scheme(
             built["region"] = region
 
     monkeypatch.setattr(minio_client, "Minio", FakeMinio)
-    monkeypatch.setattr(cfg, "minio_endpoint", "http://roboco-minio:9000")
+    monkeypatch.setattr(cfg, "minio_endpoint", "http://robofleet-minio:9000")
     monkeypatch.setattr(cfg, "minio_access_key", "minio")
     monkeypatch.setattr(cfg, "minio_secret_key", "minio123")
     monkeypatch.setattr(cfg, "minio_region", "us-east-1")
 
     minio_client.get_client()
-    assert built["endpoint"] == "roboco-minio:9000"
+    assert built["endpoint"] == "robofleet-minio:9000"
     assert built["secure"] is False
     assert built["access_key"] == "minio"
     assert built["secret_key"] == "minio123"
@@ -105,7 +105,7 @@ def test_get_object_stream_raises_when_unconfigured(
 def test_get_client_singleton_cached(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(cfg, "minio_endpoint", "http://roboco-minio:9000")
+    monkeypatch.setattr(cfg, "minio_endpoint", "http://robofleet-minio:9000")
     minio_client._reset_client()
     a = minio_client.get_client()
     b = minio_client.get_client()

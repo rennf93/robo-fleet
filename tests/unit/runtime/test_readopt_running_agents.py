@@ -36,7 +36,7 @@ async def test_readopts_running_containers_as_active() -> None:
     running = {"be-dev-1", "fe-pm"}
 
     async def inspect(name: str) -> tuple[bool, int | None]:
-        slug = name.removeprefix("roboco-agent-")
+        slug = name.removeprefix("robofleet-agent-")
         return (slug in running, 0)
 
     orch._inspect_container_state = AsyncMock(side_effect=inspect)
@@ -132,7 +132,7 @@ async def test_readopt_failopen_registers_on_claim_lookup_error() -> None:
     running = {"be-dev-1"}
 
     async def inspect(name: str) -> tuple[bool, int | None]:
-        return (name.removeprefix("roboco-agent-") in running, 0)
+        return (name.removeprefix("robofleet-agent-") in running, 0)
 
     orch._inspect_container_state = AsyncMock(side_effect=inspect)
     orch._resolve_container_id = AsyncMock(return_value="deadbeef1234")

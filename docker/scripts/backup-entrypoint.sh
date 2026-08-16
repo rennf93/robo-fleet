@@ -16,11 +16,11 @@ INTERVAL_SECONDS="${BACKUP_INTERVAL_SECONDS:-86400}"
 MIRROR_DIR="${BACKUP_MIRROR_DIR:-}"
 
 # pg_dump reads these natively — no need to pass -h/-p/-U/-d by hand.
-export PGHOST="${POSTGRES_HOST:-roboco-postgres}"
+export PGHOST="${POSTGRES_HOST:-robofleet-postgres}"
 export PGPORT="${POSTGRES_PORT:-5432}"
-export PGUSER="${POSTGRES_USER:-roboco}"
-export PGPASSWORD="${POSTGRES_PASSWORD:-roboco}"
-export PGDATABASE="${POSTGRES_DB:-roboco}"
+export PGUSER="${POSTGRES_USER:-robofleet}"
+export PGPASSWORD="${POSTGRES_PASSWORD:-robofleet}"
+export PGDATABASE="${POSTGRES_DB:-robofleet}"
 
 mkdir -p "$BACKUP_DIR"
 
@@ -35,7 +35,7 @@ mirror_backup() {
     echo "[backup] $(date -u -Iseconds) mirror dir ${MIRROR_DIR} not writable — skipping" >&2
     return 0
   fi
-  rm -f "${MIRROR_DIR}"/roboco-*.dump.tmp
+  rm -f "${MIRROR_DIR}"/robofleet-*.dump.tmp
   if cp "$dump" "${MIRROR_DIR}/${name}.tmp" && mv "${MIRROR_DIR}/${name}.tmp" "${MIRROR_DIR}/${name}"; then
     echo "[backup] $(date -u -Iseconds) mirrored: ${MIRROR_DIR}/${name}"
   else
@@ -44,7 +44,7 @@ mirror_backup() {
     return 0
   fi
   # shellcheck disable=SC2012
-  ls -1t "${MIRROR_DIR}"/roboco-*.dump 2>/dev/null | tail -n "+$((KEEP + 1))" | while IFS= read -r old; do
+  ls -1t "${MIRROR_DIR}"/robofleet-*.dump 2>/dev/null | tail -n "+$((KEEP + 1))" | while IFS= read -r old; do
     rm -f "$old"
   done
 }
@@ -53,9 +53,9 @@ run_backup() {
   local ts dest
   # Any .tmp here is a crash orphan (one dump at a time, unique names, and
   # the prune glob never matches them) — sweep before starting.
-  rm -f "${BACKUP_DIR}"/roboco-*.dump.tmp
+  rm -f "${BACKUP_DIR}"/robofleet-*.dump.tmp
   ts="$(date -u +%Y%m%dT%H%M%SZ)"
-  dest="${BACKUP_DIR}/roboco-${ts}.dump"
+  dest="${BACKUP_DIR}/robofleet-${ts}.dump"
   echo "[backup] $(date -u -Iseconds) starting pg_dump -> ${dest}"
   if pg_dump -Fc -f "${dest}.tmp"; then
     mv "${dest}.tmp" "${dest}"
@@ -69,7 +69,7 @@ run_backup() {
   # Prune to the newest $KEEP dumps. Filenames are our own fixed timestamp
   # format (no spaces/globs to worry about), so plain `ls -t` is enough.
   # shellcheck disable=SC2012
-  ls -1t "${BACKUP_DIR}"/roboco-*.dump 2>/dev/null | tail -n "+$((KEEP + 1))" | while IFS= read -r old; do
+  ls -1t "${BACKUP_DIR}"/robofleet-*.dump 2>/dev/null | tail -n "+$((KEEP + 1))" | while IFS= read -r old; do
     rm -f "$old"
   done
 }

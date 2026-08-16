@@ -8,7 +8,7 @@
 # submit directives (the gate-list bounces high-impact ones back to the CEO).
 # `claude-agent-sdk` and `roboco` are already in the base image; the SDK drives
 # the same `claude` binary using the same mounted ~/.claude auth — no API key.
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 LABEL role="secretary"
 LABEL description="CEO's chief-of-staff — a long-lived Claude Agent SDK session with gated CEO authority"

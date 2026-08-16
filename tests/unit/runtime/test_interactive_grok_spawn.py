@@ -36,15 +36,15 @@ def _intake_spec(
     provider_type: str, *, base_url: str | None, token: str | None
 ) -> _IntakeRunSpec:
     return _IntakeRunSpec(
-        container_name="roboco-agent-intake-1",
+        container_name="robofleet-agent-intake-1",
         image=GROK_PROMPTER_IMAGE
         if provider_type == "grok"
-        else "roboco-agent-prompter",
+        else "robofleet-agent-prompter",
         hosts=_HOSTS,
         session_id="sess-1",
         cwd="/data/workspace",
         cli_model="grok-build",
-        api_url="http://roboco-orchestrator:8000",
+        api_url="http://robofleet-orchestrator:8000",
         provider_base_url=base_url,
         provider_auth_token=token,
         provider_type=provider_type,
@@ -94,12 +94,12 @@ def test_intake_anthropic_keeps_anthropic_env() -> None:
     assert "ANTHROPIC_AUTH_TOKEN=sk-ant" in cmd
     assert not any(c.startswith("XAI_") for c in cmd)
     assert not any(c.startswith("ROBOFLEET_GROK_USAGE_FILE") for c in cmd)
-    assert cmd[-1] == "roboco-agent-prompter"
+    assert cmd[-1] == "robofleet-agent-prompter"
 
 
 def test_secretary_grok_uses_grok_cli_env_and_keeps_hmac() -> None:
     spec = _SecretaryRunSpec(
-        container_name="roboco-agent-secretary-1",
+        container_name="robofleet-agent-secretary-1",
         image=GROK_SECRETARY_IMAGE,
         hosts={
             "claude": "/h/.claude",
@@ -109,7 +109,7 @@ def test_secretary_grok_uses_grok_cli_env_and_keeps_hmac() -> None:
         session_id="sess-2",
         cwd="/app",
         cli_model="grok-build",
-        api_url="http://roboco-orchestrator:8000",
+        api_url="http://robofleet-orchestrator:8000",
         agent_uuid="uuid-sec",
         agent_token="hmac-secretary",
         provider_base_url="https://api.x.ai/v1",

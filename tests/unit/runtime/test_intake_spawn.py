@@ -48,8 +48,8 @@ def _make_minimal_orchestrator() -> AgentOrchestrator:
 
 def _spec(**overrides: Any) -> _IntakeRunSpec:
     base: dict[str, Any] = {
-        "container_name": "roboco-agent-intake-1",
-        "image": "roboco-agent-prompter",
+        "container_name": "robofleet-agent-intake-1",
+        "image": "robofleet-agent-prompter",
         "hosts": {
             "claude": "/home/runner/.claude",
             "prompt": "/data/prompts-generated/intake-1-prompt.md",
@@ -58,7 +58,7 @@ def _spec(**overrides: Any) -> _IntakeRunSpec:
         "session_id": "sess-abc",
         "cwd": "/data/workspaces/roboco/board/intake-1",
         "cli_model": "claude-opus-5",
-        "api_url": "http://roboco-orchestrator:8000",
+        "api_url": "http://robofleet-orchestrator:8000",
         "provider_base_url": None,
         "provider_auth_token": None,
     }
@@ -83,7 +83,7 @@ def _fresh_registry() -> Any:
 class TestBuildIntakeRunCmd:
     def test_image_is_last_and_no_claude_cli_args(self) -> None:
         cmd = AgentOrchestrator._build_intake_run_cmd(_spec())
-        assert cmd[-1] == "roboco-agent-prompter"
+        assert cmd[-1] == "robofleet-agent-prompter"
         # The image ENTRYPOINT is the driver — none of the claude CLI flags
         # the task-driven path appends may appear here.
         for flag in (
@@ -107,7 +107,7 @@ class TestBuildIntakeRunCmd:
         cmd = AgentOrchestrator._build_intake_run_cmd(_spec())
         assert "ROBOFLEET_PROMPTER_SESSION_ID=sess-abc" in cmd
         assert "ROBOFLEET_WORKSPACE=/data/workspaces/roboco/board/intake-1" in cmd
-        assert "ROBOFLEET_API_URL=http://roboco-orchestrator:8000" in cmd
+        assert "ROBOFLEET_API_URL=http://robofleet-orchestrator:8000" in cmd
         assert "ROBOFLEET_AGENT_ID=intake-1" in cmd
         assert "CLAUDE_CODE_SUBAGENT_MODEL=claude-opus-5" in cmd
 
@@ -1042,7 +1042,7 @@ class TestSpawnGuarded:
 
 class TestConcurrentSpawnSerialization:
     """Two concurrent intake starts must serialize — the intake agent id is a
-    single fixed id, so two ``docker run --name roboco-agent-prompter`` calls and
+    single fixed id, so two ``docker run --name robofleet-agent-prompter`` calls and
     two ``_instances[INTAKE_AGENT_ID]`` writes racing orphan a container + relay.
     The spawn body (reap-prior → clone → docker run → register) must run under
     a per-agent lock so the second start only begins once the first has fully
@@ -1266,8 +1266,8 @@ class TestSpawnIntakeShutdownNoOrphan:
         # just-started container is orphaned — so asserting two proves the guard
         # ran.
         assert removed == [
-            f"roboco-agent-{INTAKE_AGENT_ID}",
-            f"roboco-agent-{INTAKE_AGENT_ID}",
+            f"robofleet-agent-{INTAKE_AGENT_ID}",
+            f"robofleet-agent-{INTAKE_AGENT_ID}",
         ]
         # No instance registered — stop()'s _instances iteration has already
         # run, so a registration now would land a live container nothing stops.
@@ -1299,4 +1299,4 @@ class TestSpawnIntakeShutdownNoOrphan:
         assert orch._instances[INTAKE_AGENT_ID] is instance
         # The pre-spawn reap remove is the only remove call (the shutdown guard
         # did NOT remove the just-started container).
-        assert removed == [f"roboco-agent-{INTAKE_AGENT_ID}"]
+        assert removed == [f"robofleet-agent-{INTAKE_AGENT_ID}"]

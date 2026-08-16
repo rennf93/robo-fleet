@@ -135,8 +135,8 @@ async def test_shutdown_mid_spawn_removes_container_and_skips_registration(
     # post-docker-run shutdown guard reaping the just-started one. Without the
     # guard there is only ONE remove and the just-started container is orphaned.
     assert removed == [
-        f"roboco-agent-{SECRETARY_AGENT_ID}",
-        f"roboco-agent-{SECRETARY_AGENT_ID}",
+        f"robofleet-agent-{SECRETARY_AGENT_ID}",
+        f"robofleet-agent-{SECRETARY_AGENT_ID}",
     ]
     # No instance registered — stop()'s _instances iteration has already run.
     assert SECRETARY_AGENT_ID not in orch._instances
@@ -223,7 +223,7 @@ async def test_running_spawn_registers_normally(
     assert orch._instances[SECRETARY_AGENT_ID] is instance
     # Only the pre-spawn reap remove — the shutdown guard did NOT remove the
     # just-started container (the orchestrator stayed running).
-    assert removed == [f"roboco-agent-{SECRETARY_AGENT_ID}"]
+    assert removed == [f"robofleet-agent-{SECRETARY_AGENT_ID}"]
 
 
 # ---------------------------------------------------------------------------

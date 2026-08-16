@@ -9,7 +9,7 @@
 # — it is dispatched per review task like the dev/QA agents, not a persistent
 # SDK driver like intake/secretary.
 
-FROM roboco-agent-base
+FROM robofleet-agent-base
 
 LABEL role="pr-reviewer"
 LABEL description="Read-only PR reviewer - reviews inbound external PRs and posts one change-request"

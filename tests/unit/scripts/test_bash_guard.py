@@ -38,7 +38,7 @@ def _run(cmd: str, cwd: Path | None = None) -> int:
 
 def test_blocks_internal_curl_to_orchestrator() -> None:
     assert (
-        _run("curl http://roboco-orchestrator:8000/api/v1/flow/main_pm/delegate")
+        _run("curl http://robofleet-orchestrator:8000/api/v1/flow/main_pm/delegate")
         == _DENIED
     )
 
@@ -52,7 +52,7 @@ def test_blocks_internal_curl_to_127() -> None:
 
 
 def test_blocks_scheme_less_curl_to_orchestrator() -> None:
-    assert _run("curl roboco-orchestrator:8000/api") != _ALLOWED
+    assert _run("curl robofleet-orchestrator:8000/api") != _ALLOWED
 
 
 def test_blocks_scheme_less_curl_to_localhost() -> None:
@@ -311,7 +311,7 @@ def test_blocks_smoke17_python_httpx_heredoc_to_orchestrator() -> None:
     cmd = (
         "python3 << 'PYEOF'\n"
         "import httpx\n"
-        'httpx.post("http://roboco-orchestrator:8000/api/v1/flow/'
+        'httpx.post("http://robofleet-orchestrator:8000/api/v1/flow/'
         'developer/i_will_work_on",\n'
         '           headers={"X-Agent-ID": "00000000-0000-0000-0001-'
         '000000000001", "X-Agent-Role": "developer"})\n'
@@ -331,7 +331,7 @@ def test_blocks_python_urllib_to_orchestrator() -> None:
     assert (
         _run(
             'python3 -c "import urllib.request; '
-            "urllib.request.urlopen('http://roboco-orchestrator:8000/api')\""
+            "urllib.request.urlopen('http://robofleet-orchestrator:8000/api')\""
         )
         == _DENIED
     )
@@ -339,7 +339,7 @@ def test_blocks_python_urllib_to_orchestrator() -> None:
 
 def test_blocks_node_fetch_to_internal_host() -> None:
     assert (
-        _run("node -e \"fetch('http://roboco-orchestrator:8000/api/v1/do/note')\"")
+        _run("node -e \"fetch('http://robofleet-orchestrator:8000/api/v1/do/note')\"")
         == _DENIED
     )
 
@@ -359,7 +359,7 @@ def test_blocks_aiohttp_to_orchestrator() -> None:
         "import aiohttp, asyncio\n"
         "async def m():\n"
         "    async with aiohttp.ClientSession() as s:\n"
-        '        await s.post("http://roboco-orchestrator:8000/api/v1/flow/'
+        '        await s.post("http://robofleet-orchestrator:8000/api/v1/flow/'
         'developer/i_am_done")\n'
         "asyncio.run(m())\n"
         "EOF"

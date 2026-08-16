@@ -130,7 +130,7 @@ def test_telegram_initdata_max_age_defaults_to_600() -> None:
 
 def test_local_llm_base_url_default_accepted() -> None:
     s = Settings()
-    assert s.local_llm_base_url == "http://roboco-ollama:11434/v1"
+    assert s.local_llm_base_url == "http://robofleet-ollama:11434/v1"
 
 
 def test_local_llm_base_url_localhost_accepted() -> None:

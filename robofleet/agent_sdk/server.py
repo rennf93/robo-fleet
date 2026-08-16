@@ -57,7 +57,7 @@ logger = structlog.get_logger()
 # Environment configuration
 AGENT_ID = os.environ.get("ROBOFLEET_AGENT_ID", "unknown")
 AGENT_ROLE = os.environ.get("ROBOFLEET_AGENT_ROLE", "developer")
-MAIN_API_URL = os.environ.get("ROBOFLEET_API_URL", "http://roboco-orchestrator:8000")
+MAIN_API_URL = os.environ.get("ROBOFLEET_API_URL", "http://robofleet-orchestrator:8000")
 SDK_PORT = int(os.environ.get("ROBOFLEET_SDK_PORT", "9000"))
 
 
@@ -227,8 +227,8 @@ async def send_message(req: SendRequest) -> SendResponse:
     Attempts direct delivery via HTTP. Falls back to notification
     via main API if target agent is offline.
     """
-    # Container name = roboco-agent-{slug}
-    target_url = f"http://roboco-agent-{req.target_agent}:{SDK_PORT}/a2a/receive"
+    # Container name = robofleet-agent-{slug}
+    target_url = f"http://robofleet-agent-{req.target_agent}:{SDK_PORT}/a2a/receive"
 
     msg = A2AMessage(
         from_agent=AGENT_ID,

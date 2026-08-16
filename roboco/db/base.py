@@ -7,7 +7,7 @@ import weakref
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 import structlog
 from alembic import command
@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 from roboco.config import settings
+from roboco.infra.cloudsql import async_engine_for_cloudsql
 
 logger = structlog.get_logger()
 
@@ -61,11 +62,16 @@ class _DbHolder:
     to do between tests, now enforced at the single chokepoint every caller
     routes through. In production exactly one loop exists, so the check
     never fires and behavior is unchanged.
+
+    ``cloudsql_connector`` caches the Cloud SQL python connector alongside
+    the engine when ``gcp_cloudsql_instance`` is armed; the connector is
+    loop-bound so a cross-loop rebind drops it together with the engine.
     """
 
     engine: AsyncEngine | None = None
     session_factory: async_sessionmaker[AsyncSession] | None = None
     loop: "weakref.ref[asyncio.AbstractEventLoop] | None" = None
+    cloudsql_connector: Any | None = None
 
 
 class _BackgroundDbHolder:
@@ -87,6 +93,7 @@ class _BackgroundDbHolder:
     engine: AsyncEngine | None = None
     session_factory: async_sessionmaker[AsyncSession] | None = None
     loop: "weakref.ref[asyncio.AbstractEventLoop] | None" = None
+    cloudsql_connector: Any | None = None
 
 
 _DbPool = Literal["primary", "background"]
@@ -133,6 +140,7 @@ def _rebind_holder_to_current_loop(
     holder.engine = None
     holder.session_factory = None
     holder.loop = None
+    holder.cloudsql_connector = None
 
 
 def get_engine(pool: _DbPool = "primary") -> AsyncEngine:
@@ -144,10 +152,23 @@ def get_engine(pool: _DbPool = "primary") -> AsyncEngine:
     smaller engine reserved for the orchestrator's dormant/opt-in engine
     loops (see ``_BackgroundDbHolder``); both connect to the same
     ``database_url``, just through independent pools.
+
+    When ``settings.gcp_cloudsql_instance`` is armed the engine is built
+    through the Cloud SQL python connector (``async_engine_for_cloudsql``)
+    instead of the plain DSN; the connector is cached on the holder so it
+    outlives the engine. The plain-DSN path is byte-for-byte unchanged when
+    the setting is empty.
     """
     holder = _holder_for(pool)
     _rebind_holder_to_current_loop(holder)
     if holder.engine is None:
+        if settings.gcp_cloudsql_instance:
+            engine, connector = async_engine_for_cloudsql(settings)
+            holder.engine = engine
+            holder.cloudsql_connector = connector
+            current = _running_loop()
+            holder.loop = weakref.ref(current) if current is not None else None
+            return holder.engine
         # Server-side timeouts, applied per asyncpg connection: a transaction
         # left idle (its coroutine parked on git I/O or an asyncio lock) is
         # killed by Postgres itself, releasing its row locks and pool slot;

@@ -643,6 +643,30 @@ wheels = [
 ]
 
 [[package]]
+name = "cloud-sql-python-connector"
+version = "1.21.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "cryptography" },
+    { name = "dnspython" },
+    { name = "google-auth" },
+    { name = "googleapis-common-protos" },
+    { name = "grpcio" },
+    { name = "protobuf" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ea/a0/e1554a92336ac1df06c51553ba6cf4ec868788a81723130318713441a245/cloud_sql_python_connector-1.21.0.tar.gz", hash = "sha256:a5295627caa588c5c4b7b718d1954b8cf43de1dba9749b60b756984a1ea9cb21", size = 45183, upload-time = "2026-07-24T01:51:15.378Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/62/25/99042398d3bf14a03bb59f08f872a49d3cc7b9e34c35b05a3acf0ef350ae/cloud_sql_python_connector-1.21.0-py3-none-any.whl", hash = "sha256:104e47d1a06448ec1231cf76454cb474f8c1954f970c7c2931b1aa2088805d8d", size = 51190, upload-time = "2026-07-24T01:51:13.976Z" },
+]
+
+[package.optional-dependencies]
+asyncpg = [
+    { name = "asyncpg" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1139,6 +1163,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/27/3f/d2887a46446311c10871dde73e97bc9c07b08963ff92cb0a78a564d87a45/google_cloud_run-0.16.1.tar.gz", hash = "sha256:568bf7fceba8f844a39b69858a8e642f6cca27eab7246c621d9d341c289b1158", size = 513602, upload-time = "2026-06-22T23:22:30.849Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/37/27/aed6476e16083dfe4da93633331b0561e0160249d44e81d96077185afe27/google_cloud_run-0.16.1-py3-none-any.whl", hash = "sha256:8b7b91b20270cff5514a0af7ac2009572b3d3501a075868cf956a1f8cc6e61f2", size = 459007, upload-time = "2026-06-22T23:20:29.456Z" },
+]
+
+[[package]]
+name = "google-cloud-secret-manager"
+version = "2.30.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", extra = ["grpc"] },
+    { name = "google-auth" },
+    { name = "grpc-google-iam-v1" },
+    { name = "grpcio" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/33/4a/7acb616b316c91969f7abf5f3719cb61cc4a97af86411e683ddb11147aa1/google_cloud_secret_manager-2.30.0.tar.gz", hash = "sha256:26ec87737731b483f7f95c26a8c7ab79e22cb66317c95006e7f6985dbc43c8a2", size = 286034, upload-time = "2026-07-16T20:36:23.29Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/18/8b/9347282b7f6828511d8cf927f3ab62b4b849aaa46aa12ae79e2f6da6cb0b/google_cloud_secret_manager-2.30.0-py3-none-any.whl", hash = "sha256:0f285e77d09a73700e3fca9abbc77f844a50276989bf76d64a76b6e2b871e396", size = 229181, upload-time = "2026-07-16T20:36:01.125Z" },
 ]
 
 [[package]]
@@ -3019,6 +3060,7 @@ dependencies = [
     { name = "anthropic" },
     { name = "asyncpg" },
     { name = "claude-agent-sdk" },
+    { name = "cloud-sql-python-connector", extra = ["asyncpg"] },
     { name = "cryptography" },
     { name = "fastapi" },
     { name = "fastapi-guard" },
@@ -3026,6 +3068,7 @@ dependencies = [
     { name = "fastapi-users-db-sqlalchemy" },
     { name = "google-adk" },
     { name = "google-cloud-run" },
+    { name = "google-cloud-secret-manager" },
     { name = "google-cloud-storage" },
     { name = "google-genai" },
     { name = "guard-core", extra = ["redis"] },
@@ -3094,6 +3137,7 @@ requires-dist = [
     { name = "asyncpg" },
     { name = "bandit", marker = "extra == 'dev'" },
     { name = "claude-agent-sdk" },
+    { name = "cloud-sql-python-connector", extras = ["asyncpg"] },
     { name = "cryptography" },
     { name = "deptry", marker = "extra == 'dev'" },
     { name = "factory-boy", marker = "extra == 'dev'" },
@@ -3104,6 +3148,7 @@ requires-dist = [
     { name = "fastapi-users-db-sqlalchemy" },
     { name = "google-adk" },
     { name = "google-cloud-run" },
+    { name = "google-cloud-secret-manager" },
     { name = "google-cloud-storage" },
     { name = "google-genai" },
     { name = "guard-core", extras = ["redis"], specifier = ">=3.12.0" },

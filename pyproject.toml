@@ -62,6 +62,8 @@ dependencies = [
     # ADK agent runtime (roboco.agent) — LlmAgent + Runner on Gemini
     "google-adk",
     "google-genai",
+    "cloud-sql-python-connector[asyncpg]",  # PyPI pkg name; import is google.cloud.sql.connector; asyncpg extra matches existing async stack
+    "google-cloud-secret-manager",
 ]
 
 [project.optional-dependencies]

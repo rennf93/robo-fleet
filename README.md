@@ -1,424 +1,115 @@
-# RoboCo
+# robo-fleet
 
-AI Agents Company - A virtual organization of 25 AI agents + 1 human CEO, designed to operate as a complete software development workforce.
+robo-fleet is a virtual AI company of 25 AI agents plus one human CEO that runs as a self-organizing software workforce on Google Cloud. Each agent is built on Google ADK and Gemini 3.5 Flash; together they plan, code, QA, review, and merge real tasks through a structured lifecycle, observable from a live control panel. This is the RoboCo AI-agent-company system ported to the Google Cloud stack for the All Things Agentic hackathon, Fortified Enterprise Fleet track.
 
-<table align="center">
-<tr>
-<td width="50%" align="center">
-  <a href="https://www.youtube.com/watch?v=t1QNqJgBmkM">
-    <img src="https://img.youtube.com/vi/t1QNqJgBmkM/maxresdefault.jpg" alt="Watch the 26-minute RoboCo intro on YouTube — what it is, a walkthrough, and how to use it" width="100%">
-  </a>
-  <br>
-  <sub>▶ <b><a href="https://www.youtube.com/watch?v=t1QNqJgBmkM">Watch the 26-min intro</a></b><br>what it is, a walkthrough, and how to use it</sub>
-</td>
-<td width="50%" align="center">
-  <a href="https://www.youtube.com/watch?v=xige_EUIjIA">
-    <img src="https://img.youtube.com/vi/xige_EUIjIA/maxresdefault.jpg" alt="Watch the 2.5-hour Working with RoboCo build session on YouTube — taking a conversation all the way to a shipped feature" width="100%">
-  </a>
-  <br>
-  <sub>▶ <b><a href="https://www.youtube.com/watch?v=xige_EUIjIA">Watch the 2.5-hour build session</a></b><br>a conversation → a shipped feature</sub>
-</td>
-</tr>
-</table>
+## Architecture overview
 
-<p align="center">
-  <img src="https://docs.roboco.tech/docs/videos/panel-teaser.gif" alt="Twelve-second looping preview of the RoboCo control panel — the org tree, a task in progress, and an approval queue." width="80%">
-  <br>
-  <sub><a href="https://docs.roboco.tech/docs/videos/panel-full-walkthrough.mp4">Watch the full 2:33 walkthrough (.mp4) →</a></sub>
-</p>
+Three real changes from RoboCo, everything else copied verbatim:
 
-> [!WARNING]
-> **RoboCo is early-stage, work-in-progress software (v0).** It's under active development, runs in a homelab, and *will* have rough edges, breaking changes, and bugs. It is **not production-ready** and the API/database schema are not stable yet. Treat it as a working prototype to explore and build on — please  don't expose it to the public internet as-is. Issues and PRs very welcome.
+1. **Spawn backend: docker containers -> Cloud Run Jobs.** The orchestrator no longer `docker run`s an agent container per task. A `CloudRunJobsProvider` submits a Cloud Run Job execution (one image serves every role; role behavior comes from the tool manifest + composed system prompt) and polls the job to completion.
+2. **Agent runtime: Claude Code CLI -> ADK Runner + Gemini 3.5 Flash.** The `roboco-agent-adk` image runs `roboco.agent.adk_entry`, which builds an ADK `LlmAgent` with the gateway tool-shim and git/file `FunctionTools`, runs it over an `InMemorySessionService` session on Gemini 3.5 Flash, accumulates token counts, and POSTs usage to `/api/v1/usage/report`. No MCP servers, no Claude CLI, no Node.js: a pure Python ADK runtime.
+3. **Infra: homelab docker-compose -> Cloud SQL, Memorystore, Filestore, GCS, Secret Manager, Artifact Registry, Cloud Run.** Postgres + pgvector moves to Cloud SQL Postgres 16 (via the Cloud SQL python connector, `roboco.infra.cloudsql`), Redis to Memorystore for Redis 7.x, the workspaces volume to a Filestore NFS share, agent clones to GCS, the Fernet key + HMAC secret + Gemini API key to Secret Manager, and the three images to Artifact Registry, built by Cloud Build.
 
-> [!TIP]
-> 📚 **Full documentation:** **[docs.roboco.tech](https://docs.roboco.tech)** — install & first run, the company model, a page-by-page panel reference, model providers, the optional subsystems, deployment, and the API.
+Everything else (the org hierarchy, task lifecycle, gateway verbs, findings ledger, conventions standard, audit log, the Next.js panel) is unchanged from RoboCo.
 
-## Overview
+## Architecture diagram
 
-RoboCo implements a structured organizational hierarchy with formal communication protocols, task management, and quality controls. The system enables a single human (CEO) to orchestrate complex multi-project development at scale.
+See `docs/architecture.mmd` (render to `docs/architecture.png` with `npx -y @mermaid-js/mermaid-cli -i docs/architecture.mmd -o docs/architecture.png` if a local mermaid CLI is available).
 
-```
-CEO (You, the human)
-    │
-    ├── Intake (on-demand interviewer: chats only with you to draft a task)
-    ├── Secretary (on-demand chief-of-staff: reads company state, runs gated directives)
-    ├── PR Reviewer (read-only main reviewer: inbound external/fork + internal PRs, and the root→master in-path gate)
-    │
-    └── Board (3 agents)
-         ├── Product Owner
-         ├── Head of Marketing
-         └── Auditor (silent observer, reports to you)
-              │
-              └── Main PM (coordinates all cells)
-                   │
-                   ├── Backend Cell (6 agents: 2 Devs, 1 QA, 1 PM, 1 Documenter, 1 PR Reviewer)
-                   ├── Frontend Cell (6 agents: 2 Devs, 1 QA, 1 PM, 1 Documenter, 1 PR Reviewer)
-                   └── UX/UI Cell (6 agents: 2 Devs, 1 QA, 1 PM, 1 Documenter, 1 PR Reviewer)
-```
+## Prerequisites
 
-The 25 agents = Intake + Secretary + PR Reviewer + the Board (3) + Main PM + the three 6-agent cells (18). Agents run on Anthropic Claude by default, or on xAI Grok, OpenAI Codex, Google Gemini, or Moonshot Kimi K3 (each on its own official CLI and subscription, no metered API key) — see the provider note under Configuration.
+- `gcloud` CLI authenticated to a GCP project (`gcloud auth login` and `gcloud auth application-default login`).
+- `terraform` (the `infra/` directory is a terraform root module).
+- The GCP project with billing enabled and the hackathon credit request approved.
+- A Gemini API key (set as `ROBOCO_GEMINI_API_KEY` when seeding secrets).
 
-## How it works
+## Spin-up
 
-You hand a task to the company; it runs through a real *build → review → document → merge* pipeline and comes back to you to approve.
-
-One full loop, put simply:
-
-1. **You give the Board a task — they review it.** The Product Owner and Head of Marketing turn your ask into requirements and acceptance criteria.
-2. **You approve — the Main PM starts the work.** A notification asks for your *Approve & Start* decision; approve, and the Main PM breaks it into per-cell subtasks.
-3. **Each cell's PM delegates, supports, and triages** its developers (UX/UI, Frontend, Backend).
-4. **Developers build it, QA verifies and gates it, Documenters keep the books.**
-5. **Cell PMs merge their PRs into the Main PM's branch.**
-6. **The Main PM opens the final PR and notifies you "It's done!"** — you approve and merge, or send it back for rework. *(Only you ever merge to `master`.)*
-
-**— Full circle —**
-
-**[See the full walkthrough, with screenshots →](https://docs.roboco.tech/docs/tour)**
-
-**[Or watch the full panel walkthrough (video) →](https://docs.roboco.tech/docs/videos/panel-full-walkthrough.mp4)**
-
-## Project Structure
-
-```
-roboco/
-├── roboco/                      # Main Python package
-│   ├── api/                     # FastAPI routes & schemas
-│   │   ├── routes/              # API endpoints (tasks, git, agents, etc.)
-│   │   └── schemas/             # Pydantic request/response models
-│   ├── services/                # Business logic services
-│   │   ├── task.py              # Task lifecycle management
-│   │   ├── workspace.py         # Multi-agent workspace management
-│   │   ├── messaging.py         # Agent communication
-│   │   └── optimal.py           # RAG/Knowledge base (in-house pgvector)
-│   ├── models/                  # Pydantic domain models
-│   ├── db/                      # SQLAlchemy ORM & session
-│   ├── enforcement/             # Task lifecycle state machine
-│   ├── runtime/                 # Orchestrator for agent spawning
-│   ├── agents/                  # Agent base classes
-│   ├── mcp/                     # MCP server implementations
-│   └── config.py                # Application configuration
-├── agents/
-│   └── prompts/                 # Agent system prompts (roles, teams, identities)
-├── docs/
-│   ├── rag/                     # Agent knowledge base (indexed into RAG)
-│   └── map/                     # Exhaustive codebase map (agent-facing)
-├── alembic/                     # Database migrations
-├── motion/                      # Video/motion-graphics toolchain
-├── panel/                       # Next.js 16 control panel (served on :3000 via nginx)
-├── scripts/                     # Bootstrap and utility scripts (bootstrap.sh for make quickstart)
-├── CLAUDE.md                    # Claude Code guidance
-├── docker-compose.yml           # Full stack, built from source
-└── docker-compose.registry.yml  # Full stack, pulled from the image registry
-```
-
-## Running RoboCo
-
-You need **Docker** + **Docker Compose** and a Claude Code auth directory on the host (`~/.claude`, mounted into the orchestrator so agents can reach the model). Copy `.env.example` to `.env` and set at least `ROBOCO_ENCRYPTION_KEY` and `ROBOCO_AGENT_AUTH_SECRET` (that file shows how to generate each). However you start it, the whole company is reachable at one origin: **http://localhost:3000**.
-
-**Optional — run agents on xAI Grok instead of Claude.** RoboCo can spawn agents on xAI's official `grok` CLI authenticated by a SuperGrok subscription (no metered API key). Run `grok login` once on the host and point `ROBOCO_HOST_GROK_DIR` at the resulting `~/.grok` so it mounts into Grok agents; the orchestrator keeps the ~6h token refreshed for you. See the Grok block in `.env.example` (`ROBOCO_HOST_GROK_DIR`, `ROBOCO_GROK_AGENT_IMAGE`, `ROBOCO_GROK_CLI_MODEL`, `ROBOCO_GROK_REASONING_EFFORT`).
-
-**Optional — run agents on Moonshot Kimi K3 instead of Claude.** RoboCo can spawn agents on Moonshot's official `kimi` (kimi-code) CLI authenticated by a Kimi subscription (OAuth device-code login, no metered API key). Run `kimi login` once on the host; `ROBOCO_HOST_KIMI_DIR` points at the resulting `~/.kimi-code` (optional — defaults sensibly) and mounts read-write, since every Kimi agent shares the host's one rotating credential chain. See the Kimi block in `.env.example` (`ROBOCO_HOST_KIMI_DIR`, `ROBOCO_KIMI_CLI_MODEL` — default `kimi-code/k3`, `kimi-code/kimi-for-coding` is the cheaper lever).
-
-### Option 1 — Run the pre-built images (quickest)
-
-Every release publishes all RoboCo images to both the GitHub Container Registry and Docker Hub, so you can run the full stack without building anything. One command brings it up:
+A judge with the prerequisites above and credits approved reaches a running stack by following these steps in order. Every script reads its GCP references from `ROBOCO_GCP_*` env vars and `terraform output`; no values are hardcoded.
 
 ```bash
-git clone https://github.com/rennf93/roboco.git && cd roboco
-make quickstart                    # no make? run ./scripts/bootstrap.sh directly
+# 1. Provision the infra (Cloud SQL, Memorystore, Filestore, GCS, Artifact
+#    Registry, VPC connector, the Cloud Run service/job IAM). Review and apply:
+cd infra
+terraform init
+terraform apply
+cd ..
+
+# 2. Seed the four Secret Manager secrets (Fernet key, agent-auth HMAC secret,
+#    cloud-auth secret, Gemini API key). Requires ROBOCO_GEMINI_API_KEY.
+ROBOCO_GEMINI_API_KEY=your-key ./infra/seed-secrets.sh PROJECT_ID
+
+# 3. Build the three images (roboco-orchestrator, roboco-panel, roboco-agent-adk)
+#    into Artifact Registry via Cloud Build. Reads ROBOCO_GCP_PROJECT_ID and
+#    ROBOCO_GCP_REGION; uses cloudbuild.yaml at the repo root.
+export ROBOCO_GCP_PROJECT_ID=your-project
+export ROBOCO_GCP_REGION=your-region
+./infra/build-images.sh
+
+# 4. Deploy the orchestrator to Cloud Run. Pulls Cloud SQL connection name,
+#    Memorystore host, Filestore IP/share, and GCS bucket from terraform output,
+#    substitutes the __PLACEHOLDER__ tokens in orchestrator-service.yaml, and
+#    calls `gcloud run services replace`. Needs ROBOCO_DATABASE_PASSWORD,
+#    ROBOCO_REDIS_PASSWORD, and the seeded cloud-auth CEO login.
+export ROBOCO_DATABASE_PASSWORD=...
+export ROBOCO_REDIS_PASSWORD=...
+export ROBOCO_CLOUD_AUTH_EMAIL=ceo@example.com
+export ROBOCO_CLOUD_AUTH_PASSWORD=...
+./infra/deploy-orchestrator.sh
+
+# 5. Deploy the panel to Cloud Run. Discovers the orchestrator's Cloud Run URL
+#    from the deployed service, substitutes panel-service.yaml, and calls
+#    `gcloud run services replace`.
+./infra/deploy-panel.sh
+
+# 6. Open the panel URL printed by step 5, log in with the cloud-auth CEO
+#    credentials, and drive a task from the Board -> Main PM -> cells -> dev
+#    pipeline. The orchestrator spawns each agent as a Cloud Run Job running
+#    ADK on Gemini 3.5 Flash.
 ```
 
-`make quickstart` (`scripts/bootstrap.sh`) is idempotent — safe to re-run any time. What it does:
+A single judge-reproducible env template lives at `.env.gcp.example`; copy it to `.env.gcp` and fill the values from `terraform output` and Secret Manager. It documents every `ROBOCO_GCP_*` var, the DB/Redis connection details, the agent image registry/tag, and the feature flags armed (or deliberately off) for the GCP deploy.
 
-```bash
-cp .env.example .env              # only if missing — an existing .env is never touched
-# ...generates ROBOCO_ENCRYPTION_KEY / ROBOCO_AGENT_AUTH_SECRET / ROBOCO_PANEL_AGENT_TOKEN in place
+## Env vars
 
-docker compose -f docker-compose.registry.yml pull
-docker compose -f docker-compose.registry.yml up -d
+See `.env.gcp.example` for the full set. One-line-per-section summary:
 
-# ...then polls until the stack is genuinely ready (health, migrations, Ollama
-# models) and prints a doctor-style summary — or fails loud with what to check.
-```
+- **Database (Cloud SQL):** `ROBOCO_DATABASE_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_NAME` point at the Cloud SQL Auth Proxy sidecar.
+- **Redis (Memorystore):** `ROBOCO_REDIS_HOST` / `_PORT` / `_PASSWORD` / `_DB` for the Memorystore instance.
+- **GCP infra references:** `ROBOCO_GCP_PROJECT_ID`, `ROBOCO_GCP_REGION`, `ROBOCO_GCP_CLOUDSQL_INSTANCE`, `ROBOCO_GCP_MEMORYSTORE_HOST` / `_PORT`, `ROBOCO_GCP_FILESTORE_SHARE`, `ROBOCO_GCP_GCS_BUCKET`, `ROBOCO_GCP_ARTIFACT_REGISTRY_REPO`, `ROBOCO_GCP_CLOUD_RUN_AGENT_JOB_PREFIX`.
+- **Secrets (Secret Manager):** `ROBOCO_ENCRYPTION_KEY`, `ROBOCO_AGENT_AUTH_SECRET`, `ROBOCO_AGENT_AUTH_REQUIRED=true`, `ROBOCO_CLOUD_AUTH_SECRET`.
+- **Cloud auth (armed on GCP):** `ROBOCO_CLOUD_AUTH_ENABLED=true`, `ROBOCO_CLOUD_AUTH_EMAIL` / `_PASSWORD` (the seeded CEO login).
+- **URLs:** `ROBOCO_PUBLIC_BASE_URL` (the Cloud Run panel URL), `ROBOCO_API_URL` / `ROBOCO_ORCHESTRATOR_URL` (localhost in the orchestrator container).
+- **Agent images:** `ROBOCO_AGENT_IMAGE_REGISTRY`, `ROBOCO_AGENT_IMAGE_TAG`.
+- **Gemini:** `ROBOCO_GEMINI_API_KEY`, `ROBOCO_AGENT_MODEL` (defaults to `gemini-3.5-flash` in `roboco.agent.adk_entry`).
 
-Note: ROBOCO_PANEL_AGENT_TOKEN is a standing CEO credential — blank it if you later arm cloud auth (see `.env.example`).
+## The 7 fleet properties
 
-A fresh `.env` also gets `ROBOCO_HOST_PROJECT_DIR` and `ROBOCO_HOST_DATA_DIR` pinned to the checkout location — these are the host-side paths the orchestrator bind-mounts into every spawned agent. If you reuse an existing `.env` that doesn't set them, quickstart checks that the absence is safe: it only passes silently when the checkout is already at `/opt/roboco` (the compose default). Anywhere else, it fails loud with the exact line to add (e.g. `ROBOCO_HOST_PROJECT_DIR=/your/checkout/path`), because an unset var makes Docker create an empty directory at `/opt/roboco` and every agent spawn dies with `IsADirectoryError` before reading its system prompt. An explicitly-set value is always trusted as-is — split host/daemon setups (remote or rootless Docker, a bind-mounted checkout) legitimately name paths the script can't see.
+The Fortified Enterprise Fleet track scores seven fleet properties; all already exist in RoboCo and map onto the Google stack:
 
-Choose the registry and version with two env vars (defaults shown) — set them in `.env` before running `make quickstart`:
+1. **Agent registry** = the agent registry in `agents_config` / the `agents` DB table (25 agents + the human CEO), loaded at orchestrator startup.
+2. **Runtime** = Cloud Run Jobs (one execution per agent task) running the ADK `Runner` + `LlmAgent` on Gemini 3.5 Flash in the `roboco-agent-adk` image.
+3. **Memory bank** = the pgvector knowledge base (in-house RAG engine) on Cloud SQL plus the organizational-memory loop (learnings + playbooks, captured on task completion and injected into the next claim's briefing).
+4. **Identity** = per-agent HMAC tokens (`X-Agent-Token`, signed with `ROBOCO_AGENT_AUTH_SECRET`) for the agent gateway, plus FastAPI Users cloud auth (cookie + JWT) for the human CEO on the public panel.
+5. **Gateway** = the Choreographer + the `roboco-flow` / `roboco-do` v1 routes (`/api/v1/flow/{role}/{verb}` and `/api/v1/do`); agents never call domain services directly, only through intent verbs that return a standardized Envelope.
+6. **Model armor** = the task-content guardrails (prompt-injection guard, forbidden-content screening, per-role tool manifests) + the architectural-conventions standard, enforced at `i_am_done` and the in-path PR-review gate.
+7. **Observability** = the `audit_log` transition journal + `MetricsService` (cycle time, rework, spawn-waste) surfaced in the panel, plus Cloud Logging for the Cloud Run services and jobs.
 
-```bash
-ROBOCO_REGISTRY=ghcr.io/rennf93   # or docker.io/renzof93
-ROBOCO_VERSION=latest             # or a pinned release, e.g. 0.15.0
-```
+## Reproducibility
 
-The orchestrator spawns the matching pre-built agent images on demand — no build toolchain or source compile on your host.
-
-### Option 2 — Build from source
-
-The same full stack, built locally from the Dockerfiles instead of pulled:
-
-```bash
-git clone https://github.com/rennf93/roboco.git && cd roboco
-cp .env.example .env              # then edit in your secrets
-docker compose up -d              # builds images on first run, then starts everything
-```
-
-### Option 3 — Local development (no full stack)
-
-For hacking on the code itself, run only the backing services in Docker and the API on your host. RoboCo's own code requires **Python 3.13+** (`uv` will fetch it if needed):
-
-```bash
-uv sync
-docker compose up -d postgres redis ollama   # backing services only
-uv run alembic upgrade head                   # migrate the database
-uv run python -m roboco.cli                   # API + orchestrator
-
-# Or just the API without the orchestrator:
-uv run uvicorn roboco.api.app:app --reload --host 0.0.0.0 --port 8000
-```
-
-## Configuration
-
-Key environment variables (see `roboco/config.py` for all options). The panel's **Settings → Feature Flags** card is the authoritative source for the full set of 36 feature flags — toggle them there rather than editing env by hand. The bash block below shows the env-var equivalents of a few representative flags plus settings that have no panel toggle:
-
-```bash
-# API Server
-ROBOCO_HOST=0.0.0.0
-ROBOCO_PORT=8000
-
-# Database
-ROBOCO_DATABASE_HOST=localhost
-ROBOCO_DATABASE_PORT=5432
-ROBOCO_DATABASE_NAME=roboco
-
-# Workspaces (Multi-Agent Git)
-ROBOCO_WORKSPACES_ROOT=/data/workspaces
-ROBOCO_WORKSPACE_AUTO_CLONE=true
-
-# RAG/LLM
-ROBOCO_LOCAL_LLM_BASE_URL=http://roboco-ollama:11434/v1
-ROBOCO_LOCAL_LLM_MODEL=glm-5.2:cloud
-
-# Feature flags (default-off unless noted; toggle from Settings → Feature Flags)
-ROBOCO_CONVENTIONS_ENABLED=false        # per-project architectural conventions standard
-ROBOCO_TOOLCHAIN_MATCH_ENABLED=false    # build each target project under its own Python
-ROBOCO_OVERLOAD_BREAK_ENABLED=true      # park a provider on a persistent model-API overload
-ROBOCO_DOCS_SYNC_ENABLED=false          # docs-divergence sync (release → docs-update task). Default-off; when on, a successful release publish originates one bounded, deduped docs-update task against the roboco-website project.
-ROBOCO_DOCS_SYNC_MAX_OPEN_TASKS=3       # rolling cap on concurrently-open docs-sync tasks
-ROBOCO_DOCS_SYNC_MAX_PER_CYCLE=1        # max docs-sync tasks originated per publish invocation
-
-# Auditor scheduled sweeps (default 6 hours; 0 disables)
-ROBOCO_AUDIT_INTERVAL_SECONDS=21600
-```
-
-The 36 feature flags exposed in the panel fall into eight categories:
-
-- **Communication:** `telegram_enabled`, `telegram_inbound_enabled`, `x_engine_enabled`, `x_replies_enabled`, `x_feature_spotlight_enabled` — Telegram notifications and the X (Twitter) account.
-- **Content:** `video_engine_enabled`, `video_on_release`, `video_on_spotlight` — the video-generation engine and its triggers.
-- **Governance:** `provisioning_enabled`, `strategy_engine_enabled`, `roadmap_engine_enabled`, `research_enabled`, `release_manager_enabled` — Board programs and the gated release manager.
-- **Infrastructure:** `ci_watch_enabled`, `dep_update_enabled`, `env_sync_enabled`, `docs_sync_enabled`, `gateway_health_enabled`, `self_heal_enabled`, `self_heal_originate_enabled`, `sandbox_db_enabled`, `rag_auto_update_enabled`, `transcript_prune_enabled` — background loops, sandbox DBs, and workspace health.
-- **Quality:** `conventions_enabled`, `org_memory_enabled`, `fable_mode_enabled`, `possibilities_matrix_enabled`, `routing_strict` — architectural enforcement, organizational memory, behavioral doctrine, and model-routing strictness.
-- **Budgets:** `task_budgets_enabled` — per-project monthly and per-task cost caps.
-- **Vault:** `obsidian_vault_enabled`, `vault_intake_enabled`, `vault_report_enabled`, `vault_kb_enabled` — Obsidian vault projection, intake, reports, and KB indexing.
-- **PR review:** `external_pr_enabled`, `internal_pr_enabled`, `toolchain_match_enabled` — inbound/external PR review, internal PR review, and toolchain matching.
-
-Each flag has a one-line description in the panel card. The remaining twelve Board Programs (Pest Control, Spackle, Scales, Dogfood, Periscope, Megaphone, Mirror, Barfly, War Room, Coroner, Librarian, Sentinel) arm per-program on the dedicated Board Programs page (Business section) rather than the Feature Flags card.
-
-## Multi-Agent Workspace Structure
-
-Each agent gets their own git clone for parallel development:
-
-```
-{ROBOCO_WORKSPACES_ROOT}/
-└── {project-slug}/
-    └── {team}/
-        └── {agent-slug}/
-            └── [git repository]
-
-Example:
-/data/workspaces/roboco/backend/be-dev-1/
-/data/workspaces/roboco/backend/be-dev-2/
-```
-
-## Task Lifecycle
-
-```
-backlog → pending → claimed → in_progress → verifying → awaiting_qa
-    ↓                              ↓              ↓           ↓
-cancelled                      blocked      needs_revision   awaiting_documentation
-                               paused                              ↓
-                                                           awaiting_pm_review
-                                                                   ↓
-                                                           awaiting_ceo_approval
-                                                                   ↓
-                                                              completed
-```
-
-Assembled, PR-bearing tasks pass through one extra stage — the in-path PR-review gate — before the PM merges:
-
-```
-in_progress → awaiting_pr_review → awaiting_pm_review
-   (submit_up /      (pr_pass)
-    submit_root)     (pr_fail → needs_revision)
-```
-
-The cell PM's `submit_up` (cell→root PR) and the Main PM's `submit_root` (root→master PR) open the assembled PR and enter the gate; a PR reviewer `pr_pass`es it on to the PM merge or `pr_fail`s it back. Leaf dev tasks (reviewed by QA) and branchless coordination roots skip the gate.
-
-## API Endpoints
-
-Domain routes are mounted under `/api`:
-
-| Route Group | Description |
-|-------------|-------------|
-| `/api/tasks` | Task CRUD, lifecycle, claiming |
-| `/api/agents` | Agent management |
-| `/api/projects` | Project (repo) management |
-| `/api/work-sessions` | Git work session tracking |
-| `/api/git` | Git operations (status, commit, push, PR) |
-| `/api/orchestrator` | Orchestrator / dispatcher status |
-| `/api/kanban` | Kanban board views per team |
-| `/api/dashboard` | Dashboard, metrics, and analytics |
-| `/api/notifications` | Formal notifications (ack-required) |
-| `/api/journals` | Agent journals/reflections |
-| `/api/a2a` | Agent-to-agent direct messaging |
-| `/api/optimal` | RAG/Knowledge base queries |
-| `/api/stream` | Stream processing and permissions |
-| `/api/settings` | Feature flags and settings store |
-| `/api/company-goals` | Company goals, scorecard, brand voice |
-| `/api/research` | Web research (external search/fetch) |
-| `/api/cockpit` | CEO read-only business summary |
-| `/api/release` | Release manager proposals and approval |
-| `/api/secretary` | Secretary chief-of-staff reads and directives |
-| `/api/prompter` | Intake live chat (SSE relay) |
-| `/api/pitches` | Board proposals and CEO approve/provision |
-| `/api/playbooks` | Playbook library curation (approve/reject/archive) |
-| `/api/x` | X (Twitter) post queue and credentials |
-| `/api/video` | Video engine request, pipeline, and approval |
-| `/api/tiktok` | TikTok OAuth credentials (write-only) |
-| `/api/telegram` | Telegram notifications bridge |
-| `/api/roadmap` | Board roadmap cycle approval |
-| `/api/board-programs` | Board Programs registry status and run-now |
-| `/api/pest-control` | Pest Control bug-hunt cycle |
-| `/api/periscope` | Periscope market-research briefs |
-| `/api/coroner` | Coroner postmortem reports |
-| `/api/sentinel` | Sentinel quality-drift reports |
-| `/api/spackle` | Spackle gap-fill cycle |
-| `/api/scales` | Scales portfolio-rebalance cycle |
-| `/api/mirror` | Mirror messaging-fix cycle |
-| `/api/dogfood` | Dogfood friction-fix cycle |
-| `/api/github-app` | GitHub App credentials and repo listing |
-| `/api/products` | Product CRUD |
-| `/api/providers` | AI provider model routing |
-| `/api/docs` | Project documentation management |
-| `/api/usage` | Token usage analytics |
-| `/api/system` | System monitoring (rate limits, etc.) |
-| `/api/auth` | Cloud auth login/logout (mounted only when `ROBOCO_CLOUD_AUTH_ENABLED`) |
-
-The agent **gateway** verbs are served separately under `/api/v1/flow/{role}/{verb}` (intent verbs) and `/api/v1/do` (content tools) — see the [Agent Gateway](CLAUDE.md#agent-gateway).
+This repository is licensed under AGPL-3.0 (see [`LICENSE`](./LICENSE)). A judge following the spin-up above, with a GCP project and the credit request approved, reaches a running stack. The live deploy (Cloud SQL, Memorystore, Cloud Run) costs GCP credits; the repo itself, the compliance test (`tests/compliance/test_hackathon_stack.py`), and the unit-test suite run anywhere with `uv sync` and a local Postgres.
 
 ## Development
 
 ```bash
-# Install dev dependencies
-uv sync --all-extras
-
-# Run tests
-uv run pytest
-
-# Format and lint
-uv run ruff format .
-uv run ruff check .
-uv run mypy roboco/
-
-# Type checking
-uv run mypy roboco/
+uv sync                       # install deps (google-adk is a main dep)
+docker compose up -d postgres redis ollama   # backing services only (local dev)
+uv run alembic upgrade head   # migrate the database
+uv run python -m roboco.cli   # API + orchestrator
+uv run pytest                 # tests
+make quality                  # the full gate (ruff/format/markdown/mypy/pytest/xenon)
 ```
-
-## Core Principles
-
-1. **Everything is a task** - All work is tracked and documented
-2. **No work without a task** - Create task record first
-3. **No task without acceptance criteria** - How do we know it's done?
-4. **No closure without documentation** - Future agents need context
-5. **Communication is constant** - Stream reasoning, log everything
-6. **The Auditor sees all** - Quality monitored silently
-7. **CEO approves major changes** - Human-in-the-loop for critical decisions
-
-## Technology Stack
-
-| Layer | Technology |
-|-------|------------|
-| API Framework | FastAPI |
-| Database | PostgreSQL + SQLAlchemy (async) |
-| Vector Store | PostgreSQL + pgvector (in-house engine) |
-| Cache/Queue | Redis |
-| RAG Engine | in-house (asyncpg + pgvector, hybrid retrieval) |
-| Embeddings | qwen3-embedding:0.6b (Ollama) |
-| Local LLM | Ollama (glm-5.2:cloud) |
-| Cloud LLM | Claude API (Anthropic) + xAI Grok (official `grok` CLI, SuperGrok subscription) + OpenAI (official `codex` CLI, ChatGPT subscription) + Google Gemini (official `gemini` CLI, OAuth login) + Moonshot Kimi K3 (official `kimi` CLI, Kimi subscription) |
-| Package Manager | uv |
-
-## Status
-
-**Core Infrastructure** (Complete)
-- [x] Data models (Pydantic)
-- [x] Database ORM (SQLAlchemy async)
-- [x] Task lifecycle state machine
-- [x] Multi-agent workspace management
-- [x] Agent prompts (25 agents)
-- [x] Messaging API
-- [x] Task API with full lifecycle
-- [x] Git operations API
-- [x] RAG/Knowledge base (in-house pgvector engine)
-- [x] Agent orchestrator
-- [x] CEO approval workflow
-- [x] Pluggable agent providers (Claude Code + xAI Grok + OpenAI Codex + Google Gemini + Moonshot Kimi K3, each on its official CLI)
-- [x] Inbound PR review (read-only PR-reviewer + CEO supersede/dismiss queue)
-- [x] Self-healing CI loop for RoboCo's own repo (default-off, CEO-gated)
-- [x] Business Goals tab with a live Company Scorecard (delivery, spend-vs-budget, lead time)
-- [x] Frontend control panel (Next.js 16, vendored under `panel/`, served through nginx on :3000 — kanban, command palette, Metrics, Workstation)
-- [x] Telegram bridge + Mini App (V1–V6: notifications bridge, two-way bot, signed webapp, Today/cockpit, brand voice, premium overhaul)
-- [x] X engine (craft bar + rework loop, release-caption composition, CEO-reject redraft)
-- [x] Video engine (HyperFrames craft program + motion design bar)
-- [x] Board Program registry (12 programs: Pest Control, Spackle, Scales, Dogfood, Periscope, Megaphone, Mirror, Barfly, War Room, Coroner, Librarian, Sentinel)
-- [x] Roadmap engine (replaced bespoke roadmap loop via the Board Program registry)
-- [x] Forge program (GitHub, Gitea, GitLab as first-class forges via provider-routed REST)
-- [x] Env-branches ladder (EnvSyncEngine, ordered environment ladder, sync PRs)
-- [x] Cost-tiered model routing (role:complexity rung + saved routing presets)
-- [x] Per-task and per-project cost budgets (flag-gated, claim-time spend guard)
-- [x] Eval harness (golden-task lifecycle replay + real-spawn path)
-- [x] GitHub App authentication (installation-token minting with PAT fallback)
-- [x] Org memory (learnings + error-solution + playbook knowledge base)
-- [x] Obsidian vault projection (V2: drift janitor, archival, weekly report, KB ingest)
-- [x] Possibilities matrix (work-already-done fast path to QA)
-- [x] Release manager (RoboCo Release Manager identity + CI-verifying release gate)
-
-**In Progress**
-- [ ] Full agent autonomy testing
-
-## Security
-
-> [!IMPORTANT]
-> **Do not expose RoboCo to the public internet as-is.** It is designed to run on a trusted private network (homelab / LAN).
-
-**Agent authentication.** Requests identify the caller with `X-Agent-Id` / `X-Agent-Role` headers. The orchestrator issues each spawned agent an HMAC token (`X-Agent-Token`, signed with `ROBOCO_AGENT_AUTH_SECRET`) that binds its id, role and team. Token enforcement is gated by `ROBOCO_AGENT_AUTH_REQUIRED`:
-
-- **`ROBOCO_AGENT_AUTH_REQUIRED` unset/false (default):** *header-trust mode* — the role headers are accepted without a token, so any client that can reach the API may claim any role (including `ceo`). The API logs a warning at startup in this mode. Acceptable only on a trusted network.
-- **`ROBOCO_AGENT_AUTH_REQUIRED=true`:** every request must carry a valid token; an agent cannot spoof another agent's role. The control panel keeps working because **nginx** — the only trusted hop between the browser and the API — injects the CEO token (`X-Agent-Token`) on `/api` and `/ws`, so the browser never holds the signing secret. Generate that token with `make panel-token` and set it as `ROBOCO_PANEL_AGENT_TOKEN` in `.env` before enabling secure mode.
-
-**WebSocket streams.** Token enforcement is currently REST-only. The `/ws/*` endpoints authenticate by `agent_id` query param at most and do not yet validate `X-Agent-Token`, even in secure mode — nginx injects the token so the panel works, but a direct WebSocket connection that bypasses nginx is not rejected. In particular the operator stream `/ws/system` (rate-limit lifecycle + token-usage snapshots for the dashboard) is unauthenticated. These streams are read-only — no control surface, secrets, or task content — but treat the orchestrator port as trusted-network-only until WebSocket auth lands.
-
-**Secrets** (the Fernet `ROBOCO_ENCRYPTION_KEY`, GitHub PATs) live encrypted in the database and in gitignored env files — never in the repo. Per-project git tokens are Fernet-encrypted at rest and never returned by the API.
 
 ## License
 
-Copyright (c) 2026 Renzo Franceschini
-
-RoboCo is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0). See [`LICENSE`](./LICENSE) for the full text.
-
-The AGPL's network-use clause (section 13) means that if you run a modified version of RoboCo as a network service, you must make your modified source available to its users. This keeps the project open while preventing closed, hosted re-distributions.
-
-## Contributing
-
-Contributions are welcome. All contributors must sign the Contributor License Agreement ([`CLA.md`](./CLA.md)) — this is automated on your first pull request. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the workflow and why the CLA exists.
+Copyright (c) 2026 Renzo Franceschini. Licensed under AGPL-3.0; see [`LICENSE`](./LICENSE) for the full text. The AGPL's network-use clause (section 13) means that if you run a modified version of robo-fleet as a network service, you must make your modified source available to its users.

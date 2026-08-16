@@ -1,0 +1,60 @@
+# Cloud Build pipeline: build the three RoboCo images into Artifact Registry.
+# Substitutions (override via --substitutions or the env vars in build-images.sh):
+#   _AR_HOST     - the regional docker.pkg.dev host, e.g. us-central1-docker.pkg.dev
+#   _AR_REPO     - the Artifact Registry repo id, e.g. robo-fleet
+#   _PROJECT_ID  - the GCP project id (set automatically by Cloud Build)
+# Each image is tagged with both $SHORT_SHA and :latest so a deploy can pin to
+# a build while :latest always points at the most recent successful build.
+# Plain hyphens only, no em-dashes.
+
+substitutions:
+  _AR_HOST: ""
+  _AR_REPO: ""
+
+steps:
+  - id: orchestrator
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - docker/orchestrator.Dockerfile
+      - -t
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-orchestrator:${SHORT_SHA}
+      - -t
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-orchestrator:latest
+      - .
+
+  - id: panel
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - docker/panel.Dockerfile
+      - -t
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-panel:${SHORT_SHA}
+      - -t
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-panel:latest
+      - .
+
+  - id: agent-adk
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - docker/agent-adk.Dockerfile
+      - -t
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-agent-adk:${SHORT_SHA}
+      - -t
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-agent-adk:latest
+      - .
+
+images:
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-orchestrator:${SHORT_SHA}
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-orchestrator:latest
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-panel:${SHORT_SHA}
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-panel:latest
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-agent-adk:${SHORT_SHA}
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/roboco-agent-adk:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY

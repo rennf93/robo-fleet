@@ -64,7 +64,6 @@ from robofleet.models import AgentRole, Team
 from robofleet.models.base import ModelProvider
 from robofleet.models.runtime import (
     MODEL_MAP,
-    ROLE_EFFORT_MAP,
     ROLE_MODEL_MAP,
     AgentInstance,
     OrchestratorAgentConfig,
@@ -394,41 +393,14 @@ def _reject_interactive_unsupported_provider(
         )
 
 
-# Role -> Image mapping
-# Specialized images extend the base with role-specific tools
+# Role -> Image mapping. Delivery agents (dev/qa/doc/pm/pr-reviewer/ux) no
+# longer carry specialized local images: the Claude CLI docker spawn path was
+# stripped (Leg D1) and ADK_CLOUD_RUN is the delivery spawn path, so a delivery
+# slug falls through to AGENT_BASE_IMAGE via get_agent_image's .get default.
+# This map now holds only the interactive persistent-container images (intake
+# and secretary), which still run as local docker containers with their own
+# images.
 AGENT_IMAGES: dict[str, str] = {
-    # Backend
-    "be-dev-1": "robofleet-agent-dev-be",
-    "be-dev-2": "robofleet-agent-dev-be",
-    "be-qa": "robofleet-agent-qa-be",
-    "be-pm": "robofleet-agent-pm",
-    "be-doc": "robofleet-agent-doc",
-    # Frontend
-    "fe-dev-1": "robofleet-agent-dev-fe",
-    "fe-dev-2": "robofleet-agent-dev-fe",
-    "fe-qa": "robofleet-agent-qa-fe",
-    "fe-pm": "robofleet-agent-pm",
-    "fe-doc": "robofleet-agent-doc",
-    # UX/UI
-    "ux-dev-1": "robofleet-agent-ux",
-    "ux-dev-2": "robofleet-agent-ux",
-    "ux-qa": "robofleet-agent-ux",  # Uses same as dev for now
-    "ux-pm": "robofleet-agent-pm",
-    "ux-doc": "robofleet-agent-doc",
-    # Board
-    "main-pm": "robofleet-agent-pm",
-    "product-owner": "robofleet-agent-pm",
-    "head-marketing": "robofleet-agent-pm",
-    "auditor": "robofleet-agent-pm",
-    # PR Reviewer — read-only reviewer (diff via API, grep, post one
-    # change-request; never runs code). Its own image for parity with the other
-    # agents; built FROM the base, no extra toolchain. The three cell reviewers
-    # are additional instances of the same role and reuse the same image (as
-    # be-dev-1/-2 share one dev image) — the in-path gate adds no new image.
-    "pr-reviewer-1": "robofleet-agent-pr-reviewer",
-    "be-pr-reviewer": "robofleet-agent-pr-reviewer",
-    "fe-pr-reviewer": "robofleet-agent-pr-reviewer",
-    "ux-pr-reviewer": "robofleet-agent-pr-reviewer",
     # Intake — persistent Agent-SDK driver, not a one-shot `claude -p`.
     INTAKE_AGENT_ID: "robofleet-agent-prompter",
     # Secretary — persistent Agent-SDK driver with gated CEO authority.
@@ -1726,18 +1698,12 @@ class AgentOrchestrator:
         if agent_id:
             bare = AGENT_IMAGES.get(agent_id, AGENT_BASE_IMAGE)
             if bare != AGENT_BASE_IMAGE:
-                # Map the bare image name to its dockerfile
+                # Map the bare image name to its dockerfile. Delivery images
+                # (dev/qa/doc/pm/ux/pr-reviewer) were removed (Leg D1); only the
+                # interactive persistent-container images remain here.
                 dockerfile_map = {
-                    "robofleet-agent-pm": "agent-pm.Dockerfile",
-                    "robofleet-agent-dev-be": "agent-dev-be.Dockerfile",
-                    "robofleet-agent-dev-fe": "agent-dev-fe.Dockerfile",
-                    "robofleet-agent-qa-be": "agent-qa-be.Dockerfile",
-                    "robofleet-agent-qa-fe": "agent-qa-fe.Dockerfile",
-                    "robofleet-agent-doc": "agent-doc.Dockerfile",
-                    "robofleet-agent-ux": "agent-ux.Dockerfile",
                     "robofleet-agent-prompter": "agent-prompter.Dockerfile",
                     "robofleet-agent-secretary": "agent-secretary.Dockerfile",
-                    "robofleet-agent-pr-reviewer": "agent-pr-reviewer.Dockerfile",
                 }
                 dockerfile = dockerfile_map.get(bare)
                 if dockerfile:
@@ -3620,74 +3586,6 @@ class AgentOrchestrator:
             "Start now by scanning for work."
         )
 
-    @classmethod
-    def _append_image_and_claude_args(
-        cls, cmd: list[str], config: AgentConfig, initial_prompt: str | None
-    ) -> None:
-        """Append the image + Claude Code CLI args to the docker run cmd.
-
-        `--tools` explicitly enumerates the built-in tools loaded at session
-        start. Without it, Claude CLI's default behavior leaves Edit/Write
-        in the deferred pool, so an agent that doesn't reliably call
-        ToolSearch (e.g. weaker non-Anthropic models routed via
-        Ollama-cloud) ends up unable to modify any file. The set below is
-        the minimum every agent role needs:
-          - Read/Write/Edit  : file IO inside the workspace
-          - Bash             : shell commands (gated by bash-guard hook)
-          - Grep/Glob        : code navigation
-          - TodoWrite        : per-session planning
-        Permissions still gate *which* paths Edit/Write can touch (see
-        `_get_role_permissions`), so this is purely about loading vs
-        denying.
-
-        `--disable-slash-commands` closes a separate capability channel
-        `--tools` doesn't reach: skills/slash-commands resolve independently
-        of the built-in tool allowlist (Anthropic's own `--bare` flag docs
-        call this out — skills still resolve via `/skill-name` even with
-        everything else disabled). The agent's `~/.claude` is the host's
-        shared Claude Code auth dir, bind-mounted into every container
-        (`_build_mount_args`); if it ever carries personal
-        skills/plugins/marketplace installs, this stops them from silently
-        becoming callable inside the agent's session. No RoboCo role's
-        workflow uses a Claude Code skill (their surface is the MCP gateway
-        + the `--tools` set above), so this has no legitimate flow to break.
-        """
-        claude_args = [
-            get_agent_image(config.agent_id),
-            "--model",
-            cls._resolve_cli_model(config),
-            "--system-prompt-file",
-            "/app/system-prompt.md",
-            "--mcp-config",
-            "/app/mcp-config.json",
-            "--strict-mcp-config",
-            "--tools",
-            "Read,Write,Edit,Bash,Grep,Glob,TodoWrite",
-            "--disable-slash-commands",
-            "--output-format",
-            "stream-json",
-            "--verbose",
-        ]
-        # Per-role reasoning-effort override via Claude Code's `--effort` flag.
-        # Only set for roles in ROLE_EFFORT_MAP; models without effort support
-        # ignore it, so passing it for a mapped role is always safe.
-        _effort_role = get_agent_role(config.agent_id)
-        _effort = ROLE_EFFORT_MAP.get(_effort_role) if _effort_role else None
-        if _effort:
-            claude_args += ["--effort", _effort]
-        # Pin the Claude session id so the agent's transcript is locatable by id
-        # at finalize, regardless of which project/cwd dir Claude Code writes it
-        # to (review/coordinate roles run at /app, not a per-agent workspace).
-        if config.claude_session_id:
-            claude_args += ["--session-id", config.claude_session_id]
-        claude_args += ["-p", initial_prompt or cls._default_spawn_prompt()]
-        cmd.extend(claude_args)
-
-    @staticmethod
-    def _resolve_cli_model(config: AgentConfig) -> str:
-        """Return the string to pass to `claude --model`."""
-        return _resolve_agent_cli_model(config.provider_type, config.model)
-
     def _ensure_provider_registry(self) -> "ProviderRegistry":
         """Build (once) the registry of dedicated provider backends.
 
@@ -3800,54 +3698,27 @@ class AgentOrchestrator:
         """
         # Every spawn gets a non-empty user prompt. A prompt-less spawn (e.g. the
         # crash auto-restart, which passes no initial_prompt) must still direct the
-        # agent to scan for work. The Claude body re-applies the same default; doing
-        # it here single-sources it so dedicated providers (GROK) get it too —
-        # otherwise grok would launch with an empty `grok -p ""`.
+        # agent to scan for work. Doing this here single-sources it so dedicated
+        # providers (GROK) get it too, otherwise grok would launch with an
+        # empty `grok -p ""`.
         if not initial_prompt:
             initial_prompt = self._default_spawn_prompt()
-        # A dedicated provider backend (e.g. GROK / OpenAI protocol) handles its
-        # own spawn. Anthropic / Ollama Cloud / self-hosted have no dedicated
-        # provider registered and fall through to the Claude Code body below,
-        # byte-for-byte unchanged.
+        # A dedicated provider backend (e.g. GROK / OpenAI / Gemini / Kimi /
+        # ADK_CLOUD_RUN) handles its own spawn. Every delivery agent must resolve
+        # to a registered provider; ADK_CLOUD_RUN is the live delivery spawn
+        # path. Anthropic / Ollama Cloud / self-hosted have no dedicated provider
+        # registered, and the Claude CLI docker spawn path was stripped (Leg
+        # D1), so reaching here is a misconfigured agent (no registered provider
+        # for its provider_type).
         provider = self._provider_for(config.provider_type)
         if provider is not None:
             result = await provider.spawn(config, initial_prompt, agent_settings_path)
             return result.instance_id
 
-        container_name = f"robofleet-agent-{config.agent_id}"
-        # teardown_sandbox=False: nothing is provisioned before spawn anymore
-        # (sandboxes are on-demand via request_sandbox/ensure_sandbox), so this
-        # is now vestigial for THIS spawn — but it still protects a respawn
-        # racing a sandbox the agent just requested moments ago via the verb.
-        await self._remove_container(
-            container_name, teardown_sandbox=False, stop_reason="pre_spawn_stale_clear"
+        raise RuntimeError(
+            f"No spawn backend for provider {config.provider_type!r}. "
+            "The Claude CLI runtime was removed; use ADK_CLOUD_RUN."
         )
-
-        if not config.mcp_config_path:
-            raise RuntimeError("MCP config path not set")
-
-        hosts = self._resolve_host_paths(config, agent_settings_path)
-        cmd = self._build_mount_args(container_name, config, hosts)
-        self._append_agent_auth_env(cmd, config)
-        self._append_git_context_env(cmd, config)
-        if config.sandbox_available_services:
-            self._append_sandbox_marker_env(cmd, config.sandbox_available_services)
-        else:
-            self._append_gate_env(cmd)
-        cmd.extend(await compose_label_args(config.agent_id))
-        self._append_image_and_claude_args(cmd, config, initial_prompt)
-
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await proc.communicate()
-
-        if proc.returncode != 0:
-            raise RuntimeError(f"Failed to start container: {stderr.decode()}")
-
-        return stdout.decode().strip()
 
     def _record_expected_stop(self, agent_id: str, reason: str) -> None:
         """Breadcrumb an orchestrator-initiated stop/kill for ``agent_id``.

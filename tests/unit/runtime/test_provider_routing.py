@@ -2,7 +2,8 @@
 
 GROK gets the GrokCliProvider, GEMINI gets the GeminiCliProvider; Anthropic /
 Ollama Cloud / self-hosted (and any unknown value) return None so
-``_spawn_container`` runs its built-in Claude Code path unchanged. This keeps
+``_spawn_container`` raises RuntimeError (the Claude CLI docker spawn path was
+stripped in Leg D1; ADK_CLOUD_RUN is the live delivery spawn path). This keeps
 the GROK / GEMINI additions purely additive.
 """
 

@@ -1,16 +1,23 @@
-"""Sandbox marker env: `_append_sandbox_marker_env` + the `_spawn_container` branch.
+"""Sandbox marker env: ``_append_sandbox_marker_env`` + the no-provider spawn
+guard.
 
-An opted-in spawn injects a cheap `ROBOFLEET_SANDBOX_SERVICES_AVAILABLE` marker
-(never prod creds — actual provisioning is on-demand via `request_sandbox`)
-and MUST NOT also run the legacy `_append_gate_env` prod-creds injection —
-the marker replaces, never coexists with, prod creds.
+An opted-in spawn injects a cheap ``ROBOFLEET_SANDBOX_SERVICES_AVAILABLE``
+marker (never prod creds; actual provisioning is on-demand via
+``request_sandbox``).
+
+Leg D1 stripped the Claude CLI docker spawn path (the fall-through in
+``_spawn_container``) that previously branched on
+``config.sandbox_available_services`` to choose the marker env vs the legacy
+``_append_gate_env``. That branch is gone with the fall-through; the marker
+helper itself stays (it is a pure function tested directly below). The
+``_spawn_container`` integration tests are replaced by a guard that a
+no-provider delivery spawn raises RuntimeError.
 """
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock
+from unittest.mock import patch
 
 import pytest
 from robofleet.models.runtime import OrchestratorAgentConfig
@@ -42,131 +49,14 @@ def test_append_sandbox_marker_env_single_service() -> None:
     assert "ROBOFLEET_SANDBOX_SERVICES_AVAILABLE=mongo" in cmd
 
 
-def _fake_proc() -> AsyncMock:
-    proc = AsyncMock()
-    proc.communicate = AsyncMock(return_value=(b"", b""))
-    proc.returncode = 0
-    return proc
-
-
-def _stub_spawn_container_collaborators(
-    monkeypatch: pytest.MonkeyPatch, orch: AgentOrchestrator, calls: list[str]
-) -> None:
-    monkeypatch.setattr(orch, "_provider_for", lambda *_a: None)
-    monkeypatch.setattr(orch, "_remove_container", AsyncMock(return_value=None))
-    monkeypatch.setattr(orch, "_resolve_host_paths", lambda *_a: {})
-    monkeypatch.setattr(
-        AgentOrchestrator,
-        "_build_mount_args",
-        staticmethod(lambda *_a: []),
-    )
-    monkeypatch.setattr(orch, "_append_agent_auth_env", lambda *_a: None)
-    monkeypatch.setattr(orch, "_append_git_context_env", lambda *_a: None)
-    monkeypatch.setattr(orch, "_append_gate_env", lambda *_a: calls.append("gate"))
-    monkeypatch.setattr(
-        orch,
-        "_append_sandbox_marker_env",
-        lambda *_a: calls.append("sandbox"),
-    )
-    monkeypatch.setattr(orch, "_append_image_and_claude_args", lambda *_a: None)
-    monkeypatch.setattr(
-        asyncio, "create_subprocess_exec", AsyncMock(return_value=_fake_proc())
-    )
-
-
 @pytest.mark.asyncio
-async def test_spawn_container_uses_marker_env_when_opted_in(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_no_provider_delivery_spawn_raises() -> None:
+    """Leg D1: a delivery spawn with no registered provider raises RuntimeError
+    instead of falling through to the (deleted) Claude CLI docker run path,
+    regardless of the sandbox-available marker on the config."""
     orch = AgentOrchestrator.__new__(AgentOrchestrator)
-    calls: list[str] = []
-    _stub_spawn_container_collaborators(monkeypatch, orch, calls)
-
-    await orch._spawn_container(_config(["postgres"]))
-
-    assert calls == ["sandbox"]
-
-
-@pytest.mark.asyncio
-async def test_spawn_container_uses_legacy_gate_env_when_not_opted_in(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    orch = AgentOrchestrator.__new__(AgentOrchestrator)
-    calls: list[str] = []
-    _stub_spawn_container_collaborators(monkeypatch, orch, calls)
-
-    await orch._spawn_container(_config(None))
-
-    assert calls == ["gate"]
-
-
-@pytest.mark.asyncio
-async def test_spawn_container_stale_clear_runs_with_teardown_sandbox_false(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The pre-spawn stale-clear is vestigial now (nothing is provisioned
-    before spawn) but still passes teardown_sandbox=False — it must not
-    tear down a sandbox the agent requested moments ago via the verb."""
-    orch = AgentOrchestrator.__new__(AgentOrchestrator)
-    calls: list[str] = []
-    _stub_spawn_container_collaborators(monkeypatch, orch, calls)
-    remove = AsyncMock(return_value=None)
-    monkeypatch.setattr(orch, "_remove_container", remove)
-
-    await orch._spawn_container(_config(["postgres"]))
-
-    remove.assert_awaited_once_with(
-        "robofleet-agent-dev-1",
-        teardown_sandbox=False,
-        stop_reason="pre_spawn_stale_clear",
-    )
-
-
-@pytest.mark.asyncio
-async def test_spawn_container_adds_compose_labels_before_image_args(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """When the orchestrator resolves its own compose project, the spawned
-    agent container carries it too — inserted before
-    `_append_image_and_claude_args` runs, so the label flags precede the
-    image argument in the final docker run cmd."""
-    orch = AgentOrchestrator.__new__(AgentOrchestrator)
-    calls: list[str] = []
-    _stub_spawn_container_collaborators(monkeypatch, orch, calls)
-
-    async def _fake_label_args(service: str) -> list[str]:
-        return ["--label", f"com.docker.compose.service={service}"]
-
-    monkeypatch.setattr(
-        "robofleet.runtime.orchestrator.compose_label_args", _fake_label_args
-    )
-    exec_mock = AsyncMock(return_value=_fake_proc())
-    monkeypatch.setattr(asyncio, "create_subprocess_exec", exec_mock)
-
-    await orch._spawn_container(_config(["postgres"]))
-
-    cmd = list(exec_mock.call_args.args)
-    assert cmd == ["--label", "com.docker.compose.service=dev-1"]
-
-
-@pytest.mark.asyncio
-async def test_spawn_container_omits_compose_labels_outside_compose(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The real helper returns [] outside a compose stack (dev machines, CI,
-    the eval harness) — the cmd is byte-for-byte unchanged from today."""
-    orch = AgentOrchestrator.__new__(AgentOrchestrator)
-    calls: list[str] = []
-    _stub_spawn_container_collaborators(monkeypatch, orch, calls)
-
-    async def _no_labels(_service: str) -> list[str]:
-        return []
-
-    monkeypatch.setattr("robofleet.runtime.orchestrator.compose_label_args", _no_labels)
-    exec_mock = AsyncMock(return_value=_fake_proc())
-    monkeypatch.setattr(asyncio, "create_subprocess_exec", exec_mock)
-
-    await orch._spawn_container(_config(["postgres"]))
-
-    cmd = list(exec_mock.call_args.args)
-    assert cmd == []
+    with (
+        patch.object(orch, "_provider_for", return_value=None),
+        pytest.raises(RuntimeError, match="No spawn backend"),
+    ):
+        await orch._spawn_container(_config(["postgres"]))

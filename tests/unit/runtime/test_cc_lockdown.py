@@ -1,19 +1,17 @@
 """Claude Code capability lockdown.
 
-Two independent tightenings against the shared Claude Code harness state:
+The settings.json deny-rules below are generated for every spawned agent
+container (the shared Claude Code harness state). The host's ~/.claude (OAuth
+credential store) and ~/.claude.json are bind-mounted read-write into every
+agent container; no role's job requires the LLM to read its own harness's
+credentials, so the generated settings.json must deny the native Read tool
+from the two files that carry them, and deny the `Task` subagent tool.
 
-1. The host's ~/.claude (OAuth credential store) and ~/.claude.json are
-   bind-mounted read-write into EVERY agent container (the shared
-   subscription auth every spawned agent uses — see
-   AgentOrchestrator._build_mount_args). No role's job requires the LLM to
-   read its own harness's credentials, so the generated settings.json must
-   deny the native Read tool from the two files that carry them.
-2. `--disable-slash-commands` must accompany every container spawn: skills
-   resolve independently of the `--tools` built-in allowlist (Anthropic's
-   own `--bare` docs note skills still resolve via `/skill-name` even with
-   everything else disabled), so if the shared `~/.claude` mount ever
-   carries personal skills/plugins they must not become callable inside an
-   agent's session.
+Leg D1 stripped the Claude CLI docker spawn path (the fall-through in
+``_spawn_container``); the `--disable-slash-commands` / `--tools` argv tests
+that rode on the deleted ``_append_image_and_claude_args`` are replaced by a
+guard that a no-provider delivery spawn raises RuntimeError. The settings.json
+deny-rule tests are unaffected (they exercise ``_generate_agent_settings``).
 """
 
 from __future__ import annotations
@@ -22,6 +20,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from robofleet.models.runtime import OrchestratorAgentConfig, SpawnGitContext
 from robofleet.runtime.orchestrator import AgentOrchestrator
 
@@ -45,16 +44,6 @@ def _make_dev_config() -> OrchestratorAgentConfig:
             branch_name="feature/backend/TASK0001",
         ),
     )
-
-
-def _build_image_args() -> list[str]:
-    cmd: list[str] = []
-    with patch(
-        "robofleet.runtime.orchestrator._resolve_agent_cli_model",
-        return_value="claude-sonnet-5",
-    ):
-        AgentOrchestrator._append_image_and_claude_args(cmd, _make_dev_config(), None)
-    return cmd
 
 
 class TestSharedClaudeCredentialsDenied:
@@ -153,23 +142,18 @@ class TestSubagentBanned:
         assert "Task" in deny, deny
 
 
-class TestSlashCommandsDisabled:
-    """--disable-slash-commands accompanies every container agent spawn."""
+class TestNoProviderSpawnRaises:
+    """Leg D1: a delivery spawn with no registered provider raises RuntimeError
+    instead of falling through to the (deleted) Claude CLI docker run path."""
 
-    def test_cmd_contains_disable_slash_commands_flag(self) -> None:
-        cmd = _build_image_args()
-        assert "--disable-slash-commands" in cmd, (
-            f"--disable-slash-commands missing from spawn cmd — skills resolve "
-            f"independently of --tools, so a contaminated shared ~/.claude mount "
-            f"could still expose host skills/plugins. Full cmd: {cmd}"
-        )
-
-    def test_tools_flag_still_present(self) -> None:
-        """The new flag must not crowd out or replace the existing --tools cap."""
-        cmd = _build_image_args()
-        assert "--tools" in cmd
-        idx = cmd.index("--tools")
-        assert cmd[idx + 1] == "Read,Write,Edit,Bash,Grep,Glob,TodoWrite"
+    @pytest.mark.asyncio
+    async def test_no_provider_delivery_spawn_raises(self) -> None:
+        orch = _orch()
+        with (
+            patch.object(orch, "_provider_for", return_value=None),
+            pytest.raises(RuntimeError, match="No spawn backend"),
+        ):
+            await orch._spawn_container(_make_dev_config(), initial_prompt="x")
 
 
 class TestFableModeHooksInjection:

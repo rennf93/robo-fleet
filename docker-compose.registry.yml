@@ -213,41 +213,6 @@ services:
     entrypoint: ["/bin/sh", "-c", "echo 'agent-base image present'"]
     restart: "no"
 
-  agent-pm-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-pm:${ROBOFLEET_VERSION:-latest}
-    entrypoint: ["/bin/sh", "-c", "echo 'agent-pm image present'"]
-    restart: "no"
-
-  agent-dev-be-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-dev-be:${ROBOFLEET_VERSION:-latest}
-    entrypoint: ["/bin/sh", "-c", "echo 'agent-dev-be image present'"]
-    restart: "no"
-
-  agent-dev-fe-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-dev-fe:${ROBOFLEET_VERSION:-latest}
-    entrypoint: ["/bin/sh", "-c", "echo 'agent-dev-fe image present'"]
-    restart: "no"
-
-  agent-qa-be-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-qa-be:${ROBOFLEET_VERSION:-latest}
-    entrypoint: ["/bin/sh", "-c", "echo 'agent-qa-be image present'"]
-    restart: "no"
-
-  agent-qa-fe-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-qa-fe:${ROBOFLEET_VERSION:-latest}
-    entrypoint: ["/bin/sh", "-c", "echo 'agent-qa-fe image present'"]
-    restart: "no"
-
-  agent-ux-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-ux:${ROBOFLEET_VERSION:-latest}
-    entrypoint: ["/bin/sh", "-c", "echo 'agent-ux image present'"]
-    restart: "no"
-
-  agent-doc-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-doc:${ROBOFLEET_VERSION:-latest}
-    entrypoint: ["/bin/sh", "-c", "echo 'agent-doc image present'"]
-    restart: "no"
-
   agent-prompter-image:
     image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-prompter:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-prompter image present'"]
@@ -256,11 +221,6 @@ services:
   agent-secretary-image:
     image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-secretary:${ROBOFLEET_VERSION:-latest}
     entrypoint: ["/bin/sh", "-c", "echo 'agent-secretary image present'"]
-    restart: "no"
-
-  agent-pr-reviewer-image:
-    image: ${ROBOFLEET_REGISTRY:-ghcr.io/rennf93}/robofleet-agent-pr-reviewer:${ROBOFLEET_VERSION:-latest}
-    entrypoint: ["/bin/sh", "-c", "echo 'agent-pr-reviewer image present'"]
     restart: "no"
 
   agent-grok-image:

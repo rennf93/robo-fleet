@@ -1,11 +1,20 @@
-"""Per-role effort: Claude Code's `--effort <level>` flag is added to the spawn
-argv only for roles present in ROLE_EFFORT_MAP."""
+"""Per-role effort map + no-provider spawn guard.
+
+Leg D1 stripped the Claude CLI docker spawn path (the fall-through in
+``_spawn_container``) along with ``_append_image_and_claude_args`` (which
+applied ``ROLE_EFFORT_MAP`` to the ``--effort`` flag). ADK_CLOUD_RUN is the
+live delivery spawn path. The ``ROLE_EFFORT_MAP`` data table still ships (it
+is a pure policy map, not bound to the deleted arg builder), so the shipped
+value assertion below stays; the spawn-argv ``--effort`` tests are replaced by
+a guard that a no-provider delivery spawn raises RuntimeError.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from robofleet.models.runtime import (
     ROLE_EFFORT_MAP,
     OrchestratorAgentConfig,
@@ -27,32 +36,18 @@ def _config(agent_id: str) -> OrchestratorAgentConfig:
     )
 
 
-def _spawn_args(agent_id: str) -> list[str]:
-    cmd: list[str] = []
-    with patch(
-        "robofleet.runtime.orchestrator._resolve_agent_cli_model",
-        return_value="claude-sonnet-5",
-    ):
-        AgentOrchestrator._append_image_and_claude_args(cmd, _config(agent_id), None)
-    return cmd
-
-
-def test_effort_flag_injected_for_mapped_role() -> None:
-    with patch("robofleet.runtime.orchestrator.ROLE_EFFORT_MAP", {"developer": "low"}):
-        args = _spawn_args("be-dev-1")  # be-dev-1 → developer
-    assert "--effort" in args
-    assert args[args.index("--effort") + 1] == "low"
-
-
-def test_no_effort_flag_for_unmapped_role() -> None:
-    with patch("robofleet.runtime.orchestrator.ROLE_EFFORT_MAP", {"cell_pm": "medium"}):
-        args = _spawn_args("be-dev-1")  # developer — not in the patched map
-    assert "--effort" not in args
-
-
 def test_shipped_map_sets_cell_pm_to_medium() -> None:
     # The shipped ROLE_EFFORT_MAP routes cell_pm to medium.
     assert ROLE_EFFORT_MAP.get("cell_pm") == "medium"
-    args = _spawn_args("be-pm")  # be-pm → cell_pm
-    assert "--effort" in args
-    assert args[args.index("--effort") + 1] == "medium"
+
+
+@pytest.mark.asyncio
+async def test_no_provider_delivery_spawn_raises() -> None:
+    """Leg D1: a delivery spawn with no registered provider raises RuntimeError
+    instead of falling through to the (deleted) Claude CLI docker run path."""
+    orch = AgentOrchestrator.__new__(AgentOrchestrator)
+    with (
+        patch.object(orch, "_provider_for", return_value=None),
+        pytest.raises(RuntimeError, match="No spawn backend"),
+    ):
+        await orch._spawn_container(_config("be-dev-1"), initial_prompt="work")

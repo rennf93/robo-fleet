@@ -1,10 +1,12 @@
-"""Wave E3: agent spawn cmd uses --strict-mcp-config to suppress builtin
-Anthropic connectors (Gmail / Google Calendar / Notion / Google Drive).
+"""MCP config generation + no-provider spawn guard.
 
-Without --strict-mcp-config, the Claude Code CLI auto-registers its
-builtin MCP connectors alongside our --mcp-config entries — they appear
-in the agent's tool inventory as `mcp__claude_ai_Gmail__authenticate`
-etc. The flag tells the CLI to load ONLY the servers from --mcp-config.
+Leg D1 stripped the Claude CLI docker spawn path (the fall-through body in
+``_spawn_container``); ADK_CLOUD_RUN is the live delivery spawn path. A
+delivery spawn that resolves to no registered provider now raises a
+RuntimeError instead of building a ``claude`` docker run.
+
+The MCP-config generation tests below are unaffected (they exercise
+``_generate_mcp_config``, not the deleted spawn arg builder).
 """
 
 from __future__ import annotations
@@ -18,11 +20,9 @@ from robofleet.config import settings
 from robofleet.models.runtime import OrchestratorAgentConfig, SpawnGitContext
 from robofleet.runtime.orchestrator import AgentOrchestrator
 
-_MAX_FLAG_ADJACENCY = 3
-
 
 def _make_dev_config() -> OrchestratorAgentConfig:
-    """Minimal AgentConfig for a developer."""
+    """Minimal AgentConfig for a developer with no registered provider."""
     return OrchestratorAgentConfig(
         agent_id="be-dev-1",
         blueprint_path=Path("/app/agents/blueprints/be-dev-1.md"),
@@ -32,44 +32,26 @@ def _make_dev_config() -> OrchestratorAgentConfig:
             project_slug="roboco-api",
             branch_name="feature/backend/TASK0001",
         ),
+        # provider_type defaults to "anthropic" and no dedicated provider is
+        # registered for it, so _provider_for returns None.
     )
 
 
-def _build_image_args(config: OrchestratorAgentConfig) -> list[str]:
-    """Invoke _append_image_and_claude_args against an empty cmd."""
-    cmd: list[str] = []
-    with patch(
-        "robofleet.runtime.orchestrator._resolve_agent_cli_model",
-        return_value="claude-sonnet-5",
-    ):
-        AgentOrchestrator._append_image_and_claude_args(cmd, config, None)
-    return cmd
+class TestNoProviderSpawnRaises:
+    """Leg D1: a delivery spawn with no registered provider raises RuntimeError
+    instead of falling through to the (deleted) Claude CLI docker run path."""
 
-
-class TestSpawnStrictMcpConfig:
-    """Agent spawn cmd includes --strict-mcp-config."""
-
-    def test_cmd_contains_strict_mcp_config_flag(self) -> None:
-        """docker run cmd for an agent includes --strict-mcp-config."""
-        cmd = _build_image_args(_make_dev_config())
-        assert "--strict-mcp-config" in cmd, (
-            f"--strict-mcp-config flag missing from spawn cmd. Without it, "
-            f"the Claude CLI auto-registers builtin connectors (Gmail, "
-            f"Calendar, Notion, Drive) alongside our roboco MCP servers. "
-            f"Full cmd: {cmd}"
-        )
-
-    def test_strict_mcp_config_paired_with_mcp_config(self) -> None:
-        """--strict-mcp-config appears alongside --mcp-config /app/mcp-config.json."""
-        cmd = _build_image_args(_make_dev_config())
-        assert "--mcp-config" in cmd
-        mcp_idx = cmd.index("--mcp-config")
-        assert cmd[mcp_idx + 1] == "/app/mcp-config.json"
-        strict_idx = cmd.index("--strict-mcp-config")
-        assert abs(strict_idx - mcp_idx) <= _MAX_FLAG_ADJACENCY, (
-            f"--strict-mcp-config should appear near --mcp-config; "
-            f"strict_idx={strict_idx}, mcp_idx={mcp_idx}. Cmd: {cmd}"
-        )
+    @pytest.mark.asyncio
+    async def test_no_provider_delivery_spawn_raises(self) -> None:
+        orch = AgentOrchestrator.__new__(AgentOrchestrator)
+        # _provider_for returns None for ANTHROPIC (no dedicated provider
+        # registered), so the spawn dispatch raises instead of building a
+        # `claude` docker run.
+        with (
+            patch.object(orch, "_provider_for", return_value=None),
+            pytest.raises(RuntimeError, match="No spawn backend"),
+        ):
+            await orch._spawn_container(_make_dev_config(), initial_prompt="do work")
 
 
 class TestMcpConfigPinsBakedVenv:

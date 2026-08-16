@@ -1,0 +1,52 @@
+# Cloud Run v2 Service manifest for roboco-panel.
+# Consumed by `gcloud run services replace infra/panel-service.yaml`.
+# Stateless: no Cloud SQL, Redis, or Filestore. The panel talks to the
+# orchestrator over its internal Cloud Run URL (ROBOCO_API_URL).
+# --allow-unauthenticated is NOT set: ROBOCO_CLOUD_AUTH_ENABLED=true is the
+# auth gate, and the HTTPS load balancer (infra/lb.tf) fronts both services.
+# Plain hyphens only, no em-dashes.
+
+apiVersion: run.googleapis.com/v1
+kind: Service
+metadata:
+  name: roboco-panel
+  labels:
+    run.googleapis.com/managed-by: gcloud
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.googleapis.com/min-scale: "1"
+        autoscaling.googleapis.com/max-scale: "3"
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - name: panel
+          image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/roboco-panel:latest
+          ports:
+            - name: http1
+              containerPort: 3000
+          env:
+            # --- Cloud auth (armed: panel is publicly reachable via the LB) ---
+            - name: ROBOCO_CLOUD_AUTH_ENABLED
+              value: "true"
+            # ROBOCO_CLOUD_AUTH_EMAIL / _PASSWORD: set by deploy script.
+
+            # --- URLs ---
+            # ROBOCO_API_URL / ROBOCO_ORCHESTRATOR_URL point at the orchestrator's
+            # internal Cloud Run URL. The deploy script fills __ORCHESTRATOR_URL__
+            # from `gcloud run services describe roboco-orchestrator`.
+            - name: ROBOCO_API_URL
+              value: "__ORCHESTRATOR_URL__"
+            - name: ROBOCO_ORCHESTRATOR_URL
+              value: "__ORCHESTRATOR_URL__"
+            - name: ROBOCO_PUBLIC_BASE_URL
+              value: "__PUBLIC_BASE_URL__"
+
+            # --- Cloud auth secret (Secret Manager) ---
+            - name: ROBOCO_CLOUD_AUTH_SECRET
+              valueFrom:
+                secretRef:
+                  name: roboco-cloud-auth-secret
+                  key: latest

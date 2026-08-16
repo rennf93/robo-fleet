@@ -1666,6 +1666,7 @@ class Settings(BaseSettings):
         if self.gcp_filestore_share:
             self.workspaces_root = self.gcp_filestore_share
         return self
+
     workspace_auto_clone: bool = Field(
         default=True,
         description="Automatically clone repos when workspace is first accessed",

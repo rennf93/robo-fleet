@@ -36,7 +36,9 @@ def test_gcp_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
 # --- Task 4.2: Memorystore TLS redis_url ---
 
 
-def test_redis_url_uses_rediss_when_memorystore_tls(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_redis_url_uses_rediss_when_memorystore_tls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """TLS branch: rediss:// + password when gcp_memorystore_tls + host set."""
     monkeypatch.setenv("ROBOCO_GCP_MEMORYSTORE_HOST", "10.0.0.5")
     monkeypatch.setenv("ROBOCO_GCP_MEMORYSTORE_TLS", "true")
@@ -74,7 +76,9 @@ def test_redis_url_uses_memorystore_host_over_redis_host(
 # --- Task 4.5: Filestore workspaces root ---
 
 
-def test_workspaces_root_uses_filestore_when_set(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_workspaces_root_uses_filestore_when_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """gcp_filestore_share overrides workspaces_root when set."""
     monkeypatch.setenv("ROBOCO_GCP_FILESTORE_SHARE", "/mnt/fileshare/workspaces")
 
@@ -82,7 +86,9 @@ def test_workspaces_root_uses_filestore_when_set(monkeypatch: pytest.MonkeyPatch
     assert s.workspaces_root == "/mnt/fileshare/workspaces"
 
 
-def test_workspaces_root_default_when_filestore_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_workspaces_root_default_when_filestore_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Default /data/workspaces when gcp_filestore_share is empty."""
     monkeypatch.delenv("ROBOCO_GCP_FILESTORE_SHARE", raising=False)
 

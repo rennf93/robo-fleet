@@ -7,6 +7,12 @@ agent's open ``agent_spawn_sessions`` row. The six fields mirror
 ``TokenUsageStatus`` (roboco/agent_sdk/models.py) one-for-one but live here
 in the public API schema layer rather than importing the agent_sdk model, so
 the v1 API contract stays decoupled from the in-container SDK.
+
+``exit_reason`` is the provider-backed analogue of the docker exit code: the
+ADK entrypoint pushes ``"normal"`` / ``"rate_limited"`` / ``"auth"`` so the
+orchestrator's overload break can park the provider without a container exit
+code (Cloud Run Jobs expose none). Optional + defaults to None so existing
+callers that omit it stay valid.
 """
 
 from __future__ import annotations
@@ -39,4 +45,12 @@ class UsageReportRequest(BaseModel):
     )
     tokens_cache_write: int = Field(
         default=0, description="Total cache-write tokens this session"
+    )
+    exit_reason: str | None = Field(
+        default=None,
+        description=(
+            "Provider-backed exit signal: 'normal' | 'rate_limited' | 'auth'. "
+            "The orchestrator reads this to park the provider on a rate-limit / "
+            "auth failure (no container exit code exists for Cloud Run Jobs)."
+        ),
     )

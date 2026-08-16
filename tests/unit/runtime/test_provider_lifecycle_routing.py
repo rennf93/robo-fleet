@@ -64,10 +64,11 @@ async def test_provider_for_instance_returns_none_for_docker() -> None:
 
 @pytest.mark.asyncio
 async def test_check_health_routes_through_provider() -> None:
-    """A provider-backed ACTIVE instance is health-checked via the provider,
-    not via _inspect_container_state (docker)."""
+    """A provider-backed ACTIVE instance is health-checked via the provider's
+    execution_outcome (None = still running), not via _inspect_container_state
+    (docker)."""
     fake_provider = MagicMock()
-    fake_provider.health_check = AsyncMock(return_value=True)
+    fake_provider.execution_outcome = AsyncMock(return_value=None)
     inst = MagicMock()
     inst.state = MagicMock()  # will compare against AgentState.ACTIVE below
     inst.container_id = "exec-1"
@@ -81,4 +82,4 @@ async def test_check_health_routes_through_provider() -> None:
     inst.state = State.ACTIVE
     # If the docker path ran, this would raise (no asyncio patch). It must not.
     await AgentOrchestrator._check_health(orch_obj)
-    fake_provider.health_check.assert_awaited_once()
+    fake_provider.execution_outcome.assert_awaited_once()

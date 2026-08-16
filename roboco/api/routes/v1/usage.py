@@ -74,6 +74,7 @@ async def report_usage(
             tokens_output=body.tokens_output,
             tokens_cache_read=body.tokens_cache_read,
             tokens_cache_write=body.tokens_cache_write,
+            exit_reason=body.exit_reason,
         )
     )
     await db.commit()

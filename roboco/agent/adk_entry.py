@@ -28,6 +28,11 @@ from roboco.agent.git_tools import build_git_tools
 _MODEL = os.environ.get("ROBOCO_AGENT_MODEL", "gemini-3.5-flash")
 _APP_NAME = "robo-fleet"
 _SYSTEM_PROMPT_PATH = "/app/system-prompt.md"
+# Exit codes mirror the grok/codex/kimi CLIs (75 = rate-limit/quota,
+# 78 = auth/credential) so the orchestrator's overload break treats them
+# identically across docker and provider-backed agents.
+_RATE_LIMIT_EXIT = 75
+_AUTH_EXIT = 78
 
 
 def _instruction() -> str:
@@ -56,10 +61,13 @@ def _headers() -> dict[str, str]:
     return h
 
 
-async def _post_usage(usage: dict[str, Any]) -> None:
+async def _post_usage(usage: dict[str, Any], exit_reason: str) -> None:
     base = os.environ.get("ROBOCO_ORCHESTRATOR_URL", "http://roboco-orchestrator:8000")
+    payload = {**usage, "exit_reason": exit_reason}
     async with httpx.AsyncClient(timeout=10.0) as client:
-        await client.post(f"{base}/api/v1/usage/report", json=usage, headers=_headers())
+        await client.post(
+            f"{base}/api/v1/usage/report", json=payload, headers=_headers()
+        )
 
 
 def _new_usage() -> dict[str, Any]:
@@ -88,9 +96,9 @@ def _classify(exc: BaseException) -> int | None:
     name = type(exc).__name__
     msg = str(exc)
     if "ResourceExhausted" in name or "429" in msg:
-        return 75
+        return _RATE_LIMIT_EXIT
     if "Unauthenticated" in name or "401" in msg:
-        return 78
+        return _AUTH_EXIT
     return None
 
 
@@ -118,10 +126,11 @@ async def main() -> int:
     except Exception as exc:
         code = _classify(exc)
         if code is not None:
-            await _post_usage(usage)
+            reason = "rate_limited" if code == _RATE_LIMIT_EXIT else "auth"
+            await _post_usage(usage, exit_reason=reason)
             return code
         raise
-    await _post_usage(usage)
+    await _post_usage(usage, exit_reason="normal")
     return 0
 
 

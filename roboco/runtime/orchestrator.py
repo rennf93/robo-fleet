@@ -9370,6 +9370,68 @@ Start by:
                 return True
         return False
 
+    async def _read_pushed_exit_reason(self, agent_id: str) -> str | None:
+        """Read the ``exit_reason`` a provider-backed agent pushed via /usage/report.
+
+        Provider-backed (Cloud Run Job) agents have no container exit code, so
+        the ADK entrypoint POSTs ``exit_reason`` ('normal' | 'rate_limited' |
+        'auth') to ``/api/v1/usage/report`` before exiting. This reads it back
+        from the open spawn-session row so the overload break can park the
+        provider on rate-limited / auth the same way docker's 75/78 does.
+        Returns None when there's no open row, the agent never pushed a reason,
+        or the read fails (best-effort, never blocks the health loop).
+        """
+        try:
+            from sqlalchemy import select
+
+            from roboco.db.base import get_session_factory
+            from roboco.db.tables import AgentSpawnSessionTable
+
+            session_factory = get_session_factory()
+            async with session_factory() as db:
+                result = await db.execute(
+                    select(AgentSpawnSessionTable.exit_reason)
+                    .where(
+                        AgentSpawnSessionTable.agent_slug == agent_id,
+                        AgentSpawnSessionTable.ended_at.is_(None),
+                    )
+                    .order_by(AgentSpawnSessionTable.started_at.desc())
+                    .limit(1)
+                )
+                return result.scalar_one_or_none()
+        except Exception as exc:
+            logger.debug(
+                "pushed exit_reason read failed",
+                agent_id=agent_id,
+                error=str(exc),
+            )
+            return None
+
+    async def _maybe_park_provider_for_pushed_reason(
+        self, agent_id: str, instance: Any
+    ) -> bool:
+        """Park a provider-backed agent's provider on a pushed rate-limit / auth reason.
+
+        Provider-backed (Cloud Run Job / ADK) agents have no container exit code
+        for the 75/78 overload break to read; instead the agent pushed
+        ``exit_reason`` via /usage/report. Mirrors the docker 75/78 path: park
+        the Gemini provider (the ADK runtime runs on the Gemini model API) on
+        'rate_limited' / 'auth' and return True so the caller skips the crash
+        respawn + finalize (the probe-resume loop revives the task). Returns
+        False when the instance isn't provider-backed or the pushed reason is
+        absent / 'normal' so the normal graceful-vs-crash split runs.
+        """
+        if self._provider_for_instance(agent_id) is None:
+            return False
+        reason = await self._read_pushed_exit_reason(agent_id)
+        if reason == "rate_limited":
+            await self._park_gemini_rate_limited(agent_id, instance)
+            return True
+        if reason == "auth":
+            await self._park_gemini_auth_unavailable(agent_id, instance)
+            return True
+        return False
+
     async def _handle_stopped_container(
         self, agent_id: str, instance: Any, exit_code: int | None
     ) -> None:
@@ -9390,6 +9452,10 @@ Start by:
         # near-identical early returns (keeps this function's branching flat
         # for PLR0911).
         if await self._maybe_park_for_known_exit(agent_id, instance, exit_code):
+            return
+        # Provider-backed agents have no container exit code for the 75/78
+        # overload break; the agent pushed exit_reason via /usage/report.
+        if await self._maybe_park_provider_for_pushed_reason(agent_id, instance):
             return
         graceful = exit_code == 0
         # Park the provider on a session/usage limit or a server overload detected
@@ -9488,27 +9554,24 @@ Start by:
             # A dedicated provider backend (Cloud Run Jobs for ADK) is
             # health-checked through the provider instead of `docker inspect`;
             # synthesize the (is_running, exit_code) tuple the loop expects.
-            # exit_code is None while running and on a stop (Cloud Run v2
-            # exposes no exit code on the execution) so _handle_stopped_container
-            # treats a completed execution as a non-graceful exit, same as a
-            # docker crash.
+            # execution_outcome returns None while running, 0 succeeded, 1
+            # failed, so a normally-completed ADK agent is graceful (exit_code
+            # 0) and does NOT respawn-loop; a failed one (1) hits the crash
+            # path. The docker path below stays unchanged.
             provider = self._provider_for_instance(agent_id)
             if provider is not None:
                 try:
-                    is_running = await provider.health_check(instance.container_id)
+                    outcome = await provider.execution_outcome(instance.container_id)
                 except Exception as exc:
                     logger.debug(
-                        "provider health_check failed; skipping agent this tick",
+                        "provider execution_outcome failed; skipping agent this tick",
                         agent_id=agent_id,
                         error=str(exc),
                     )
                     continue
-                # Cloud Run v2 exposes no exit code on the execution; None
-                # makes _handle_stopped_container treat a completed execution
-                # as a non-graceful exit (same as a docker crash).
-                exit_code = None
-                if not is_running:
-                    await self._handle_stopped_container(agent_id, instance, exit_code)
+                if outcome is None:
+                    continue  # still running
+                await self._handle_stopped_container(agent_id, instance, outcome)
                 continue
             # A per-agent docker-inspect timeout (or any docker error) must skip
             # THIS agent, not abort the whole sweep — otherwise one hung daemon

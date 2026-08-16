@@ -138,6 +138,36 @@ class CloudRunJobsProvider(AgentProvider):
         except Exception:
             return False
 
+    async def execution_outcome(self, instance_id: str) -> int | None:
+        """Terminal outcome of a Cloud Run Job execution.
+
+        Returns ``None`` while still running, ``0`` if the execution succeeded,
+        ``1`` if it failed. Read from the Execution's ``conditions`` repeated
+        field: the ``Ready`` condition's ``state`` is ``CONDITION_SUCCEEDED``
+        on a clean finish and ``CONDITION_FAILED`` on a non-zero task exit. A
+        completed execution with no Ready condition is treated as failed
+        (safer; the prior behaviour treated every finish as a crash anyway).
+        Field shape verified against the installed ``google-cloud-run`` proto:
+        ``Execution.conditions`` (plural, repeated ``run_v2.Condition``),
+        ``Condition.type_`` (Python alias for the ``type`` field), and
+        ``Condition.State`` enum members
+        ``CONDITION_SUCCEEDED`` / ``CONDITION_FAILED``.
+        """
+        client = _executions_client()
+        exe = await asyncio.to_thread(
+            client.get_execution,
+            request=run_v2.GetExecutionRequest(name=instance_id),
+        )
+        if exe.completion_time is None:
+            return None  # still running
+        for cond in exe.conditions:
+            if getattr(cond, "type_", "") == "Ready":
+                if cond.state == run_v2.Condition.State.CONDITION_SUCCEEDED:
+                    return 0
+                if cond.state == run_v2.Condition.State.CONDITION_FAILED:
+                    return 1
+        return 1  # completed but no Ready condition -> treat as failed
+
     async def stop(self, instance_id: str, graceful: bool = True) -> None:
         client = _executions_client()
         try:

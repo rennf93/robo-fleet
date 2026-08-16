@@ -86,6 +86,16 @@ class AgentProvider(ABC):
         """Return True if the instance is still alive."""
         ...
 
+    async def execution_outcome(self, instance_id: str) -> int | None:
+        """Terminal outcome: None while running, 0 succeeded, 1 failed.
+
+        Only provider backends that expose a terminal outcome (Cloud Run Jobs)
+        override this. The docker path never calls it (``_check_health`` routes
+        through ``_inspect_container_state`` for non-provider instances), so the
+        default returns None and docker providers need not implement it.
+        """
+        return None
+
     @abstractmethod
     async def remove(self, instance_id: str) -> None:
         """Remove the instance, releasing all resources."""

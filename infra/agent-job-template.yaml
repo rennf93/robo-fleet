@@ -1,0 +1,91 @@
+# Cloud Run v2 Job template for RoboCo agents (ADK + Gemini on Cloud Run).
+#
+# This is the REFERENCE shape: the CloudRunJobsProvider (Task 2.2,
+# roboco/llm/providers/cloudrun_jobs.py) creates the real per-agent Job in
+# code via the run_v2 client, setting ROBOCO_AGENT_ID / ROBOCO_AGENT_MODEL /
+# ROBOCO_INITIAL_PROMPT / ROBOCO_TOOL_MANIFEST_PATH from the spawn call. This
+# YAML documents the full field set an operator can also apply manually with
+# `gcloud run jobs replace infra/agent-job-template.yaml` for debugging or a
+# one-off spawn. Plain hyphens only, no em-dashes.
+#
+# Per-agent fields the provider fills at spawn time (left as placeholders here):
+#   metadata.name                    -> roboco-agent-<agent-slug>
+#   ROBOCO_AGENT_ID                  -> agent UUID
+#   ROBOCO_AGENT_ROLE                -> role slug (developer, qa, cell_pm, ...)
+#   ROBOCO_INITIAL_PROMPT            -> the composed task prompt
+#   ROBOCO_TOOL_MANIFEST_PATH        -> gs://<bucket>/manifests/<agent-id>.json
+#   ROBOCO_GIT_TOKEN                 -> per-project git PAT (or secretRef)
+#
+# Infra placeholders the deploy script (or terraform output) fills:
+#   __AR_HOST__ / __PROJECT_ID__ / __AR_REPO__  -> image path
+#   __VPC_CONNECTOR_PATH__                      -> VPC connector for Cloud SQL/Memorystore
+#   __FILESTORE_IP__ / __FILESTORE_SHARE__      -> NFS workspaces mount
+#   __ORCHESTRATOR_URL__                        -> orchestrator Cloud Run URL
+
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: roboco-agent-__AGENT_SLUG__
+  labels:
+    run.googleapis.com/managed-by: gcloud
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/vpc-access-connector: __VPC_CONNECTOR_PATH__
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      template:
+        spec:
+          containers:
+            - name: agent
+              image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/roboco-agent-adk:latest
+              env:
+                # --- Agent identity (filled by CloudRunJobsProvider at spawn) ---
+                - name: ROBOCO_AGENT_ID
+                  value: "__AGENT_ID__"
+                - name: ROBOCO_AGENT_ROLE
+                  value: "__AGENT_ROLE__"
+                - name: ROBOCO_AGENT_MODEL
+                  value: "gemini-3.5-flash"
+                - name: ROBOCO_INITIAL_PROMPT
+                  value: "__INITIAL_PROMPT__"
+                - name: ROBOCO_TOOL_MANIFEST_PATH
+                  value: "__TOOL_MANIFEST_GS_URI__"
+
+                # --- Orchestrator URL (agent calls the gateway over HTTP) ---
+                - name: ROBOCO_ORCHESTRATOR_URL
+                  value: "__ORCHESTRATOR_URL__"
+
+                # --- Agent auth (Secret Manager) ---
+                - name: ROBOCO_AGENT_AUTH_SECRET
+                  valueFrom:
+                    secretRef:
+                      name: roboco-agent-auth-secret
+                      key: latest
+
+                # --- Git token (Secret Manager, per-project PAT) ---
+                # Mount as a secret volume at /secrets/git-token and have the
+                # agent read it, or set it as an env var. The provider sets
+                # ROBOCO_GIT_TOKEN directly from the project's encrypted PAT
+                # when available; this secretRef is the manual-deploy fallback.
+                - name: ROBOCO_GIT_TOKEN
+                  valueFrom:
+                    secretRef:
+                      name: roboco-git-token
+                      key: latest
+
+              volumeMounts:
+                - mountPath: /data/workspaces
+                  name: filestore
+                  readOnly: false
+
+          volumes:
+            - name: filestore
+              nfs:
+                server: __FILESTORE_IP__
+                path: /__FILESTORE_SHARE__
+                readOnly: false
+
+          timeoutSeconds: 1800
+          maxRetries: 0

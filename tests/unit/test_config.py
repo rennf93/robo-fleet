@@ -31,3 +31,41 @@ def test_gcp_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.gcp_project_id == "my-proj"
     assert s.gcp_region == "europe-west1"
     assert s.gcp_memorystore_port == DEFAULT_MEMORYSTORE_PORT
+
+
+# --- Task 4.2: Memorystore TLS redis_url ---
+
+
+def test_redis_url_uses_rediss_when_memorystore_tls(monkeypatch: pytest.MonkeyPatch) -> None:
+    """TLS branch: rediss:// + password when gcp_memorystore_tls + host set."""
+    monkeypatch.setenv("ROBOCO_GCP_MEMORYSTORE_HOST", "10.0.0.5")
+    monkeypatch.setenv("ROBOCO_GCP_MEMORYSTORE_TLS", "true")
+    monkeypatch.setenv("ROBOCO_GCP_MEMORYSTORE_PORT", "6379")
+    monkeypatch.setenv("ROBOCO_REDIS_PASSWORD", "pw")
+
+    s = Settings()
+    assert s.redis_url == "rediss://:pw@10.0.0.5:6379/0"
+
+
+def test_redis_url_plain_when_memorystore_tls_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Non-TLS branch: plain redis:// when gcp_memorystore_tls is False."""
+    monkeypatch.setenv("ROBOCO_GCP_MEMORYSTORE_HOST", "10.0.0.5")
+    monkeypatch.setenv("ROBOCO_GCP_MEMORYSTORE_TLS", "false")
+    monkeypatch.setenv("ROBOCO_REDIS_PASSWORD", "pw")
+
+    s = Settings()
+    assert s.redis_url == "redis://:pw@10.0.0.5:6379/0"
+
+
+def test_redis_url_uses_memorystore_host_over_redis_host(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """gcp_memorystore_host overrides redis_host when set."""
+    monkeypatch.setenv("ROBOCO_GCP_MEMORYSTORE_HOST", "memorystore.example")
+    monkeypatch.setenv("ROBOCO_GCP_MEMORYSTORE_TLS", "true")
+    monkeypatch.setenv("ROBOCO_REDIS_PASSWORD", "secret")
+
+    s = Settings()
+    assert s.redis_url.startswith("rediss://:secret@memorystore.example:")

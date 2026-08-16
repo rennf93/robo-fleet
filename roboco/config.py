@@ -203,10 +203,25 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def redis_url(self) -> str:
-        """Redis connection URL."""
+        """Redis connection URL.
+
+        When ``gcp_memorystore_host`` is armed the host/port come from
+        Memorystore (overriding the local-dev ``redis_host``/``redis_port``);
+        ``gcp_memorystore_tls`` swaps the scheme to ``rediss://`` which
+        redis-py honors as a TLS trigger. The local-dev path is unchanged
+        when ``gcp_memorystore_host`` is empty.
+        """
+        if self.gcp_memorystore_host:
+            scheme = "rediss://" if self.gcp_memorystore_tls else "redis://"
+            host = self.gcp_memorystore_host
+            port = self.gcp_memorystore_port
+        else:
+            scheme = "redis://"
+            host = self.redis_host
+            port = self.redis_port
         if self.redis_password:
-            return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
-        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+            return f"{scheme}:{self.redis_password}@{host}:{port}/{self.redis_db}"
+        return f"{scheme}{host}:{port}/{self.redis_db}"
 
     # ==========================================================================
     # Google Cloud Platform (robo-fleet GCP port)

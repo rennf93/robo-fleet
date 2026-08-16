@@ -37,6 +37,7 @@ from typing import Final
 from roboco.config import settings
 from roboco.foundation import identity as _foundation
 from roboco.foundation.policy import communications as _comms
+from roboco.infra import secretmanager as _secretmanager
 from roboco.models.base import NotificationPriority, NotificationType
 from roboco.seeds.initial_data import AGENT_UUIDS, CEO_AGENT_ID
 
@@ -65,10 +66,10 @@ def _auth_secret() -> bytes | None:
     """
     if settings.gcp_project_id:
         if "v" not in _auth_secret_cache:
-            from roboco.infra.secretmanager import access_secret
-
             try:
-                _auth_secret_cache["v"] = access_secret("agent-auth-secret") or ""
+                _auth_secret_cache["v"] = (
+                    _secretmanager.access_secret("agent-auth-secret") or ""
+                )
             except Exception:
                 _auth_secret_cache["v"] = ""
         v = _auth_secret_cache.get("v", "")

@@ -7,6 +7,7 @@ Uses Fernet symmetric encryption with a master key from settings.
 from cryptography.fernet import Fernet, InvalidToken
 
 from roboco.config import settings
+from roboco.infra import secretmanager as _secretmanager
 from roboco.logging import get_logger
 
 logger = get_logger(__name__)
@@ -32,10 +33,8 @@ def _get_fernet() -> Fernet:
     """
     key = settings.encryption_key
     if not key and settings.gcp_project_id:
-        from roboco.infra.secretmanager import access_secret
-
         try:
-            key = access_secret("fernet-key")
+            key = _secretmanager.access_secret("fernet-key")
         except Exception as e:
             raise EncryptionError(
                 f"Failed to read fernet-key from Secret Manager: {e}"

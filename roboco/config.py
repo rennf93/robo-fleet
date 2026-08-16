@@ -203,6 +203,33 @@ class Settings(BaseSettings):
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
     # ==========================================================================
+    # Google Cloud Platform (robo-fleet GCP port)
+    # ==========================================================================
+    gcp_project_id: str = Field(default="", description="Google Cloud project id.")
+    gcp_region: str = Field(default="", description="Google Cloud region.")
+    gcp_cloudsql_instance: str = Field(
+        default="", description="Cloud SQL instance connection name (proj:region:inst)."
+    )
+    gcp_memorystore_host: str = Field(default="", description="Memorystore for Redis host.")
+    gcp_memorystore_port: int = Field(default=6379)
+    gcp_memorystore_tls: bool = Field(default=True, description="Use TLS to Memorystore.")
+    gcp_filestore_share: str = Field(
+        default="", description="Filestore NFS share path mounted as workspaces root."
+    )
+    gcp_gcs_bucket: str = Field(
+        default="", description="GCS bucket for renders/logs/config handoff."
+    )
+    gcp_artifact_registry_repo: str = Field(
+        default="", description="Artifact Registry repo for agent images."
+    )
+    gcp_secret_manager_prefix: str = Field(
+        default="roboco", description="Secret Manager secret name prefix."
+    )
+    gcp_cloud_run_agent_job_prefix: str = Field(
+        default="roboco-agent", description="Cloud Run Jobs name prefix."
+    )
+
+    # ==========================================================================
     # RAG (in-house engine with pgvector)
     # ==========================================================================
     rag_persist_dir: str = ".roboco"

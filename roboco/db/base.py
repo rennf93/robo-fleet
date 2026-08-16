@@ -163,7 +163,7 @@ def get_engine(pool: _DbPool = "primary") -> AsyncEngine:
     _rebind_holder_to_current_loop(holder)
     if holder.engine is None:
         if settings.gcp_cloudsql_instance:
-            engine, connector = async_engine_for_cloudsql(settings)
+            engine, connector = async_engine_for_cloudsql(settings, pool)
             holder.engine = engine
             holder.cloudsql_connector = connector
             current = _running_loop()

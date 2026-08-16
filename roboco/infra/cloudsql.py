@@ -14,9 +14,11 @@ closure also holds a reference).
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+
+_DbPool = Literal["primary", "background"]
 
 
 def _Connector(loop: asyncio.AbstractEventLoop) -> Any:
@@ -42,16 +44,29 @@ def _server_settings(settings: Any) -> dict[str, str]:
     return {key: str(value) for key, value in pairs if value > 0}
 
 
-def async_engine_for_cloudsql(settings: Any) -> tuple[AsyncEngine, Any]:
+def async_engine_for_cloudsql(
+    settings: Any, pool: _DbPool = "primary"
+) -> tuple[AsyncEngine, Any]:
     """Build an async engine + connector for the configured Cloud SQL instance.
 
     Returns ``(engine, connector)``; the caller caches the connector next to
     the engine so it outlives the engine. ``async_creator`` closes over both.
+    ``pool`` selects primary vs background sizing, mirroring the plain-DSN
+    path in ``roboco.db.base.get_engine`` so background loops stay on the
+    smaller independent pool under Cloud SQL.
     """
     loop = asyncio.get_running_loop()
     connector = _Connector(loop)
     instance = settings.gcp_cloudsql_instance
     server_settings = _server_settings(settings)
+    pool_size, max_overflow = (
+        (settings.database_pool_size, settings.database_max_overflow)
+        if pool == "primary"
+        else (
+            settings.database_background_pool_size,
+            settings.database_background_max_overflow,
+        )
+    )
 
     async def getconn() -> Any:
         from google.cloud.sql.connector import IPTypes
@@ -70,8 +85,8 @@ def async_engine_for_cloudsql(settings: Any) -> tuple[AsyncEngine, Any]:
         "postgresql+asyncpg://",
         async_creator=getconn,
         echo=settings.database_echo,
-        pool_size=settings.database_pool_size,
-        max_overflow=settings.database_max_overflow,
+        pool_size=pool_size,
+        max_overflow=max_overflow,
         pool_timeout=settings.database_pool_timeout,
         pool_recycle=settings.database_pool_recycle,
         pool_pre_ping=True,

@@ -106,7 +106,7 @@ def test_get_engine_uses_cloudsql_when_instance_set(
     monkeypatch.setattr(db_base.settings, "gcp_cloudsql_instance", "proj:reg:inst")
     built: dict[str, Any] = {}
 
-    def _fake_builder(settings: Any) -> Any:
+    def _fake_builder(settings: Any, pool: str = "primary") -> Any:
         built["called"] = True
         engine = MagicMock(name="cloudsql_engine")
         engine.url = "postgresql+asyncpg://"
@@ -138,3 +138,85 @@ def test_get_engine_plain_dsn_when_instance_empty(
     db_base.get_engine()
     assert captured["url"].startswith("postgresql+asyncpg://")
     assert "proj" not in captured["url"]
+
+
+# --- Fix R1: background pool sizing under Cloud SQL ---
+
+
+async def test_cloudsql_engine_background_pool_uses_background_sizing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """async_engine_for_cloudsql(settings, 'background') uses background sizing."""
+    settings = Settings(
+        gcp_cloudsql_instance="proj:reg:inst",
+        database_user="u",
+        database_password="p",
+        database_name="db",
+        database_pool_size=10,
+        database_max_overflow=20,
+        database_background_pool_size=4,
+        database_background_max_overflow=2,
+    )
+    fake_connector = MagicMock()
+    fake_connector.connect_async = AsyncMock(return_value=object())
+    captured: dict[str, Any] = {}
+
+    def _fake_create(url: str, **kwargs: Any) -> MagicMock:
+        captured.update(kwargs)
+        return MagicMock()
+
+    monkeypatch.setattr(cloudsql, "_Connector", lambda loop: fake_connector)
+    monkeypatch.setattr(cloudsql, "create_async_engine", _fake_create)
+
+    cloudsql.async_engine_for_cloudsql(settings, pool="background")
+
+    assert captured["pool_size"] == 4
+    assert captured["max_overflow"] == 2
+
+
+async def test_cloudsql_engine_primary_pool_uses_primary_sizing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """async_engine_for_cloudsql(settings, 'primary') keeps primary sizing."""
+    settings = Settings(
+        gcp_cloudsql_instance="proj:reg:inst",
+        database_user="u",
+        database_password="p",
+        database_name="db",
+        database_pool_size=10,
+        database_max_overflow=20,
+        database_background_pool_size=4,
+        database_background_max_overflow=2,
+    )
+    fake_connector = MagicMock()
+    fake_connector.connect_async = AsyncMock(return_value=object())
+    captured: dict[str, Any] = {}
+
+    def _fake_create(url: str, **kwargs: Any) -> MagicMock:
+        captured.update(kwargs)
+        return MagicMock()
+
+    monkeypatch.setattr(cloudsql, "_Connector", lambda loop: fake_connector)
+    monkeypatch.setattr(cloudsql, "create_async_engine", _fake_create)
+
+    cloudsql.async_engine_for_cloudsql(settings, pool="primary")
+
+    assert captured["pool_size"] == 10
+    assert captured["max_overflow"] == 20
+
+
+def test_get_engine_background_passes_pool_to_cloudsql_builder(
+    monkeypatch: pytest.MonkeyPatch, _holder_reset: Any
+) -> None:
+    """get_engine(pool='background') passes pool through to the Cloud SQL builder."""
+    monkeypatch.setattr(db_base.settings, "gcp_cloudsql_instance", "proj:reg:inst")
+    received: dict[str, Any] = {}
+
+    def _fake_builder(settings: Any, pool: str = "primary") -> Any:
+        received["pool"] = pool
+        engine = MagicMock(name="cloudsql_engine")
+        return engine, MagicMock(name="connector")
+
+    monkeypatch.setattr(db_base, "async_engine_for_cloudsql", _fake_builder)
+    db_base.get_engine(pool="background")
+    assert received.get("pool") == "background"

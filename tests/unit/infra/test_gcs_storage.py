@@ -7,12 +7,13 @@ a local file at ``gs://{bucket}/renders/{basename}`` and returns the URI.
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from roboco.infra import gcs_storage
 
 
-def test_upload_calls_blob_upload_from_filename(tmp_path) -> None:
+def test_upload_calls_blob_upload_from_filename(tmp_path: Path) -> None:
     local = tmp_path / "render.mp4"
     local.write_bytes(b"data")
 
@@ -30,7 +31,7 @@ def test_upload_calls_blob_upload_from_filename(tmp_path) -> None:
     assert uri == "gs://my-bucket/renders/render.mp4"
 
 
-def test_download_calls_blob_download_to_filename(tmp_path) -> None:
+def test_download_calls_blob_download_to_filename(tmp_path: Path) -> None:
     fake_blob = MagicMock()
     fake_bucket = MagicMock()
     fake_bucket.blob.return_value = fake_blob
@@ -60,7 +61,7 @@ def test_presigned_url_calls_generate_signed_url() -> None:
     assert url == "https://signed.example/x"
 
 
-def test_upload_render_uploads_to_renders_prefix(tmp_path) -> None:
+def test_upload_render_uploads_to_renders_prefix(tmp_path: Path) -> None:
     """upload_render helper puts the file under renders/ and returns gs URI."""
     local = tmp_path / "abc.mp4"
     local.write_bytes(b"data")

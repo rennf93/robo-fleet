@@ -3726,8 +3726,35 @@ class AgentOrchestrator:
                 ModelProvider.KIMI,
                 KimiCliProvider(self, image=_qualify_agent_image("roboco-agent-kimi")),
             )
+            # ADK agents on Cloud Run Jobs: a dedicated spawn backend whose
+            # lifecycle (stop/health/remove) is routed through the same provider
+            # seam. _provider_for returns None for every ANTHROPIC/local route,
+            # so the docker path is byte-for-byte unchanged when no provider is
+            # registered for the route.
+            from roboco.llm.providers.cloudrun_jobs import CloudRunJobsProvider
+
+            registry.register(
+                ModelProvider.ADK_CLOUD_RUN,
+                CloudRunJobsProvider(
+                    self, image=_qualify_agent_image("roboco-agent-adk")
+                ),
+            )
             self._provider_registry = registry
         return self._provider_registry
+
+    def _provider_for_instance(self, agent_id: str) -> "AgentProvider | None":
+        """Resolve the dedicated provider backing a LIVE instance, if any.
+
+        Instance-keyed counterpart to ``_provider_for``: looks up the instance
+        registered under ``agent_id`` and routes through its ``config.provider_type``.
+        Returns ``None`` when the instance is missing, has no config, or the
+        route's provider_type has no dedicated backend (ANTHROPIC / Ollama Cloud
+        / self-hosted) — the caller then runs the existing docker path unchanged.
+        """
+        inst = self._instances.get(agent_id)
+        if inst is None or getattr(inst, "config", None) is None:
+            return None
+        return self._provider_for(inst.config.provider_type)
 
     def _provider_for(self, provider_type: str) -> "AgentProvider | None":
         """Resolve a dedicated provider for a route's ``provider_type`` string.
@@ -3908,6 +3935,18 @@ class AgentOrchestrator:
             self._record_expected_stop(
                 container_name.removeprefix("roboco-agent-"), stop_reason
             )
+        # A dedicated provider backend (Cloud Run Jobs for ADK) has no docker
+        # container to inspect/dump/rm: Cloud Logging covers observability and
+        # the provider's remove() is a no-op (executions self-clean). Skip the
+        # docker block entirely. Pre-spawn stale-clear of a provider-backed
+        # agent that isn't registered in _instances yet falls through to the
+        # docker path, which is a no-op when no container exists.
+        slug = container_name.removeprefix("roboco-agent-")
+        provider = self._provider_for_instance(slug)
+        if provider is not None:
+            inst = self._instances[slug]
+            await provider.remove(inst.container_id or slug)
+            return
         # Check the container actually exists before trying to dump logs;
         # _remove_container is routinely called pre-spawn to clear stale
         # containers, and on first spawn there's nothing to dump.
@@ -6276,31 +6315,41 @@ class AgentOrchestrator:
                 instance.state = AgentState.STOPPING
                 container_name = f"roboco-agent-{agent_id}"
 
-                if graceful:
-                    # Graceful stop with timeout
-                    proc = await asyncio.create_subprocess_exec(
-                        "docker",
-                        "stop",
-                        "-t",
-                        "10",
-                        container_name,
-                        stdout=asyncio.subprocess.DEVNULL,
-                        stderr=asyncio.subprocess.DEVNULL,
-                    )
-                    await proc.wait()
+                # A dedicated provider backend (Cloud Run Jobs for ADK) handles
+                # its own stop; the docker stop/kill/remove block is the
+                # ANTHROPIC/local path. Both branches fall through to the
+                # shared cleanup below (state=OFFLINE, container_id=None, log,
+                # and the release_claim hand-back outside the lock) so a
+                # provider stop never skips required post-stop cleanup.
+                provider = self._provider_for_instance(agent_id)
+                if provider is not None:
+                    await provider.stop(instance.container_id, graceful=graceful)
                 else:
-                    # Force kill
-                    proc = await asyncio.create_subprocess_exec(
-                        "docker",
-                        "kill",
-                        container_name,
-                        stdout=asyncio.subprocess.DEVNULL,
-                        stderr=asyncio.subprocess.DEVNULL,
-                    )
-                    await proc.wait()
+                    if graceful:
+                        # Graceful stop with timeout
+                        proc = await asyncio.create_subprocess_exec(
+                            "docker",
+                            "stop",
+                            "-t",
+                            "10",
+                            container_name,
+                            stdout=asyncio.subprocess.DEVNULL,
+                            stderr=asyncio.subprocess.DEVNULL,
+                        )
+                        await proc.wait()
+                    else:
+                        # Force kill
+                        proc = await asyncio.create_subprocess_exec(
+                            "docker",
+                            "kill",
+                            container_name,
+                            stdout=asyncio.subprocess.DEVNULL,
+                            stderr=asyncio.subprocess.DEVNULL,
+                        )
+                        await proc.wait()
 
-                # Remove container
-                await self._remove_container(container_name)
+                    # Remove container
+                    await self._remove_container(container_name)
 
             instance.state = AgentState.OFFLINE
             instance.container_id = None
@@ -9291,6 +9340,31 @@ Start by:
             if instance.state not in (AgentState.ACTIVE, AgentState.WAITING_SHORT):
                 continue
             if instance.container_id is None:
+                continue
+            # A dedicated provider backend (Cloud Run Jobs for ADK) is
+            # health-checked through the provider instead of `docker inspect`;
+            # synthesize the (is_running, exit_code) tuple the loop expects.
+            # exit_code is None while running and on a stop (Cloud Run v2
+            # exposes no exit code on the execution) so _handle_stopped_container
+            # treats a completed execution as a non-graceful exit, same as a
+            # docker crash.
+            provider = self._provider_for_instance(agent_id)
+            if provider is not None:
+                try:
+                    is_running = await provider.health_check(instance.container_id)
+                except Exception as exc:
+                    logger.debug(
+                        "provider health_check failed; skipping agent this tick",
+                        agent_id=agent_id,
+                        error=str(exc),
+                    )
+                    continue
+                # Cloud Run v2 exposes no exit code on the execution; None
+                # makes _handle_stopped_container treat a completed execution
+                # as a non-graceful exit (same as a docker crash).
+                exit_code = None
+                if not is_running:
+                    await self._handle_stopped_container(agent_id, instance, exit_code)
                 continue
             # A per-agent docker-inspect timeout (or any docker error) must skip
             # THIS agent, not abort the whole sweep — otherwise one hung daemon
@@ -13526,7 +13600,15 @@ Start now: evidence(task_id="{task_id}")
         False; the first broken sighting records the mark and returns False (one
         grace tick); a breakage older than ``gateway_health_grace_seconds`` (or a
         test-injected ``_gateway_health_grace``) returns True.
+
+        A dedicated-provider-backed agent (Cloud Run Jobs) has no docker
+        container to `docker exec` into, so the gateway venv-import probe is
+        meaningless; the ADK entrypoint does its own readiness and Cloud
+        Logging covers observability. Treat it as healthy and skip the probe.
         """
+        if self._provider_for_instance(slug) is not None:
+            self._gateway_broken_since.pop(slug, None)
+            return False
         healthy = await self._probe_gateway_health(slug)
         if healthy is None or healthy:
             self._gateway_broken_since.pop(slug, None)

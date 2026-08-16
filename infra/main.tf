@@ -39,6 +39,9 @@ resource "google_redis_instance" "roboco" {
   memory_size_gb = 1
   redis_version  = "REDIS_7_X"
   auth_enabled   = true
+  connect_mode   = "PRIVATE_SERVICE_ACCESS"
+
+  depends_on = [google_service_networking_connection.private_service_access]
 }
 
 resource "google_filestore_instance" "roboco" {
@@ -78,4 +81,18 @@ resource "google_secret_manager_secret" "keys" {
   replication {
     auto {}
   }
+}
+
+resource "google_compute_global_address" "private_service_access" {
+  name          = "roboco-psa-range"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 20
+  network       = google_compute_network.roboco.id
+}
+
+resource "google_service_networking_connection" "private_service_access" {
+  network                 = google_compute_network.roboco.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_service_access.name]
 }

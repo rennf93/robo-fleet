@@ -299,7 +299,7 @@ select = [
 # module reads the patched env at import time (PLC0415); monkeypatched
 # httpx.post fakes keep the bound-method self/unused url/kw signature
 # (ARG001); small literal counts in assertions (PLR2004).
-"tests/unit/agent/*.py" = ["PLC0415", "ARG001", "PLR2004", "TC003"]
+"tests/unit/agent/*.py" = ["PLC0415", "ARG001", "ARG002", "PLR2004", "TC003"]
 
 # =============================================================================
 # MyPy Configuration

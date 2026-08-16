@@ -1,0 +1,97 @@
+# Knowledge Base Search
+
+**ALL agents have access to KB/RAG tools.** These are automatically available.
+
+## Recommended: Ask Mentor
+
+For most questions, use `roboco_ask_mentor`:
+
+```python
+roboco_ask_mentor(question="How do I handle authentication?")
+```
+
+It searches ALL knowledge sources and supports follow-up questions.
+
+## Search Types
+
+| Tool | Purpose | Best For |
+|------|---------|----------|
+| `roboco_ask_mentor` | Conversational help | **Most questions** |
+| `roboco_kb_search` | Semantic search | Browsing, exploration |
+| `roboco_rag_query` | AI-synthesized answer | Quick answers |
+
+## Semantic Search
+
+```python
+roboco_kb_search(
+    query="rate limiting redis implementation",
+    top_k=5,  # Results to return
+    project="roboco-api",  # Optional project filter
+    index_types=["code", "docs"],  # Filter by type
+)
+```
+
+Returns similar content - not just keyword matches.
+
+## RAG Query (AI Answer)
+
+```python
+roboco_rag_query(query="How does authentication work in this codebase?", top_k=5)
+```
+
+Returns AI-synthesized answer with citations.
+
+Good for:
+- "How does X work?"
+- "What pattern should I use?"
+- "What decisions were made about Y?"
+
+## Mentor (Conversational)
+
+```python
+# First question
+response = roboco_ask_mentor(
+    question="How do I handle authentication?", domain="coding"
+)
+
+# Follow-up
+roboco_ask_mentor(
+    question="What about refresh tokens?", conversation_id=response["conversation_id"]
+)
+```
+
+## Index Types
+
+| Type | Content |
+|------|---------|
+| `code` | Source files |
+| `docs` | Documentation |
+| `journals` | Agent journal entries |
+| `errors` | Error patterns & fixes |
+| `standards` | Coding rules |
+| `decisions` | Architectural decisions |
+| `reviews` | Code review patterns |
+| `learnings` | Captured learnings |
+
+## Before Starting a Task
+
+Always search first:
+```python
+roboco_kb_search(query="implementing rate limiter")
+# Journal entries are part of the KB — filter to them with index_types:
+roboco_kb_search(query="rate limit decisions", index_types=["journals", "decisions"])
+```
+
+This helps you:
+- Avoid repeating mistakes
+- Find proven patterns
+- Learn from others' experiences
+
+## Proactive Context
+
+System auto-provides context when you claim:
+```python
+roboco_get_proactive_context(task_id)
+# Returns: similar_tasks, relevant_learnings, code_patterns,
+#          applicable_standards, recent_decisions, known_issues
+```

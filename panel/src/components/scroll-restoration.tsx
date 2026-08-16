@@ -1,0 +1,95 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useScrollRestorationStore } from "@/lib/stores/scroll-restoration-store";
+
+// Params that reflect UI-only state (e.g. tasks/page.tsx row expand/collapse)
+// rather than a distinct "page" a user navigated to — excluded from the
+// route key so toggling them doesn't fork/reset the saved scroll position.
+const UI_ONLY_PARAMS = ["expanded"];
+
+// Exported for a cheap direct unit test — no need to render the component
+// or mock next/navigation/zustand just to check param filtering.
+export function buildRouteKey(pathname: string, searchParams: URLSearchParams) {
+  const filtered = new URLSearchParams(searchParams);
+  UI_ONLY_PARAMS.forEach((param) => filtered.delete(param));
+  return `${pathname}?${filtered.toString()}`;
+}
+
+/**
+ * Global scroll restoration component.
+ * Add this to the layout to automatically save/restore scroll positions.
+ * Works with the parent scrollable container (the <main> element).
+ */
+export function ScrollRestoration() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { setScrollPosition, getScrollPosition, setLastVisited } =
+    useScrollRestorationStore();
+  const hasRestored = useRef(false);
+  const prevRouteKey = useRef<string>("");
+
+  const routeKey = buildRouteKey(pathname, searchParams);
+
+  // Track last visited route per section
+  useEffect(() => {
+    const section = pathname.split("/")[1] || "home";
+    setLastVisited(section, routeKey);
+  }, [pathname, routeKey, setLastVisited]);
+
+  // Find the scrollable main container
+  useEffect(() => {
+    // The main element is the parent with overflow-auto
+    const mainElement = document.querySelector("main");
+    if (!mainElement) return;
+
+    // Reset restoration flag when route changes
+    if (prevRouteKey.current !== routeKey) {
+      hasRestored.current = false;
+      prevRouteKey.current = routeKey;
+    }
+
+    const saveScroll = () => {
+      setScrollPosition(routeKey, {
+        x: mainElement.scrollLeft,
+        y: mainElement.scrollTop,
+      });
+    };
+
+    // Save on scroll (debounced)
+    let timeout: NodeJS.Timeout;
+    const handleScroll = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(saveScroll, 150);
+    };
+
+    mainElement.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Restore scroll position
+    if (!hasRestored.current) {
+      const savedPosition = getScrollPosition(routeKey);
+      if (savedPosition && savedPosition.y > 0) {
+        requestAnimationFrame(() => {
+          mainElement.scrollTo({
+            top: savedPosition.y,
+            left: savedPosition.x,
+            behavior: "instant",
+          });
+          hasRestored.current = true;
+        });
+      } else {
+        // Scroll to top for new routes
+        mainElement.scrollTo({ top: 0, behavior: "instant" });
+        hasRestored.current = true;
+      }
+    }
+
+    return () => {
+      clearTimeout(timeout);
+      mainElement.removeEventListener("scroll", handleScroll);
+    };
+  }, [routeKey, setScrollPosition, getScrollPosition]);
+
+  return null;
+}

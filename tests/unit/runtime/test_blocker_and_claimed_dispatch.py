@@ -1,0 +1,506 @@
+"""Dispatch routing for blocked tasks (#17) and agentless claims (#19).
+
+#17: a blocked task reassigned to Main PM must dispatch THAT assignee to
+unblock it, not the ex-assignee cell PM — the pre-unblock note is assignee-only
+and the ex-assignee got not_authorized, livelocking the respawn.
+
+#19: a task left claimed/in_progress with an assignee but no running container
+is invisibly stuck (only PENDING tasks get fresh dispatch). The orchestrator
+must (re)spawn the assignee after a short grace window, or release the claim to
+pending when the assignee is unknown.
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
+from roboco.models.runtime import AgentInstance
+from roboco.runtime.orchestrator import AgentOrchestrator, AgentState
+from roboco.seeds.initial_data import AGENT_UUIDS
+
+
+def _orch() -> AgentOrchestrator:
+    orch = object.__new__(AgentOrchestrator)
+    orch._instances = {}
+    return orch
+
+
+def _active_instance(agent_id: str) -> AgentInstance:
+    return AgentInstance(agent_id=agent_id, state=AgentState.ACTIVE)
+
+
+# ---------------------------------------------------------------------------
+# _blocker_resolver_slug (#17)
+# ---------------------------------------------------------------------------
+
+
+def test_blocked_task_assigned_to_main_pm_dispatches_main_pm() -> None:
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "team": "backend",
+        "assigned_to": AGENT_UUIDS["main-pm"],
+    }
+    # The current assignee (Main PM) holds unblock authority — dispatch THEM,
+    # not the ex-assignee cell PM (be-pm), which would loop on not_authorized.
+    assert orch._blocker_resolver_slug(task) == "main-pm"
+
+
+def test_blocked_task_assigned_to_board_is_not_dispatched() -> None:
+    # A board/advisory role (product-owner / head-marketing) has NO unblock
+    # verb — dispatching it to resolve a blocker is a futile catch-22 (it can
+    # only notify/triage, so it spam-notifies the CEO and respawns forever).
+    # The resolver must be None so the blocker dispatch SKIPS it; the task is
+    # mis-owned and must be re-routed / surfaced to the CEO out-of-band.
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "team": "backend",
+        "assigned_to": AGENT_UUIDS["product-owner"],
+    }
+    assert orch._blocker_resolver_slug(task) is None
+
+
+def test_blocked_task_assigned_to_head_marketing_is_not_dispatched() -> None:
+    # Same catch-22 guard for the other board role.
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "team": "backend",
+        "assigned_to": AGENT_UUIDS["head-marketing"],
+    }
+    assert orch._blocker_resolver_slug(task) is None
+
+
+def test_blocked_task_held_by_dev_falls_back_to_cell_pm() -> None:
+    orch = _orch()
+    # A dev raised i_am_blocked and still holds the task → cell PM resolves.
+    task: dict[str, Any] = {
+        "id": "t1",
+        "team": "backend",
+        "assigned_to": AGENT_UUIDS["be-dev-1"],
+    }
+    assert orch._blocker_resolver_slug(task) == "be-pm"
+
+
+def test_blocked_task_unassigned_falls_back_to_cell_pm() -> None:
+    orch = _orch()
+    task: dict[str, Any] = {"id": "t1", "team": "frontend", "assigned_to": None}
+    assert orch._blocker_resolver_slug(task) == "fe-pm"
+
+
+def test_blocked_task_non_cell_team_unassigned_is_unroutable() -> None:
+    orch = _orch()
+    task: dict[str, Any] = {"id": "t1", "team": "board", "assigned_to": None}
+    assert orch._blocker_resolver_slug(task) is None
+
+
+# ---------------------------------------------------------------------------
+# _dispatch_blocker_work — wire-shaped HITL skip. `_fetch_tasks` hands this
+# dispatcher plain dicts decoded straight from GET /tasks JSON — this pins
+# that shape (blocker_resolver_type as the lowercase enum-value string
+# TaskResponse now serializes) rather than an in-process TaskTable/enum.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_dispatch_blocker_work_skips_wire_shaped_hitl_blocked_task(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "blocked",
+        "blocker_resolver_type": "human",
+        "team": "backend",
+        "assigned_to": AGENT_UUIDS["be-dev-1"],
+    }
+    monkeypatch.setattr(orch, "_fetch_tasks", AsyncMock(return_value=[task]))
+    spawn = AsyncMock()
+    monkeypatch.setattr(orch, "spawn_agent", spawn)
+
+    await orch._dispatch_blocker_work(client=MagicMock())
+
+    spawn.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_blocker_work_spawns_non_hitl_blocked_task(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Control case: an agent-resolvable block (no HITL marker) still
+    dispatches normally — the wire-shaped skip above isn't just refusing
+    every blocked task."""
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "blocked",
+        "blocker_resolver_type": None,
+        "team": "backend",
+        "assigned_to": AGENT_UUIDS["be-pm"],
+    }
+    monkeypatch.setattr(orch, "_fetch_tasks", AsyncMock(return_value=[task]))
+    monkeypatch.setattr(orch, "_is_agent_active", lambda _agent_id: False)
+    monkeypatch.setattr(orch, "_pm_respawn_should_gate", AsyncMock(return_value=False))
+    monkeypatch.setattr(orch, "_build_pm_blocker_prompt", lambda _task: "p")
+    monkeypatch.setattr(orch, "_task_git_context", lambda _task: None)
+    spawn = AsyncMock()
+    monkeypatch.setattr(orch, "spawn_agent", spawn)
+
+    await orch._dispatch_blocker_work(client=MagicMock())
+
+    spawn.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_blocker_work_skips_dependency_held_task(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """2026-07-29: a blocked task waiting on a non-terminal dependency must
+    be skipped BEFORE the respawn gate — spawn_agent's readiness gate was
+    going to refuse anyway, and each refused attempt burned a breaker strike
+    plus, once tripped, a CEO escalation notification."""
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "blocked",
+        "blocker_resolver_type": None,
+        "team": "backend",
+        "assigned_to": AGENT_UUIDS["be-pm"],
+        "dependency_ids": ["d1"],
+    }
+    monkeypatch.setattr(orch, "_fetch_tasks", AsyncMock(return_value=[task]))
+    monkeypatch.setattr(
+        orch,
+        "_check_dependencies_terminal",
+        AsyncMock(return_value="Task t1 waiting on non-terminal dependency d1"),
+    )
+    gate = AsyncMock(return_value=False)
+    monkeypatch.setattr(orch, "_pm_respawn_should_gate", gate)
+    spawn = AsyncMock()
+    monkeypatch.setattr(orch, "spawn_agent", spawn)
+
+    await orch._dispatch_blocker_work(client=MagicMock())
+
+    spawn.assert_not_awaited()
+    gate.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# _claimed_task_needs_agent — claimed-but-no-agent detection
+# ---------------------------------------------------------------------------
+
+_STALE = (datetime.now(UTC) - timedelta(minutes=30)).isoformat()
+
+
+def test_claimed_task_with_no_agent_past_grace_returns_assignee() -> None:
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "claimed",
+        "assigned_to": AGENT_UUIDS["be-dev-1"],
+        "updated_at": _STALE,
+    }
+    assert orch._claimed_task_needs_agent(task) == "be-dev-1"
+
+
+def test_claimed_task_with_active_agent_is_healthy() -> None:
+    orch = _orch()
+    orch._instances["be-dev-1"] = _active_instance("be-dev-1")
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "claimed",
+        "assigned_to": AGENT_UUIDS["be-dev-1"],
+        "updated_at": _STALE,
+    }
+    assert orch._claimed_task_needs_agent(task) is None
+
+
+def test_claimed_task_within_grace_window_is_skipped() -> None:
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "claimed",
+        "assigned_to": AGENT_UUIDS["be-dev-1"],
+        # Compute "fresh" at test time, not module load: the grace check uses
+        # wall-clock now(), so a module-level constant ages out of the window
+        # during a long full-suite run and flakes this assertion.
+        "updated_at": datetime.now(UTC).isoformat(),
+    }
+    # Fresh claim — spawn may still be in flight; do not churn.
+    assert orch._claimed_task_needs_agent(task) is None
+
+
+def test_claimed_task_without_assignee_is_skipped() -> None:
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "claimed",
+        "assigned_to": None,
+        "claimed_by": None,
+        "updated_at": _STALE,
+    }
+    assert orch._claimed_task_needs_agent(task) is None
+
+
+def test_hitl_blocked_claimed_task_is_skipped() -> None:
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "blocked",
+        "blocker_resolver_type": "human",
+        "assigned_to": AGENT_UUIDS["be-dev-1"],
+        "updated_at": _STALE,
+    }
+    assert orch._claimed_task_needs_agent(task) is None
+
+
+def test_claimed_task_assigned_to_ceo_is_not_respawned() -> None:
+    # A claimed/in_progress task whose assignee is the CEO (or any human-only
+    # role) has no container to respawn — the CEO is the human operator. The
+    # resolver must return None so the dispatcher neither spawns a CEO
+    # container NOR releases a human-owned task to pending. Defense-in-depth
+    # for the spawn_agent human-role chokepoint (2026-06-27 CEO-spawn incident).
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "in_progress",
+        "assigned_to": AGENT_UUIDS["ceo"],
+        "updated_at": _STALE,
+    }
+    assert orch._claimed_task_needs_agent(task) is None
+
+
+def test_in_progress_task_with_no_agent_returns_assignee() -> None:
+    orch = _orch()
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "in_progress",
+        "assigned_to": AGENT_UUIDS["fe-dev-2"],
+        "updated_at": _STALE,
+    }
+    assert orch._claimed_task_needs_agent(task) == "fe-dev-2"
+
+
+def test_claimed_task_with_unknown_assignee_returns_slug_for_release() -> None:
+    # A claimed/in_progress task whose assignee is a stale/unknown UUID (no
+    # seeded agent) must reach the release-to-pending path: the human-only guard
+    # returns None for unknown slugs, so the slug falls through and is released.
+    orch = _orch()
+    unknown_uuid = str(uuid4())
+    task: dict[str, Any] = {
+        "id": "t1",
+        "status": "claimed",
+        "assigned_to": unknown_uuid,
+        "updated_at": _STALE,
+    }
+    # Returns the (unknown) slug, NOT None — the release path is reachable.
+    assert orch._claimed_task_needs_agent(task) == unknown_uuid
+
+
+# ---------------------------------------------------------------------------
+# _get_prompt_for_agent — role-appropriate respawn prompt (#19)
+# ---------------------------------------------------------------------------
+#
+# A respawn must hand each role the prompt it can act on. The bug: the PM/board
+# branch fell through to the developer prompt, telling a PM/board agent to write
+# code and call verbs it does not own.
+
+
+def _task(**over: Any) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "id": "t1",
+        "title": "T",
+        "status": "in_progress",
+        "team": "backend",
+    }
+    base.update(over)
+    return base
+
+
+@pytest.mark.parametrize(
+    ("agent_slug", "marker"),
+    [
+        ("be-dev-1", "development task"),
+        ("be-qa", "ready for QA review"),
+        ("be-doc", "ready for documentation"),
+        ("be-pm", "PM for backend team"),
+        ("main-pm", "MAIN PM at RoboCo"),
+        ("product-owner", "You are on the Board"),
+        ("auditor", "AUDIT"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_prompt_for_agent_routes_by_role(
+    agent_slug: str, marker: str
+) -> None:
+    orch = _orch()
+    prompt = await orch._get_prompt_for_agent(agent_slug, _task())
+    assert marker in prompt
+
+
+@pytest.mark.asyncio
+async def test_get_prompt_for_pm_is_not_the_dev_prompt() -> None:
+    # Regression for #19: a respawned PM must NOT receive the developer prompt.
+    orch = _orch()
+    pm_prompt = await orch._get_prompt_for_agent("be-pm", _task())
+    assert "development task" not in pm_prompt
+    assert "You do NOT code" in pm_prompt
+
+
+@pytest.mark.asyncio
+async def test_get_prompt_for_board_is_not_the_dev_prompt() -> None:
+    orch = _orch()
+    board_prompt = await orch._get_prompt_for_agent("product-owner", _task())
+    assert "development task" not in board_prompt
+    assert "do NOT build, code" in board_prompt
+
+
+@pytest.mark.asyncio
+async def test_head_marketing_prompt_is_marketing_on_marketing_team() -> None:
+    orch = _orch()
+    prompt = await orch._get_prompt_for_agent("head-marketing", _task(team="marketing"))
+    assert "marketing task" in prompt
+
+
+@pytest.mark.asyncio
+async def test_head_marketing_prompt_is_board_off_marketing_team() -> None:
+    orch = _orch()
+    prompt = await orch._get_prompt_for_agent("head-marketing", _task(team="backend"))
+    assert "You are on the Board" in prompt
+
+
+# ---------------------------------------------------------------------------
+# _dispatch_claimed_without_agent — one-spawn-per-tick throttle (#19)
+# ---------------------------------------------------------------------------
+#
+# `monkeypatch.setattr` is used to stub instance methods because direct
+# attribute assignment (`orch.spawn_agent = ...`) trips mypy's method-assign
+# check; the fixture is the type-safe, suppression-free way to do it.
+
+
+def _stub_git_context(orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(orch, "_task_git_context", lambda _task: None)
+
+
+@pytest.mark.asyncio
+async def test_dispatch_claimed_without_agent_spawns_at_most_one_per_tick(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    orch = _orch()
+    orch._tick_handled_tasks = set()
+    stale_tasks = [
+        {"id": f"t{i}", "status": "claimed", "assigned_to": AGENT_UUIDS["be-dev-1"]}
+        for i in range(3)
+    ]
+    monkeypatch.setattr(orch, "_fetch_tasks", AsyncMock(return_value=stale_tasks))
+    monkeypatch.setattr(orch, "_claimed_task_needs_agent", lambda _task: "be-dev-1")
+    _stub_git_context(orch, monkeypatch)
+    spawn = AsyncMock()
+    monkeypatch.setattr(orch, "spawn_agent", spawn)
+
+    await orch._dispatch_claimed_without_agent(client=MagicMock())
+
+    # Three agentless claims, but only ONE container spawned this tick.
+    spawn.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_claimed_without_agent_has_no_progress_backoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unlike `_dispatch_blocker_work` (every spawn gated through
+    `_pm_respawn_should_gate`), this dispatcher carries no respawn-loop
+    protection of its own — it unconditionally respawns an agentless
+    claimed/in_progress task every tick past the grace window. This is half
+    of why the escalate_up/unblock oscillation defeats the per-(agent, task)
+    breaker: the resolved side of the cycle (the PM restored to in_progress)
+    has no counter here to ever trip, so the loop's other half never runs out
+    of fuel on its own — only a task-scoped breaker that also covers this
+    path (by moving the task to `blocked` entirely, which this dispatcher
+    doesn't fetch) can stop it.
+    """
+    orch = _orch()
+    task = {
+        "id": "t1",
+        "status": "in_progress",
+        "assigned_to": AGENT_UUIDS["fe-pm"],
+        "updated_at": _STALE,
+    }
+    monkeypatch.setattr(orch, "_fetch_tasks", AsyncMock(return_value=[task]))
+    _stub_git_context(orch, monkeypatch)
+    monkeypatch.setattr(orch, "_get_prompt_for_agent", AsyncMock(return_value="p"))
+    spawn = AsyncMock()
+    monkeypatch.setattr(orch, "spawn_agent", spawn)
+
+    cycles = 10
+    for _ in range(cycles):
+        orch._tick_handled_tasks = set()  # a fresh dispatch tick each cycle
+        await orch._dispatch_claimed_without_agent(client=MagicMock())
+
+    # No cycle was ever refused — zero backoff anywhere in this call path.
+    assert spawn.await_count == cycles
+
+
+@pytest.mark.asyncio
+async def test_dispatch_claimed_without_agent_releases_unknown_without_spending_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The release-to-pending path spawns nothing and must NOT consume the
+    # per-tick spawn budget — it keeps draining stale unknown claims, then
+    # spawns the first task with a known assignee.
+    orch = _orch()
+    orch._tick_handled_tasks = set()
+    tasks = [
+        {"id": "u1", "status": "claimed", "assigned_to": "ghost-uuid"},
+        {"id": "u2", "status": "claimed", "assigned_to": "ghost-uuid"},
+        {"id": "k1", "status": "claimed", "assigned_to": AGENT_UUIDS["be-dev-1"]},
+    ]
+    monkeypatch.setattr(orch, "_fetch_tasks", AsyncMock(return_value=tasks))
+
+    def _needs(task: dict[str, Any]) -> str:
+        return orch._resolve_agent_slug(str(task["assigned_to"]))
+
+    monkeypatch.setattr(orch, "_claimed_task_needs_agent", _needs)
+    _stub_git_context(orch, monkeypatch)
+    release = AsyncMock()
+    monkeypatch.setattr(orch, "_release_claim_to_pending", release)
+    spawn = AsyncMock()
+    monkeypatch.setattr(orch, "spawn_agent", spawn)
+
+    await orch._dispatch_claimed_without_agent(client=MagicMock())
+
+    expected_releases = 2  # both ghost claims released
+    assert release.await_count == expected_releases
+    spawn.assert_awaited_once()  # then one known assignee respawned
+
+
+@pytest.mark.asyncio
+async def test_handle_dev_existing_owner_skips_blocked() -> None:
+    """A blocked task's owner is not respawned — it has no legal move from
+    blocked, so respawning it only churns; it waits for unblock or release."""
+    orch = _orch()
+    respawn_mock = AsyncMock()
+    with (
+        patch.object(orch, "_respawn_dev_if_inactive", new=respawn_mock),
+        patch.object(orch, "_is_agent_active", new=MagicMock(return_value=False)),
+    ):
+        await orch._handle_dev_existing_owner({"id": "t1"}, "blocked", "be-dev-1")
+    respawn_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_handle_dev_existing_owner_respawns_in_progress() -> None:
+    """An in_progress task whose owner is inactive is still respawned."""
+    orch = _orch()
+    respawn_mock = AsyncMock()
+    with (
+        patch.object(orch, "_respawn_dev_if_inactive", new=respawn_mock),
+        patch.object(orch, "_is_agent_active", new=MagicMock(return_value=False)),
+    ):
+        await orch._handle_dev_existing_owner({"id": "t1"}, "in_progress", "be-dev-1")
+    respawn_mock.assert_awaited_once()

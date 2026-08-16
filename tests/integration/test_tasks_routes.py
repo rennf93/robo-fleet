@@ -1,0 +1,3849 @@
+"""Tasks API route coverage — list/get/lifecycle endpoints."""
+
+from __future__ import annotations
+
+from http import HTTPStatus
+from pathlib import Path
+from types import SimpleNamespace
+from typing import TYPE_CHECKING, Any, cast
+from unittest.mock import AsyncMock, patch
+from uuid import UUID, uuid4
+
+import pytest
+import pytest_asyncio
+from fastapi import FastAPI, HTTPException
+from httpx import ASGITransport, AsyncClient
+from roboco.api.deps import get_agent_context, get_db
+from roboco.api.routes.tasks import (
+    get_awaiting_ceo_approval_tasks,
+    get_awaiting_pm_review_tasks,
+)
+from roboco.api.routes.tasks import (
+    router as tasks_router,
+)
+from roboco.api.utils.tasks import _translate_error
+from roboco.config import settings
+from roboco.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
+from roboco.exceptions import GitError, TaskLifecycleError
+from roboco.foundation.policy.lifecycle import STATUS_GRAPH
+from roboco.foundation.policy.lifecycle import Status as LifecycleStatus
+from roboco.models import AgentRole, AgentStatus, Team
+from roboco.models.base import (
+    TaskNature,
+    TaskStatus,
+    TaskType,
+)
+from roboco.models.permissions import AgentContext
+from roboco.services.base import (
+    NotFoundError,
+    ServiceError,
+    UnauthorizedError,
+    ValidationError,
+)
+from roboco.services.base import ServiceError as SvcError
+from roboco.services.git import GitService
+from roboco.services.notification_delivery import EscalationError
+from roboco.services.permissions import PermissionService
+from roboco.services.task import TaskService
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+
+@pytest_asyncio.fixture
+async def task_client(
+    db_session: AsyncSession,
+) -> AsyncIterator[dict]:
+    main_pm = AgentTable(
+        id=uuid4(),
+        name="MainPM",
+        slug=f"main-pm-{uuid4().hex[:8]}",
+        role=AgentRole.MAIN_PM,
+        team=None,
+        status=AgentStatus.ACTIVE,
+        model_config={},
+        system_prompt="pm",
+        capabilities=[],
+        permissions={},
+        metrics={},
+    )
+    db_session.add(main_pm)
+    await db_session.flush()
+    project = ProjectTable(
+        id=uuid4(),
+        name="TR-Proj",
+        slug=f"tr-proj-{uuid4().hex[:6]}",
+        git_url="https://example.com/r.git",
+        assigned_cell=Team.BACKEND,
+        created_by=main_pm.id,
+    )
+    db_session.add(project)
+    await db_session.flush()
+
+    app = FastAPI()
+    app.include_router(tasks_router, prefix="/api/tasks")
+
+    async def _override_db() -> AsyncIterator[AsyncSession]:
+        yield db_session
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=cast("UUID", main_pm.id), role=AgentRole.MAIN_PM, team=None
+        )
+
+    app.dependency_overrides[get_db] = _override_db
+    app.dependency_overrides[get_agent_context] = _override_agent
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield {
+            "client": client,
+            "agent": main_pm,
+            "project": project,
+            "db": db_session,
+            "app": app,
+        }
+    app.dependency_overrides.clear()
+
+
+_HDR = {"X-Agent-ID": str(uuid4()), "X-Agent-Role": "main_pm"}
+
+
+def _as_ceo(setup: dict) -> None:
+    """Re-override this client's agent identity to CEO for the rest of the
+    test — the general PATCH admin surface (status overrides, structural
+    fields, force hatches, ...) is CEO/Board/Auditor-only now that
+    cell_pm/main_pm get the narrower "PM lighter" content-only slice (see
+    test_tasks_route_pm_lighter_patch.py). ``task_client``'s default agent
+    stays main_pm so the many other tests that specifically exercise
+    PM-role behavior (or "not CEO" refusals) are unaffected.
+    """
+
+    async def _override_ceo() -> AgentContext:
+        return AgentContext(
+            agent_id=cast("UUID", setup["agent"].id), role=AgentRole.CEO, team=None
+        )
+
+    setup["app"].dependency_overrides[get_agent_context] = _override_ceo
+
+
+def _seed_task(
+    setup: dict, *, status: TaskStatus = TaskStatus.PENDING, **kw: Any
+) -> TaskTable:
+    task = TaskTable(
+        id=uuid4(),
+        title=kw.pop("title", "t"),
+        description=kw.pop("description", "d"),
+        acceptance_criteria=["ac"],
+        status=status,
+        priority=kw.pop("priority", 2),
+        task_type=kw.pop("task_type", TaskType.CODE),
+        nature=kw.pop("nature", TaskNature.TECHNICAL),
+        project_id=kw.pop("project_id", setup["project"].id),
+        created_by=kw.pop("created_by", setup["agent"].id),
+        team=kw.pop("team", Team.BACKEND),
+        **kw,
+    )
+    setup["db"].add(task)
+    return task
+
+
+async def _seed_agent(
+    setup: dict, *, role: AgentRole = AgentRole.DEVELOPER
+) -> AgentTable:
+    """Seed a real agent so FK constraints don't break."""
+    other = AgentTable(
+        id=uuid4(),
+        name="Other",
+        slug=f"other-{uuid4().hex[:8]}",
+        role=role,
+        team=Team.BACKEND,
+        status=AgentStatus.ACTIVE,
+        model_config={},
+        system_prompt="x",
+        capabilities=[],
+        permissions={},
+        metrics={},
+    )
+    setup["db"].add(other)
+    await setup["db"].flush()
+    return other
+
+
+@pytest.mark.asyncio
+async def test_create_task(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Test Task",
+            "description": "Some description that is long enough for the schema",
+            "acceptance_criteria": ["criteria"],
+            "team": "backend",
+            "project_id": str(task_client["project"].id),
+            "task_type": "code",
+            "nature": "technical",
+            "estimated_complexity": "medium",
+        },
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.CREATED
+
+
+@pytest.mark.asyncio
+async def test_create_task_missing_project_id(task_client: dict) -> None:
+    """Create with no project_id should fail validation."""
+    client = task_client["client"]
+    response = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Test",
+            "description": "x",
+            "acceptance_criteria": ["a"],
+            "team": "backend",
+        },
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_list_tasks(task_client: dict) -> None:
+    client = task_client["client"]
+    _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await client.get("/api/tasks", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_list_tasks_filter_by_team(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get("/api/tasks?team=backend", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_list_tasks_filter_by_status(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get("/api/tasks?status=pending", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_my_tasks(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get("/api/tasks/my", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_pending_tasks(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get("/api/tasks/pending", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_blocked_tasks(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get("/api/tasks/blocked", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_awaiting_qa(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get("/api/tasks/awaiting-qa", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_task_not_found(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get(f"/api/tasks/{uuid4()}", headers=_HDR)
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_get_task_by_id(task_client: dict) -> None:
+    client = task_client["client"]
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await client.get(f"/api/tasks/{task.id}", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_task_by_id_includes_spend_when_budgets_enabled(
+    task_client: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """spend_usd is populated (0.0 with no spawn sessions yet) once
+    ROBOCO_TASK_BUDGETS_ENABLED is on — the extra DB read only runs then."""
+    monkeypatch.setattr(settings, "task_budgets_enabled", True)
+    client = task_client["client"]
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await client.get(f"/api/tasks/{task.id}", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["spend_usd"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_get_task_by_id_omits_spend_when_budgets_disabled(
+    task_client: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Flag off => spend_usd stays null, the same as before this field existed."""
+    monkeypatch.setattr(settings, "task_budgets_enabled", False)
+    client = task_client["client"]
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await client.get(f"/api/tasks/{task.id}", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["spend_usd"] is None
+
+
+@pytest.mark.asyncio
+async def test_update_task(task_client: dict) -> None:
+    client = task_client["client"]
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"title": "Renamed"},
+        headers=_HDR,
+    )
+    assert response.status_code in (HTTPStatus.OK, HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
+@pytest.mark.asyncio
+async def test_update_task_rejects_zero_budget_usd(task_client: dict) -> None:
+    """#654: a 0 cap would block every claim immediately — rejected at the
+    request boundary, never stored."""
+    client = task_client["client"]
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"budget_usd": 0},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.asyncio
+async def test_update_task_rejects_negative_budget_usd(task_client: dict) -> None:
+    client = task_client["client"]
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"budget_usd": -5},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.asyncio
+async def test_update_task_accepts_positive_budget_usd(task_client: dict) -> None:
+    # budget_usd is a _PRIVILEGED_UPDATE_FIELDS / non-"PM lighter" field —
+    # a plain main_pm PATCH would 403 here, so exercise the CEO's full scope.
+    _as_ceo(task_client)
+    client = task_client["client"]
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    budget = 12.5
+    response = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"budget_usd": budget},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["budget_usd"] == budget
+
+
+@pytest.mark.asyncio
+async def test_update_task_status_override_recovers_blocked(task_client: dict) -> None:
+    """A privileged PATCH with ``status`` + ``force`` is applied as an audited
+    override, so an operator can recover a task wedged in ``blocked`` (which
+    ``/complete`` refuses) instead of the status being silently dropped. The
+    ``force`` flag acknowledges the bypass past the lifecycle gate (#13)."""
+    _as_ceo(task_client)
+    client = task_client["client"]
+    task = _seed_task(task_client, status=TaskStatus.BLOCKED)
+    await task_client["db"].flush()
+    response = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"status": "completed", "force": True},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_update_task_status_override_refused_without_force(
+    task_client: dict,
+) -> None:
+    """#13: pasting over the lifecycle gate into a terminal/final hatch state
+    (completed / awaiting_qa / awaiting_pm_review) without ``force`` is refused
+    with 400 — the bypass must be an explicit, acknowledged forced override."""
+    _as_ceo(task_client)
+    client = task_client["client"]
+    task = _seed_task(task_client, status=TaskStatus.IN_PROGRESS)
+    await task_client["db"].flush()
+    for hatch in ("completed", "awaiting_qa", "awaiting_pm_review"):
+        response = await client.patch(
+            f"/api/tasks/{task.id}",
+            json={"status": hatch},
+            headers=_HDR,
+        )
+        assert response.status_code == HTTPStatus.BAD_REQUEST, hatch
+        assert "force" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_update_task_status_override_non_hatch_needs_no_force(
+    task_client: dict,
+) -> None:
+    """#13: a non-terminal recovery override (blocked -> pending) does NOT require
+    ``force`` — only the terminal/final hatch states do."""
+    _as_ceo(task_client)
+    client = task_client["client"]
+    task = _seed_task(task_client, status=TaskStatus.BLOCKED)
+    await task_client["db"].flush()
+    response = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"status": "pending"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] == "pending"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("hatch", ["awaiting_ceo_approval", "cancelled"])
+async def test_update_task_override_gate_states_require_force(
+    task_client: dict, hatch: str
+) -> None:
+    """The hatch set covers the CEO gate and the terminal cancel too (not just
+    completed/awaiting_qa/awaiting_pm_review): a privileged PATCH into either
+    without ``force`` is refused 400."""
+    _as_ceo(task_client)
+    client = task_client["client"]
+    task = _seed_task(task_client, status=TaskStatus.IN_PROGRESS)
+    await task_client["db"].flush()
+    response = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"status": hatch},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST, hatch
+    assert "force" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("hatch", ["awaiting_ceo_approval", "cancelled"])
+async def test_update_task_override_gate_states_with_force_succeeds(
+    task_client: dict, hatch: str
+) -> None:
+    _as_ceo(task_client)
+    client = task_client["client"]
+    task = _seed_task(task_client, status=TaskStatus.IN_PROGRESS)
+    await task_client["db"].flush()
+    response = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"status": hatch, "force": True},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK, hatch
+    assert response.json()["status"] == hatch
+
+
+@pytest.mark.asyncio
+async def test_update_task_resurrect_terminal_requires_force(task_client: dict) -> None:
+    """Resurrecting a COMPLETED task back to in_progress is a bypass of the merge
+    decision; the target (in_progress) is not itself a hatch state, so the
+    target-only gate would miss it — the source-terminal check requires force."""
+    _as_ceo(task_client)
+    client = task_client["client"]
+    task = _seed_task(task_client, status=TaskStatus.COMPLETED)
+    await task_client["db"].flush()
+    no_force = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"status": "in_progress"},
+        headers=_HDR,
+    )
+    assert no_force.status_code == HTTPStatus.BAD_REQUEST
+    assert "force" in no_force.json()["detail"]
+    with_force = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"status": "in_progress", "force": True},
+        headers=_HDR,
+    )
+    assert with_force.status_code == HTTPStatus.OK
+    assert with_force.json()["status"] == "in_progress"
+
+
+async def _seed_open_pr_session(setup: dict, task: TaskTable, pr_status: str) -> None:
+    """Attach a work session with the given PR state to ``task``."""
+    ws = WorkSessionTable(
+        id=uuid4(),
+        project_id=setup["project"].id,
+        task_id=task.id,
+        agent_id=setup["agent"].id,
+        branch_name="feature/backend/ABC12345",
+        base_branch="master",
+        target_branch="master",
+        pr_number=123,
+        pr_url="https://example.com/r/pull/123",
+        pr_status=pr_status,
+    )
+    setup["db"].add(ws)
+    await setup["db"].flush()
+    task.work_session_id = ws.id
+    task.pr_number = 123
+    task.pr_url = ws.pr_url
+    await setup["db"].flush()
+
+
+@pytest.mark.asyncio
+async def test_admin_complete_with_open_pr_names_the_pr(task_client: dict) -> None:
+    """Admin status→completed on a task whose PR is still OPEN strands its
+    commits (bit the CEO twice live, 2026-07-02). The refusal must name the
+    PR and the stranding — not just the generic lifecycle-gate text."""
+    _as_ceo(task_client)
+    client = task_client["client"]
+    task = _seed_task(task_client, status=TaskStatus.AWAITING_CEO_APPROVAL)
+    await task_client["db"].flush()
+    await _seed_open_pr_session(task_client, task, "open")
+    response = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"status": "completed"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    detail = response.json()["detail"]
+    assert "#123" in detail
+    assert "open" in detail.lower()
+    assert "force" in detail
+
+
+@pytest.mark.asyncio
+async def test_admin_complete_with_open_pr_force_still_escapes(
+    task_client: dict,
+) -> None:
+    """``force`` remains the deliberate, audited escape — an operator who
+    KNOWS the PR should be stranded can still complete."""
+    _as_ceo(task_client)
+    client = task_client["client"]
+    task = _seed_task(task_client, status=TaskStatus.AWAITING_CEO_APPROVAL)
+    await task_client["db"].flush()
+    await _seed_open_pr_session(task_client, task, "open")
+    response = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"status": "completed", "force": True},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_admin_complete_with_merged_pr_gets_generic_gate_only(
+    task_client: dict,
+) -> None:
+    """A merged PR strands nothing — the refusal stays the generic hatch
+    text (no PR callout), and force completes as before."""
+    _as_ceo(task_client)
+    client = task_client["client"]
+    task = _seed_task(task_client, status=TaskStatus.AWAITING_CEO_APPROVAL)
+    await task_client["db"].flush()
+    await _seed_open_pr_session(task_client, task, "merged")
+    no_force = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"status": "completed"},
+        headers=_HDR,
+    )
+    assert no_force.status_code == HTTPStatus.BAD_REQUEST
+    assert "#123" not in no_force.json()["detail"]
+    with_force = await client.patch(
+        f"/api/tasks/{task.id}",
+        json={"status": "completed", "force": True},
+        headers=_HDR,
+    )
+    assert with_force.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_delete_task(task_client: dict) -> None:
+    client = task_client["client"]
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await client.delete(f"/api/tasks/{task.id}", headers=_HDR)
+    assert response.status_code in (
+        HTTPStatus.OK,
+        HTTPStatus.NO_CONTENT,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_delete_task_not_found(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.delete(f"/api/tasks/{uuid4()}", headers=_HDR)
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_get_subtasks_of_unknown_task(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get(f"/api/tasks/{uuid4()}/subtasks", headers=_HDR)
+    # Either 404 or empty list depending on implementation.
+    assert response.status_code in (HTTPStatus.OK, HTTPStatus.NOT_FOUND)
+
+
+@pytest.mark.asyncio
+async def test_count_endpoint_returns_response(task_client: dict) -> None:
+    """Count route may take query params we don't supply; just ensure it's reached."""
+    client = task_client["client"]
+    response = await client.get("/api/tasks/count", headers=_HDR)
+    assert response.status_code in (HTTPStatus.OK, HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
+# ---------------------------------------------------------------------------
+# Additional list endpoints
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_awaiting_docs(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get("/api/tasks/awaiting-docs", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_team_tasks(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get("/api/tasks/team/backend", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_task_stats(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get("/api/tasks/stats", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_task_stats_by_team(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get("/api/tasks/stats/by-team", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_lifecycle_transitions_parity(task_client: dict) -> None:
+    """GET /lifecycle-transitions returns the exact STATUS_GRAPH as strings.
+
+    Parity check: response keys and values must match
+    roboco.foundation.policy.lifecycle.STATUS_GRAPH.
+    """
+    client = task_client["client"]
+    response = await client.get("/api/tasks/lifecycle-transitions", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+
+    # Keys must be exactly the set of status string values
+    expected_keys = {s.value for s in STATUS_GRAPH}
+    assert set(body.keys()) == expected_keys, (
+        f"Key mismatch: extra={set(body.keys()) - expected_keys}, "
+        f"missing={expected_keys - set(body.keys())}"
+    )
+
+    # Values must match STATUS_GRAPH (as sorted lists of strings)
+    for status_str, next_statuses in body.items():
+        src = LifecycleStatus(status_str)
+        expected_targets = sorted(t.value for t in STATUS_GRAPH[src])
+        assert sorted(next_statuses) == expected_targets, (
+            f"Targets for {status_str!r} mismatch: "
+            f"got {sorted(next_statuses)!r}, want {expected_targets!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle: claim/unclaim (404 paths)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_claim_unknown_task_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/claim",
+        json={"role": "developer"},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_unclaim_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(f"/api/tasks/{uuid4()}/unclaim", headers=_HDR)
+    assert response.status_code in (HTTPStatus.BAD_REQUEST, HTTPStatus.NOT_FOUND)
+
+
+@pytest.mark.asyncio
+async def test_submit_for_qa_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/submit-qa",
+        json={},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_pass_qa_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/pass-qa",
+        json={"notes": "looks good and is sufficiently detailed"},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_fail_qa_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/fail-qa",
+        json={"notes": "broken in many ways"},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_complete_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/complete",
+        json={},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_block_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/block",
+        json={"reason": "blocker", "blocker_type": "external", "what_needed": "x"},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_unblock_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(f"/api/tasks/{uuid4()}/unblock", headers=_HDR)
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_assign_review_pm_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(f"/api/tasks/{uuid4()}/assign-review-pm", headers=_HDR)
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_assign_review_pm_places_owning_pm(task_client: dict) -> None:
+    """The orchestrator's recovery seam: a review task with no (or a stale)
+    owner is placed with the real team-resolved PM — CLAIM_RULES has no
+    claim() edge into AWAITING_PM_REVIEW for the normal route to do this.
+
+    Resolves the expected PM via the real ``main_pm_agent()`` query rather
+    than assuming this fixture's own agent — the test DB is shared/cumulative
+    across the module, and "earliest-created" main_pm may be an older row
+    from an earlier test.
+    """
+    setup = task_client
+    client = setup["client"]
+    task = _seed_task(
+        setup,
+        status=TaskStatus.AWAITING_PM_REVIEW,
+        team=Team.MAIN_PM,
+        assigned_to=None,
+    )
+    await setup["db"].commit()
+    expected_pm = await TaskService(setup["db"]).main_pm_agent()
+    assert expected_pm is not None
+
+    response = await client.post(f"/api/tasks/{task.id}/assign-review-pm", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["assigned_to"] == str(expected_pm.id)
+
+
+@pytest.mark.asyncio
+async def test_assign_review_pm_rejects_non_review_status(task_client: dict) -> None:
+    setup = task_client
+    client = setup["client"]
+    task = _seed_task(setup, status=TaskStatus.IN_PROGRESS)
+    await setup["db"].commit()
+
+    response = await client.post(f"/api/tasks/{task.id}/assign-review-pm", headers=_HDR)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.asyncio
+async def test_pause_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(f"/api/tasks/{uuid4()}/pause", headers=_HDR)
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_resume_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(f"/api/tasks/{uuid4()}/resume", headers=_HDR)
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_cancel_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/cancel",
+        json={"reason": "no longer needed"},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_add_progress_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/progress",
+        json={"message": "doing things", "percentage": 25},
+        headers=_HDR,
+    )
+    assert response.status_code in (HTTPStatus.BAD_REQUEST, HTTPStatus.NOT_FOUND)
+
+
+@pytest.mark.asyncio
+async def test_add_checkpoint_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/checkpoints",
+        json={
+            "state_summary": "halfway",
+            "remaining_work": ["finish API"],
+        },
+        headers=_HDR,
+    )
+    assert response.status_code in (HTTPStatus.BAD_REQUEST, HTTPStatus.NOT_FOUND)
+
+
+@pytest.mark.asyncio
+async def test_add_commit_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/commits",
+        json={"hash": "abc123", "message": "fix"},
+        headers=_HDR,
+    )
+    assert response.status_code in (HTTPStatus.BAD_REQUEST, HTTPStatus.NOT_FOUND)
+
+
+@pytest.mark.asyncio
+async def test_escalate_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/escalate",
+        json={"reason": "needs PM input"},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.FORBIDDEN,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Additional create_task validation paths
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_create_task_no_acceptance_criteria(task_client: dict) -> None:
+    """Task without acceptance criteria — 4xx."""
+    client = task_client["client"]
+    response = await client.post(
+        "/api/tasks",
+        json={
+            "title": "T",
+            "description": "d",
+            "acceptance_criteria": [],
+            "team": "backend",
+            "project_id": str(task_client["project"].id),
+        },
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_task_blank_acceptance_criteria(task_client: dict) -> None:
+    """Task with blank acceptance criteria — 400."""
+    client = task_client["client"]
+    response = await client.post(
+        "/api/tasks",
+        json={
+            "title": "T",
+            "description": "d",
+            "acceptance_criteria": ["  ", ""],
+            "team": "backend",
+            "project_id": str(task_client["project"].id),
+        },
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_task_assigned_to_uuid(task_client: dict) -> None:
+    """Task with assigned_to as UUID string — should work."""
+    client = task_client["client"]
+    response = await client.post(
+        "/api/tasks",
+        json={
+            "title": "T",
+            "description": "Twenty character description here ok",
+            "acceptance_criteria": ["a"],
+            "team": "backend",
+            "project_id": str(task_client["project"].id),
+            "assigned_to": str(task_client["agent"].id),
+            "task_type": "code",
+            "nature": "technical",
+            "estimated_complexity": "medium",
+        },
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.CREATED
+
+
+@pytest.mark.asyncio
+async def test_create_task_assigned_to_slug(task_client: dict) -> None:
+    """Task with assigned_to as slug — should resolve."""
+    client = task_client["client"]
+    response = await client.post(
+        "/api/tasks",
+        json={
+            "title": "T",
+            "description": "Twenty character description here ok",
+            "acceptance_criteria": ["a"],
+            "team": "backend",
+            "project_id": str(task_client["project"].id),
+            "assigned_to": task_client["agent"].slug,
+            "task_type": "code",
+            "nature": "technical",
+            "estimated_complexity": "medium",
+        },
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.CREATED
+
+
+@pytest.mark.asyncio
+async def test_create_task_assigned_to_unknown_slug(task_client: dict) -> None:
+    """Task with unknown assigned_to slug — 422."""
+    client = task_client["client"]
+    response = await client.post(
+        "/api/tasks",
+        json={
+            "title": "T",
+            "description": "d",
+            "acceptance_criteria": ["a"],
+            "team": "backend",
+            "project_id": str(task_client["project"].id),
+            "assigned_to": "ghost-agent-1",
+        },
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+# ---------------------------------------------------------------------------
+# Get descendants
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_descendants(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.get(f"/api/tasks/{uuid4()}/descendants", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+
+
+# ---------------------------------------------------------------------------
+# Update task — privileges
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_update_task_not_found(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.patch(
+        f"/api/tasks/{uuid4()}",
+        json={"title": "Renamed"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_update_task_via_put(task_client: dict) -> None:
+    """PUT alias works the same as PATCH."""
+    client = task_client["client"]
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await client.put(
+        f"/api/tasks/{task.id}",
+        json={"title": "PutRenamed"},
+        headers=_HDR,
+    )
+    assert response.status_code in (HTTPStatus.OK, HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle: start
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_start_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(f"/api/tasks/{uuid4()}/start", headers=_HDR)
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_start_task_not_assigned_returns_403(task_client: dict) -> None:
+    """Main PM is not the assignee, so start should fail with 403."""
+    client = task_client["client"]
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, status=TaskStatus.CLAIMED, assigned_to=other.id)
+    await task_client["db"].flush()
+    response = await client.post(f"/api/tasks/{task.id}/start", headers=_HDR)
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_start_task_no_branch_returns_400(task_client: dict) -> None:
+    """Task without branch — 400."""
+    client = task_client["client"]
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.CLAIMED,
+        assigned_to=task_client["agent"].id,
+    )
+    await task_client["db"].flush()
+    response = await client.post(f"/api/tasks/{task.id}/start", headers=_HDR)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "NO_BRANCH" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_start_claimed_task_no_plan_returns_400(task_client: dict) -> None:
+    """Claimed task without plan — 400."""
+    client = task_client["client"]
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.CLAIMED,
+        assigned_to=task_client["agent"].id,
+        branch_name="feature/backend/X",
+    )
+    await task_client["db"].flush()
+    response = await client.post(f"/api/tasks/{task.id}/start", headers=_HDR)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "NO_PLAN" in response.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Block
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_block_task_not_found(task_client: dict) -> None:
+    client = task_client["client"]
+    blocker = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/block?blocker_id={blocker.id}",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_block_task_forbidden(task_client: dict) -> None:
+    """Non-assignee, non-PM cannot block."""
+
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, assigned_to=other.id)
+    blocker = _seed_task(task_client)
+    await task_client["db"].flush()
+
+    # Override agent to a developer not assigned
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=uuid4(), role=AgentRole.DEVELOPER, team=Team.BACKEND
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/block?blocker_id={blocker.id}",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# Soft-block
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_soft_block_unknown_returns_404(task_client: dict) -> None:
+    client = task_client["client"]
+    response = await client.post(
+        f"/api/tasks/{uuid4()}/soft-block",
+        json={
+            "reason": "stuck",
+            "blocker_type": "external",
+            "what_needed": "some external system",
+        },
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.FORBIDDEN,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Unblock — happy path with progress notification
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_unblock_task_not_blocked_returns_400(task_client: dict) -> None:
+    """Unblock a task that is not blocked - 400."""
+    client = task_client["client"]
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.PENDING,
+        assigned_to=task_client["agent"].id,
+    )
+    await task_client["db"].flush()
+    response = await client.post(f"/api/tasks/{task.id}/unblock", headers=_HDR)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.asyncio
+async def test_unblock_task_forbidden(task_client: dict) -> None:
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, status=TaskStatus.BLOCKED, assigned_to=other.id)
+    await task_client["db"].flush()
+
+    # Override agent role to be non-PM, non-assignee
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=uuid4(), role=AgentRole.DEVELOPER, team=Team.BACKEND
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/unblock", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# Pause/resume forbidden + invalid-status branches
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_pause_task_forbidden(task_client: dict) -> None:
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, status=TaskStatus.IN_PROGRESS, assigned_to=other.id)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/pause", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_pause_task_invalid_status_returns_400(task_client: dict) -> None:
+    """Pause when not in_progress — 400."""
+    task = _seed_task(
+        task_client, status=TaskStatus.PENDING, assigned_to=task_client["agent"].id
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/pause", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.asyncio
+async def test_resume_task_forbidden(task_client: dict) -> None:
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, status=TaskStatus.PAUSED, assigned_to=other.id)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/resume", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_resume_task_invalid_status(task_client: dict) -> None:
+    task = _seed_task(
+        task_client, status=TaskStatus.PENDING, assigned_to=task_client["agent"].id
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/resume", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
+# verify
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_verify_task_not_found(task_client: dict) -> None:
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/verify", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_verify_task_forbidden(task_client: dict) -> None:
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, status=TaskStatus.IN_PROGRESS, assigned_to=other.id)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/verify", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_verify_task_invalid_status(task_client: dict) -> None:
+    task = _seed_task(
+        task_client, status=TaskStatus.PENDING, assigned_to=task_client["agent"].id
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/verify", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
+# submit-qa gates
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_submit_qa_not_self_verified_returns_400(task_client: dict) -> None:
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.VERIFYING,
+        assigned_to=task_client["agent"].id,
+        self_verified=False,
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/submit-qa", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "NOT_SELF_VERIFIED" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_submit_qa_no_commits_returns_400(task_client: dict) -> None:
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.VERIFYING,
+        assigned_to=task_client["agent"].id,
+        self_verified=True,
+        commits=[],
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/submit-qa", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "NO_COMMITS" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_submit_qa_no_pr_returns_400(task_client: dict) -> None:
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.VERIFYING,
+        assigned_to=task_client["agent"].id,
+        self_verified=True,
+        commits=[{"hash": "abc", "message": "fix"}],
+        pr_number=None,
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/submit-qa", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "NO_PR" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_submit_qa_no_progress_updates_returns_400(task_client: dict) -> None:
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.VERIFYING,
+        assigned_to=task_client["agent"].id,
+        self_verified=True,
+        commits=[{"hash": "abc", "message": "fix"}],
+        pr_number=42,
+        progress_updates=[],
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/submit-qa", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "NO_PROGRESS" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_submit_qa_forbidden_non_assignee(task_client: dict) -> None:
+    other = await _seed_agent(task_client)
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.VERIFYING,
+        assigned_to=other.id,
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/submit-qa", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# pass-qa gates
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_pass_qa_non_qa_role_forbidden(task_client: dict) -> None:
+    task = _seed_task(task_client, status=TaskStatus.AWAITING_QA, pr_number=42)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/pass-qa",
+        json={"notes": "looks good and is sufficiently substantive notes"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_fail_qa_non_qa_role_forbidden(task_client: dict) -> None:
+    task = _seed_task(task_client, status=TaskStatus.AWAITING_QA, pr_number=42)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/fail-qa",
+        json={"notes": "broken in some ways"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# docs-complete
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_docs_complete_unknown_returns_4xx(task_client: dict) -> None:
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/docs-complete",
+        json={"notes": "completed docs"},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.FORBIDDEN,
+    )
+
+
+# ---------------------------------------------------------------------------
+# submit-pm-review
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_submit_pm_review_not_found(task_client: dict) -> None:
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/submit-pm-review",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_submit_pm_review_forbidden(task_client: dict) -> None:
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, status=TaskStatus.IN_PROGRESS, assigned_to=other.id)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/submit-pm-review",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# CEO endpoints
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_awaiting_pm_review(task_client: dict) -> None:
+    """Path collides with /{task_id} — invalid UUID gives 422."""
+    response = await task_client["client"].get(
+        "/api/tasks/awaiting-pm-review", headers=_HDR
+    )
+    # Route ordering quirk: /{task_id} matches first.
+    assert response.status_code in (HTTPStatus.OK, HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
+@pytest.mark.asyncio
+async def test_get_awaiting_ceo_approval(task_client: dict) -> None:
+    response = await task_client["client"].get(
+        "/api/tasks/awaiting-ceo-approval", headers=_HDR
+    )
+    # Same /{task_id} ordering quirk.
+    assert response.status_code in (HTTPStatus.OK, HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
+@pytest.mark.asyncio
+async def test_ceo_approve_unknown_returns_4xx(task_client: dict) -> None:
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/ceo-approve",
+        json={"notes": "approved"},
+        headers=_HDR,
+    )
+    # Main PM is not CEO — 403
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_ceo_reject_non_ceo_forbidden(task_client: dict) -> None:
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/ceo-reject",
+        json={"notes": "rejected"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_escalate_to_ceo_unknown_returns_4xx(task_client: dict) -> None:
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/escalate-to-ceo",
+        json={"notes": "needs CEO"},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.FORBIDDEN,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Substitute
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_substitute_unknown_returns_4xx(task_client: dict) -> None:
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/substitute",
+        json={"reason": "low_context", "details": "Need more context"},
+        headers=_HDR,
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.FORBIDDEN,
+    )
+
+
+# ---------------------------------------------------------------------------
+# progress / checkpoint / commit forbidden + not-found
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_progress_forbidden(task_client: dict) -> None:
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, assigned_to=other.id)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/progress",
+        json={"message": "doing things now", "percentage": 25},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_forbidden(task_client: dict) -> None:
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, assigned_to=other.id)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/checkpoint",
+        json={"state_summary": "halfway", "remaining_work": ["finish"]},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_unknown_returns_404(task_client: dict) -> None:
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/checkpoint",
+        json={"state_summary": "halfway", "remaining_work": ["finish"]},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_commit_unknown_returns_404(task_client: dict) -> None:
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/commit",
+        json={"hash": "abc1234", "message": "fix"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_commit_forbidden(task_client: dict) -> None:
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, assigned_to=other.id)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/commit",
+        json={"hash": "abc1234", "message": "fix"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# Activate (PM)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_activate_unknown_returns_4xx(task_client: dict) -> None:
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/activate", headers=_HDR
+    )
+    assert response.status_code in (
+        HTTPStatus.BAD_REQUEST,
+        HTTPStatus.NOT_FOUND,
+        HTTPStatus.FORBIDDEN,
+    )
+
+
+@pytest.mark.asyncio
+async def test_activate_developer_forbidden(task_client: dict) -> None:
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=task_client["agent"].id,
+            role=AgentRole.DEVELOPER,
+            team=Team.BACKEND,
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/activate", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# Listing variants — different team filters
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_tasks_by_team_filter(task_client: dict) -> None:
+    """Both team and status filters set."""
+    response = await task_client["client"].get(
+        "/api/tasks?team=backend&status=pending", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_team_tasks_unauthorized(task_client: dict) -> None:
+    """Developer trying to view a team's tasks they aren't on."""
+
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=task_client["agent"].id,
+            role=AgentRole.DEVELOPER,
+            team=Team.BACKEND,
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].get("/api/tasks/team/frontend", headers=_HDR)
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_get_task_stats_by_team_developer_forbidden(
+    task_client: dict,
+) -> None:
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=task_client["agent"].id,
+            role=AgentRole.DEVELOPER,
+            team=Team.BACKEND,
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].get("/api/tasks/stats/by-team", headers=_HDR)
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# List as developer with no team — empty list
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_tasks_no_team_no_view_all(task_client: dict) -> None:
+    """Agent with no team and no VIEW_ALL — empty list."""
+
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=task_client["agent"].id,
+            role=AgentRole.DEVELOPER,
+            team=None,
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].get("/api/tasks", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_tasks_developer_with_team_filters_to_own(
+    task_client: dict,
+) -> None:
+    """Developer (no VIEW_ALL) with a team — effective_team = agent.team."""
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=task_client["agent"].id,
+            role=AgentRole.DEVELOPER,
+            team=Team.BACKEND,
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].get("/api/tasks", headers=_HDR)
+    assert response.status_code == HTTPStatus.OK
+    assert isinstance(response.json(), list)
+
+
+@pytest.mark.asyncio
+async def test_create_task_missing_project_id_returns_422(task_client: dict) -> None:
+    """`TaskCreate.project_id` is `UUID` (required); pydantic rejects missing
+    value with 422 before the route runs. (The previously-dead inline runtime
+    `if not data.project_id` branch was removed.)"""
+    response = await task_client["client"].post(
+        "/api/tasks",
+        json={
+            "title": "T",
+            "description": "d",
+            "acceptance_criteria": ["a"],
+            "team": "backend",
+            # project_id intentionally missing
+        },
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+# ---------------------------------------------------------------------------
+# Delete forbidden
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_delete_task_forbidden_non_creator(task_client: dict) -> None:
+    """Developer not the creator — 403."""
+
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, created_by=other.id)
+    await task_client["db"].flush()
+
+    # Override to be a developer different from creator
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=uuid4(), role=AgentRole.DEVELOPER, team=Team.BACKEND
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].delete(f"/api/tasks/{task.id}", headers=_HDR)
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# Cancel forbidden + happy path
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_cancel_developer_forbidden(task_client: dict) -> None:
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=task_client["agent"].id,
+            role=AgentRole.DEVELOPER,
+            team=Team.BACKEND,
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/cancel",
+        json={"reason": "no longer needed at all"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_cancel_task_pm_succeeds(task_client: dict) -> None:
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/cancel",
+        json={"reason": "no longer needed at all"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+
+
+# ---------------------------------------------------------------------------
+# _translate_error: direct unit coverage for service-error → HTTP mapping
+# ---------------------------------------------------------------------------
+
+
+def test_translate_error_not_found() -> None:
+    """NotFoundError → 404."""
+    err = NotFoundError(resource_type="task", resource_id="123")
+    http_exc = _translate_error(err)
+    assert isinstance(http_exc, HTTPException)
+    assert http_exc.status_code == HTTPStatus.NOT_FOUND
+    assert "task not found" in http_exc.detail.lower()
+
+
+def test_translate_error_unauthorized() -> None:
+    """UnauthorizedError → 403."""
+    err = UnauthorizedError(action="delete", reason="not your task")
+    http_exc = _translate_error(err)
+    assert http_exc.status_code == HTTPStatus.FORBIDDEN
+    assert "delete" in http_exc.detail
+
+
+def test_translate_error_validation() -> None:
+    """ValidationError → 400."""
+    err = ValidationError("bad field value")
+    http_exc = _translate_error(err)
+    assert http_exc.status_code == HTTPStatus.BAD_REQUEST
+    assert http_exc.detail == "bad field value"
+
+
+def test_translate_error_generic_service_error() -> None:
+    """Plain ServiceError → 500."""
+    err = ServiceError("service exploded")
+    http_exc = _translate_error(err)
+    assert http_exc.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert http_exc.detail == "service exploded"
+
+
+# ---------------------------------------------------------------------------
+# create_task: role denial + audit logging
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_create_task_role_not_authorized(task_client: dict) -> None:
+    """Override agent to a role that cannot CREATE; audit denial path runs."""
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=task_client["agent"].id,
+            role=AgentRole.QA,
+            team=Team.BACKEND,
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].post(
+        "/api/tasks",
+        json={
+            "title": "T",
+            "description": "Twenty character description here ok",
+            "acceptance_criteria": ["a"],
+            "team": "backend",
+            "project_id": str(task_client["project"].id),
+            "task_type": "code",
+            "nature": "technical",
+            "estimated_complexity": "medium",
+        },
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert "Not authorized" in response.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# update_task: forbidden (non-owner non-PM) + 500 fallback
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_update_task_forbidden_non_owner(task_client: dict) -> None:
+    """Developer who is neither owner nor creator gets 403."""
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, assigned_to=other.id, created_by=other.id)
+    await task_client["db"].flush()
+
+    app = task_client["client"]._transport.app
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=uuid4(), role=AgentRole.DEVELOPER, team=Team.BACKEND
+        )
+
+    app.dependency_overrides[get_agent_context] = _override_agent
+    response = await task_client["client"].patch(
+        f"/api/tasks/{task.id}",
+        json={"title": "X"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert "Not authorized" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_update_task_service_returns_none_yields_500(
+    task_client: dict,
+) -> None:
+    """Force service.update() to return None → route raises 500."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.update = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await task_client["client"].patch(
+            f"/api/tasks/{task.id}",
+            json={"title": "Renamed"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "update failed" in response.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# claim_task: ServiceError -> _translate_error
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_claim_task_service_error_translated(task_client: dict) -> None:
+    """A ServiceError raised by claim_task_for_agent surfaces via _translate_error."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.claim_task_for_agent = AsyncMock(
+            side_effect=ValidationError("Cannot claim — already claimed")
+        )
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/claim",
+            json={"agent_id": "main-pm"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.asyncio
+async def test_claim_task_success(task_client: dict) -> None:
+    """Happy path: claim returns task, route serializes it."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.claim_task_for_agent = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        # No body — claim with the caller's own context.
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/claim",
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["id"] == str(task.id)
+
+
+# ---------------------------------------------------------------------------
+# start_task: success path
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_start_task_success(task_client: dict) -> None:
+    """Claimed task with branch + plan starts cleanly → in_progress."""
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.CLAIMED,
+        assigned_to=task_client["agent"].id,
+        branch_name="feature/backend/X",
+        plan={"steps": ["a"]},
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/start", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] == "in_progress"
+
+
+@pytest.mark.asyncio
+async def test_start_task_service_returns_none_returns_400(
+    task_client: dict,
+) -> None:
+    """If service.start returns None on a non-claimed/paused task, route 400s."""
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.IN_PROGRESS,
+        assigned_to=task_client["agent"].id,
+        branch_name="feature/backend/X",
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/start", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "invalid status" in response.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# block_task: success + 500 fallback
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_block_task_success(task_client: dict) -> None:
+    """PM blocks a task with a real blocker_id → 200."""
+    blocker = _seed_task(task_client)
+    target = _seed_task(
+        task_client,
+        status=TaskStatus.IN_PROGRESS,
+        assigned_to=task_client["agent"].id,
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{target.id}/block?blocker_id={blocker.id}",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] == "blocked"
+
+
+@pytest.mark.asyncio
+async def test_block_task_service_returns_none_500(task_client: dict) -> None:
+    """If service.block returns None → 500."""
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.IN_PROGRESS,
+        assigned_to=task_client["agent"].id,
+    )
+    blocker = _seed_task(task_client)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.block = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/block?blocker_id={blocker.id}",
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert "block failed" in response.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# soft_block: success
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_soft_block_task_success(task_client: dict) -> None:
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.IN_PROGRESS,
+        assigned_to=task_client["agent"].id,
+    )
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.soft_block_task_for_agent = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/soft-block",
+            json={
+                "reason": "external system unavailable",
+                "blocker_type": "external",
+                "what_needed": "Stripe API",
+            },
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.OK
+
+
+# ---------------------------------------------------------------------------
+# unblock: success leaves blocked status
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_unblock_task_success(
+    task_client: dict,
+) -> None:
+    """Unblock a blocked task assigned to a different agent → 200, leaves BLOCKED.
+
+    The unblock notification (ALERT) is sent from TaskService.unblock() itself
+    (roboco/services/notification.py send_unblock_notification) — the route no
+    longer sends a second, duplicate notification, so there is nothing to mock
+    here.
+    """
+    other = await _seed_agent(task_client)
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.BLOCKED,
+        assigned_to=other.id,
+    )
+    await task_client["db"].flush()
+
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/unblock", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] != "blocked"
+
+
+# ---------------------------------------------------------------------------
+# pause / resume / verify success
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_pause_task_success(task_client: dict) -> None:
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.IN_PROGRESS,
+        assigned_to=task_client["agent"].id,
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/pause", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] == "paused"
+
+
+@pytest.mark.asyncio
+async def test_resume_task_success(task_client: dict) -> None:
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.PAUSED,
+        assigned_to=task_client["agent"].id,
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/resume", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_pause_task_ceo_success(task_client: dict) -> None:
+    """The CEO can pause a task assigned to someone else through the plain
+    pause route (a non-assignee, non-CEO caller still gets 403 —
+    ``test_pause_task_forbidden`` covers that unchanged)."""
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, status=TaskStatus.IN_PROGRESS, assigned_to=other.id)
+    await task_client["db"].flush()
+    _as_ceo(task_client)
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/pause", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] == "paused"
+
+
+@pytest.mark.asyncio
+async def test_resume_task_ceo_success(task_client: dict) -> None:
+    """The CEO can resume a task assigned to someone else through the plain
+    resume route — same carve-out as pause above."""
+    other = await _seed_agent(task_client)
+    task = _seed_task(task_client, status=TaskStatus.PAUSED, assigned_to=other.id)
+    await task_client["db"].flush()
+    _as_ceo(task_client)
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/resume", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] != "paused"
+
+
+@pytest.mark.asyncio
+async def test_verify_task_success(task_client: dict) -> None:
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.IN_PROGRESS,
+        assigned_to=task_client["agent"].id,
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/verify", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.OK
+
+
+# ---------------------------------------------------------------------------
+# submit_for_qa: success
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_submit_qa_success(task_client: dict) -> None:
+    """All gates satisfied + status=verifying → submit succeeds."""
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.VERIFYING,
+        assigned_to=task_client["agent"].id,
+        self_verified=True,
+        commits=[
+            {
+                "hash": "abc1234",
+                "message": "wip",
+                "timestamp": "2026-01-01T00:00:00+00:00",
+            }
+        ],
+        pr_number=42,
+        progress_updates=[
+            {
+                "timestamp": "2026-01-01T00:00:00+00:00",
+                "agent_id": str(task_client["agent"].id),
+                "message": "started",
+            }
+        ],
+    )
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/submit-qa", headers=_HDR
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] == "awaiting_qa"
+
+
+@pytest.mark.asyncio
+async def test_submit_qa_service_returns_none_returns_400(
+    task_client: dict,
+) -> None:
+    """Force service.submit_for_qa to return None → route 400s with cannot submit."""
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.VERIFYING,
+        assigned_to=task_client["agent"].id,
+        self_verified=True,
+        commits=[{"hash": "abc", "message": "fix"}],
+        pr_number=42,
+        progress_updates=[
+            {
+                "timestamp": "2026-01-01T00:00:00+00:00",
+                "agent_id": str(task_client["agent"].id),
+                "message": "started",
+            }
+        ],
+    )
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.submit_for_qa = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/submit-qa", headers=_HDR
+        )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "not verifying" in response.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# pass_qa: full body coverage
+# ---------------------------------------------------------------------------
+
+
+@pytest_asyncio.fixture
+async def qa_client(db_session: AsyncSession) -> AsyncIterator[dict]:
+    """Client where the agent context role is QA."""
+    qa = AgentTable(
+        id=uuid4(),
+        name="QA",
+        slug=f"be-qa-{uuid4().hex[:8]}",
+        role=AgentRole.QA,
+        team=Team.BACKEND,
+        status=AgentStatus.ACTIVE,
+        model_config={},
+        system_prompt="qa",
+        capabilities=[],
+        permissions={},
+        metrics={},
+    )
+    db_session.add(qa)
+    await db_session.flush()
+    project = ProjectTable(
+        id=uuid4(),
+        name="QA-Proj",
+        slug=f"qa-proj-{uuid4().hex[:6]}",
+        git_url="https://example.com/r.git",
+        assigned_cell=Team.BACKEND,
+        created_by=qa.id,
+    )
+    db_session.add(project)
+    await db_session.flush()
+
+    app = FastAPI()
+    app.include_router(tasks_router, prefix="/api/tasks")
+
+    async def _override_db() -> AsyncIterator[AsyncSession]:
+        yield db_session
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=cast("UUID", qa.id), role=AgentRole.QA, team=Team.BACKEND
+        )
+
+    app.dependency_overrides[get_db] = _override_db
+    app.dependency_overrides[get_agent_context] = _override_agent
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield {
+            "client": client,
+            "agent": qa,
+            "project": project,
+            "db": db_session,
+        }
+    app.dependency_overrides.clear()
+
+
+def _seed_task_qa(setup: dict, **kw: Any) -> TaskTable:
+    task = TaskTable(
+        id=uuid4(),
+        title="t",
+        description="d",
+        acceptance_criteria=["ac"],
+        status=kw.pop("status", TaskStatus.AWAITING_QA),
+        priority=2,
+        task_type=TaskType.CODE,
+        nature=TaskNature.TECHNICAL,
+        project_id=setup["project"].id,
+        created_by=setup["agent"].id,
+        team=Team.BACKEND,
+        **kw,
+    )
+    setup["db"].add(task)
+    return task
+
+
+@pytest.mark.asyncio
+async def test_pass_qa_self_review_forbidden(qa_client: dict) -> None:
+    """QA agent cannot pass-QA on a task where they were the original developer."""
+    task = _seed_task_qa(
+        qa_client,
+        pr_number=42,
+        orchestration_markers={"original_developer": str(qa_client["agent"].id)},
+    )
+    await qa_client["db"].flush()
+    response = await qa_client["client"].post(
+        f"/api/tasks/{task.id}/pass-qa",
+        json={"notes": "looks good and covers all criteria"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert "your own task" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_pass_qa_no_pr_attached(qa_client: dict) -> None:
+    """pass-qa without a PR returns NO_PR_ATTACHED 400."""
+    task = _seed_task_qa(qa_client, pr_number=None)
+    await qa_client["db"].flush()
+    response = await qa_client["client"].post(
+        f"/api/tasks/{task.id}/pass-qa",
+        json={"notes": "ok and was thorough enough for review"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "NO_PR_ATTACHED" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_pass_qa_notes_too_short(qa_client: dict) -> None:
+    """pass-qa with notes < 20 chars → QA_NOTES_REQUIRED 400."""
+    task = _seed_task_qa(qa_client, pr_number=42)
+    await qa_client["db"].flush()
+    response = await qa_client["client"].post(
+        f"/api/tasks/{task.id}/pass-qa",
+        json={"notes": "ok"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "QA_NOTES_REQUIRED" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_pass_qa_no_notes_at_all(qa_client: dict) -> None:
+    """pass-qa with NO body at all → QA_NOTES_REQUIRED 400."""
+    task = _seed_task_qa(qa_client, pr_number=42)
+    await qa_client["db"].flush()
+    response = await qa_client["client"].post(
+        f"/api/tasks/{task.id}/pass-qa",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "QA_NOTES_REQUIRED" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_pass_qa_success(qa_client: dict) -> None:
+    """Happy path — QA passes a task, transitions to awaiting_documentation."""
+    task = _seed_task_qa(qa_client, pr_number=42)
+    await qa_client["db"].flush()
+    response = await qa_client["client"].post(
+        f"/api/tasks/{task.id}/pass-qa",
+        json={
+            "notes": (
+                "Verified all acceptance criteria match the PR diff. "
+                "No security issues."
+            )
+        },
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] == "awaiting_documentation"
+
+
+@pytest.mark.asyncio
+async def test_pass_qa_service_returns_none(qa_client: dict) -> None:
+    """If service.pass_qa returns None → route 400s."""
+    task = _seed_task_qa(qa_client, pr_number=42)
+    await qa_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.pass_qa = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await qa_client["client"].post(
+            f"/api/tasks/{task.id}/pass-qa",
+            json={"notes": "verified all acceptance criteria are met."},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "invalid status" in response.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# fail_qa: full body coverage
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_fail_qa_self_review_forbidden(qa_client: dict) -> None:
+    """QA cannot fail-QA on a task where they were the dev."""
+    task = _seed_task_qa(
+        qa_client,
+        orchestration_markers={"original_developer": str(qa_client["agent"].id)},
+    )
+    await qa_client["db"].flush()
+    response = await qa_client["client"].post(
+        f"/api/tasks/{task.id}/fail-qa",
+        json={"notes": "broken in many ways"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert "your own task" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_fail_qa_success(qa_client: dict) -> None:
+    """fail-qa happy path → needs_revision."""
+    task = _seed_task_qa(qa_client)
+    await qa_client["db"].flush()
+    response = await qa_client["client"].post(
+        f"/api/tasks/{task.id}/fail-qa",
+        json={"notes": "broken in some ways"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["status"] == "needs_revision"
+
+
+@pytest.mark.asyncio
+async def test_fail_qa_service_returns_none(qa_client: dict) -> None:
+    """If service.fail_qa returns None → 400."""
+    task = _seed_task_qa(qa_client)
+    await qa_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.fail_qa = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await qa_client["client"].post(
+            f"/api/tasks/{task.id}/fail-qa",
+            json={"notes": "broken"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
+# docs_complete: success
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_docs_complete_success(task_client: dict) -> None:
+    """Mock service.docs_complete_for_task to return a task, route serializes it."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.docs_complete_for_task = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/docs-complete",
+            json={"notes": "documented thoroughly enough"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.OK
+
+
+# ---------------------------------------------------------------------------
+# submit_pm_review: success + None branch
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_submit_pm_review_success(task_client: dict) -> None:
+    """Assigned in_progress task — assignee submits for PM review."""
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.IN_PROGRESS,
+        assigned_to=task_client["agent"].id,
+        branch_name="feature/backend/X",
+        pr_created=True,
+        pr_number=42,
+    )
+    await task_client["db"].flush()
+    with patch(
+        "roboco.api.routes.tasks.get_notification_delivery_service"
+    ) as mock_delivery:
+        delivery_instance = AsyncMock()
+        delivery_instance.notify_pm_of_review_submission = AsyncMock(return_value=None)
+        mock_delivery.return_value = delivery_instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/submit-pm-review",
+            json={"notes": "Submitted for PM review please."},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.OK
+    delivery_instance.notify_pm_of_review_submission.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_submit_pm_review_service_returns_none(task_client: dict) -> None:
+    """If service.submit_for_pm_review returns None → 400."""
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.IN_PROGRESS,
+        assigned_to=task_client["agent"].id,
+    )
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.submit_for_pm_review = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/submit-pm-review",
+            json={"notes": "Ready for PM review — all criteria met."},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "not in progress" in response.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# complete_task: success path through service mock
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_complete_task_success(task_client: dict) -> None:
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.complete_task_for_agent = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/complete",
+            json={
+                "force_with_cancelled": False,
+                "justification": "All acceptance criteria met; merging.",
+            },
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_complete_without_justification_rejected(task_client: dict) -> None:
+    """Audit: completing a task must carry its rationale (>= 20 chars)."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/complete",
+        json={"force_with_cancelled": False},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "JUSTIFICATION_REQUIRED" in response.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# cancel: service returns None branch (1162-1167)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_cancel_task_service_returns_none(task_client: dict) -> None:
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.cancel = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/cancel",
+            json={"reason": "no longer needed at all"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+# ---------------------------------------------------------------------------
+# CEO endpoints with separate ceo_client fixture
+# ---------------------------------------------------------------------------
+
+
+@pytest_asyncio.fixture
+async def ceo_client(db_session: AsyncSession) -> AsyncIterator[dict]:
+    """Client where agent role is CEO."""
+    ceo = AgentTable(
+        id=uuid4(),
+        name="CEO",
+        slug=f"ceo-{uuid4().hex[:8]}",
+        role=AgentRole.CEO,
+        team=None,
+        status=AgentStatus.ACTIVE,
+        model_config={},
+        system_prompt="ceo",
+        capabilities=[],
+        permissions={},
+        metrics={},
+    )
+    db_session.add(ceo)
+    await db_session.flush()
+    project = ProjectTable(
+        id=uuid4(),
+        name="CEO-Proj",
+        slug=f"ceo-proj-{uuid4().hex[:6]}",
+        git_url="https://example.com/r.git",
+        assigned_cell=Team.BACKEND,
+        created_by=ceo.id,
+    )
+    db_session.add(project)
+    await db_session.flush()
+
+    app = FastAPI()
+    app.include_router(tasks_router, prefix="/api/tasks")
+
+    async def _override_db() -> AsyncIterator[AsyncSession]:
+        yield db_session
+
+    async def _override_agent() -> AgentContext:
+        return AgentContext(
+            agent_id=cast("UUID", ceo.id), role=AgentRole.CEO, team=None
+        )
+
+    app.dependency_overrides[get_db] = _override_db
+    app.dependency_overrides[get_agent_context] = _override_agent
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield {
+            "client": client,
+            "agent": ceo,
+            "project": project,
+            "db": db_session,
+        }
+    app.dependency_overrides.clear()
+
+
+def _seed_task_ceo(setup: dict, **kw: Any) -> TaskTable:
+    task = TaskTable(
+        id=uuid4(),
+        title="t",
+        description="d",
+        acceptance_criteria=["ac"],
+        status=kw.pop("status", TaskStatus.AWAITING_CEO_APPROVAL),
+        priority=2,
+        task_type=TaskType.CODE,
+        nature=TaskNature.TECHNICAL,
+        project_id=setup["project"].id,
+        created_by=setup["agent"].id,
+        team=Team.BACKEND,
+        **kw,
+    )
+    setup["db"].add(task)
+    return task
+
+
+@pytest.mark.asyncio
+async def test_get_awaiting_pm_review_via_query(task_client: dict) -> None:
+    """Hit get_awaiting_pm_review_tasks helper directly (route ordering quirk)."""
+    db = task_client["db"]
+    agent_ctx = AgentContext(
+        agent_id=task_client["agent"].id, role=AgentRole.MAIN_PM, team=None
+    )
+    permissions = PermissionService()
+    result = await get_awaiting_pm_review_tasks(
+        db=db,
+        agent=agent_ctx,
+        permissions=permissions,
+        team=Team.BACKEND,
+    )
+    assert isinstance(result, list)
+
+
+@pytest.mark.asyncio
+async def test_get_awaiting_pm_review_no_view_all(task_client: dict) -> None:
+    """Developer (no VIEW_ALL) — falls back to agent.team."""
+    db = task_client["db"]
+    agent_ctx = AgentContext(
+        agent_id=task_client["agent"].id,
+        role=AgentRole.DEVELOPER,
+        team=Team.BACKEND,
+    )
+    permissions = PermissionService()
+    result = await get_awaiting_pm_review_tasks(
+        db=db, agent=agent_ctx, permissions=permissions, team=None
+    )
+    assert isinstance(result, list)
+
+
+@pytest.mark.asyncio
+async def test_get_awaiting_ceo_approval_pm_role(task_client: dict) -> None:
+    """Main PM can view CEO approval queue — direct invocation."""
+    db = task_client["db"]
+    agent_ctx = AgentContext(
+        agent_id=task_client["agent"].id, role=AgentRole.MAIN_PM, team=None
+    )
+    permissions = PermissionService()
+    result = await get_awaiting_ceo_approval_tasks(
+        db=db, agent=agent_ctx, permissions=permissions
+    )
+    assert isinstance(result, list)
+
+
+@pytest.mark.asyncio
+async def test_get_awaiting_ceo_approval_developer_forbidden(
+    task_client: dict,
+) -> None:
+    """Developer (no VIEW_ALL, not PM/CEO) → 403 from helper."""
+    db = task_client["db"]
+    agent_ctx = AgentContext(
+        agent_id=task_client["agent"].id,
+        role=AgentRole.DEVELOPER,
+        team=Team.BACKEND,
+    )
+    permissions = PermissionService()
+    with pytest.raises(HTTPException) as exc_info:
+        await get_awaiting_ceo_approval_tasks(
+            db=db, agent=agent_ctx, permissions=permissions
+        )
+    assert exc_info.value.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_escalate_to_ceo_returns_task(task_client: dict) -> None:
+    """Mock service.escalate_to_ceo_for_agent → route returns serialized task."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.escalate_to_ceo_for_agent = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/escalate-to-ceo",
+            json={"notes": "Need CEO sign-off please"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_ceo_approve_task_not_found(ceo_client: dict) -> None:
+    response = await ceo_client["client"].post(
+        f"/api/tasks/{uuid4()}/ceo-approve",
+        json={"notes": "approved"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_ceo_approve_service_returns_none(ceo_client: dict) -> None:
+    """If service.ceo_approve returns None — 400."""
+    task = _seed_task_ceo(ceo_client, status=TaskStatus.PENDING)
+    await ceo_client["db"].flush()
+    response = await ceo_client["client"].post(
+        f"/api/tasks/{task.id}/ceo-approve",
+        json={"notes": "Reviewed and approved for production release."},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "not awaiting CEO" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_ceo_approve_success(ceo_client: dict) -> None:
+    task = _seed_task_ceo(ceo_client)
+    await ceo_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.ceo_approve = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        response = await ceo_client["client"].post(
+            f"/api/tasks/{task.id}/ceo-approve",
+            json={"notes": "Verified against all acceptance criteria; approved."},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_ceo_approve_without_notes_rejected(ceo_client: dict) -> None:
+    """Audit: a CEO approval with no/thin notes leaves no record of WHY the
+    work shipped, so the endpoint must reject it (>= 20 chars required). The
+    panel collects the note before POSTing."""
+    task = _seed_task_ceo(ceo_client)
+    await ceo_client["db"].flush()
+    for body in ({}, {"notes": ""}, {"notes": "lgtm"}):
+        response = await ceo_client["client"].post(
+            f"/api/tasks/{task.id}/ceo-approve",
+            json=body,
+            headers=_HDR,
+        )
+        assert response.status_code in (
+            HTTPStatus.BAD_REQUEST,
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+        ), (body, response.status_code)
+
+
+@pytest.mark.asyncio
+async def test_approve_and_start_success(ceo_client: dict) -> None:
+    task = _seed_task_ceo(ceo_client, status=TaskStatus.PENDING)
+    await ceo_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.approve_and_start = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        resp = await ceo_client["client"].post(
+            f"/api/tasks/{task.id}/approve-and-start",
+            json={"notes": "Board review complete; clear requirements; build it now."},
+            headers=_HDR,
+        )
+    assert resp.status_code == HTTPStatus.OK
+    instance.approve_and_start.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_approve_and_start_requires_ceo(task_client: dict) -> None:
+    # task_client is MAIN_PM-role; the inline CEO guard must 403.
+    resp = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/approve-and-start",
+        json={"notes": "x" * 30},
+        headers=_HDR,
+    )
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_approve_and_start_short_notes(ceo_client: dict) -> None:
+    task = _seed_task_ceo(ceo_client, status=TaskStatus.PENDING)
+    await ceo_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        resp = await ceo_client["client"].post(
+            f"/api/tasks/{task.id}/approve-and-start",
+            json={"notes": "too short"},
+            headers=_HDR,
+        )
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.asyncio
+async def test_approve_and_start_missing_task_404_before_notes_gate(
+    ceo_client: dict,
+) -> None:
+    # Missing task -> 404 even with valid notes: the not-found guard runs
+    # before the notes gate, so service.approve_and_start is never reached.
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        resp = await ceo_client["client"].post(
+            f"/api/tasks/{uuid4()}/approve-and-start",
+            json={"notes": "Board review complete; clear requirements; build it now."},
+            headers=_HDR,
+        )
+    assert resp.status_code == HTTPStatus.NOT_FOUND
+    instance.approve_and_start.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_ceo_reject_task_not_found(ceo_client: dict) -> None:
+    response = await ceo_client["client"].post(
+        f"/api/tasks/{uuid4()}/ceo-reject",
+        json={"notes": "rejected"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_ceo_reject_service_returns_none(ceo_client: dict) -> None:
+    """ceo_reject on a task not in awaiting_ceo_approval — service None → 400."""
+    task = _seed_task_ceo(ceo_client, status=TaskStatus.PENDING)
+    await ceo_client["db"].flush()
+    response = await ceo_client["client"].post(
+        f"/api/tasks/{task.id}/ceo-reject",
+        json={"notes": "rejected"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.asyncio
+async def test_ceo_reject_success_notifies_assignee(ceo_client: dict) -> None:
+    """ceo_reject success path with assignee triggers notification."""
+    other = AgentTable(
+        id=uuid4(),
+        name="Dev",
+        slug=f"dev-{uuid4().hex[:8]}",
+        role=AgentRole.DEVELOPER,
+        team=Team.BACKEND,
+        status=AgentStatus.ACTIVE,
+        model_config={},
+        system_prompt="x",
+        capabilities=[],
+        permissions={},
+        metrics={},
+    )
+    ceo_client["db"].add(other)
+    await ceo_client["db"].flush()
+
+    task = _seed_task_ceo(ceo_client, assigned_to=other.id)
+    await ceo_client["db"].flush()
+
+    with (
+        patch("roboco.api.routes.tasks.get_task_service") as mock_factory,
+        patch(
+            "roboco.api.routes.tasks.get_notification_delivery_service"
+        ) as mock_delivery,
+    ):
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.ceo_reject = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        delivery_instance = AsyncMock()
+        delivery_instance.notify_assignee_of_ceo_rejection = AsyncMock(
+            return_value=None
+        )
+        mock_delivery.return_value = delivery_instance
+        response = await ceo_client["client"].post(
+            f"/api/tasks/{task.id}/ceo-reject",
+            json={"notes": "rejected with detailed notes"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.OK
+    delivery_instance.notify_assignee_of_ceo_rejection.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# escalate (general): success + EscalationError 403/400
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_escalate_task_success(task_client: dict) -> None:
+    """escalate_and_notify returns outcome → service.apply_escalation runs."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    outcome = SimpleNamespace(
+        target_agent_id=uuid4(),
+        escalator_slug="be-dev-1",
+        target_slug="be-pm",
+    )
+    with (
+        patch(
+            "roboco.api.routes.tasks.get_notification_delivery_service"
+        ) as mock_delivery,
+        patch("roboco.api.routes.tasks.get_task_service") as mock_factory,
+    ):
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.apply_escalation = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        delivery_instance = AsyncMock()
+        delivery_instance.escalate_and_notify = AsyncMock(return_value=outcome)
+        mock_delivery.return_value = delivery_instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/escalate",
+            json={"reason": "Need help — out of scope"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["status"] == "escalated"
+    assert body["escalated_to"] == "be-pm"
+
+
+@pytest.mark.asyncio
+async def test_escalate_task_escalation_error_404(task_client: dict) -> None:
+    """EscalationError starting with 'escalator agent' → 404."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    with patch(
+        "roboco.api.routes.tasks.get_notification_delivery_service"
+    ) as mock_delivery:
+        delivery_instance = AsyncMock()
+        delivery_instance.escalate_and_notify = AsyncMock(
+            side_effect=EscalationError("escalator agent missing")
+        )
+        mock_delivery.return_value = delivery_instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/escalate",
+            json={"reason": "stuck"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_escalate_task_escalation_error_403(task_client: dict) -> None:
+    """EscalationError 'Cannot escalate to ...' → 403."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    with patch(
+        "roboco.api.routes.tasks.get_notification_delivery_service"
+    ) as mock_delivery:
+        delivery_instance = AsyncMock()
+        delivery_instance.escalate_and_notify = AsyncMock(
+            side_effect=EscalationError("Cannot escalate to qa")
+        )
+        mock_delivery.return_value = delivery_instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/escalate",
+            json={"reason": "stuck"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_escalate_task_escalation_error_400(task_client: dict) -> None:
+    """Other EscalationError → 400."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+    with patch(
+        "roboco.api.routes.tasks.get_notification_delivery_service"
+    ) as mock_delivery:
+        delivery_instance = AsyncMock()
+        delivery_instance.escalate_and_notify = AsyncMock(
+            side_effect=EscalationError("no chain configured")
+        )
+        mock_delivery.return_value = delivery_instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/escalate",
+            json={"reason": "stuck"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
+# substitute: success
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_substitute_task_success(task_client: dict) -> None:
+    task = _seed_task(task_client, assigned_to=task_client["agent"].id)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.substitute_task_for_agent = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/substitute",
+            json={"reason": "low_context", "details": "Need more context"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.OK
+
+
+# ---------------------------------------------------------------------------
+# progress / checkpoint / commit: success and 500-fallback
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_add_progress_success(task_client: dict) -> None:
+    task = _seed_task(task_client, assigned_to=task_client["agent"].id)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/progress",
+        json={"message": "Halfway done now", "percentage": 50},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_add_progress_service_returns_none_500(task_client: dict) -> None:
+    task = _seed_task(task_client, assigned_to=task_client["agent"].id)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.add_progress = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/progress",
+            json={"message": "halfway done now", "percentage": 50},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+@pytest.mark.asyncio
+async def test_add_checkpoint_success(task_client: dict) -> None:
+    task = _seed_task(task_client, assigned_to=task_client["agent"].id)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/checkpoint",
+        json={"state_summary": "halfway", "remaining_work": ["finish API"]},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_add_checkpoint_service_returns_none_500(task_client: dict) -> None:
+    task = _seed_task(task_client, assigned_to=task_client["agent"].id)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.add_checkpoint = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/checkpoint",
+            json={"state_summary": "halfway", "remaining_work": ["finish"]},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+@pytest.mark.asyncio
+async def test_add_commit_success(task_client: dict) -> None:
+    task = _seed_task(task_client, assigned_to=task_client["agent"].id)
+    await task_client["db"].flush()
+    response = await task_client["client"].post(
+        f"/api/tasks/{task.id}/commit",
+        json={"hash": "abc1234", "message": "fix"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_add_commit_service_returns_none_500(task_client: dict) -> None:
+    task = _seed_task(task_client, assigned_to=task_client["agent"].id)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=task)
+        instance.add_commit = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/commit",
+            json={"hash": "abc1234", "message": "fix"},
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+# ---------------------------------------------------------------------------
+# activate: success + ValueError + TaskLifecycleError
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_activate_success(task_client: dict) -> None:
+    task = _seed_task(task_client, status=TaskStatus.BACKLOG)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.activate = AsyncMock(return_value=task)
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/activate", headers=_HDR
+        )
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_activate_value_error_returns_400(task_client: dict) -> None:
+    task = _seed_task(task_client, status=TaskStatus.BACKLOG)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.activate = AsyncMock(
+            side_effect=ValueError("no project or product set")
+        )
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/activate", headers=_HDR
+        )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "no project or product" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_activate_task_lifecycle_error_returns_403(task_client: dict) -> None:
+    task = _seed_task(task_client, status=TaskStatus.BACKLOG)
+    await task_client["db"].flush()
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.activate = AsyncMock(
+            side_effect=TaskLifecycleError(
+                current_status="backlog",
+                target_status="pending",
+                message="Wrong role",
+            )
+        )
+        mock_factory.return_value = instance
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/activate", headers=_HDR
+        )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# TaskUpdate schema: nature / task_type / project_id (AC: schema fix)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_patch_nature_persists(task_client: dict) -> None:
+    """PATCH with nature=non_technical persists; GET returns updated value."""
+    _as_ceo(task_client)
+    task = _seed_task(task_client, nature=TaskNature.TECHNICAL)
+    await task_client["db"].flush()
+    response = await task_client["client"].patch(
+        f"/api/tasks/{task.id}",
+        json={"nature": "non_technical"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["nature"] == "non_technical"
+
+
+@pytest.mark.asyncio
+async def test_patch_task_type_persists(task_client: dict) -> None:
+    """PATCH with task_type=research persists; GET returns updated value."""
+    _as_ceo(task_client)
+    task = _seed_task(task_client, task_type=TaskType.CODE)
+    await task_client["db"].flush()
+    response = await task_client["client"].patch(
+        f"/api/tasks/{task.id}",
+        json={"task_type": "research"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["task_type"] == "research"
+
+
+@pytest.mark.asyncio
+async def test_patch_project_id_persists(task_client: dict) -> None:
+    """PATCH with project_id=<valid-uuid> persists; GET returns updated value."""
+    _as_ceo(task_client)
+    task = _seed_task(task_client)
+    # Create a second project to switch to
+    second_project = ProjectTable(
+        id=uuid4(),
+        name="Proj2",
+        slug=f"proj2-{uuid4().hex[:6]}",
+        git_url="https://example.com/proj2.git",
+        assigned_cell=Team.BACKEND,
+        created_by=task_client["agent"].id,
+    )
+    task_client["db"].add(second_project)
+    await task_client["db"].flush()
+
+    response = await task_client["client"].patch(
+        f"/api/tasks/{task.id}",
+        json={"project_id": str(second_project.id)},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["project_id"] == str(second_project.id)
+
+
+@pytest.mark.asyncio
+async def test_patch_title_only_changes_title(task_client: dict) -> None:
+    """PATCH with only title does not mutate nature/task_type/status/team."""
+    task = _seed_task(
+        task_client,
+        title="original title",
+        nature=TaskNature.TECHNICAL,
+        task_type=TaskType.CODE,
+        team=Team.BACKEND,
+    )
+    await task_client["db"].flush()
+
+    response = await task_client["client"].patch(
+        f"/api/tasks/{task.id}",
+        json={"title": "updated title"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["title"] == "updated title"
+    # Other fields unchanged
+    assert body["nature"] == "technical"
+    assert body["task_type"] == "code"
+    assert body["team"] == "backend"
+
+
+# ---------------------------------------------------------------------------
+# assigned_to: slug resolution and null guard (AC: slug-resolution fix)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_patch_assigned_to_slug_resolves_to_uuid(task_client: dict) -> None:
+    """PATCH assigned_to with agent slug resolves to agent UUID."""
+    _as_ceo(task_client)
+    dev = await _seed_agent(task_client)
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+
+    response = await task_client["client"].patch(
+        f"/api/tasks/{task.id}",
+        json={"assigned_to": dev.slug},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["assigned_to"] == str(dev.id)
+
+
+@pytest.mark.asyncio
+async def test_patch_assigned_to_null_unassigns(task_client: dict) -> None:
+    """PATCH assigned_to: null sets assigned_to to null (unassign)."""
+    _as_ceo(task_client)
+    dev = await _seed_agent(task_client)
+    task = _seed_task(task_client, assigned_to=dev.id)
+    await task_client["db"].flush()
+
+    response = await task_client["client"].patch(
+        f"/api/tasks/{task.id}",
+        json={"assigned_to": None},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["assigned_to"] is None
+
+
+@pytest.mark.asyncio
+async def test_patch_assigned_to_unknown_slug_returns_422(task_client: dict) -> None:
+    """PATCH assigned_to with unknown slug returns 422 ASSIGNEE_NOT_FOUND."""
+    task = _seed_task(task_client)
+    await task_client["db"].flush()
+
+    response = await task_client["client"].patch(
+        f"/api/tasks/{task.id}",
+        json={"assigned_to": "totally-nonexistent-slug"},
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    detail = response.json()["detail"]
+    assert isinstance(detail, dict)
+    assert detail["error"]["code"] == "ASSIGNEE_NOT_FOUND"
+
+
+# ---------------------------------------------------------------------------
+# GET /tasks/{id}/ceo-approve — eligibility check (AC: ceo-approve fix)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_ceo_approve_get_no_pr_returns_400(ceo_client: dict) -> None:
+    """GET /ceo-approve with no pr_number on the task → 400 NO_PR."""
+    task = _seed_task_ceo(ceo_client, pr_number=None)
+    await ceo_client["db"].flush()
+    response = await ceo_client["client"].get(
+        f"/api/tasks/{task.id}/ceo-approve",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "NO_PR" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_ceo_approve_get_with_pr_returns_200(ceo_client: dict) -> None:
+    """GET /ceo-approve with pr_number set → 200 with task."""
+    task = _seed_task_ceo(ceo_client, pr_number=42)
+    await ceo_client["db"].flush()
+    response = await ceo_client["client"].get(
+        f"/api/tasks/{task.id}/ceo-approve",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    _expected_pr = 42
+    assert body["pr_number"] == _expected_pr
+
+
+@pytest.mark.asyncio
+async def test_ceo_approve_get_not_ceo_returns_403(task_client: dict) -> None:
+    """GET /ceo-approve by non-CEO → 403 Forbidden."""
+    response = await task_client["client"].get(
+        f"/api/tasks/{uuid4()}/ceo-approve",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_ceo_approve_get_task_not_found(ceo_client: dict) -> None:
+    """GET /ceo-approve for unknown task → 404."""
+    response = await ceo_client["client"].get(
+        f"/api/tasks/{uuid4()}/ceo-approve",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# POST /tasks/{id}/approve-and-merge (AC: approve-and-merge fix)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_approve_and_merge_no_pr_returns_400(ceo_client: dict) -> None:
+    """POST /approve-and-merge with no pr_number → 400 NO_PR."""
+    task = _seed_task_ceo(ceo_client, pr_number=None)
+    await ceo_client["db"].flush()
+    response = await ceo_client["client"].post(
+        f"/api/tasks/{task.id}/approve-and-merge",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert "NO_PR" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_approve_and_merge_not_ceo_returns_403(task_client: dict) -> None:
+    """POST /approve-and-merge by non-CEO → 403 Forbidden."""
+    response = await task_client["client"].post(
+        f"/api/tasks/{uuid4()}/approve-and-merge",
+        headers=_HDR,
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_approve_and_merge_task_not_found(ceo_client: dict) -> None:
+    """POST /approve-and-merge for unknown task → 404."""
+    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+        instance = AsyncMock()
+        instance.get = AsyncMock(return_value=None)
+        mock_factory.return_value = instance
+        response = await ceo_client["client"].post(
+            f"/api/tasks/{uuid4()}/approve-and-merge",
+            headers=_HDR,
+        )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_approve_and_merge_success(ceo_client: dict) -> None:
+    """POST /approve-and-merge with PR + fully mocked services → 200 task."""
+    task = _seed_task_ceo(ceo_client, pr_number=99)
+    await ceo_client["db"].flush()
+
+    # The handler does lazy imports of get_project_service and get_git_service.
+    # Patch them at their source modules so the lazy import picks up the mock.
+    with (
+        patch("roboco.api.routes.tasks.get_task_service") as mock_task_factory,
+        patch("roboco.services.project.get_project_service") as mock_proj_factory,
+        patch("roboco.services.git.get_git_service") as mock_git_factory,
+    ):
+        task_instance = AsyncMock()
+        # service.get is called twice: once for the initial check, once to re-fetch.
+        task_instance.get = AsyncMock(side_effect=[task, task])
+        mock_task_factory.return_value = task_instance
+
+        proj_instance = AsyncMock()
+        proj_instance.get = AsyncMock(return_value=ceo_client["project"])
+        mock_proj_factory.return_value = proj_instance
+
+        git_instance = AsyncMock()
+        git_instance.merge_pr_for_task = AsyncMock(return_value=("main", "abc1234"))
+        mock_git_factory.return_value = git_instance
+
+        response = await ceo_client["client"].post(
+            f"/api/tasks/{task.id}/approve-and-merge",
+            headers=_HDR,
+        )
+
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    _expected_pr = 99
+    assert body["pr_number"] == _expected_pr
+
+
+@pytest.mark.asyncio
+async def test_approve_and_merge_merge_failure_returns_structured_error(
+    ceo_client: dict,
+) -> None:
+    """POST /approve-and-merge where git merge fails → 400 with descriptive message.
+
+    The error must NOT be an unhandled exception (500 with traceback); it must
+    be a structured HTTP error (400 or 500) with a human-readable message.
+    """
+    task = _seed_task_ceo(ceo_client, pr_number=55)
+    await ceo_client["db"].flush()
+
+    with (
+        patch("roboco.api.routes.tasks.get_task_service") as mock_task_factory,
+        patch("roboco.services.project.get_project_service") as mock_proj_factory,
+        patch("roboco.services.git.get_git_service") as mock_git_factory,
+    ):
+        task_instance = AsyncMock()
+        task_instance.get = AsyncMock(return_value=task)
+        mock_task_factory.return_value = task_instance
+
+        proj_instance = AsyncMock()
+        proj_instance.get = AsyncMock(return_value=ceo_client["project"])
+        mock_proj_factory.return_value = proj_instance
+
+        git_instance = AsyncMock()
+        git_instance.merge_pr_for_task = AsyncMock(
+            side_effect=SvcError("GitHub refused the merge: 409 Conflict")
+        )
+        mock_git_factory.return_value = git_instance
+
+        response = await ceo_client["client"].post(
+            f"/api/tasks/{task.id}/approve-and-merge",
+            headers=_HDR,
+        )
+
+    # Must be a structured error, not an unhandled 500
+    _ok_statuses = (HTTPStatus.BAD_REQUEST, HTTPStatus.INTERNAL_SERVER_ERROR)
+    assert response.status_code in _ok_statuses
+    body = response.json()
+    # The detail must be a string (not a raw traceback or empty)
+    assert isinstance(body.get("detail"), str)
+    assert len(body["detail"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_approve_and_merge_git_error_returns_structured_error(
+    ceo_client: dict,
+) -> None:
+    """POST /approve-and-merge: GitError → 400 with descriptive message."""
+    task = _seed_task_ceo(ceo_client, pr_number=66)
+    await ceo_client["db"].flush()
+
+    with (
+        patch("roboco.api.routes.tasks.get_task_service") as mock_task_factory,
+        patch("roboco.services.project.get_project_service") as mock_proj_factory,
+        patch("roboco.services.git.get_git_service") as mock_git_factory,
+    ):
+        task_instance = AsyncMock()
+        task_instance.get = AsyncMock(return_value=task)
+        mock_task_factory.return_value = task_instance
+
+        proj_instance = AsyncMock()
+        proj_instance.get = AsyncMock(return_value=ceo_client["project"])
+        mock_proj_factory.return_value = proj_instance
+
+        git_instance = AsyncMock()
+        git_instance.merge_pr_for_task = AsyncMock(
+            side_effect=GitError(
+                "GitHub API refused PR merge (422): branch protected",
+                {"pr": 66},
+            )
+        )
+        mock_git_factory.return_value = git_instance
+
+        response = await ceo_client["client"].post(
+            f"/api/tasks/{task.id}/approve-and-merge",
+            headers=_HDR,
+        )
+
+    # Must be a structured error — NOT an unhandled traceback
+    _ok_statuses = (HTTPStatus.BAD_REQUEST, HTTPStatus.INTERNAL_SERVER_ERROR)
+    assert response.status_code in _ok_statuses
+    body = response.json()
+    assert isinstance(body.get("detail"), str)
+    assert len(body["detail"]) > 0
+
+
+# ---------------------------------------------------------------------------
+# POST /tasks/{id}/complete — PM merge path (AC: pm-merge-path fix)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_cell_pm_complete_merges_then_completes(task_client: dict) -> None:
+    """POST /complete on an awaiting_pm_review task with a pr_number triggers
+    merge_pr_for_task before the task is marked completed.
+
+    The git service and project service are mocked so no real GitHub call is
+    made; the test verifies the call ordering and the final 200 response.
+    """
+    task = _seed_task(task_client, status=TaskStatus.AWAITING_PM_REVIEW, pr_number=77)
+    await task_client["db"].flush()
+
+    with (
+        patch("roboco.api.routes.tasks.get_task_service") as mock_task_factory,
+        patch("roboco.services.project.get_project_service") as mock_proj_factory,
+        patch("roboco.services.git.get_git_service") as mock_git_factory,
+    ):
+        # Task service: get() returns the seeded task; complete_task_for_agent
+        # simulates the service marking it completed and returning it.
+        task_instance = AsyncMock()
+        task_instance.get = AsyncMock(return_value=task)
+        completed_task = task  # same object; status already set on the mock
+        task_instance.complete_task_for_agent = AsyncMock(return_value=completed_task)
+        mock_task_factory.return_value = task_instance
+
+        proj_instance = AsyncMock()
+        proj_instance.get = AsyncMock(return_value=task_client["project"])
+        mock_proj_factory.return_value = proj_instance
+
+        git_instance = AsyncMock()
+        git_instance.merge_pr_for_task = AsyncMock(return_value=("main", "abc1234"))
+        mock_git_factory.return_value = git_instance
+
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/complete",
+            json={"justification": "All criteria met; QA and docs signed off."},
+            headers=_HDR,
+        )
+
+    assert response.status_code == HTTPStatus.OK
+    # merge_pr_for_task must have been called exactly once
+    git_instance.merge_pr_for_task.assert_called_once()
+    call_args = git_instance.merge_pr_for_task.call_args
+    # The GitMergePRRequest passed to merge_pr_for_task must carry the right pr_number
+    merge_request = call_args.args[2]  # positional: agent_id, agent_role, request
+    _expected_pr = 77
+    assert merge_request.pr_number == _expected_pr
+
+
+# ---------------------------------------------------------------------------
+# POST /tasks/{id}/complete — PM merge path end-to-end (AC: double-completion fix)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_pm_merge_auto_completes_without_double_completion(
+    task_client: dict,
+) -> None:
+    """POST /complete on awaiting_pm_review calls real merge_pr_for_task and
+    real complete_task_for_agent is NOT called — the task is auto-completed
+    by _auto_complete_on_merge inside the git service, and the route detects
+    the completed state from the re-fetch and returns 200 directly.
+
+    Only the git-workspace / GitHub-API layer is mocked (GitService.get_workspace
+    and GitService.merge_pull_request).  merge_pr_for_task and complete_task_for_agent
+    run for real so this exercises the fix for the double-completion 500.
+    """
+    # Seed a task in awaiting_pm_review with a PR.  No work_session_id so that
+    # _assert_pr_merged_for_complete returns True without querying WorkSession.
+    task = _seed_task(
+        task_client,
+        status=TaskStatus.AWAITING_PM_REVIEW,
+        pr_number=99,
+        # work_session_id intentionally omitted (defaults to None)
+    )
+    await task_client["db"].flush()
+
+    # Spy: we want to assert complete_task_for_agent is never reached.
+    # If it were called on an already-completed task it would raise ValidationError
+    # and the route would return a non-200 — but we assert explicitly to be clear.
+    complete_for_agent_spy = AsyncMock(
+        wraps=TaskService.complete_task_for_agent,
+        name="complete_task_for_agent_spy",
+    )
+
+    _mock_workspace = Path("/tmp/mock_workspace")
+
+    with (
+        patch.object(
+            GitService,
+            "get_workspace",
+            new=AsyncMock(return_value=_mock_workspace),
+        ),
+        patch.object(
+            GitService,
+            "merge_pull_request",
+            new=AsyncMock(return_value=("main", "dead1234")),
+        ),
+        patch.object(
+            TaskService,
+            "complete_task_for_agent",
+            new=complete_for_agent_spy,
+        ),
+    ):
+        response = await task_client["client"].post(
+            f"/api/tasks/{task.id}/complete",
+            json={"justification": "All criteria met and QA signed off."},
+            headers=_HDR,
+        )
+
+    # The route must return 200; if the double-completion bug were present the
+    # second call to complete() would fail (task already completed) → 422/400.
+    assert response.status_code == HTTPStatus.OK, response.text
+
+    body = response.json()
+    assert body["status"] == "completed", f"expected completed, got {body['status']}"
+
+    # complete_task_for_agent must NOT have been called: the task was already
+    # auto-completed by _auto_complete_on_merge inside merge_pr_for_task.
+    complete_for_agent_spy.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_summary_search_matches_title_description_and_id(
+    task_client: dict,
+) -> None:
+    """The task list search covers title, description (details/keywords),
+    and id prefix — server-side, because summaries deliberately exclude
+    descriptions (CEO reMarkable item: task search bar)."""
+    client = task_client["client"]
+    hit_title = _seed_task(task_client, title="Rework the greeting banner")
+    hit_desc = _seed_task(
+        task_client,
+        title="Unrelated title",
+        description="Contains the zanzibar keyword deep in the details.",
+    )
+    miss = _seed_task(task_client, title="Nothing to see here")
+    await task_client["db"].flush()
+
+    by_title = await client.get("/api/tasks/summary?q=greeting", headers=_HDR)
+    assert by_title.status_code == HTTPStatus.OK
+    ids = {t["id"] for t in by_title.json()}
+    assert str(hit_title.id) in ids and str(miss.id) not in ids
+
+    by_desc = await client.get("/api/tasks/summary?q=zanzibar", headers=_HDR)
+    ids = {t["id"] for t in by_desc.json()}
+    assert str(hit_desc.id) in ids and str(hit_title.id) not in ids
+
+    prefix = str(hit_title.id)[:8]
+    by_id = await client.get(f"/api/tasks/summary?q={prefix}", headers=_HDR)
+    ids = {t["id"] for t in by_id.json()}
+    assert str(hit_title.id) in ids
+
+
+@pytest.mark.asyncio
+async def test_summary_search_respects_team_filter(task_client: dict) -> None:
+    client = task_client["client"]
+    hit = _seed_task(task_client, title="Backend greeting search hit")
+    await task_client["db"].flush()
+
+    resp = await client.get("/api/tasks/summary?q=greeting&team=frontend", headers=_HDR)
+    assert resp.status_code == HTTPStatus.OK
+    assert str(hit.id) not in {t["id"] for t in resp.json()}

@@ -1,0 +1,669 @@
+"""SequencingService — the deterministic collision-sequencing analyzer.
+
+The unit tests pin each rule in isolation; the golden test asserts the analyzer
+reproduces the CEO's own hand-sequencing of the 11-item guard-core-app batch
+(the effort that motivated the feature, and whose hand-coordination deadlocked
+the Main PM): S6 alone last, the R1/R3/R4 migration chain, R2/R3/S8 serialized on
+the shared threat service, and S1/S2/S7 in one parallel wave.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from uuid import uuid4
+
+import pytest
+from roboco.foundation.policy.sequencing.models import (
+    DraftSurface,
+    SequencingError,
+)
+from roboco.services.sequencing import (
+    SequencingService,
+    by_osmosis_tail_dev_tasks,
+    cell_task_wave_chain_depends_on,
+    dev_task_collision_edges,
+    sequence_blocker_id,
+)
+
+
+def _backend(_i: int) -> str:
+    return "backend"
+
+
+def _frontend(_i: int) -> str:
+    return "frontend"
+
+
+def _wave_of(waves: list[list[int]], idx: int) -> int:
+    return next(w for w, wave in enumerate(waves) if idx in wave)
+
+
+# ---------------------------------------------------------------------------
+# Per-rule unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_disjoint_surfaces_no_edges() -> None:
+    s = [
+        DraftSurface(0, 1, ["a/x.py"], False, False),
+        DraftSurface(1, 1, ["b/y.py"], False, False),
+    ]
+    plan = SequencingService().analyze(s, _backend, {"backend": 2})
+    assert plan.edges == []
+    assert plan.waves == [[0, 1]]
+
+
+def test_file_overlap_serializes_more_important_first() -> None:
+    # idx 1 has the lower priority NUMBER (more important) → it runs first.
+    s = [
+        DraftSurface(0, 2, ["svc/threats.py"], False, False),
+        DraftSurface(1, 1, ["svc/threats.py"], False, False),
+    ]
+    plan = SequencingService().analyze(s, _backend, {"backend": 2})
+    assert (1, 0) in plan.edges  # more-important runs first, the other waits
+
+
+def test_migrations_form_serial_chain() -> None:
+    s = [
+        DraftSurface(0, 1, ["a.py"], True, False),
+        DraftSurface(1, 1, ["b.py"], True, False),
+        DraftSurface(2, 1, ["c.py"], True, False),
+    ]
+    plan = SequencingService().analyze(s, _backend, {"backend": 2})
+    assert (0, 1) in plan.edges  # no two migrations run in parallel
+    assert (1, 2) in plan.edges
+
+
+def test_touches_shared_runs_last() -> None:
+    s = [
+        DraftSurface(0, 1, ["page/a.tsx"], False, False),
+        DraftSurface(1, 1, ["page/b.tsx"], False, False),
+        DraftSurface(2, 1, ["page/a.tsx", "components/shared.tsx"], False, True),
+    ]
+    plan = SequencingService().analyze(s, _frontend, {"frontend": 2})
+    assert plan.waves[-1] == [2]  # the shared task is the final wave
+
+
+def test_all_shared_batch_with_disjoint_surfaces_generates_no_edges() -> None:
+    # Verifying the claimed rule-3 property: when every draft in the batch
+    # touches_shared, ``_shared_last_edges`` skips every candidate pair (its
+    # inner loop continues on `other.touches_shared`), so it contributes no
+    # edges on its own. With disjoint file surfaces rule 1 (same-shared-status
+    # overlap) also contributes nothing, so the whole batch runs in one
+    # parallel wave — confirmed correct, no fix needed.
+    s = [
+        DraftSurface(0, 1, ["fe/app/a.tsx"], False, True),
+        DraftSurface(1, 1, ["fe/app/b.tsx"], False, True),
+        DraftSurface(2, 1, ["fe/app/c.tsx"], False, True),
+    ]
+    plan = SequencingService().analyze(s, _frontend, {"frontend": 3})
+    assert plan.edges == []
+    assert plan.waves == [[0, 1, 2]]
+    # And rule 3 in isolation truly contributes zero edges for an all-shared
+    # set, regardless of overlap — it is rule 1 (same-shared-status overlap),
+    # not rule 3, that would serialize two OVERLAPPING shared surfaces.
+    assert SequencingService()._shared_last_edges(s) == []
+
+
+def test_cycle_is_rejected() -> None:
+    with pytest.raises(SequencingError):
+        SequencingService()._toposort([(0, 1), (1, 0)], 2)
+
+
+def test_existence_check_rejects_out_of_range_edge() -> None:
+    with pytest.raises(SequencingError):
+        SequencingService()._toposort([(0, 5)], 2)
+
+
+def test_shared_migration_chains_after_non_shared_no_cycle() -> None:
+    # Regression: a draft that is BOTH touches_shared AND adds_migration,
+    # overlapping a non-shared migration draft on the same file, used to fabricate
+    # a cycle — rule 2 (migration chain) emitted shared->non-shared while rule 3
+    # (shared-last) emitted non-shared->shared. The migration chain is now
+    # shared-last-aware, so the shared draft is ordered LAST and there is no cycle.
+    s = [
+        DraftSurface(0, 1, ["svc/threats.py"], True, True),  # shared migration
+        DraftSurface(1, 1, ["svc/threats.py"], True, False),  # non-shared migration
+    ]
+    plan = SequencingService().analyze(s, _backend, {"backend": 2})
+    assert plan.waves == [[1], [0]]  # non-shared first, shared migration last
+
+
+def test_cross_project_surfaces_do_not_collide() -> None:
+    # A MegaTask spans repos that don't share a working tree — two migrations in
+    # different projects run in PARALLEL, and a coincidentally-equal path across
+    # repos is not a collision.
+    s = [
+        DraftSurface(0, 1, ["alembic/x.py"], True, False, project_id="proj-a"),
+        DraftSurface(1, 1, ["alembic/x.py"], True, False, project_id="proj-b"),
+    ]
+    plan = SequencingService().analyze(s, _backend, {"backend": 2})
+    assert plan.waves == [[0, 1]]  # independent repos → one parallel wave
+
+
+def test_cell_contention_warns_not_serializes() -> None:
+    s = [DraftSurface(i, 1, [f"page/{i}.tsx"], False, False) for i in range(3)]
+    plan = SequencingService().analyze(s, _frontend, {"frontend": 2})
+    assert plan.edges == []  # contention never adds an edge
+    assert any("frontend" in w for w in plan.warnings)
+
+
+# ---------------------------------------------------------------------------
+# Golden test — reproduce the CEO's 4-wave plan for the 11-item batch
+# ---------------------------------------------------------------------------
+
+# Index map for the guard-core-app items (see obs: wave-based sequencing).
+R1, R2, R3, R4 = 0, 1, 2, 3
+S1, S2, S3, S5, S7, S8, S6 = 4, 5, 6, 7, 8, 9, 10
+
+
+def _guard_core_app_batch() -> list[DraftSurface]:
+    # (idx, priority, intends_to_touch, adds_migration, touches_shared)
+    return [
+        DraftSurface(R1, 1, ["be/services/project_service.py"], True, False),
+        DraftSurface(R2, 1, ["be/services/threats_service.py"], False, False),
+        DraftSurface(
+            R3,
+            1,
+            ["be/services/threats_service.py", "be/services/behavioral_service.py"],
+            True,
+            False,
+        ),
+        DraftSurface(R4, 1, ["fe/app/rules/page.tsx"], True, False),
+        DraftSurface(S1, 1, ["fe/app/metrics/page.tsx"], False, False),
+        DraftSurface(S2, 1, ["fe/app/settings/page.tsx"], False, False),
+        DraftSurface(S3, 1, ["be/services/dashboard_service.py"], False, False),
+        DraftSurface(S5, 1, ["be/services/audit_service.py"], False, False),
+        DraftSurface(S7, 1, ["fe/app/threats/page.tsx"], False, False),
+        DraftSurface(S8, 1, ["be/services/threats_service.py"], False, False),
+        DraftSurface(S6, 1, ["fe/components/", "fe/app/"], False, True),
+    ]
+
+
+def _cell_of(idx: int) -> str:
+    return "backend" if idx in {R1, R2, R3, S3, S5, S8} else "frontend"
+
+
+def test_golden_reproduces_ceo_waves() -> None:
+    plan = SequencingService().analyze(
+        _guard_core_app_batch(), _cell_of, {"backend": 2, "frontend": 2}
+    )
+
+    # EXACT partition — the CEO's own 4-wave hand-sequencing, locked. The bar is
+    # "reproduce my exact waves or it's not done", so assert the full partition,
+    # not just the properties below.
+    assert plan.waves == [
+        sorted([R1, R2, S1, S2, S3, S5, S7]),  # wave 1: everything unblocked
+        [R3],  # wave 2: the shared+migration hinge
+        sorted([R4, S8]),  # wave 3: after R3
+        [S6],  # wave 4: the shared UI-consistency pass, alone, last
+    ]
+
+    # The properties that partition expresses (kept as documentation of WHY):
+    # S6 (the shared UI-consistency pass) runs alone, last.
+    assert plan.waves[-1] == [S6]
+    # R1/R3/R4 form a serial migration chain (no concurrent Alembic heads).
+    assert (R1, R3) in plan.edges
+    assert (R3, R4) in plan.edges
+    # R2/R3/S8 serialize on the shared threats service surface.
+    assert (R2, R3) in plan.edges
+    assert (R3, S8) in plan.edges
+    # The page-isolated frontend work (S1/S2/S7) lands in one parallel wave.
+    assert _wave_of(plan.waves, S1) == _wave_of(plan.waves, S2)
+    assert _wave_of(plan.waves, S2) == _wave_of(plan.waves, S7)
+
+
+# ---------------------------------------------------------------------------
+# dev_task_collision_edges — the dev-task collision DAG (edge kind 3).
+# Pure glue: a parent's surfaced siblings -> (depends_on_id, task_id) pairs.
+# Wraps SequencingService so the choreographer can wire the DAG via add_dependency
+# at cell-PM dev-delegation time (incremental, idempotent). See the multi-level
+# sequencing design doc.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _Sib:
+    """Minimal sibling shape — the attributes dev_task_collision_edges reads."""
+
+    id: object
+    priority: int = 2
+    sequence: int = 0
+    intends_to_touch: list[str] = field(default_factory=list)
+    adds_migration: bool = False
+    touches_shared: bool = False
+    project_id: str | None = "proj-backend"
+    assigned_to: object | None = None
+
+
+def _edge_set(pairs: list[tuple[object, object]]) -> set[tuple[object, object]]:
+    return set(pairs)
+
+
+def _has_cycle(pairs: list[tuple[object, object]]) -> bool:
+    """True if the (depends_on, task) edge list contains a directed cycle."""
+    graph: dict[object, set[object]] = {}
+    for dep_on, task in pairs:
+        graph.setdefault(dep_on, set()).add(task)
+    visiting: set[object] = set()
+    done: set[object] = set()
+
+    def _visit(node: object) -> bool:
+        visiting.add(node)
+        for nxt in graph.get(node, ()):
+            if nxt in visiting or (nxt not in done and _visit(nxt)):
+                return True
+        visiting.discard(node)
+        done.add(node)
+        return False
+
+    nodes = {n for pair in pairs for n in pair}
+    return any(n not in done and _visit(n) for n in nodes)
+
+
+def test_dev_collision_disjoint_surfaces_are_parallel() -> None:
+    # Same project, disjoint files → no edge (the two dev tasks run together).
+    a, b = (
+        _Sib(uuid4(), sequence=0, intends_to_touch=["a.py"]),
+        _Sib(uuid4(), sequence=1, intends_to_touch=["b.py"]),
+    )
+    assert dev_task_collision_edges([a, b]) == []
+
+
+def test_dev_collision_overlap_serializes_more_important_first() -> None:
+    # Both touch a.py → serialized; lower priority NUMBER runs first.
+    first = _Sib(uuid4(), priority=1, sequence=0, intends_to_touch=["a.py"])
+    second = _Sib(uuid4(), priority=2, sequence=1, intends_to_touch=["a.py"])
+    edges = dev_task_collision_edges([second, first])  # passed out of order
+    assert edges == [
+        (first.id, second.id)
+    ]  # first depends-on nothing; second depends-on first
+
+
+def test_dev_collision_overlap_equal_priority_uses_sequence() -> None:
+    # Equal priority → lower sequence runs first (stable across incremental re-runs).
+    t1 = _Sib(uuid4(), sequence=0, intends_to_touch=["a.py"])
+    t3 = _Sib(uuid4(), sequence=1, intends_to_touch=["a.py"])
+    assert dev_task_collision_edges([t1, t3]) == [(t1.id, t3.id)]
+
+
+def test_dev_collision_skips_unsurfaced_siblings() -> None:
+    # A sibling with no surface is parallel to everything (no edges to/from it).
+    surfaced = _Sib(uuid4(), sequence=0, intends_to_touch=["a.py"])
+    bare = _Sib(uuid4(), sequence=1)  # no intends_to_touch / migration / shared
+    other = _Sib(uuid4(), sequence=2, intends_to_touch=["a.py"])
+    edges = _edge_set(dev_task_collision_edges([surfaced, bare, other]))
+    assert edges == {(surfaced.id, other.id)}
+    assert bare.id not in {e[0] for e in edges} and bare.id not in {e[1] for e in edges}
+
+
+def test_dev_collision_skips_different_project() -> None:
+    # Same path, different repo → no collision (different codebase).
+    a = _Sib(uuid4(), sequence=0, intends_to_touch=["a.py"], project_id="proj-be")
+    b = _Sib(uuid4(), sequence=1, intends_to_touch=["a.py"], project_id="proj-fe")
+    assert dev_task_collision_edges([a, b]) == []
+
+
+def test_dev_collision_migration_chain_serializes() -> None:
+    # Two migration-adders in the same repo chain serially (alembic single-head).
+    m1 = _Sib(uuid4(), sequence=0, adds_migration=True, intends_to_touch=["m1.py"])
+    m2 = _Sib(uuid4(), sequence=1, adds_migration=True, intends_to_touch=["m2.py"])
+    assert dev_task_collision_edges([m1, m2]) == [(m1.id, m2.id)]
+
+
+def test_dev_collision_shared_last_after_non_shared_overlap() -> None:
+    # A touches_shared edit runs after a non-shared task that overlaps it.
+    base = _Sib(uuid4(), sequence=0, intends_to_touch=["svc/shared.py"])
+    shared = _Sib(
+        uuid4(), sequence=1, touches_shared=True, intends_to_touch=["svc/shared.py"]
+    )
+    assert dev_task_collision_edges([base, shared]) == [(base.id, shared.id)]
+
+
+def test_dev_collision_single_surfaced_sibling_no_edge() -> None:
+    solo = _Sib(uuid4(), sequence=0, intends_to_touch=["a.py"])
+    assert dev_task_collision_edges([solo]) == []
+
+
+def test_dev_collision_returns_depends_on_first_pairs() -> None:
+    # Contract: each pair is (depends_on_id, task_id) — task depends-on depends_on.
+    first = _Sib(uuid4(), sequence=0, intends_to_touch=["a.py"])
+    second = _Sib(uuid4(), sequence=1, intends_to_touch=["a.py"])
+    [(dep, task)] = dev_task_collision_edges([first, second])
+    assert dep == first.id
+    assert task == second.id
+
+
+# ---------------------------------------------------------------------------
+# dev_task_collision_edges — undeclared-surface fallback: same-assignee
+# same-repo siblings chain by (priority, sequence); cross-dev stays parallel.
+# ---------------------------------------------------------------------------
+
+
+def test_dev_collision_fallback_chains_same_assignee_no_surface() -> None:
+    # Same dev, same repo, no declared surface -> chain by sequence.
+    a = _Sib(uuid4(), sequence=0, assigned_to="be-dev-1")
+    b = _Sib(uuid4(), sequence=1, assigned_to="be-dev-1")
+    assert dev_task_collision_edges([a, b]) == [(a.id, b.id)]
+
+
+def test_dev_collision_fallback_skips_cross_assignee() -> None:
+    # Two different devs on the same repo, no surface -> parallel.
+    a = _Sib(uuid4(), sequence=0, assigned_to="be-dev-1")
+    b = _Sib(uuid4(), sequence=1, assigned_to="be-dev-2")
+    assert dev_task_collision_edges([a, b]) == []
+
+
+def test_dev_collision_fallback_skips_unassigned() -> None:
+    # No assignee -> can't determine a per-dev lane -> skip.
+    a = _Sib(uuid4(), sequence=0)
+    b = _Sib(uuid4(), sequence=1)
+    assert dev_task_collision_edges([a, b]) == []
+
+
+def test_dev_collision_fallback_skips_different_project() -> None:
+    # Same dev, different repos -> no shared working tree -> no chain.
+    a = _Sib(uuid4(), sequence=0, assigned_to="be-dev-1", project_id="proj-be")
+    b = _Sib(uuid4(), sequence=1, assigned_to="be-dev-1", project_id="proj-fe")
+    assert dev_task_collision_edges([a, b]) == []
+
+
+def test_dev_collision_fallback_does_not_override_collision_edges() -> None:
+    # Declared overlapping surface -> collision edge wins; no fallback chain.
+    a = _Sib(uuid4(), sequence=0, assigned_to="be-dev-1", intends_to_touch=["a.py"])
+    b = _Sib(uuid4(), sequence=1, assigned_to="be-dev-1", intends_to_touch=["a.py"])
+    assert dev_task_collision_edges([a, b]) == [(a.id, b.id)]
+
+
+def test_dev_collision_fallback_orders_by_priority_then_sequence() -> None:
+    # Mixed priority/sequence -> chain in (priority, sequence) ascending order.
+    p2s2 = _Sib(uuid4(), priority=2, sequence=2, assigned_to="be-dev-1")
+    p1s5 = _Sib(uuid4(), priority=1, sequence=5, assigned_to="be-dev-1")
+    p1s1 = _Sib(uuid4(), priority=1, sequence=1, assigned_to="be-dev-1")
+    edges = dev_task_collision_edges([p2s2, p1s5, p1s1])  # passed out of order
+    assert edges == [(p1s1.id, p1s5.id), (p1s5.id, p2s2.id)]
+
+
+def test_dev_collision_fallback_single_sibling_no_edge() -> None:
+    # A chain needs >= 2 same-assignee same-project siblings.
+    solo = _Sib(uuid4(), sequence=0, assigned_to="be-dev-1")
+    assert dev_task_collision_edges([solo]) == []
+
+
+def test_dev_collision_fallback_idempotent_on_rerun() -> None:
+    # Deterministic sort -> two calls return the same edge list.
+    a = _Sib(uuid4(), sequence=0, assigned_to="be-dev-1")
+    b = _Sib(uuid4(), sequence=1, assigned_to="be-dev-1")
+    assert dev_task_collision_edges([a, b]) == dev_task_collision_edges([a, b])
+
+
+def test_dev_collision_fallback_still_applies_when_another_pair_collides() -> None:
+    # Regression: a `if edges: return edges` short-circuit used to drop the
+    # assignee-lane fallback ENTIRELY whenever ANY surfaced pair produced a
+    # collision edge, even for a totally unrelated same-assignee pair with no
+    # declared surface at all. (a, b) collide on a.py (different assignees, so
+    # no lane relationship between them); (c, d) share an assignee/project but
+    # declare no surface — they must still get lane-ordered.
+    a = _Sib(
+        uuid4(),
+        sequence=0,
+        intends_to_touch=["a.py"],
+        assigned_to="be-dev-1",
+    )
+    b = _Sib(
+        uuid4(),
+        sequence=1,
+        intends_to_touch=["a.py"],
+        assigned_to="be-dev-2",
+    )
+    c = _Sib(uuid4(), sequence=2, assigned_to="be-dev-3")
+    d = _Sib(uuid4(), sequence=3, assigned_to="be-dev-3")
+    edges = _edge_set(dev_task_collision_edges([a, b, c, d]))
+    assert edges == {(a.id, b.id), (c.id, d.id)}
+
+
+def test_dev_collision_fallback_covers_unsurfaced_sibling_in_surfaced_lane() -> None:
+    # Same assignee/project lane mixes a surfaced sibling (touches a.py) with
+    # an unsurfaced one (no declared surface) and a third surfaced sibling
+    # that doesn't overlap the first — the analyzer alone wires nothing for
+    # this lane (no pair overlaps), so the fallback must still chain all three
+    # by (priority, sequence).
+    first = _Sib(uuid4(), sequence=0, assigned_to="be-dev-1", intends_to_touch=["a.py"])
+    bare = _Sib(uuid4(), sequence=1, assigned_to="be-dev-1")
+    other = _Sib(uuid4(), sequence=2, assigned_to="be-dev-1", intends_to_touch=["b.py"])
+    edges = dev_task_collision_edges([first, bare, other])
+    assert edges == [(first.id, bare.id), (bare.id, other.id)]
+
+
+def test_dev_collision_fallback_never_closes_cycle_against_analyzer() -> None:
+    # Regression: the analyzer's shared-last migration order inverts priority
+    # order (s3 before s1), while the same-assignee lane fallback chains by
+    # priority through the unsurfaced middle sibling (s1 -> s2 -> s3). Naively
+    # unioning the two closed a 3-cycle s1 -> s3 -> s2 -> s1 that made
+    # add_dependency raise ConflictError and wedged every later delegate. The
+    # analyzer edge wins; the fallback edge that would cycle is dropped.
+    s1 = _Sib(
+        uuid4(),
+        priority=1,
+        sequence=0,
+        assigned_to="be-dev-1",
+        adds_migration=True,
+        touches_shared=True,
+    )
+    s2 = _Sib(uuid4(), priority=2, sequence=1, assigned_to="be-dev-1")  # unsurfaced
+    s3 = _Sib(
+        uuid4(),
+        priority=3,
+        sequence=2,
+        assigned_to="be-dev-1",
+        adds_migration=True,
+        touches_shared=False,
+    )
+    edges = dev_task_collision_edges([s1, s2, s3])
+    assert not _has_cycle(edges)
+    assert (s3.id, s1.id) in edges  # authoritative analyzer edge preserved
+    assert (s2.id, s3.id) not in edges  # the cycling fallback edge is dropped
+
+
+# ---------------------------------------------------------------------------
+# cell_task_wave_chain_depends_on — the cell-task wave chain (edge kind 2).
+# Pure glue: a new cell-task under root-subtask UT_n depends on every cell-task
+# under every root-subtask UT_n itself depends on (the kind-1 wave-chain edges).
+# ---------------------------------------------------------------------------
+
+
+def test_wave_chain_collects_all_predecessor_cell_tasks() -> None:
+    # Two predecessor root-subtasks: one fans to two cell-tasks, the other to one.
+    ct_a1, ct_a2, ct_b1 = _Sib(uuid4()), _Sib(uuid4()), _Sib(uuid4())
+    root_a, root_b = object(), object()
+    deps = cell_task_wave_chain_depends_on(
+        [root_a, root_b], {root_a: [ct_a1, ct_a2], root_b: [ct_b1]}
+    )
+    assert set(deps) == {ct_a1.id, ct_a2.id, ct_b1.id}
+
+
+def test_wave_chain_empty_when_no_predecessor_roots() -> None:
+    assert cell_task_wave_chain_depends_on([], {}) == []
+
+
+def test_wave_chain_skips_root_with_no_cell_tasks() -> None:
+    root = object()
+    assert cell_task_wave_chain_depends_on([root], {root: []}) == []
+    # A predecessor root absent from the map contributes nothing (no KeyError).
+    assert cell_task_wave_chain_depends_on([object()], {}) == []
+
+
+def test_wave_chain_preserves_predecessor_order() -> None:
+    # Edges are appended in predecessor-root order then cell-task order — stable
+    # so add_dependency (which dedupes) sees a deterministic sequence.
+    ct_a, ct_b = _Sib(uuid4()), _Sib(uuid4())
+    root_a, root_b = object(), object()
+    deps = cell_task_wave_chain_depends_on(
+        [root_a, root_b], {root_a: [ct_a], root_b: [ct_b]}
+    )
+    assert deps == [ct_a.id, ct_b.id]
+
+
+# ---------------------------------------------------------------------------
+# by_osmosis_tail_dev_tasks — the by-osmosis edge (edge kind 4).
+# Pure glue: the first dev task of a cell-task depends on each predecessor
+# cell-task's tail (highest-sequence) dev task. Only sequence 0 carries it.
+# ---------------------------------------------------------------------------
+
+
+def test_by_osmosis_skips_non_first_dev_task() -> None:
+    tail = _Sib(uuid4(), sequence=2)
+    # is_first_dev_task=False -> no edges, regardless of predecessor groups.
+    assert by_osmosis_tail_dev_tasks(False, [[tail]]) == []
+
+
+def test_by_osmosis_picks_max_sequence_per_group() -> None:
+    t0 = _Sib(uuid4(), sequence=0)
+    t1 = _Sib(uuid4(), sequence=1)
+    t2 = _Sib(uuid4(), sequence=2)
+    assert by_osmosis_tail_dev_tasks(True, [[t0, t1, t2]]) == [t2.id]
+
+
+def test_by_osmosis_one_tail_per_predecessor_group() -> None:
+    a_tail = _Sib(uuid4(), sequence=2)
+    b_tail = _Sib(uuid4(), sequence=4)
+    a_group = [_Sib(uuid4(), sequence=0), _Sib(uuid4(), sequence=1), a_tail]
+    b_group = [_Sib(uuid4(), sequence=3), b_tail]
+    assert by_osmosis_tail_dev_tasks(True, [a_group, b_group]) == [a_tail.id, b_tail.id]
+
+
+def test_by_osmosis_skips_empty_predecessor_group() -> None:
+    # A predecessor cell-task with no dev tasks contributes no edge.
+    tail = _Sib(uuid4(), sequence=1)
+    assert by_osmosis_tail_dev_tasks(True, [[], [tail]]) == [tail.id]
+
+
+def test_by_osmosis_no_edges_when_no_predecessor_groups() -> None:
+    assert by_osmosis_tail_dev_tasks(True, []) == []
+
+
+# ---------------------------------------------------------------------------
+# Declared dependencies (B1b — the CEO's "Depends on" lists become real edges)
+# ---------------------------------------------------------------------------
+# Live break (S6, 2026-07-01): the draft declared depends-on S1+R2+R3 but only
+# the analyzer's file-overlap edges were wired, so S6 started 90s after
+# still-running R3. Declared edges are authoritative; derived edges remain the
+# safety net — analyze() takes the union.
+
+
+def test_declared_dependency_creates_edge_between_disjoint_surfaces() -> None:
+    s = [
+        DraftSurface(0, 1, ["a/x.py"], False, False),
+        DraftSurface(1, 1, ["b/y.py"], False, False, declared_depends_on=(0,)),
+    ]
+    plan = SequencingService().analyze(s, _backend, {"backend": 2})
+    assert (0, 1) in plan.edges
+    assert _wave_of(plan.waves, 0) < _wave_of(plan.waves, 1)
+
+
+def test_declared_union_with_derived_dedupes() -> None:
+    # Overlap already derives (0, 1) (idx 0 more important); declaring it too
+    # must not duplicate the edge.
+    s = [
+        DraftSurface(0, 1, ["svc/threats.py"], False, False),
+        DraftSurface(1, 2, ["svc/threats.py"], False, False, declared_depends_on=(0,)),
+    ]
+    plan = SequencingService().analyze(s, _backend, {"backend": 2})
+    assert plan.edges.count((0, 1)) == 1
+
+
+def test_declared_out_of_range_rejected() -> None:
+    s = [
+        DraftSurface(0, 1, ["a/x.py"], False, False, declared_depends_on=(7,)),
+    ]
+    with pytest.raises(SequencingError):
+        SequencingService().analyze(s, _backend, {"backend": 2})
+
+
+def test_declared_self_dependency_rejected() -> None:
+    s = [
+        DraftSurface(0, 1, ["a/x.py"], False, False, declared_depends_on=(0,)),
+    ]
+    with pytest.raises(SequencingError):
+        SequencingService().analyze(s, _backend, {"backend": 2})
+
+
+def test_declared_cycle_rejected() -> None:
+    s = [
+        DraftSurface(0, 1, ["a/x.py"], False, False, declared_depends_on=(1,)),
+        DraftSurface(1, 1, ["b/y.py"], False, False, declared_depends_on=(0,)),
+    ]
+    with pytest.raises(SequencingError):
+        SequencingService().analyze(s, _backend, {"backend": 2})
+
+
+# ---------------------------------------------------------------------------
+# sequence_blocker_id — the claim-gate's non-batch reachability decision
+# (the 2026-07-24 phantom cross-stream serialization fix).
+# ---------------------------------------------------------------------------
+
+
+def test_sequence_blocker_no_graph_info_falls_back_to_raw_first_candidate() -> None:
+    """No dependency edge onto ANY same-parent sibling at all — the #452
+    manually-sequenced, edge-less scenario — keeps the strict raw bar: the
+    first (lowest-sequence) candidate blocks unconditionally."""
+    a, b = uuid4(), uuid4()
+    assert (
+        sequence_blocker_id(
+            task_dependency_ids=[],
+            candidate_ids=[a, b],
+            sibling_dependency_ids={a: [], b: []},
+        )
+        == a
+    )
+
+
+def test_sequence_blocker_ignores_unconnected_sibling() -> None:
+    """A same-parent sibling reachable via NO edge (a different stream) must
+    not block once real graph info exists elsewhere."""
+    real_predecessor, unrelated = uuid4(), uuid4()
+    assert (
+        sequence_blocker_id(
+            task_dependency_ids=[real_predecessor],
+            candidate_ids=[unrelated],
+            sibling_dependency_ids={real_predecessor: [], unrelated: []},
+        )
+        is None
+    )
+
+
+def test_sequence_blocker_finds_direct_predecessor() -> None:
+    predecessor = uuid4()
+    assert (
+        sequence_blocker_id(
+            task_dependency_ids=[predecessor],
+            candidate_ids=[predecessor],
+            sibling_dependency_ids={predecessor: []},
+        )
+        == predecessor
+    )
+
+
+def test_sequence_blocker_transitive_two_hop() -> None:
+    """A candidate two hops away (through an already-terminal, non-candidate
+    intermediate) is still found — a genuine ordering must still hold."""
+    intermediate, root_blocker = uuid4(), uuid4()
+    assert (
+        sequence_blocker_id(
+            task_dependency_ids=[intermediate],
+            candidate_ids=[root_blocker],
+            sibling_dependency_ids={intermediate: [root_blocker], root_blocker: []},
+        )
+        == root_blocker
+    )
+
+
+def test_sequence_blocker_no_candidates_is_none() -> None:
+    assert (
+        sequence_blocker_id(
+            task_dependency_ids=[uuid4()],
+            candidate_ids=[],
+            sibling_dependency_ids={},
+        )
+        is None
+    )

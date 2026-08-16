@@ -1,0 +1,2274 @@
+"""
+Optimal API Service (Refactored with Plugin Architecture)
+
+Knowledge base, RAG queries, and prompt optimization over an in-house
+PostgreSQL/pgvector engine.
+This service provides semantic search across documentation,
+conversations, journal entries, errors, standards, decisions, reviews, and learnings.
+
+NOTE: Code indexing has been deprecated due to slow CPU embedding and poor quality.
+
+The service uses a plugin-based architecture where each index type is handled
+by a specialized plugin that implements the BaseIndexPlugin interface.
+"""
+
+import asyncio
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+from uuid import UUID
+
+import structlog
+
+from roboco.models.optimal import (
+    IndexDecisionParams,
+    IndexErrorParams,
+    IndexJournalEntryParams,
+    IndexReviewParams,
+    IndexStandardParams,
+    IndexType,
+    QueryContext,
+    RAGResponse,
+    SearchResult,
+)
+from roboco.services.optimal_brain.indexes import (
+    BaseIndexPlugin,
+    DecisionsIndexPlugin,
+    DocsIndexPlugin,
+    ErrorsIndexPlugin,
+    JournalsIndexPlugin,
+    LearningsIndexPlugin,
+    PlaybooksIndexPlugin,
+    ReviewsIndexPlugin,
+    StandardsIndexPlugin,
+    VaultNotesIndexPlugin,
+)
+from roboco.services.optimal_brain.indexes.base import IngestResult
+from roboco.services.optimal_brain.indexes.learnings import (
+    RecordLearningParams as LearningParams,
+)
+from roboco.services.optimal_brain.indexes.playbooks import IndexPlaybookParams
+from roboco.services.optimal_brain.indexes.reviews import (
+    RecordReviewParams as ReviewParams,
+)
+
+logger = structlog.get_logger()
+
+# Max chars per citation content - increased for better synthesis quality
+# qwen3-embedding:0.6b retrieves higher quality chunks, so more context helps
+MAX_CONTENT_CHARS = 800
+
+# Directories under docs/ that are auto-indexed at startup AND watched by the
+# periodic update loop. docs/rag is the agent-facing RAG corpus; docs/map is
+# the agent-facing exhaustive codebase map. Both dirs' files route through
+# index_documentation, except any file under a "standards" subdir, which
+# routes to the standards indexer instead (see _index_doc_file).
+AUTO_INDEX_DIRS = ("rag", "map")
+
+
+@dataclass
+class IndexingReport:
+    """
+    Detailed report of indexing operation results.
+
+    Provides visibility into what was indexed successfully vs what failed,
+    enabling proper error handling and recovery.
+    """
+
+    index_type: str
+    total_attempted: int = 0
+    successful: int = 0
+    failed: int = 0
+    skipped: int = 0  # Already indexed or filtered out
+    failed_sources: list[tuple[str, str]] = field(default_factory=list)
+    duration_seconds: float = 0.0
+
+    @property
+    def success_rate(self) -> float:
+        """Percentage of attempted items that succeeded."""
+        if self.total_attempted == 0:
+            return 100.0
+        return (self.successful / self.total_attempted) * 100
+
+    @property
+    def has_failures(self) -> bool:
+        """True if any items failed."""
+        return self.failed > 0
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API responses."""
+        return {
+            "index_type": self.index_type,
+            "total_attempted": self.total_attempted,
+            "successful": self.successful,
+            "failed": self.failed,
+            "skipped": self.skipped,
+            "success_rate": round(self.success_rate, 1),
+            "has_failures": self.has_failures,
+            "failed_sources": self.failed_sources[:10],  # Limit for API
+            "duration_seconds": round(self.duration_seconds, 2),
+        }
+
+
+@dataclass
+class _QueryAggregationBuffer:
+    """Accumulator for citations/stats/errors across multiple index searches."""
+
+    citations: list[SearchResult] = field(default_factory=list)
+    stats: dict[str, int] = field(default_factory=dict)
+    errors: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class AutoIndexReport:
+    """Combined report for auto-indexing on startup."""
+
+    code: IndexingReport | None = None
+    documentation: IndexingReport | None = None
+    overall_success: bool = True
+    warnings: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for API responses."""
+        docs = self.documentation.to_dict() if self.documentation else None
+        return {
+            "code": self.code.to_dict() if self.code else None,
+            "documentation": docs,
+            "overall_success": self.overall_success,
+            "warnings": self.warnings,
+        }
+
+
+# Plugin registry mapping IndexType to plugin class
+PLUGIN_REGISTRY: dict[IndexType, type[BaseIndexPlugin]] = {
+    # IndexType.CODE removed - deprecated due to slow CPU embedding and poor retrieval
+    IndexType.DOCUMENTATION: DocsIndexPlugin,
+    IndexType.JOURNALS: JournalsIndexPlugin,
+    IndexType.ERRORS: ErrorsIndexPlugin,
+    IndexType.STANDARDS: StandardsIndexPlugin,
+    IndexType.DECISIONS: DecisionsIndexPlugin,
+    IndexType.REVIEWS: ReviewsIndexPlugin,
+    IndexType.LEARNINGS: LearningsIndexPlugin,
+    IndexType.PLAYBOOKS: PlaybooksIndexPlugin,
+    IndexType.VAULT_NOTES: VaultNotesIndexPlugin,
+}
+
+
+class OptimalService:
+    """
+    Service for knowledge base operations and RAG queries.
+
+    Uses a plugin-based architecture over an in-house PostgreSQL/pgvector
+    vector store. Manages multiple indexes for different content types:
+
+    Existing:
+    - Code: Repositories, functions, classes
+    - Documentation: READMEs, API docs, guides
+    - Conversations: Extracted messages from agent streams
+    - Journals: Agent journal entries
+
+    New (Optimal Brain):
+    - Errors: Error patterns and solutions
+    - Standards: Coding standards, security policies, workflow rules
+    - Decisions: Architectural and design decisions
+    - Reviews: Code review feedback
+    - Learnings: Cross-agent learnings
+    """
+
+    def __init__(self) -> None:
+        self._initialized = False
+        self._plugins: dict[IndexType, BaseIndexPlugin] = {}
+        self._prompt_templates: dict[str, dict[str, Any]] = {}
+        self._indexing_task: Any = None  # Background indexing task
+        self._periodic_update_task: Any = None  # Periodic update task
+        self._file_mtimes: dict[str, float] = {}  # Track file modification times
+        self._docs_root: Path | None = None  # Cached docs root path
+
+    async def initialize(self) -> None:
+        """
+        Initialize all knowledge base indexes.
+
+        Uses graceful degradation - if a plugin fails to initialize, log the error
+        and continue with remaining plugins. The service will function with
+        reduced capabilities rather than completely failing.
+        """
+        if self._initialized:
+            return
+
+        logger.info("Initializing OptimalService with plugin architecture")
+
+        # Track initialization results for reporting
+        initialized_count = 0
+        failed_plugins: list[tuple[IndexType, str]] = []
+
+        # Per-plugin initialization timeout (embedding validation can be slow)
+        plugin_init_timeout = 30.0
+
+        # Create and initialize plugins for each index type
+        for index_type, plugin_class in PLUGIN_REGISTRY.items():
+            try:
+                plugin = plugin_class()
+                async with asyncio.timeout(plugin_init_timeout):
+                    await plugin.initialize()
+                self._plugins[index_type] = plugin
+                initialized_count += 1
+                logger.info(f"Initialized {index_type.value} plugin")
+            except TimeoutError:
+                error_msg = f"Plugin init timed out ({plugin_init_timeout}s)"
+                failed_plugins.append((index_type, error_msg))
+                logger.error(
+                    "Plugin initialization timeout - continuing with degraded mode",
+                    index_type=index_type.value,
+                    timeout=plugin_init_timeout,
+                )
+            except Exception as e:
+                # Log error but continue with other plugins
+                error_msg = str(e)
+                failed_plugins.append((index_type, error_msg))
+                logger.error(
+                    "Failed to initialize plugin - continuing with degraded mode",
+                    index_type=index_type.value,
+                    error=error_msg,
+                )
+
+        # Service is initialized if at least one plugin succeeded
+        if initialized_count > 0:
+            self._initialized = True
+            logger.info(
+                "OptimalService initialization complete",
+                initialized=initialized_count,
+                failed=len(failed_plugins),
+            )
+        else:
+            # All plugins failed - this is a critical error
+            raise RuntimeError(
+                f"OptimalService failed to initialize any plugins. "
+                f"Errors: {failed_plugins}"
+            )
+
+        # Report failed plugins for debugging
+        if failed_plugins:
+            logger.warning(
+                "Some index plugins failed to initialize",
+                failed=[f"{idx.value}: {err}" for idx, err in failed_plugins],
+            )
+
+        # Warm up embedding model to avoid cold start latency on first query
+        await self._warmup_embedder()
+
+        # Auto-index code and documentation on startup (truly non-blocking)
+        # Run in background so API can start accepting requests immediately
+        self._indexing_task = asyncio.create_task(self._auto_index_on_startup_safe())
+
+    async def _warmup_embedder(self) -> None:
+        """Warm up the embedding model to avoid cold start latency."""
+        from roboco.services.optimal_brain.shared_embedder import (
+            get_shared_embedder,
+        )
+
+        try:
+            embedder = await get_shared_embedder()
+            if hasattr(embedder, "aembed_query"):
+                await embedder.aembed_query("warmup")
+            logger.info("Embedding model warmed up successfully")
+        except Exception as e:
+            logger.warning("Embedding warm-up failed (non-fatal)", error=str(e))
+
+    async def _auto_index_on_startup_safe(self) -> None:
+        """
+        Safe wrapper for auto-indexing that catches all errors.
+
+        Runs auto-indexing in background without blocking API startup.
+        Logs errors but doesn't crash the service if Ollama is unavailable.
+        After startup indexing, starts periodic update task if enabled.
+        """
+        try:
+            report = await self._auto_index_on_startup()
+            if report.warnings:
+                logger.warning(
+                    "Auto-indexing completed with warnings",
+                    warnings=report.warnings,
+                )
+            else:
+                logger.info(
+                    "Auto-indexing completed successfully",
+                    code_indexed=report.code.successful if report.code else 0,
+                    docs_indexed=report.documentation.successful
+                    if report.documentation
+                    else 0,
+                )
+        except Exception as e:
+            logger.error(
+                "Auto-indexing failed - service operational but indexes may be empty",
+                error=str(e),
+            )
+
+        # Catch up on any file deleted while this process (or a prior one)
+        # was down, before the periodic in-memory sweep takes over.
+        await self._reconcile_deleted_docs_from_db()
+
+        # Start periodic update task if enabled
+        await self._start_periodic_update()
+
+    async def _auto_index_on_startup(self, force: bool = False) -> AutoIndexReport:
+        """
+        Auto-index documentation on startup.
+
+        Indexes:
+        - /docs/standards/ - Coding, security, workflow standards
+        - /docs/workflows/ - Agent workflow documentation
+
+        NOTE: Code indexing has been deprecated.
+
+        Args:
+            force: If True, reindex even if indexes already have content
+
+        Returns:
+            AutoIndexReport with detailed results for each index type
+        """
+        report = AutoIndexReport()
+        report.code = None  # Code indexing deprecated
+
+        # Index documentation
+        docs_report = await self._auto_index_docs(force=force)
+        report.documentation = docs_report
+        if docs_report and docs_report.has_failures:
+            report.warnings.append(
+                f"Documentation indexing had {docs_report.failed} failures"
+            )
+
+        # Overall success if at least something was indexed
+        total_successful = docs_report.successful if docs_report else 0
+        report.overall_success = total_successful > 0 or not report.warnings
+
+        return report
+
+    async def _auto_index_docs(self, force: bool = False) -> IndexingReport | None:
+        """Auto-index documentation directories on startup."""
+        import time
+
+        report = IndexingReport(index_type="documentation")
+        start_time = time.time()
+
+        # Find the docs directory
+        possible_docs_roots = [
+            Path("/app/docs"),
+            Path(__file__).parent.parent.parent / "docs",
+            Path.cwd() / "docs",
+        ]
+
+        docs_root = None
+        for path in possible_docs_roots:
+            if path.exists() and path.is_dir():
+                docs_root = path
+                self._docs_root = path  # Cache for periodic updates
+                break
+
+        if docs_root is None:
+            logger.warning(
+                "Docs directory not found",
+                searched_paths=[str(p) for p in possible_docs_roots],
+            )
+            return None
+
+        for subdir in AUTO_INDEX_DIRS:
+            target_dir = docs_root / subdir
+            if not target_dir.exists():
+                continue
+
+            subdir_report = await self._index_docs_directory(
+                target_dir, subdir, _force=force
+            )
+            # Aggregate results
+            report.total_attempted += subdir_report.total_attempted
+            report.successful += subdir_report.successful
+            report.failed += subdir_report.failed
+            report.skipped += subdir_report.skipped
+            report.failed_sources.extend(subdir_report.failed_sources)
+
+        report.duration_seconds = time.time() - start_time
+        return report
+
+    async def _index_docs_directory(
+        self, directory: Path, name: str, _force: bool = False
+    ) -> IndexingReport:
+        """Index all markdown files in a documentation directory."""
+        report = IndexingReport(index_type=f"docs/{name}")
+
+        md_files = list(directory.rglob("*.md"))
+        if not md_files:
+            logger.info(f"No files found to index in {name}/", path=str(directory))
+            return report
+
+        report.total_attempted = len(md_files)
+        logger.info(
+            f"Auto-indexing {name} files",
+            directory=str(directory),
+            file_count=len(md_files),
+        )
+
+        # Index each file with individual error tracking
+        for md_file in md_files:
+            try:
+                await self._index_doc_file(md_file, name)
+                report.successful += 1
+
+                # Track mtime for periodic update detection
+                import contextlib
+
+                with contextlib.suppress(OSError):
+                    self._file_mtimes[str(md_file)] = md_file.stat().st_mtime
+
+                logger.debug(f"Indexed {name} file", file=str(md_file))
+            except Exception as e:
+                error_msg = str(e)
+                report.failed += 1
+                report.failed_sources.append((str(md_file), error_msg))
+                logger.warning(
+                    f"Failed to index {name} file",
+                    file=str(md_file),
+                    error=error_msg,
+                )
+
+        logger.info(
+            f"{name.capitalize()} auto-indexing complete",
+            successful=report.successful,
+            failed=report.failed,
+            total=report.total_attempted,
+        )
+        return report
+
+    async def _index_doc_file(self, md_file: Path, name: str) -> None:
+        """Route a single doc file to the standards or general docs indexer.
+
+        Shared by the one-shot auto-index (_index_docs_directory) and the
+        periodic re-index path so both resolve the same index type for the
+        same file.
+        """
+        is_standards = name == "standards" or "standards" in md_file.parts
+        if is_standards:
+            await self.index_standards_file(str(md_file))
+        else:
+            await self.index_documentation([str(md_file)])
+
+    # =========================================================================
+    # PERIODIC UPDATE (File Change Detection)
+    # =========================================================================
+
+    async def _start_periodic_update(self) -> None:
+        """Start periodic update task if enabled in config."""
+        from roboco.config import get_settings
+
+        settings = get_settings()
+        if not settings.rag_auto_update_enabled:
+            logger.info("RAG auto-update disabled in config")
+            return
+
+        interval = settings.rag_auto_update_interval
+        logger.info(
+            "Starting RAG periodic update task",
+            interval_seconds=interval,
+        )
+        self._periodic_update_task = asyncio.create_task(
+            self._periodic_update_loop(interval)
+        )
+
+    async def _periodic_update_loop(self, interval: int) -> None:
+        """Background loop that checks for file changes periodically."""
+        while True:
+            try:
+                await asyncio.sleep(interval)
+                await self._check_for_updates()
+            except asyncio.CancelledError:
+                logger.info("Periodic update task cancelled")
+                break
+            except Exception as e:
+                logger.error("Periodic update check failed", error=str(e))
+                # Continue running despite errors
+
+    def _resolve_docs_root(self) -> Path | None:
+        """Resolve and cache the docs root directory."""
+        if self._docs_root is not None:
+            return self._docs_root
+
+        possible_docs_roots = [
+            Path("/app/docs"),
+            Path(__file__).parent.parent.parent / "docs",
+            Path.cwd() / "docs",
+        ]
+        for path in possible_docs_roots:
+            if path.exists() and path.is_dir():
+                self._docs_root = path
+                return path
+        return None
+
+    def _scan_for_file_changes(self, directory: Path) -> tuple[list[Path], list[Path]]:
+        """Scan ``directory`` for new or modified .md files.
+
+        Updates ``self._file_mtimes`` in place as a side effect.
+        Returns (new_files, modified_files).
+        """
+        new_files: list[Path] = []
+        modified_files: list[Path] = []
+
+        for md_file in directory.rglob("*.md"):
+            file_path = str(md_file)
+            try:
+                current_mtime = md_file.stat().st_mtime
+            except OSError:
+                continue
+
+            if file_path not in self._file_mtimes:
+                new_files.append(md_file)
+                self._file_mtimes[file_path] = current_mtime
+            elif current_mtime > self._file_mtimes[file_path]:
+                modified_files.append(md_file)
+                self._file_mtimes[file_path] = current_mtime
+
+        return new_files, modified_files
+
+    def _scan_for_deleted_files(self, directory: Path) -> list[str]:
+        """Return previously-tracked file paths under ``directory`` that no
+        longer exist on disk, pruning them from ``self._file_mtimes``.
+
+        A file only ever enters ``self._file_mtimes`` after
+        ``_scan_for_file_changes``/``_index_docs_directory`` indexed it, so
+        this is the mirror check: anything tracked under this dir that the
+        current on-disk rglob no longer sees was deleted since the last scan.
+        """
+        on_disk = {str(p) for p in directory.rglob("*.md")}
+        deleted = [
+            path
+            for path in self._file_mtimes
+            if Path(path).is_relative_to(directory) and path not in on_disk
+        ]
+        for path in deleted:
+            del self._file_mtimes[path]
+        return deleted
+
+    async def _unindex_deleted_doc_file(self, file_path_str: str, name: str) -> None:
+        """De-index one auto-index-dir file that no longer exists on disk
+        (best-effort).
+
+        Mirrors unindex_playbook/unindex_vault_note/unindex_journal_entry:
+        drops the file's vector-store chunks AND its IndexedDocumentTable
+        tracking row, so a file removed from docs/rag or docs/map stops
+        surfacing in roboco_kb_search once it's gone from the tree.
+        Idempotent; failures are logged and swallowed so one bad path never
+        aborts the rest of the periodic re-scan.
+
+        ponytail: a "standards" subdir file is skipped — index_standards_file
+        parses it into multiple per-rule chunks under hashed-title source
+        URIs, with no per-file source to reverse from the path alone. Upgrade
+        path if this bites: track each file's emitted rule_ids alongside its
+        IndexedDocumentTable row so a delete can look them up.
+        """
+        if "standards" in Path(file_path_str).parts:
+            logger.debug(
+                "Skipping de-index of deleted standards file (per-rule "
+                "sources, not reversible from the path alone)",
+                file=file_path_str,
+            )
+            return
+
+        from roboco.db import get_db_context
+        from roboco.services.repositories import IndexedDocumentRepository
+
+        store_source = f"roboco://docs/{file_path_str}"
+        try:
+            plugin = self._get_plugin(IndexType.DOCUMENTATION)
+            await plugin._require_store.delete_by_source(store_source)
+        except Exception as exc:
+            logger.warning(
+                "Deleted-doc de-index (vector store) failed; continuing",
+                file=file_path_str,
+                error=str(exc),
+            )
+            return
+
+        try:
+            async with get_db_context() as db:
+                repo = IndexedDocumentRepository(db)
+                await repo.delete_by_source(
+                    IndexType.DOCUMENTATION.value, file_path_str
+                )
+        except Exception as exc:
+            logger.warning(
+                "Deleted-doc de-index (tracking row) failed; continuing",
+                file=file_path_str,
+                error=str(exc),
+            )
+            return
+
+        logger.info("De-indexed deleted doc file", file=file_path_str, dir=name)
+
+    async def _reconcile_deleted_docs_from_db(self) -> None:
+        """DB-seeded companion to ``_scan_for_deleted_files``, run once at
+        startup: ``self._file_mtimes`` is in-memory and only ever learns a
+        path by indexing it THIS process, so a file deleted while the
+        process was down (or in a prior process) is invisible to the
+        in-memory sweep — its chunks/tracking row are orphaned forever.
+        Bounded to one query; reconciles against the on-disk auto-index dirs.
+        """
+        docs_root = self._resolve_docs_root()
+        if docs_root is None:
+            return
+
+        from roboco.db import get_db_context
+        from roboco.services.repositories import IndexedDocumentRepository
+
+        try:
+            async with get_db_context() as db:
+                repo = IndexedDocumentRepository(db)
+                rows = await repo.get_by_index_type(
+                    IndexType.DOCUMENTATION.value, limit=10000
+                )
+        except Exception as exc:
+            logger.warning("DB-seeded deletion reconcile failed", error=str(exc))
+            return
+
+        for subdir in AUTO_INDEX_DIRS:
+            target_dir = docs_root / subdir
+            for row in rows:
+                source = row.source
+                if not source or not Path(source).is_relative_to(target_dir):
+                    continue
+                if not Path(source).exists():
+                    await self._unindex_deleted_doc_file(source, subdir)
+
+    async def _reindex_files(self, files_to_index: list[Path], name: str) -> int:
+        """Re-index the given files (from auto-index dir ``name``) and return
+        the count that succeeded."""
+        indexed = 0
+        for md_file in files_to_index:
+            try:
+                await self._index_doc_file(md_file, name)
+                indexed += 1
+                logger.debug("Re-indexed file", file=str(md_file))
+            except Exception as e:
+                logger.warning(
+                    "Failed to re-index file",
+                    file=str(md_file),
+                    error=str(e),
+                )
+        return indexed
+
+    async def _check_for_updates(self) -> None:
+        """Scan every AUTO_INDEX_DIRS dir for new, modified, or deleted files
+        and index/de-index them accordingly."""
+        docs_root = self._resolve_docs_root()
+        if docs_root is None:
+            return
+
+        total_indexed = 0
+        total_files = 0
+        total_deleted = 0
+        for subdir in AUTO_INDEX_DIRS:
+            target_dir = docs_root / subdir
+            if not target_dir.exists():
+                continue
+
+            new_files, modified_files = self._scan_for_file_changes(target_dir)
+            files_to_index = new_files + modified_files
+            if files_to_index:
+                logger.info(
+                    "Detected file changes, re-indexing",
+                    dir=subdir,
+                    new_count=len(new_files),
+                    modified_count=len(modified_files),
+                )
+                total_indexed += await self._reindex_files(files_to_index, subdir)
+                total_files += len(files_to_index)
+
+            deleted_files = self._scan_for_deleted_files(target_dir)
+            if deleted_files:
+                logger.info(
+                    "Detected deleted files, de-indexing",
+                    dir=subdir,
+                    deleted_count=len(deleted_files),
+                )
+                for deleted_path in deleted_files:
+                    await self._unindex_deleted_doc_file(deleted_path, subdir)
+                total_deleted += len(deleted_files)
+
+        if total_indexed > 0 or total_deleted > 0:
+            logger.info(
+                "Periodic update complete",
+                indexed=total_indexed,
+                total_files=total_files,
+                deleted=total_deleted,
+            )
+
+    async def close(self) -> None:
+        """Cleanup resources."""
+        import contextlib
+
+        # Cancel the startup indexing task FIRST — it can still be mid-flight
+        # (slow Ollama, large repo) and writes through the plugins cleared
+        # below. Cancelling before clearing prevents writes against closed
+        # plugins. Its tail also starts the periodic task, so cancel it first.
+        if self._indexing_task and not self._indexing_task.done():
+            self._indexing_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._indexing_task
+
+        # Cancel periodic update task
+        if self._periodic_update_task and not self._periodic_update_task.done():
+            self._periodic_update_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._periodic_update_task
+
+        for plugin in self._plugins.values():
+            await plugin.close()
+        self._plugins.clear()
+        self._initialized = False
+
+        # Close shared embedder
+        from roboco.services.optimal_brain.shared_embedder import close_shared_embedder
+
+        await close_shared_embedder()
+        logger.info("OptimalService closed")
+
+    def _get_plugin(self, index_type: IndexType) -> BaseIndexPlugin:
+        """Get the plugin for an index type.
+
+        Raises a clear error when a plugin is missing (e.g. removed or
+        failed to initialize), rather than leaking a bare KeyError.
+        """
+        if not self._initialized:
+            raise RuntimeError(
+                "OptimalService not initialized. Call initialize() first."
+            )
+        plugin = self._plugins.get(index_type)
+        if plugin is None:
+            available = sorted(t.value for t in self._plugins)
+            raise RuntimeError(
+                f"No plugin registered for index type '{index_type.value}'. "
+                f"Available: {available}. "
+                "This usually means the index is disabled or failed to initialize."
+            )
+        return plugin
+
+    def is_index_registered(self, index_type: IndexType) -> bool:
+        """Whether a live plugin is registered for *index_type*.
+
+        Distinguishes a valid-but-deprecated index (e.g. ``code``) from an
+        active one, so callers can return 404 instead of leaking a 500 from
+        :meth:`_get_plugin`.
+        """
+        return self._initialized and index_type in self._plugins
+
+    # =========================================================================
+    # INDEXING OPERATIONS (Existing - Backwards Compatible)
+    # =========================================================================
+
+    async def index_code(
+        self,
+        sources: list[str],
+        project: str | None = None,
+        max_files: int | None = None,
+    ) -> int:
+        """DEPRECATED: Code indexing has been removed.
+
+        Code indexing was deprecated due to:
+        - Slow CPU-based embedding (no GPU available)
+        - Poor retrieval quality with current embedding model
+        - Better results achieved by focusing on documentation/standards
+        """
+        _ = sources, project, max_files  # Unused
+        logger.warning("index_code() is deprecated and does nothing")
+        return 0
+
+    async def index_documentation(
+        self,
+        sources: list[str],
+        project: str | None = None,
+        provenance: str = "repo_tree",
+        task_id: str | None = None,
+    ) -> int:
+        """Index documentation files and track in database.
+
+        ``provenance="live_write"`` marks a doc written mid-task (not yet
+        merged/deployed) so ``roboco_kb_search`` can caveat it; the default
+        ``"repo_tree"`` is for content already on disk (auto-index dirs,
+        startup/manual reindex).
+        """
+        plugin = self._get_plugin(IndexType.DOCUMENTATION)
+        if isinstance(plugin, DocsIndexPlugin):
+            count, indexed_files = await plugin.index_sources(
+                sources, project, provenance=provenance, task_id=task_id
+            )
+
+            # Batch track all indexed files using repository
+            docs_to_track = [
+                {
+                    "source": f["source"],
+                    "title": f["title"],
+                    "preview": f.get("preview"),
+                    "metadata": {
+                        "doc_type": f.get("doc_type"),
+                        "file_path": f.get("file_path"),
+                        "project": project,
+                    },
+                }
+                for f in indexed_files
+            ]
+            await self._track_indexed_documents_batch(
+                IndexType.DOCUMENTATION, docs_to_track
+            )
+            return count
+        return await plugin.add_sources(sources)
+
+    async def _track_indexed_document(
+        self,
+        index_type: IndexType,
+        source: str,
+        title: str | None = None,
+        preview: str | None = None,
+        metadata: dict | None = None,
+    ) -> None:
+        """Track an indexed document in the database for browsing/stats."""
+        doc = {
+            "source": source,
+            "title": title,
+            "preview": preview,
+            "metadata": metadata,
+        }
+        await self._track_indexed_documents_batch(index_type, [doc])
+
+    async def _track_indexed_documents_batch(
+        self,
+        index_type: IndexType,
+        documents: list[dict],
+    ) -> None:
+        """Track multiple indexed documents in a single transaction."""
+        from roboco.db import get_db_context
+        from roboco.services.repositories import IndexedDocumentRepository
+
+        if not documents:
+            return
+
+        async with get_db_context() as db:
+            repo = IndexedDocumentRepository(db)
+            await repo.upsert_batch(index_type.value, documents)
+
+    async def list_indexed_documents(
+        self, *, index_type: IndexType, offset: int, limit: int
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Return (docs, total) for an index's tracked documents.
+
+        Shape-maps each row into a primitive dict so the API route
+        renders without touching the ORM type directly.
+        """
+        from sqlalchemy import func, select
+
+        from roboco.db import get_db_context
+        from roboco.db.tables import IndexedDocumentTable
+
+        async with get_db_context() as db:
+            count_result = await db.execute(
+                select(func.count())
+                .select_from(IndexedDocumentTable)
+                .where(IndexedDocumentTable.index_type == index_type.value)
+            )
+            total = count_result.scalar() or 0
+
+            rows_result = await db.execute(
+                select(IndexedDocumentTable)
+                .where(IndexedDocumentTable.index_type == index_type.value)
+                .order_by(IndexedDocumentTable.indexed_at.desc())
+                .offset(offset)
+                .limit(limit)
+            )
+            docs = [
+                {
+                    "id": str(doc.id),
+                    "source": doc.source,
+                    "indexed_at": (
+                        doc.indexed_at.isoformat() if doc.indexed_at else ""
+                    ),
+                    "title": doc.title,
+                    "preview": doc.preview,
+                    "chunk_count": doc.chunk_count,
+                    "extra_data": doc.extra_data or {},
+                }
+                for doc in rows_result.scalars().all()
+            ]
+        return docs, total
+
+    async def get_indexed_sources_for(self, index_type: str) -> list[str]:
+        """Return the unique `source` values tracked for an index."""
+        from sqlalchemy import select
+
+        from roboco.db import get_db_context
+        from roboco.db.tables import IndexedDocumentTable
+
+        async with get_db_context() as db:
+            rows = await db.execute(
+                select(IndexedDocumentTable.source).where(
+                    IndexedDocumentTable.index_type == index_type
+                )
+            )
+            return [r[0] for r in rows.all() if r[0]]
+
+    async def index_journal_entry(self, params: IndexJournalEntryParams) -> None:
+        """Index a journal entry."""
+        plugin = self._get_plugin(IndexType.JOURNALS)
+        if isinstance(plugin, JournalsIndexPlugin):
+            result = await plugin.index_entry(params)
+        else:
+            result = await plugin.ingest(
+                content=params.content,
+                entry_id=params.entry_id,
+                agent_id=params.agent_id,
+                entry_type=params.entry_type,
+                task_id=params.task_id,
+                tags=params.tags,
+            )
+
+        # Track in database. Refuse to fall back to 'unknown' — that masked
+        # the upstream bug where the journal entry row hadn't been flushed
+        # before indexing, producing roboco://journals/None doc-sources.
+        if params.entry_id is None:
+            raise ValueError(
+                "index_journal_entry: entry_id is required; refusing to "
+                "build doc-source with placeholder. Caller must flush the "
+                "entry row first (use require_uuid(entry_row.id)). System "
+                "events without a journal entry must use a different "
+                "indexing path."
+            )
+        # Best-effort: don't record a failed embed as an indexed entry.
+        if not result.success:
+            logger.warning(
+                "Journal indexing failed; skipping tracking row",
+                entry_id=str(params.entry_id),
+                error=result.error,
+            )
+            return
+        source = f"roboco://journals/{params.entry_id}"
+        await self._track_indexed_document(
+            IndexType.JOURNALS,
+            source=source,
+            title=f"Journal: {params.entry_type or 'entry'}",
+            preview=params.content[:500] if params.content else None,
+            metadata={
+                "entry_id": str(params.entry_id) if params.entry_id else None,
+                "agent_id": str(params.agent_id) if params.agent_id else None,
+                "entry_type": params.entry_type,
+                "tags": params.tags,
+            },
+        )
+
+    async def index_playbook(self, params: IndexPlaybookParams) -> IngestResult:
+        """Index an approved playbook into the PLAYBOOKS index (best-effort).
+
+        Returns the ``IngestResult`` so the caller can stamp a durable
+        ``indexed_ok`` flag only on a successful embed — never on a swallowed
+        failure (the pre-M23 gap that left approved playbooks absent from the
+        corpus after a mid-approval Ollama outage).
+        """
+        plugin = self._get_plugin(IndexType.PLAYBOOKS)
+        if isinstance(plugin, PlaybooksIndexPlugin):
+            result = await plugin.index_playbook(params)
+        else:
+            result = await plugin.ingest(
+                content=f"{params.title}\n{params.problem}\n{params.procedure}",
+                doc_id=params.playbook_id,
+            )
+        if not result.success:
+            logger.warning(
+                "Playbook indexing failed; skipping tracking row",
+                playbook_id=params.playbook_id,
+                error=result.error,
+            )
+            return result
+        await self._track_indexed_document(
+            IndexType.PLAYBOOKS,
+            source=f"roboco://playbooks/{params.playbook_id}",
+            title=f"Playbook: {params.title}",
+            preview=params.problem[:500] if params.problem else None,
+            metadata={
+                "playbook_id": params.playbook_id,
+                "team": params.team,
+                "scope": params.scope,
+                "tags": params.tags,
+            },
+        )
+        return result
+
+    async def unindex_playbook(self, playbook_id: str) -> None:
+        """De-index a playbook from the PLAYBOOKS index (best-effort).
+
+        The mirror of :meth:`index_playbook`: removes the playbook's embedded
+        chunks from the vector store AND drops its tracking row, so a
+        rejected/archived playbook stops surfacing in agent briefings. Both
+        steps are idempotent — a never-indexed draft playbook is a clean no-op.
+        Failures are logged and swallowed so a curation action (reject/archive)
+        never errors on the index side.
+        """
+        from roboco.db import get_db_context
+        from roboco.services.repositories import IndexedDocumentRepository
+
+        try:
+            plugin = self._get_plugin(IndexType.PLAYBOOKS)
+            if isinstance(plugin, PlaybooksIndexPlugin):
+                await plugin.delete_playbook(playbook_id)
+            else:
+                source = f"roboco://playbooks/{playbook_id}"
+                await plugin._require_store.delete_by_source(source)
+        except Exception as exc:
+            logger.warning(
+                "Playbook de-index (vector store) failed; continuing",
+                playbook_id=playbook_id,
+                error=str(exc),
+            )
+            return
+
+        try:
+            async with get_db_context() as db:
+                repo = IndexedDocumentRepository(db)
+                await repo.delete_by_source(
+                    IndexType.PLAYBOOKS.value,
+                    f"roboco://playbooks/{playbook_id}",
+                )
+        except Exception as exc:
+            logger.warning(
+                "Playbook de-index (tracking row) failed; continuing",
+                playbook_id=playbook_id,
+                error=str(exc),
+            )
+
+    async def index_vault_note(
+        self, *, path: str, title: str, content: str, content_hash: str
+    ) -> IngestResult:
+        """Index a human-authored vault note into the VAULT_NOTES index
+        (best-effort).
+
+        Mirrors :meth:`index_playbook`: only stamps the tracking row on a
+        successful embed, so a mid-ingest Ollama hiccup doesn't leave a stale
+        tracking row pointing at chunks that were never written.
+        """
+        plugin = self._get_plugin(IndexType.VAULT_NOTES)
+        if isinstance(plugin, VaultNotesIndexPlugin):
+            result = await plugin.index_note(
+                path=path, title=title, content=content, content_hash=content_hash
+            )
+        else:
+            result = await plugin.ingest(content=content, doc_id=path, path=path)
+        if not result.success:
+            logger.warning(
+                "Vault note indexing failed; skipping tracking row",
+                path=path,
+                error=result.error,
+            )
+            return result
+        await self._track_indexed_document(
+            IndexType.VAULT_NOTES,
+            source=f"vault://{path}",
+            title=title,
+            preview=content[:500],
+            metadata={"path": path, "content_hash": content_hash},
+        )
+        return result
+
+    async def unindex_vault_note(self, path: str) -> None:
+        """De-index a deleted/moved/quarantined vault note (best-effort).
+
+        The mirror of :meth:`index_vault_note`: removes the note's embedded
+        chunks from the vector store AND drops its tracking row so it stops
+        surfacing in agent retrieval. Idempotent — a never-indexed note is a
+        clean no-op. Failures are logged and swallowed so a KB-ingest cycle
+        never errors on the de-index side.
+        """
+        from roboco.db import get_db_context
+        from roboco.services.repositories import IndexedDocumentRepository
+
+        source = f"vault://{path}"
+        try:
+            plugin = self._get_plugin(IndexType.VAULT_NOTES)
+            if isinstance(plugin, VaultNotesIndexPlugin):
+                await plugin.delete_note(path)
+            else:
+                await plugin._require_store.delete_by_source(source)
+        except Exception as exc:
+            logger.warning(
+                "Vault note de-index (vector store) failed; continuing",
+                path=path,
+                error=str(exc),
+            )
+            return
+
+        try:
+            async with get_db_context() as db:
+                repo = IndexedDocumentRepository(db)
+                await repo.delete_by_source(IndexType.VAULT_NOTES.value, source)
+        except Exception as exc:
+            logger.warning(
+                "Vault note de-index (tracking row) failed; continuing",
+                path=path,
+                error=str(exc),
+            )
+
+    async def unindex_journal_entry(self, entry_id: UUID) -> None:
+        """De-index a journal entry from the JOURNALS index (best-effort).
+
+        The mirror of :meth:`index_journal_entry`: removes the entry's embedded
+        chunks from the vector store AND drops its tracking row, so a deleted
+        (or private) entry stops surfacing in RAG answers and agent briefings.
+        Idempotent — a never-indexed entry is a clean no-op. Failures are
+        logged and swallowed so a delete never errors on the index side.
+        """
+        from roboco.db import get_db_context
+        from roboco.services.repositories import IndexedDocumentRepository
+
+        source = f"roboco://journals/{entry_id}"
+        try:
+            plugin = self._get_plugin(IndexType.JOURNALS)
+            # JournalsIndexPlugin has no specialized delete; use the shared
+            # store delete-by-source (same as unindex_playbook's else-branch).
+            await plugin._require_store.delete_by_source(source)
+        except Exception as exc:
+            logger.warning(
+                "Journal de-index (vector store) failed; continuing",
+                entry_id=str(entry_id),
+                error=str(exc),
+            )
+            return
+
+        try:
+            async with get_db_context() as db:
+                repo = IndexedDocumentRepository(db)
+                await repo.delete_by_source(IndexType.JOURNALS.value, source)
+        except Exception as exc:
+            logger.warning(
+                "Journal de-index (tracking row) failed; continuing",
+                entry_id=str(entry_id),
+                error=str(exc),
+            )
+
+    # =========================================================================
+    # INDEXING OPERATIONS (New - Optimal Brain)
+    # =========================================================================
+
+    async def index_error(self, params: IndexErrorParams) -> None:
+        """Index an error pattern with solution."""
+        plugin = self._get_plugin(IndexType.ERRORS)
+        result: IngestResult | None = None
+        if isinstance(plugin, ErrorsIndexPlugin):
+            result = await plugin.record_error(params)
+        if result is not None and not result.success:
+            raise RuntimeError(f"Failed to index error pattern: {result.error}")
+
+        # Track in database
+        import hashlib
+
+        error_hash = hashlib.md5(
+            params.error_message.encode(), usedforsecurity=False
+        ).hexdigest()[:12]
+        source = f"roboco://errors/err-{error_hash}"
+        await self._track_indexed_document(
+            IndexType.ERRORS,
+            source=source,
+            title=f"Error: {params.error_message[:100]}",
+            preview=f"{params.error_message}\n\nSolution: {params.solution}",
+            metadata={
+                "context": params.context,
+                "worked": params.worked,
+                "tags": params.tags,
+            },
+        )
+
+    async def index_standard(self, params: IndexStandardParams) -> None:
+        """Index a coding/security/workflow standard."""
+        plugin = self._get_plugin(IndexType.STANDARDS)
+        result: IngestResult | None = None
+        if isinstance(plugin, StandardsIndexPlugin):
+            result = await plugin.index_standard(params)
+        if result is not None and not result.success:
+            raise RuntimeError(f"Failed to index standard: {result.error}")
+
+        # Track in database
+        source = f"roboco://standards/{params.domain or 'general'}"
+        await self._track_indexed_document(
+            IndexType.STANDARDS,
+            source=source,
+            title=f"Standard: {params.domain or 'General'}",
+            preview=params.content[:500] if params.content else None,
+            metadata={
+                "domain": params.domain,
+                "language": params.language,
+                "scope": params.scope,
+                "severity": params.severity,
+            },
+        )
+
+    async def index_decision(self, params: IndexDecisionParams) -> None:
+        """Index an architectural/design decision."""
+        plugin = self._get_plugin(IndexType.DECISIONS)
+        result: IngestResult | None = None
+        if isinstance(plugin, DecisionsIndexPlugin):
+            result = await plugin.record_decision(params)
+        if result is not None and not result.success:
+            raise RuntimeError(f"Failed to index decision: {result.error}")
+
+        # Track in database
+        import hashlib
+
+        topic_hash = hashlib.md5(
+            params.topic.encode(), usedforsecurity=False
+        ).hexdigest()[:12]
+        source = f"roboco://decisions/dec-{topic_hash}"
+        await self._track_indexed_document(
+            IndexType.DECISIONS,
+            source=source,
+            title=f"Decision: {params.topic[:100]}",
+            preview=(
+                f"{params.topic}\n\nDecision: {params.decision}\n\n"
+                f"Rationale: {params.rationale}"
+            ),
+            metadata={
+                "scope": params.scope,
+                "tags": params.tags,
+                "alternatives": params.alternatives,
+            },
+        )
+
+    async def record_review(self, params: IndexReviewParams) -> str:
+        """Record a code review for future reference."""
+        plugin = self._get_plugin(IndexType.REVIEWS)
+        doc_id = ""
+        result: IngestResult | None = None
+        if isinstance(plugin, ReviewsIndexPlugin):
+            review_params = ReviewParams(
+                comment=params.summary,
+                file_path=params.file_path,
+                reviewer_id=params.reviewer_id,
+                task_id=params.task_id,
+                review_type="code",
+                severity="info",
+            )
+            result = await plugin.record_review(review_params)
+            doc_id = result.doc_id
+        if result is not None and not result.success:
+            raise RuntimeError(f"Failed to record review: {result.error}")
+
+        # Track in database. Refuse to fall back to 'unknown' — file_path
+        # is typed `str` (required) and an empty value means the caller is
+        # broken; an unidentifiable review is worse than no review.
+        if not params.file_path:
+            raise ValueError(
+                "record_review: file_path is required; refusing to build "
+                "doc-source with placeholder. Caller must pass a non-empty "
+                "path or task identifier."
+            )
+        source = f"roboco://reviews/{params.file_path}"
+        await self._track_indexed_document(
+            IndexType.REVIEWS,
+            source=source,
+            title=f"Review: {params.file_path}",
+            preview=params.summary[:500] if params.summary else None,
+            metadata={
+                "file_path": params.file_path,
+                "reviewer_id": str(params.reviewer_id) if params.reviewer_id else None,
+                "task_id": str(params.task_id) if params.task_id else None,
+            },
+        )
+
+        return doc_id
+
+    async def record_learning(self, params: LearningParams) -> str:
+        """Record a learning for cross-agent knowledge sharing."""
+        plugin = self._get_plugin(IndexType.LEARNINGS)
+        doc_id = ""
+        result: IngestResult | None = None
+        if isinstance(plugin, LearningsIndexPlugin):
+            result = await plugin.record_learning(params)
+            doc_id = result.doc_id
+        if result is not None and not result.success:
+            raise RuntimeError(f"Failed to record learning: {result.error}")
+
+        # Track in database. The tracking row's ``source`` MUST match the URI
+        # the plugin embedded the chunks under (``roboco://learnings/{doc_id}``,
+        # doc_id = ``lrn-{md5(content[:100])[:12]}``) so a later de-index /
+        # lookup-by-source against the tracking row finds the chunk rows. The
+        # plugin already returned that doc_id — reuse it instead of recomputing
+        # a divergent ``learn-{md5(full_content)}`` that orphans the chunk rows.
+        source = f"roboco://learnings/{doc_id}"
+        await self._track_indexed_document(
+            IndexType.LEARNINGS,
+            source=source,
+            title=f"Learning: {params.category or 'General'}",
+            preview=params.content[:500] if params.content else None,
+            metadata={
+                "category": params.category,
+                "team": params.team,
+                "shareable": params.shareable,
+                "tags": params.tags,
+            },
+        )
+
+        return doc_id
+
+    async def index_standards_file(self, file_path: str) -> int:
+        """Index a markdown standards file."""
+        from pathlib import Path
+
+        plugin = self._get_plugin(IndexType.STANDARDS)
+        count = 0
+        if isinstance(plugin, StandardsIndexPlugin):
+            results = await plugin.index_markdown_file(file_path)
+            count = len([r for r in results if r.success])
+
+        # Track in database
+        path = Path(file_path)
+        if path.exists():
+            await self._track_indexed_document(
+                IndexType.STANDARDS,
+                source=str(path.absolute()),
+                title=path.stem.replace("-", " ").replace("_", " ").title(),
+                preview=path.read_text(errors="ignore")[:500],
+                metadata={"file_path": file_path},
+            )
+
+        return count
+
+    # =========================================================================
+    # SEARCH OPERATIONS
+    # =========================================================================
+
+    @staticmethod
+    def _collect_outcomes(
+        plugins: list[tuple[IndexType, BaseIndexPlugin]],
+        outcomes: list[Any],
+    ) -> list[SearchResult]:
+        """Flatten gathered per-index search outcomes; log and skip failures."""
+        results: list[SearchResult] = []
+        for (index_type, _), outcome in zip(plugins, outcomes, strict=True):
+            if isinstance(outcome, BaseException):
+                logger.warning(
+                    "Search failed for index",
+                    index_type=index_type.value,
+                    error=str(outcome),
+                )
+            elif outcome.success:
+                results.extend(outcome.results)
+            else:
+                logger.warning(
+                    "Search failed for index",
+                    index_type=index_type.value,
+                    error=outcome.error_message,
+                )
+        return results
+
+    async def search(
+        self,
+        query: str,
+        context: QueryContext | None = None,
+        top_k: int = 5,
+    ) -> list[SearchResult]:
+        """
+        Semantic search across knowledge base.
+
+        Args:
+            query: Natural language query
+            context: Optional context for filtering results
+            top_k: Number of results per index type
+
+        Returns:
+            List of search results sorted by relevance
+        """
+        if not self._initialized:
+            raise RuntimeError("OptimalService not initialized")
+
+        index_types = (
+            context.index_types if context and context.index_types else list(IndexType)
+        )
+        plugins = [(it, self._plugins[it]) for it in index_types if it in self._plugins]
+        if not plugins:
+            return []
+
+        # Embed the query ONCE, then run every index's hybrid search
+        # concurrently — instead of each index re-embedding in series.
+        try:
+            query_embedding = await plugins[0][1].compute_query_embedding(query)
+        except Exception as e:
+            logger.warning("Query embedding failed", error=str(e))
+            return []
+
+        outcomes = await asyncio.gather(
+            *(
+                plugin.search_with_embedding(query_embedding, query, top_k=top_k)
+                for _, plugin in plugins
+            ),
+            return_exceptions=True,
+        )
+
+        results = self._collect_outcomes(plugins, outcomes)
+        results.sort(key=lambda r: r.score, reverse=True)
+        return results[: top_k * len(index_types)]
+
+    async def _search_single_index(
+        self,
+        entry: tuple[IndexType, BaseIndexPlugin],
+        query_embedding: list[float],
+        query_text: str,
+        top_k: int,
+        buf: _QueryAggregationBuffer,
+    ) -> None:
+        """Search one index with a pre-computed embedding; update buf in place."""
+        index_type, plugin = entry
+        if await plugin.count() == 0:
+            logger.debug("Skipping empty index", index_type=index_type.value)
+            return
+
+        outcome = await plugin.search_with_embedding(
+            query_embedding, query_text, top_k=top_k
+        )
+        if outcome.success:
+            buf.stats[index_type.value] = len(outcome.results)
+            buf.citations.extend(outcome.results)
+        else:
+            buf.stats[index_type.value] = -1  # -1 indicates error
+            buf.errors[index_type.value] = outcome.error_message or "Unknown"
+            logger.warning(
+                "RAG search failed for index",
+                index_type=index_type.value,
+                error=outcome.error_message,
+            )
+
+    async def _aggregate_citations(
+        self, index_types: list[IndexType], query: str, top_k: int
+    ) -> tuple[list[SearchResult], dict[str, int], dict[str, str]]:
+        """Embed once, then search the requested indexes concurrently."""
+        buf = _QueryAggregationBuffer()
+        plugins = [(it, self._plugins[it]) for it in index_types if it in self._plugins]
+        if not plugins:
+            return buf.citations, buf.stats, buf.errors
+
+        try:
+            query_embedding = await plugins[0][1].compute_query_embedding(query)
+        except Exception as e:
+            logger.warning("RAG query embedding failed", error=str(e))
+            return buf.citations, buf.stats, buf.errors
+
+        await asyncio.gather(
+            *(
+                self._search_single_index(
+                    (it, plugin), query_embedding, query, top_k, buf
+                )
+                for it, plugin in plugins
+            ),
+            return_exceptions=True,
+        )
+
+        logger.info(
+            "RAG search complete",
+            total_citations=len(buf.citations),
+            by_index=buf.stats,
+            errors=buf.errors if buf.errors else None,
+        )
+        return buf.citations, buf.stats, buf.errors
+
+    async def query(
+        self,
+        query: str,
+        context: QueryContext | None = None,
+        top_k: int = 5,
+    ) -> RAGResponse:
+        """
+        Query the knowledge base with RAG.
+
+        Aggregates citations from all indexes first, then synthesizes a single
+        answer from the best sources. This ensures quality by using the most
+        relevant content regardless of which index it comes from.
+        """
+        if not self._initialized:
+            raise RuntimeError("OptimalService not initialized")
+
+        index_types = (
+            context.index_types if context and context.index_types else list(IndexType)
+        )
+
+        logger.info(
+            "RAG query starting", query=query[:50], num_indexes=len(index_types)
+        )
+
+        all_citations, search_stats, search_errors = await self._aggregate_citations(
+            index_types, query, top_k
+        )
+
+        all_citations.sort(key=lambda r: r.score, reverse=True)
+        top_citations = all_citations[: top_k * 2]
+
+        if top_citations:
+            logger.info(
+                "Synthesizing answer from aggregated citations",
+                num_citations=len(top_citations),
+            )
+            answer = await self._synthesize_from_citations(query, top_citations)
+            if answer:
+                return RAGResponse(
+                    answer=answer,
+                    citations=top_citations,
+                    query=query,
+                    context_used=len(top_citations),
+                    search_stats=search_stats,
+                    search_errors=search_errors,
+                )
+
+        logger.warning("RAG query found no citations in any index")
+        return RAGResponse(
+            answer="I couldn't find relevant information to answer your question.",
+            citations=[],
+            query=query,
+            context_used=0,
+            search_stats=search_stats,
+            search_errors=search_errors,
+        )
+
+    def _strip_think_tags(self, text: str) -> str:
+        """Strip <think> tags from LLM response, extracting content if needed."""
+        # First try: get content outside think tags
+        outside = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+        outside = re.sub(r"</think>", "", outside).strip()
+        if outside:
+            return outside
+
+        # If empty, extract content FROM inside think tags
+        inside_match = re.search(r"<think>(.*?)</think>", text, flags=re.DOTALL)
+        if inside_match:
+            return inside_match.group(1).strip()
+
+        return text.strip()
+
+    def _build_fallback_summary(self, citations: list[SearchResult]) -> str:
+        """Build fallback summary from citations when LLM unavailable."""
+        if not citations:
+            return "No relevant information found in the knowledge base."
+
+        parts = ["Here's what I found in the knowledge base:\n"]
+        for c in citations[:5]:
+            source_type = c.index_type.value if c.index_type else "unknown"
+            parts.append(f"**[{source_type}] {c.source}**")
+            parts.append(c.content[:600])
+            parts.append("")
+
+        parts.append(
+            "\n*Note: This is a direct extract from the knowledge base. "
+            "Review the sources above for detailed guidance.*"
+        )
+        return "\n".join(parts)
+
+    @staticmethod
+    def _build_synthesis_context(citations: list[SearchResult]) -> str:
+        """Build the context block injected into the synthesis prompt."""
+        context_parts: list[str] = []
+        for citation in citations[:8]:
+            idx_type = citation.index_type
+            source_type = idx_type.value if idx_type else "unknown"
+            content = (
+                citation.content[:MAX_CONTENT_CHARS] + "..."
+                if len(citation.content) > MAX_CONTENT_CHARS
+                else citation.content
+            )
+            context_parts.append(f"[{source_type}] {content}")
+        return "\n\n---\n\n".join(context_parts)
+
+    @staticmethod
+    def _build_synthesis_prompt(query: str, context: str) -> str:
+        """Build the full LLM prompt for citation synthesis."""
+        return (
+            "You are a senior technical advisor helping AI agents. "
+            "Based on the knowledge base context below, provide a thorough answer.\n\n"
+            "Your response MUST include:\n"
+            "- Clear explanation of the concept or solution\n"
+            "- Specific steps or code examples when relevant\n"
+            "- References to standards, decisions, or learnings from context\n"
+            "- Warnings about common pitfalls if applicable\n\n"
+            "Do NOT give vague or generic advice. Be specific and actionable.\n"
+            "Do NOT use <think> tags.\n\n"
+            f"Context:\n{context}\n\n"
+            f"Question: {query}\n\n"
+            "Provide a detailed, helpful response:"
+        )
+
+    async def _handle_synthesis_response(
+        self,
+        resp: Any,
+        attempt: int,
+    ) -> tuple[str | None, bool]:
+        """Interpret an LLM response; returns (answer, should_retry).
+
+        - answer is the synthesized text if available, else None.
+        - should_retry is False for terminal errors, True if retry may help.
+        """
+        import httpx
+
+        if resp.is_success:
+            data = resp.json()
+            answer = self._strip_think_tags(data["choices"][0]["message"]["content"])
+            if answer:
+                return answer, False
+            logger.warning("LLM response was all thinking tags")
+            return None, False
+
+        if resp.status_code >= httpx.codes.INTERNAL_SERVER_ERROR:
+            logger.warning(
+                "Synthesis LLM server error",
+                status=resp.status_code,
+                attempt=attempt + 1,
+            )
+            return None, True
+
+        logger.warning("Synthesis LLM failed", status=resp.status_code)
+        return None, False
+
+    async def _synthesize_from_citations(
+        self,
+        query: str,
+        citations: list[SearchResult],
+    ) -> str:
+        """
+        Synthesize an answer from aggregated citations using the local LLM.
+
+        Called when individual indexes returned citations but no LLM answer
+        (e.g., due to timeouts or errors). Includes retry logic for transient
+        failures.
+        """
+        import httpx
+
+        from roboco.config import settings
+
+        if not citations:
+            return ""
+
+        context = self._build_synthesis_context(citations)
+        prompt = self._build_synthesis_prompt(query, context)
+
+        max_retries = 3
+        retry_delay_base = 0.5
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for attempt in range(max_retries):
+                try:
+                    resp = await client.post(
+                        f"{settings.local_llm_base_url}/chat/completions",
+                        json={
+                            "model": settings.local_llm_model,
+                            "messages": [{"role": "user", "content": prompt}],
+                            "max_tokens": 4096,
+                            "options": {"num_ctx": 8192},
+                        },
+                    )
+                    answer, should_retry = await self._handle_synthesis_response(
+                        resp, attempt
+                    )
+                    if answer:
+                        return answer
+                    if not should_retry:
+                        break
+                except (httpx.TimeoutException, httpx.ConnectError) as e:
+                    logger.warning("Synthesis LLM error", attempt=attempt + 1, error=e)
+                except Exception as e:
+                    logger.warning("Synthesis failed", error=str(e))
+                    break
+
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay_base * (2**attempt))
+
+        return self._build_fallback_summary(citations)
+
+    # =========================================================================
+    # SPECIALIZED SEARCH (Optimal Brain)
+    # =========================================================================
+
+    async def search_errors(
+        self,
+        error_message: str,
+        context: str = "",
+        top_k: int = 5,
+    ) -> list[SearchResult]:
+        """Search for known solutions to an error."""
+        plugin = self._get_plugin(IndexType.ERRORS)
+        if isinstance(plugin, ErrorsIndexPlugin):
+            return await plugin.search_error(error_message, context, top_k)
+        outcome = await plugin.search(query=error_message, top_k=top_k)
+        return outcome.results
+
+    async def get_standards(
+        self,
+        domain: str,
+        language: str | None = None,
+        severity: str | None = None,
+        top_k: int = 20,
+    ) -> list[SearchResult]:
+        """Get standards for a domain/language."""
+        plugin = self._get_plugin(IndexType.STANDARDS)
+        if isinstance(plugin, StandardsIndexPlugin):
+            return await plugin.get_standards(domain, language, severity, top_k)
+        outcome = await plugin.search(query=f"{domain} standards", top_k=top_k)
+        return outcome.results
+
+    async def check_decision(
+        self,
+        topic: str,
+        threshold: float = 0.7,
+        top_k: int = 5,
+    ) -> list[Any]:
+        """Check for similar past decisions."""
+        plugin = self._get_plugin(IndexType.DECISIONS)
+        if isinstance(plugin, DecisionsIndexPlugin):
+            return await plugin.check_decision(topic, threshold, top_k)
+        outcome = await plugin.search(query=topic, top_k=top_k)
+        return outcome.results
+
+    async def search_learnings(
+        self,
+        query: str,
+        category: str | None = None,
+        team: str | None = None,
+        top_k: int = 10,
+    ) -> list[SearchResult]:
+        """Search for relevant learnings."""
+        plugin = self._get_plugin(IndexType.LEARNINGS)
+        if isinstance(plugin, LearningsIndexPlugin):
+            return await plugin.search_learnings(query, category, team, True, top_k)
+        outcome = await plugin.search(query=query, top_k=top_k)
+        return outcome.results
+
+    async def get_reviews_for_file(
+        self,
+        file_path: str,
+        top_k: int = 10,
+    ) -> list[SearchResult]:
+        """Get past reviews for a file or similar files."""
+        plugin = self._get_plugin(IndexType.REVIEWS)
+        if isinstance(plugin, ReviewsIndexPlugin):
+            return await plugin.get_reviews_for_file(file_path, top_k)
+        outcome = await plugin.search(query=f"review {file_path}", top_k=top_k)
+        return outcome.results
+
+    # =========================================================================
+    # UTILITY OPERATIONS
+    # =========================================================================
+
+    async def get_stats(self) -> dict[str, Any]:
+        """Get statistics about all indexes."""
+        if not self._initialized:
+            return {"initialized": False}
+
+        stats: dict[str, Any] = {"initialized": True, "indexes": {}}
+        for index_type, plugin in self._plugins.items():
+            try:
+                count = await plugin.count()
+                stats["indexes"][index_type.value] = {"document_count": count}
+            except Exception as e:
+                stats["indexes"][index_type.value] = {"error": str(e)}
+
+        return stats
+
+    async def get_index_stats(self, index_type: IndexType) -> dict[str, Any]:
+        """
+        Get detailed stats for a specific index.
+
+        Returns:
+            Dict with document_count, chunk_count, last_updated
+        """
+        if not self._initialized:
+            return {"error": "Not initialized"}
+
+        from sqlalchemy import func, select
+
+        from roboco.db import get_db_context
+        from roboco.db.tables import IndexedDocumentTable
+
+        plugin = self._get_plugin(index_type)
+        chunk_count = await plugin.count()
+
+        # Query DB for document count and last_updated
+        async with get_db_context() as session:
+            # Document count
+            count_query = (
+                select(func.count())
+                .select_from(IndexedDocumentTable)
+                .where(IndexedDocumentTable.index_type == index_type.value)
+            )
+            count_result = await session.execute(count_query)
+            doc_count = count_result.scalar() or 0
+
+            # Last updated
+            last_updated_query = (
+                select(func.max(IndexedDocumentTable.indexed_at))
+                .select_from(IndexedDocumentTable)
+                .where(IndexedDocumentTable.index_type == index_type.value)
+            )
+            last_updated_result = await session.execute(last_updated_query)
+            last_updated = last_updated_result.scalar()
+
+        return {
+            "index_type": index_type.value,
+            "document_count": doc_count,
+            "chunk_count": chunk_count,
+            "last_updated": last_updated.isoformat() if last_updated else None,
+        }
+
+    async def get_all_index_stats(self) -> dict[str, Any]:
+        """
+        Get detailed stats for all indexes including document counts and last_updated.
+
+        Returns:
+            Dict with initialized flag and indexes with full stats
+        """
+        if not self._initialized:
+            return {"initialized": False, "indexes": {}}
+
+        from sqlalchemy import func, select
+
+        from roboco.db import get_db_context
+        from roboco.db.tables import IndexedDocumentTable
+
+        async with get_db_context() as session:
+            stats: dict[str, Any] = {"initialized": True, "indexes": {}}
+
+            for index_type, plugin in self._plugins.items():
+                try:
+                    chunk_count = await plugin.count()
+
+                    # Document count
+                    count_query = (
+                        select(func.count())
+                        .select_from(IndexedDocumentTable)
+                        .where(IndexedDocumentTable.index_type == index_type.value)
+                    )
+                    count_result = await session.execute(count_query)
+                    doc_count = count_result.scalar() or 0
+
+                    # Last updated
+                    last_updated_query = (
+                        select(func.max(IndexedDocumentTable.indexed_at))
+                        .select_from(IndexedDocumentTable)
+                        .where(IndexedDocumentTable.index_type == index_type.value)
+                    )
+                    last_updated_result = await session.execute(last_updated_query)
+                    last_updated = last_updated_result.scalar()
+
+                    stats["indexes"][index_type.value] = {
+                        "document_count": doc_count,
+                        "chunk_count": chunk_count,
+                        "last_updated": (
+                            last_updated.isoformat() if last_updated else None
+                        ),
+                    }
+                except Exception as e:
+                    stats["indexes"][index_type.value] = {"error": str(e)}
+
+            return stats
+
+    @staticmethod
+    def _collect_stale_source_files(
+        indexed_sources: list[str], last_indexed: Any
+    ) -> list[str]:
+        """Return source paths whose mtime is newer than ``last_indexed``."""
+        from datetime import UTC, datetime
+
+        stale_files: list[str] = []
+        for source in indexed_sources[:100]:  # Limit check to 100 files
+            source_path = Path(source)
+            if not source_path.exists():
+                continue
+            try:
+                mtime = datetime.fromtimestamp(source_path.stat().st_mtime, tz=UTC)
+                if mtime > last_indexed:
+                    stale_files.append(source)
+            except OSError:
+                pass  # Skip files we can't stat
+        return stale_files
+
+    @staticmethod
+    async def _fetch_index_last_indexed(session: Any, idx_type: IndexType) -> Any:
+        """Return the max(indexed_at) for a given index type, or None."""
+        from sqlalchemy import func, select
+
+        from roboco.db.tables import IndexedDocumentTable
+
+        last_indexed_query = (
+            select(func.max(IndexedDocumentTable.indexed_at))
+            .select_from(IndexedDocumentTable)
+            .where(IndexedDocumentTable.index_type == idx_type.value)
+        )
+        last_indexed_result = await session.execute(last_indexed_query)
+        return last_indexed_result.scalar()
+
+    @staticmethod
+    async def _fetch_indexed_sources(session: Any, idx_type: IndexType) -> list[str]:
+        """Return distinct indexed source paths for a given index type."""
+        from sqlalchemy import select
+
+        from roboco.db.tables import IndexedDocumentTable
+
+        sources_query = (
+            select(IndexedDocumentTable.source)
+            .where(IndexedDocumentTable.index_type == idx_type.value)
+            .distinct()
+        )
+        sources_result = await session.execute(sources_query)
+        return [row[0] for row in sources_result.fetchall()]
+
+    async def _check_single_index_staleness(
+        self, session: Any, idx_type: IndexType, result: dict[str, Any]
+    ) -> None:
+        """Update ``result`` with staleness info for a single index."""
+        last_indexed = await self._fetch_index_last_indexed(session, idx_type)
+
+        if last_indexed is None:
+            result["stale_indexes"].append(idx_type.value)
+            result["details"][idx_type.value] = {
+                "status": "never_indexed",
+                "last_indexed": None,
+                "recommendation": "Run /kb/reindex to index this content",
+            }
+            return
+
+        indexed_sources = await self._fetch_indexed_sources(session, idx_type)
+        stale_files = self._collect_stale_source_files(indexed_sources, last_indexed)
+
+        if stale_files:
+            result["stale_indexes"].append(idx_type.value)
+            result["details"][idx_type.value] = {
+                "status": "stale",
+                "last_indexed": last_indexed.isoformat(),
+                "stale_file_count": len(stale_files),
+                "stale_files_sample": stale_files[:5],
+                "recommendation": "Run /kb/reindex?force=true to update",
+            }
+        else:
+            result["details"][idx_type.value] = {
+                "status": "current",
+                "last_indexed": last_indexed.isoformat(),
+                "indexed_sources_count": len(indexed_sources),
+            }
+
+    async def check_index_staleness(
+        self,
+        index_type: IndexType | None = None,
+    ) -> dict[str, Any]:
+        """
+        Check if indexes are stale (source files modified after last indexing).
+
+        This helps detect when a reindex is needed because files have changed.
+
+        Args:
+            index_type: Specific index to check, or None for CODE and DOCUMENTATION
+
+        Returns:
+            Dict with staleness info per index type
+        """
+        from roboco.db import get_db_context
+
+        result: dict[str, Any] = {"stale_indexes": [], "details": {}}
+
+        # Only check DOCUMENTATION (file-based index) - CODE deprecated
+        indexes_to_check = [index_type] if index_type else [IndexType.DOCUMENTATION]
+
+        async with get_db_context() as session:
+            for idx_type in indexes_to_check:
+                if idx_type not in self._plugins:
+                    continue
+                await self._check_single_index_staleness(session, idx_type, result)
+
+        result["needs_reindex"] = len(result["stale_indexes"]) > 0
+        return result
+
+    async def auto_index_on_startup(
+        self,
+        code_sources: list[str] | None = None,
+        docs_sources: list[str] | None = None,
+        force: bool = False,
+    ) -> dict[str, int]:
+        """
+        Auto-index docs if indexes are empty.
+
+        Called during bootstrap to ensure RAG has content to search.
+
+        NOTE: Code indexing has been deprecated.
+
+        Args:
+            code_sources: DEPRECATED - ignored
+            docs_sources: Paths to index for docs (default: auto-detect)
+            force: Force re-index even if not empty
+
+        Returns:
+            Dict with counts: {"code": 0, "docs": M}
+        """
+        _ = code_sources  # Deprecated
+        if not self._initialized:
+            await self.initialize()
+
+        if docs_sources is None:
+            # Try Docker paths first, then local
+            for path in ["/app/docs", "docs/"]:
+                if Path(path).exists():
+                    docs_sources = [path]
+                    break
+            docs_sources = docs_sources or ["docs/"]
+
+        result = {"code": 0, "docs": 0}  # code always 0 - deprecated
+
+        # Check docs index
+        docs_plugin = self._get_plugin(IndexType.DOCUMENTATION)
+        docs_count = await docs_plugin.count()
+
+        if docs_count == 0 or force:
+            logger.info(
+                "Auto-indexing documentation",
+                sources=docs_sources,
+                reason="empty" if docs_count == 0 else "forced",
+            )
+            result["docs"] = await self.index_documentation(
+                docs_sources, project="roboco"
+            )
+
+        if result["docs"] > 0:
+            logger.info("Auto-indexing complete", doc_files=result["docs"])
+        else:
+            logger.info("Indexes already populated, skipping auto-index")
+
+        return result
+
+    # =========================================================================
+    # PROMPT TEMPLATE MANAGEMENT
+    # =========================================================================
+
+    def create_prompt_template(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Create a reusable prompt template.
+
+        Args:
+            template_data: Dict with id, name, template, description,
+                          variables, category, created_at, created_by
+
+        Raises:
+            ValueError: If template_data is missing required 'id' field
+        """
+        if "id" not in template_data:
+            raise ValueError("Template data must include 'id' field")
+        template_id = template_data["id"]
+        self._prompt_templates[template_id] = template_data
+        return self._prompt_templates[template_id]
+
+    def list_prompt_templates(
+        self, category: str | None = None
+    ) -> list[dict[str, Any]]:
+        """List all prompt templates, optionally filtered by category."""
+        templates = list(self._prompt_templates.values())
+        if category:
+            templates = [t for t in templates if t.get("category") == category]
+        return templates
+
+    def get_prompt_template(self, template_id: str) -> dict[str, Any] | None:
+        """Get a prompt template by ID."""
+        return self._prompt_templates.get(template_id)
+
+    def delete_prompt_template(self, template_id: str) -> bool:
+        """Delete a prompt template. Returns True if deleted."""
+        if template_id in self._prompt_templates:
+            del self._prompt_templates[template_id]
+            return True
+        return False
+
+    def reset_prompt_templates(self) -> None:
+        """Reset all prompt templates (for testing)."""
+        self._prompt_templates.clear()
+
+    async def clear_index(self, index_type: IndexType) -> None:
+        """Clear a specific index."""
+        plugin = self._get_plugin(index_type)
+        await plugin.clear()
+        logger.info("Cleared index", index_type=index_type.value)
+
+    async def list_documents(
+        self, index_type: IndexType, limit: int = 50, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        """
+        List documents in a specific index.
+
+        Returns list of documents with id, source, indexed_at, and metadata.
+        """
+        plugin = self._get_plugin(index_type)
+
+        # Check if plugin has list_documents method
+        if hasattr(plugin, "list_documents"):
+            return await plugin.list_documents(limit=limit, offset=offset)
+
+        # Fallback: return empty list if plugin doesn't support listing
+        logger.warning(
+            "Plugin does not support list_documents",
+            index_type=index_type.value,
+        )
+        return []
+
+    async def refresh_index(self, index_type: IndexType, sources: list[str]) -> None:
+        """Refresh an index with new sources."""
+        plugin = self._get_plugin(index_type)
+        # For file-based indexes, re-add sources
+        await plugin.add_sources(sources)
+        logger.info("Refreshed index", index_type=index_type.value, sources=sources)
+
+    async def _check_embedding_health(
+        self, details: dict[str, Any], timeout: float
+    ) -> bool:
+        """Test embedding model connectivity; record result in `details`."""
+        from roboco.config import settings
+        from roboco.services.optimal_brain.shared_embedder import get_shared_embedder
+
+        try:
+            async with asyncio.timeout(timeout):
+                embedder = await get_shared_embedder(
+                    model=settings.default_embedding_model
+                )
+                if hasattr(embedder, "aembed_query"):
+                    test_embedding = await embedder.aembed_query("health check")
+                else:
+                    test_embedding = await asyncio.to_thread(
+                        embedder.embed_query, "health check"
+                    )
+                if (
+                    test_embedding
+                    and len(test_embedding) == settings.embedding_dimensions
+                ):
+                    details["embedding_model"] = settings.default_embedding_model
+                    details["embedding_dimensions"] = len(test_embedding)
+                    return True
+        except TimeoutError:
+            details["embedding_error"] = f"Timeout after {timeout}s"
+        except Exception as e:
+            details["embedding_error"] = str(e)
+        return False
+
+    async def _check_llm_health(self, details: dict[str, Any], timeout: float) -> bool:
+        """Test LLM (Ollama) connectivity; record result in `details`."""
+        import httpx
+
+        from roboco.config import settings
+
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.post(
+                    f"{settings.local_llm_base_url}/chat/completions",
+                    json={
+                        "model": settings.local_llm_model,
+                        "messages": [{"role": "user", "content": "ping"}],
+                        "max_tokens": 5,
+                    },
+                )
+                if resp.is_success:
+                    details["llm_model"] = settings.local_llm_model
+                    details["llm_base_url"] = settings.local_llm_base_url
+                    return True
+                # A non-2xx (e.g. Ollama Cloud 429 weekly-limit) is NOT an
+                # httpx exception, so record the status + upstream message
+                # instead of returning a bare, diagnostic-less False.
+                reason = resp.text[:200]
+                try:
+                    body = resp.json()
+                    if isinstance(body, dict) and body.get("error"):
+                        reason = str(body["error"])
+                except Exception:
+                    pass
+                details["llm_error"] = f"HTTP {resp.status_code}: {reason}"
+        except Exception as e:
+            details["llm_error"] = str(e)
+        return False
+
+    async def _check_vector_store_health(
+        self, details: dict[str, Any], timeout: float
+    ) -> bool:
+        """Test vector store connectivity + per-index search; record details."""
+        try:
+            async with asyncio.timeout(timeout):
+                stats = await self.get_stats()
+                if not stats.get("initialized"):
+                    return False
+                details["vector_store"] = "connected"
+
+                index_health: dict[str, str] = {}
+                for index_type, plugin in self._plugins.items():
+                    try:
+                        outcome = await plugin.search("test", top_k=1)
+                        index_health[index_type.value] = (
+                            "ok"
+                            if outcome.success
+                            else f"error: {outcome.error_message or 'unknown'}"
+                        )
+                    except Exception as idx_e:
+                        index_health[index_type.value] = f"error: {idx_e}"
+                details["index_health"] = index_health
+                return True
+        except TimeoutError:
+            details["vector_store_error"] = f"Timeout after {timeout}s"
+        except Exception as e:
+            details["vector_store_error"] = str(e)
+        return False
+
+    async def check_health(
+        self, timeout: float = 10.0
+    ) -> tuple[bool, bool, bool, dict[str, Any]]:
+        """Run embedding/LLM/vector-store health probes in sequence.
+
+        Returns (embedding_ok, llm_ok, vector_ok, details).
+        """
+        details: dict[str, Any] = {}
+        embedding_ok = await self._check_embedding_health(details, timeout)
+        llm_ok = await self._check_llm_health(details, timeout)
+        vector_ok = await self._check_vector_store_health(details, timeout)
+        return embedding_ok, llm_ok, vector_ok, details
+
+
+class _OptimalServiceHolder:
+    """Holder for singleton OptimalService instance."""
+
+    instance: OptimalService | None = None
+    lock: asyncio.Lock | None = None
+
+
+def _get_init_lock() -> asyncio.Lock:
+    """Return the init lock, lazily bound to the running event loop.
+
+    The lock is created on first use (not at import time) so it binds to the
+    loop that is actually running; a lock created at import time would bind to
+    the wrong loop and raise "bound to a different event loop".
+    """
+    if _OptimalServiceHolder.lock is None:
+        _OptimalServiceHolder.lock = asyncio.Lock()
+    return _OptimalServiceHolder.lock
+
+
+async def get_optimal_service() -> OptimalService:
+    """Get or create the OptimalService instance.
+
+    The instance is only published *after* ``initialize()`` completes. A lock
+    serializes concurrent first-callers so a second coroutine can never observe
+    a half-built, ``_initialized == False`` singleton mid-initialization (which
+    previously surfaced as "OptimalService not initialized" during indexing).
+    """
+    if _OptimalServiceHolder.instance is not None:
+        return _OptimalServiceHolder.instance
+
+    async with _get_init_lock():
+        # Re-check under the lock: another coroutine may have built it while
+        # we waited to acquire.
+        if _OptimalServiceHolder.instance is None:
+            service = OptimalService()
+            await service.initialize()
+            _OptimalServiceHolder.instance = service
+    return _OptimalServiceHolder.instance
+
+
+async def close_optimal_service() -> None:
+    """Close the OptimalService instance."""
+    if _OptimalServiceHolder.instance is not None:
+        await _OptimalServiceHolder.instance.close()
+        _OptimalServiceHolder.instance = None
+    # Drop the lock so the next initialization rebinds to the running loop.
+    _OptimalServiceHolder.lock = None

@@ -1,0 +1,112 @@
+# =============================================================================
+# Orchestrator — multi-stage build
+# =============================================================================
+# Builder stage compiles the Python venv; runner stage is slim Debian with
+# docker-cli (needed to spawn agent containers over the mounted docker socket)
+# and the pre-built venv copied in.
+# =============================================================================
+
+# ---- Builder ----------------------------------------------------------------
+FROM python:3.13-slim-bookworm AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
+
+WORKDIR /app
+
+ENV UV_HTTP_TIMEOUT=300 \
+    UV_CONCURRENT_DOWNLOADS=4 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_PREFERENCE=only-system
+
+# Dependency layer first so source changes don't invalidate the big install.
+# --python-preference=only-system forces uv to use the base-image's /usr/local
+# Python (shipped with python:3.13-slim-bookworm) instead of downloading its
+# own — otherwise the venv symlinks into /root/.local/share/uv/python/... and
+# breaks when COPY --from=builder only copies /app.
+COPY pyproject.toml uv.lock README.md /app/
+RUN uv sync --frozen --no-dev --no-install-project
+
+# Project layer
+COPY roboco /app/roboco
+COPY agents /app/agents
+COPY docs /app/docs
+COPY alembic.ini /app/
+COPY alembic /app/alembic
+RUN uv sync --frozen --no-dev
+
+# ---- Runner -----------------------------------------------------------------
+FROM python:3.13-slim-bookworm AS runner
+
+# Runtime apt deps: docker-cli (spawn agents), git (workspace ops),
+# make (backstop for projects whose CI commands use make targets), Node.js 22
+# via NodeSource. Debian's distro nodejs is v18, but current pnpm requires
+# Node >=22.13 — installing v18 made `pnpm install` fail in Node/TS workspaces.
+# curl/gnupg/lsb-release are only needed to add the repos, then purged.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl ca-certificates gnupg lsb-release git make \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg \
+        | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+    && DEBIAN_CODENAME=$(lsb_release -cs) \
+    && if [ "$DEBIAN_CODENAME" = "trixie" ]; then DEBIAN_CODENAME="bookworm"; fi \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian ${DEBIAN_CODENAME} stable" \
+        > /etc/apt/sources.list.d/docker.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends docker-ce-cli \
+    && apt-get purge -y --auto-remove curl gnupg lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# pnpm lets the orchestrator pre-install the frontend/panel cell's workspace
+# deps (`pnpm install`) the same way uv handles Python cells. Without it the
+# dep-install step gracefully skips (WorkspaceService._run_dep_install catches
+# the missing-tool OSError) and the fe-dev re-installs per task. node/npm come
+# from the NodeSource layer above; pnpm matches how agent-dev-fe installs it.
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+# Copy the already-built venv + app tree from builder.
+# .venv first (invalidated only by pyproject.toml/uv.lock changes via the
+# builder's own dep-then-project split), source dirs last so an app-code-only
+# change doesn't bust the much larger .venv layer's cache.
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/pyproject.toml /app/uv.lock /app/README.md /app/
+COPY --from=builder /app/roboco /app/roboco
+COPY --from=builder /app/agents /app/agents
+COPY --from=builder /app/docs /app/docs
+COPY --from=builder /app/alembic.ini /app/
+COPY --from=builder /app/alembic /app/alembic
+
+# uv is needed at runtime: WorkspaceService runs `uv sync` to pre-install
+# Python cell deps, and CI commands shell out to `uv run`. The builder stage
+# has it at /usr/local/bin/uv; carry it into the runner so it's on PATH.
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+
+# Orchestrator clones workspaces as root, then chowns them to the agent
+# user (uid 1000) so the agent container can read/write. After the chown,
+# the orchestrator (still root) needs to run git commands (claim branch
+# creation, status, log, fetch) inside those now-1000-owned dirs — git's
+# "dubious ownership" check refuses unless safe.directory is set. `*`
+# trusts every path, which is fine here since this container only mounts
+# the sandboxed /data/workspaces tree.
+RUN git config --global --add safe.directory '*'
+
+# PYTHONUNBUFFERED: flush stdout/stderr immediately so structured logs reach
+# `docker logs` in real time. Without it Python block-buffers stdout (it's a pipe,
+# not a TTY) and lines arrive in large delayed chunks — which made live log
+# diagnosis impossible during the intake smoke tests.
+ENV PATH="/app/.venv/bin:$PATH" \
+    VIRTUAL_ENV=/app/.venv \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+# Smart dispatcher spawns agents on-demand. Override with --spawn to pre-start.
+ENTRYPOINT ["python", "-m", "roboco.cli"]
+CMD []

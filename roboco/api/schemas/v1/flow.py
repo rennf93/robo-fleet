@@ -1,0 +1,603 @@
+"""Request schemas for /api/v1/flow/* intent verbs."""
+
+from typing import Annotated, Any
+from uuid import UUID
+
+from pydantic import BaseModel, BeforeValidator, Field, field_validator
+
+from roboco.foundation.policy.content.validators import coerce_str_list
+from roboco.models.base import Complexity
+
+# A ``list[str]`` field that tolerates the Claude SDK's XML-ish tool-input
+# parsing: an LLM emitting a bullet list as ``<item>…</item>`` elements arrives
+# nested (``[[["…"]]]`` / ``[{"item": {"$text": "…"}}, …]``), which a bare
+# ``list[str]`` hard-rejects at validation time (the live ``i_will_plan`` crash:
+# ``technical_considerations.1 Input should be a valid string``). The
+# ``BeforeValidator`` flattens it to a flat ``list[str]`` first — same
+# ``coerce_str_list`` used at the intake→DB boundary (Bug 3, MegaTask memory).
+# Applied to EVERY LLM-authored list-of-strings on the flow surface so the SDK
+# can't crash any of them (acceptance_criteria, issues, files, ac_verdicts,
+# technical_considerations, covers_parent_criteria).
+StrList = Annotated[list[str], BeforeValidator(coerce_str_list)]
+
+# AC discipline (the 2026-07-07 task-quality defect: restated, over-long
+# acceptance criteria). Mirrors roboco.foundation.policy.task_completeness
+# so an over-long / over-count AC list is rejected at the request boundary.
+_AC_MAX_ITEMS = 7
+_AC_MAX_ITEM_CHARS = 200
+
+# approach's truncate-not-reject ceiling — must match _PM_APPROACH_MIN_LEN's
+# sibling ceiling in choreographer._impl (the gate re-derives its own copy).
+_APPROACH_MAX_CHARS = 800
+
+# Sibling free-text caps — same truncate-not-reject treatment as approach
+# (2026-08 fix: a hard 422 on an overlong sub_task/risk/question threw away
+# an otherwise-good plan exactly like the approach incident did — a live
+# incident stranded a cell PM's i_will_plan on an over-length sub_task
+# description for ~6 respawn laps).
+_SUBTASK_TITLE_MAX_CHARS = 200
+_SUBTASK_DESCRIPTION_MAX_CHARS = 600
+_RISK_MAX_CHARS = 300
+_MITIGATION_MAX_CHARS = 600
+_OPEN_QUESTION_MAX_CHARS = 300
+_DELEGATE_TITLE_MAX_CHARS = 200
+
+
+def _truncate(value: str, limit: int) -> str:
+    """The one truncation rule every clamp on this surface shares."""
+    if len(value) > limit:
+        return value[: limit - 3] + "..."
+    return value
+
+
+def _clamp(value: object, limit: int) -> object:
+    """``mode="before"`` clamp: pass non-str input through unchanged so the
+    real type/min_length validation reports the actual error."""
+    if isinstance(value, str):
+        return _truncate(value, limit)
+    return value
+
+
+def _clamp_dict_list(value: object, key_limits: dict[str, int]) -> object:
+    """``mode="before"`` clamp for a list-of-plain-dicts field.
+
+    IWillWorkOnRequest.steps/risks/open_questions stay ``list[dict[str,
+    str]]`` (not typed models like SubTaskCreate/RiskCreate/
+    OpenQuestionCreate) because the choreographer consumes them as raw
+    dicts (``_thin_subtask_hint``, ``_normalize_risk``,
+    ``_normalize_open_question`` all use ``.get()``) — re-typing would mean
+    touching every one of those call sites for no behavior change. Walks
+    each dict entry, truncating the named str keys in place; non-dict items
+    and unknown/non-str values pass through untouched so real validation
+    reports the actual error."""
+    if not isinstance(value, list):
+        return value
+    out = []
+    for item in value:
+        if isinstance(item, dict):
+            out.append(
+                {
+                    k: (_clamp(v, key_limits[k]) if k in key_limits else v)
+                    for k, v in item.items()
+                }
+            )
+        else:
+            out.append(item)
+    return out
+
+
+class SubTaskCreate(BaseModel):
+    """A PM sub_task — a delegate target AND a progress-checklist item.
+
+    Mirrors DelegateRequest title/description caps so an over-long sub_task
+    can't bloat the plan (the 2026-07-07 task-quality defect). Overflow past
+    the caps is truncated, not rejected (see IWillPlanRequest.approach's
+    _truncate_approach) — the server assigns id + order; callers supply
+    title + description only.
+    """
+
+    title: str = Field(..., min_length=1)
+    description: str = Field(..., min_length=20)
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def _truncate_title(cls, v: object) -> object:
+        return _clamp(v, _SUBTASK_TITLE_MAX_CHARS)
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def _truncate_description(cls, v: object) -> object:
+        return _clamp(v, _SUBTASK_DESCRIPTION_MAX_CHARS)
+
+
+class RiskCreate(BaseModel):
+    """A {risk, mitigation} entry — what could go wrong and how it's handled."""
+
+    risk: str = Field(..., min_length=1)
+    mitigation: str = Field(..., min_length=1)
+
+    @field_validator("risk", mode="before")
+    @classmethod
+    def _truncate_risk(cls, v: object) -> object:
+        return _clamp(v, _RISK_MAX_CHARS)
+
+    @field_validator("mitigation", mode="before")
+    @classmethod
+    def _truncate_mitigation(cls, v: object) -> object:
+        return _clamp(v, _MITIGATION_MAX_CHARS)
+
+
+class OpenQuestionCreate(BaseModel):
+    """An open question the PM wants answered before/during work."""
+
+    question: str = Field(..., min_length=1)
+    answered: bool = False
+
+    @field_validator("question", mode="before")
+    @classmethod
+    def _truncate_question(cls, v: object) -> object:
+        return _clamp(v, _OPEN_QUESTION_MAX_CHARS)
+
+
+class GiveMeWorkRequest(BaseModel):
+    """Empty request body — agent_id comes from header."""
+
+
+class IWillWorkOnRequest(BaseModel):
+    task_id: UUID
+    plan: str | None = None
+    # The executing developer's plan is a step checklist (same
+    # SubTask shape as IWillPlanRequest.sub_tasks). It is both the
+    # execution plan AND the progress checklist: completing a
+    # step advances progress. Depth is enforced server-side in
+    # choreographer._dev_steps_gate (a title with no real description is
+    # not a step). Server assigns id + order.
+    steps: list[dict[str, str]] = Field(
+        default_factory=list,
+        description="Ordered execution steps — list of {title, description}",
+    )
+    # Full parity with IWillPlanRequest so a dev leaf's Plan tab renders the
+    # same rich structure PMs author. Defaults stay permissive (NOT min_length)
+    # so re-entry/recovery calls that omit them still pass route validation;
+    # depth + presence are enforced on FRESH dev claims by
+    # choreographer._dev_plan_gate. The dev's `plan` doubles as the approach.
+    technical_considerations: StrList = Field(default_factory=list)
+    risks: list[dict[str, str]] = Field(default_factory=list)
+    open_questions: list[dict[str, str | bool]] = Field(default_factory=list)
+
+    # steps/risks/open_questions are the same free-text fields
+    # SubTaskCreate/RiskCreate/OpenQuestionCreate clamp above — the
+    # choreographer feeds them into the SAME _thin_subtask_hint gate with
+    # the SAME 200/600/300/600/300-char limits (same incident class as
+    # approach: a hard 422 here stranded a dev's i_will_work_on exactly
+    # like an overlong PM sub_task did). Clamped in place instead of
+    # rejected; unknown keys and non-str values pass through untouched.
+    @field_validator("steps", mode="before")
+    @classmethod
+    def _truncate_steps(cls, v: object) -> object:
+        return _clamp_dict_list(
+            v,
+            {
+                "title": _SUBTASK_TITLE_MAX_CHARS,
+                "description": _SUBTASK_DESCRIPTION_MAX_CHARS,
+            },
+        )
+
+    @field_validator("risks", mode="before")
+    @classmethod
+    def _truncate_risks(cls, v: object) -> object:
+        return _clamp_dict_list(
+            v, {"risk": _RISK_MAX_CHARS, "mitigation": _MITIGATION_MAX_CHARS}
+        )
+
+    @field_validator("open_questions", mode="before")
+    @classmethod
+    def _truncate_open_questions(cls, v: object) -> object:
+        return _clamp_dict_list(v, {"question": _OPEN_QUESTION_MAX_CHARS})
+
+
+class OpenPrRequest(BaseModel):
+    task_id: UUID
+
+
+class ResolvedFindingInput(BaseModel):
+    """One entry in ``i_am_done``'s ``resolved_findings`` — the dev's claim
+    that a ledger finding is addressed. ``finding_id`` is the id shown in the
+    rendered note/A2A body (``[F-<id8>]``) — a full UUID also matches."""
+
+    finding_id: str = Field(..., min_length=1)
+    commit: str | None = None
+    note: str | None = Field(default=None, max_length=300)
+
+
+class IAmDoneRequest(BaseModel):
+    task_id: UUID
+    notes: str = ""
+    resolved_findings: list[ResolvedFindingInput] = Field(default_factory=list)
+
+
+class IAmBlockedRequest(BaseModel):
+    task_id: UUID
+    reason: str = Field(..., min_length=1)
+    # Pre-gateway parity (G8 part b). The old TaskBlockInput at
+    # 0c3d15a:roboco/mcp/schemas/__init__.py required blocker_type and
+    # what_needed so PMs could triage by class. Optional here for
+    # back-compat with i_am_blocked(reason) callers; supplied fields are
+    # rendered into the struggle journal entry so the panel surfaces them.
+    blocker_type: str | None = Field(
+        default=None,
+        description=(
+            "external | internal | question | dependency. Required from "
+            "newly-spawned agents (per the developer.md verb table); "
+            "older agents that don't supply it default to 'internal'."
+        ),
+    )
+    what_needed: str | None = Field(
+        default=None,
+        description="Concrete description of what would unblock the task.",
+    )
+
+    @field_validator("blocker_type", mode="before")
+    @classmethod
+    def _blocker_type_enum(cls, v: object) -> object:
+        if v is None:
+            return v
+        if isinstance(v, str) and v.lower() not in {
+            "external",
+            "internal",
+            "question",
+            "dependency",
+        }:
+            raise ValueError(
+                f"blocker_type must be one of: external | internal | "
+                f"question | dependency. Got {v!r}."
+            )
+        return v
+
+
+class UnclaimRequest(BaseModel):
+    task_id: UUID
+
+
+class ReassignRequest(BaseModel):
+    """HTTP body for the cell_pm `reassign` verb.
+
+    ``new_assignee`` is a developer slug in the caller's own cell (e.g.
+    ``be-dev-2``). The choreographer resolves and validates it.
+    """
+
+    task_id: UUID
+    new_assignee: str = Field(..., min_length=1)
+
+
+class DeclareCoverageRequest(BaseModel):
+    """HTTP body for the cell_pm/main_pm `declare_coverage` verb.
+
+    ``task_id`` is the CHILD to stamp (or the caller's OWN root/coordination
+    task, for root-owned criteria); ``criteria`` are that task's parent's
+    acceptance criteria — or its own, in root-owned mode — by id or exact
+    text (same representation as `delegate`'s `covers_parent_criteria`). The
+    choreographer validates ownership + unknown criteria.
+    """
+
+    task_id: UUID
+    criteria: StrList = Field(..., min_length=1)
+
+
+class ResumeRequest(BaseModel):
+    task_id: UUID
+
+
+class SyncBranchRequest(BaseModel):
+    """HTTP body for the dev `sync_branch` verb.
+
+    Rebases the task's branch onto its resolved base (parent branch) through the
+    gate, so a developer whose branch has fallen behind can re-sync without raw
+    git (which is denied to agents). Git-only — no DB state transition.
+    """
+
+    task_id: UUID
+    # Auto-stash (tracked + untracked) instead of refusing DIRTY_WORKSPACE;
+    # popped back after the rebase. Default False preserves the prior refuse
+    # behavior for callers that don't opt in.
+    stash: bool = False
+
+
+class IAmIdleRequest(BaseModel):
+    """Empty request body."""
+
+
+class ClaimReviewRequest(BaseModel):
+    task_id: UUID
+
+
+class PassReviewRequest(BaseModel):
+    task_id: UUID
+    notes: str = Field(..., min_length=1)
+    ac_verdicts: StrList | None = Field(
+        default=None,
+        description=(
+            "Legacy free-text per-criterion verdicts — still folded into the "
+            "persisted notes but no longer gates the pass (see "
+            "criteria_verified)."
+        ),
+    )
+    criteria_verified: list[dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "Mandatory when the task has acceptance criteria — one "
+            "{criterion, evidence} entry per criterion. criterion must match "
+            "an AC by id or exact text; evidence must be concrete (file:line, "
+            "screenshot ref, rendered-frame path, test name). Every criterion "
+            "must be covered or the pass is rejected."
+        ),
+    )
+
+
+class FailReviewRequest(BaseModel):
+    task_id: UUID
+    # Free text — deprecated, one release. Shimmed into file-less findings.
+    issues: StrList = Field(default_factory=list)
+    findings: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Structured revision findings — each {file?, line?, severity "
+            "(blocker|major|minor|nit), expected, actual, fix?, evidence?}. "
+            "At least one of findings/issues is required."
+        ),
+    )
+
+
+class ClaimPrReviewRequest(BaseModel):
+    task_id: UUID
+
+
+class PostPrReviewRequest(BaseModel):
+    task_id: UUID
+    body: str = Field(..., min_length=1)
+    event: str = Field(
+        default="REQUEST_CHANGES",
+        description=(
+            "APPROVE, REQUEST_CHANGES, or COMMENT. The verdict must match the "
+            "findings: REQUEST_CHANGES needs >=1 finding; APPROVE may not carry a "
+            "blocker/major finding. Pass APPROVE explicitly to approve a clean PR."
+        ),
+    )
+    findings: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Structured per-criterion findings — each {file, line?, severity "
+            "(blocker|major|minor|nit), expected, actual}. When provided, the "
+            "GitHub comment is generated from them in the RoboCo format."
+        ),
+    )
+
+
+class ClaimGateReviewRequest(BaseModel):
+    task_id: UUID
+
+
+class PrPassRequest(BaseModel):
+    task_id: UUID
+    notes: str = Field(..., min_length=1)
+
+
+class PrFailRequest(BaseModel):
+    task_id: UUID
+    # Free text — deprecated, one release. Shimmed into file-less findings.
+    issues: StrList = Field(default_factory=list)
+    findings: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Structured revision findings — each {file?, line?, severity "
+            "(blocker|major|minor|nit), expected, actual, fix?, evidence?}. "
+            "At least one of findings/issues is required."
+        ),
+    )
+
+
+class ClaimDocTaskRequest(BaseModel):
+    task_id: UUID
+
+
+class IDocumentedRequest(BaseModel):
+    task_id: UUID
+    notes: str = Field(..., min_length=1)
+    files: StrList = Field(..., min_length=1)
+
+
+class TriageRequest(BaseModel):
+    """Empty request body."""
+
+
+class WaiveFindingRequest(BaseModel):
+    finding_id: UUID
+    note: str = Field(
+        ...,
+        min_length=1,
+        description=(
+            "Why this finding is waived rather than fixed — recorded on the "
+            "ledger row and in audit. Only minor/nit findings are waivable."
+        ),
+    )
+
+
+class UnblockRequest(BaseModel):
+    task_id: UUID
+    reason: str = Field(
+        ...,
+        min_length=10,
+        description=(
+            "Why the block is cleared — recorded as the PM's journal:decision "
+            "so no separate note(scope='decision') call is needed."
+        ),
+    )
+    restore: bool = True
+
+
+class CompleteRequest(BaseModel):
+    task_id: UUID
+    notes: str = Field(..., min_length=1)
+
+
+class RequestChangesRequest(BaseModel):
+    task_id: UUID
+    # Free text — deprecated, one release. Shimmed into file-less findings.
+    issues: StrList = Field(default_factory=list)
+    findings: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Structured revision findings — each {file?, line?, severity "
+            "(blocker|major|minor|nit), expected, actual, fix?, evidence?}. "
+            "At least one of findings/issues is required."
+        ),
+    )
+
+
+class EscalateUpRequest(BaseModel):
+    task_id: UUID
+    reason: str = Field(..., min_length=1)
+
+
+class EscalateToCeoRequest(BaseModel):
+    task_id: UUID
+    reason: str = Field(..., min_length=1)
+
+
+class IWillPlanRequest(BaseModel):
+    task_id: UUID
+    plan: str = Field(..., min_length=1, max_length=2000)
+    # Pre-gateway parity: Approach is REQUIRED — agents
+    # could not transition claimed → in_progress without filling this in the
+    # pre-gateway flow. The Plan tab depends on it; smoke run 3 confirmed
+    # the empty default lets agents through with thin plans.
+    # min_length must match choreographer._impl._PM_APPROACH_MIN_LEN. Raised
+    # 20→150: a 20-char approach was a one-liner; the approach +
+    # sub_tasks are also the progress checklist, so they must be substantive.
+    # Overflow past 800 chars is truncated, not rejected — a 422 here used to
+    # throw away an otherwise-good plan and degrade the PM to a bare unblock
+    # (live incident: an over-length approach 422'd mid-flow). min_length
+    # stays a hard reject: a thin plan IS a defect.
+    approach: str = Field(..., min_length=150)
+    sub_tasks: list[SubTaskCreate] = Field(
+        default_factory=list,
+        description="List of {title, description} — server assigns id + order",
+    )
+    technical_considerations: StrList = Field(default_factory=list)
+    risks: list[RiskCreate] = Field(default_factory=list)
+    open_questions: list[OpenQuestionCreate] = Field(default_factory=list)
+
+    @field_validator("approach", mode="before")
+    @classmethod
+    def _truncate_approach(cls, v: object) -> object:
+        return _clamp(v, _APPROACH_MAX_CHARS)
+
+
+class DelegateRequest(BaseModel):
+    """HTTP body for cell_pm + main_pm `delegate` verbs.
+
+    Mirrors :data:`roboco.foundation.policy.task_completeness.TASK_AT_CREATE`
+    so under-filled payloads fail at the request boundary with a 422 — no
+    silent defaults, no "code"/"medium" fallbacks. Each constraint matches
+    the hint string returned by the foundation policy.
+    """
+
+    parent_task_id: UUID
+    # Overflow past 200 chars is truncated, not rejected — same treatment as
+    # SubTaskCreate.title / IWillPlanRequest.approach.
+    title: str = Field(..., min_length=1)
+    # 20-char minimum mirrors TASK_AT_CREATE.description (MIN_LENGTH=20).
+    # Forces a real one-line summary instead of "x" or "see title".
+    description: str = Field(..., min_length=20)
+    assigned_to: str = Field(..., min_length=1)
+    team: str = Field(..., min_length=1)
+    # task_type, nature, estimated_complexity are EXPLICITLY_DECLARED in
+    # TASK_AT_CREATE. The 2026-05-08 trace showed agents omitting task_type
+    # and the old default of 'code' deadlocking the lifecycle; the same
+    # silent-default trap exists for nature ("technical") and complexity
+    # ("medium"). Force callers to declare intent.
+    task_type: str = Field(..., min_length=1)
+    nature: str = Field(..., min_length=1)
+    estimated_complexity: Complexity
+    # acceptance_criteria is required and non-empty; downstream policy
+    # also denylist-checks each item against placeholder phrases. The list
+    # cap (<=7) mirrors the policy and stays a hard reject — dropping ACs
+    # silently would be data loss. Each item's own overflow past 200 chars
+    # is truncated in place instead (_ac_items_bounded below) — a verbose
+    # criterion's tail isn't worth throwing away the whole delegate call.
+    acceptance_criteria: StrList = Field(..., min_length=1, max_length=7)
+
+    @field_validator("acceptance_criteria")
+    @classmethod
+    def _ac_items_bounded(cls, v: list[str]) -> list[str]:
+        return [_truncate(item, _AC_MAX_ITEM_CHARS) for item in v]
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def _truncate_title(cls, v: object) -> object:
+        return _clamp(v, _DELEGATE_TITLE_MAX_CHARS)
+
+    # Optional per-subtask project override. When omitted, the choreographer
+    # resolves the project from the parent's Product map for this cell, then
+    # falls back to the parent's project. Plain optional field — no validator.
+    project_id: UUID | None = None
+    # Parent acceptance-criterion ids this subtask is responsible for. Lets the
+    # coverage + roll-up AC gates verify every parent AC is claimed and satisfied.
+    covers_parent_criteria: StrList | None = None
+    # Dev-task collision surface (the multi-level sequencing model — edge kind
+    # 3). The cell PM states what each dev task touches so the choreographer can
+    # run SequencingService and wire the dev-task collision DAG (file-overlap
+    # serializes, migration-adders chain, shared-surface edits run last).
+    # Optional: a delegate without surfaces joins no collision edges (parallel).
+    intends_to_touch: StrList | None = None
+    adds_migration: bool = False
+    touches_shared: bool = False
+    # Explicit dependency override (edge the surface rules would miss, e.g. a
+    # non-collision ordering the PM knows). Optional; wired verbatim as
+    # dependency_ids on the created dev task.
+    depends_on: list[UUID] | None = None
+
+    # Pre-gateway parity: cross-field validators that catch the most common
+    # LLM-vs-schema confusions. Pre-gateway lived in
+    # roboco/mcp/schemas/__init__.py::TaskCreateInput at 0c3d15a.
+    @field_validator("nature", mode="before")
+    @classmethod
+    def _nature_must_be_known(cls, v: object) -> object:
+        """Reject invented nature values (e.g., 'standard') with the enum hint."""
+        if isinstance(v, str) and v.lower() not in {"technical", "non_technical"}:
+            raise ValueError(
+                f"nature must be one of: technical | non_technical. Got {v!r}. "
+                f"This was the 2026-05-11 'standard' regression — drop the "
+                f"invented value and use the enum."
+            )
+        return v
+
+    @field_validator("task_type", mode="before")
+    @classmethod
+    def _task_type_must_be_known(cls, v: object) -> object:
+        """Reject invented task_type values with the enum hint."""
+        if isinstance(v, str) and v.lower() not in {
+            "code",
+            "documentation",
+            "research",
+            "planning",
+            "design",
+            "administrative",
+        }:
+            raise ValueError(
+                f"task_type must be one of: code | documentation | research | "
+                f"planning | design | administrative. Got {v!r}."
+            )
+        return v
+
+
+class SubmitUpRequest(BaseModel):
+    task_id: UUID
+    notes: str = Field(..., min_length=1)
+    resolved_findings: list[ResolvedFindingInput] = Field(default_factory=list)
+
+
+class SubmitRootRequest(BaseModel):
+    task_id: UUID
+    notes: str = Field(..., min_length=1)
+    resolved_findings: list[ResolvedFindingInput] = Field(default_factory=list)

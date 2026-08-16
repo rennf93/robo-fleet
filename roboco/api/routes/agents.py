@@ -1,0 +1,63 @@
+"""
+Agent Routes
+
+Thin HTTP plumbing over `AgentService`: validate inputs, convert
+`NotFoundError` to 404, shape responses. No DB access in this module.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from roboco.api.deps import DbSession, require_panel_token
+from roboco.api.schemas.agents import AgentResponse, agent_to_response
+from roboco.models import AgentRole, Team
+from roboco.services.agent import get_agent_service
+from roboco.services.base import NotFoundError
+
+router = APIRouter(dependencies=[Depends(require_panel_token)])
+
+
+@router.get("")
+async def list_agents(
+    db: DbSession,
+    slug: str | None = Query(None, description="Filter by agent slug"),
+    role: str | None = Query(None, description="Filter by role"),
+    team: str | None = Query(None, description="Filter by team"),
+) -> list[AgentResponse]:
+    """List agents with optional slug / role / team filters."""
+    role_enum: AgentRole | None = None
+    if role:
+        try:
+            role_enum = AgentRole(role.lower())
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role: {role}",
+            ) from e
+
+    team_enum: Team | None = None
+    if team:
+        try:
+            team_enum = Team(team.lower())
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid team: {team}",
+            ) from e
+
+    service = get_agent_service(db)
+    agents = await service.list_agents(slug=slug, role=role_enum, team=team_enum)
+    return [agent_to_response(a) for a in agents]
+
+
+@router.get("/{agent_id}")
+async def get_agent(
+    agent_id: str,
+    db: DbSession,
+) -> AgentResponse:
+    """Get an agent by UUID or slug."""
+    service = get_agent_service(db)
+    try:
+        agent = await service.get_by_uuid_or_slug_or_raise(agent_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    return agent_to_response(agent)

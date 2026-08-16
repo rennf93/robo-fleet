@@ -1,0 +1,395 @@
+# RoboCo Slice Map — `worksession-git`
+
+Scope key: `worksession-git` Repo root: `/Users/renzof/Documents/GitHub/ZZZ/roboco-master/roboco` Files in scope:
+- `roboco/services/work_session.py`
+- `roboco/services/git.py`
+- `roboco/templates/git/` (`__init__.py`, `branch.py`, `commit.py`, `constants.py`, `pr_internal.py`, `pr_root.py`)
+- `roboco/services/forge/` (`__init__.py`, `base.py`, `github.py`, `gitea.py`, `gitlab.py`, `registry.py`, `router.py`, `shaping.py`)
+- `roboco/foundation/policy/forge.py`
+- `roboco/foundation/policy/pr_labels.py`
+
+## Purpose
+
+This slice is the git substrate every delivery agent works on. `GitService` runs all git subprocesses (status/commit/branch/push/rebase), mints branches + commit messages + PR bodies from templates, and drives the REST API for PR create/merge/close — now routed through a **multi-forge layer** (`roboco/services/forge/`) instead of talking to GitHub directly. `WorkSessionService` persists the per-claim row that links an agent to a task's branch/commits/PR and enforces the single-active-per-task invariant. The `roboco/templates/git/` package is the pure rendering layer for branch names, commit messages, and internal/root PR bodies. `roboco/foundation/policy/pr_labels.py` derives the org-structure label vocabulary (`to master`/`to slave`, `root`, `MegaTask`, layer labels) applied at PR-open. Together they are the boundary between the task lifecycle and the actual git history on disk + the configured forge (GitHub, Gitea, or GitLab).
+
+## Files
+
+| Path | Role | approx LOC |
+|------|------|------------|
+| `roboco/services/work_session.py` | WorkSession CRUD, commit/file tracking, PR-lifecycle record, single-active invariant | 685 |
+| `roboco/services/git.py` | Git subprocess execution, branch/commit/PR/rebase/merge/sync, GitHub REST API, conventions validator runner | 4596 |
+| `roboco/templates/git/__init__.py` | Package re-exports for branch/commit/PR templates | 48 |
+| `roboco/templates/git/branch.py` | Hierarchical branch name builder + root-task resolver | 131 |
+| `roboco/templates/git/constants.py` | `BRANCH_TYPES`, `COMMIT_TYPES`, `MAX_TASK_DEPTH`, length constants | 52 |
+| `roboco/templates/git/commit.py` | `CommitContext` + `build_commit_message` (traceability links) | 114 |
+| `roboco/templates/git/pr_internal.py` | Internal (subtask→parent) PR title/body builder | 140 |
+| `roboco/templates/git/pr_root.py` | Root (→master, CEO-level) PR title/body builder with task tree | 245 |
+| `roboco/services/forge/__init__.py` | Package re-exports (`ForgeRouter`, `GitProvider`, `GitHubProvider`, `GiteaProvider`, `GitLabProvider`, `RepoRef`, `provider_for`, `register_project_forge`) | 32 |
+| `roboco/services/forge/base.py` | Pure contract: `RepoRef` dataclass + the `GitProvider` ABC (~20 abstract methods every forge implements) | 208 |
+| `roboco/services/forge/github.py` | GitHub.com/GHE REST transport — the pre-existing inline `httpx` logic pulled out unchanged; owns the sole retry policy in the package (`list_ci_runs`) | 432 |
+| `roboco/services/forge/gitea.py` | Self-hosted Gitea REST transport, adapting the wire contract back into GitHub shapes | 471 |
+| `roboco/services/forge/gitlab.py` | GitLab REST v4 transport — heaviest adaptation (MR `iid`, diff reassembly, pipelines) | 679 |
+| `roboco/services/forge/registry.py` | Host↔provider(+scheme) map + `provider_for(project)` resolution, self-healing per-process | 104 |
+| `roboco/services/forge/router.py` | `ForgeRouter` — implements `GitProvider` by picking a transport per call from `RepoRef.host` | 195 |
+| `roboco/services/forge/shaping.py` | `ShapedResponse` — an `httpx.Response`-compatible stand-in a non-GitHub provider returns when it must synthesize a status the wire call didn't produce (e.g. a shaped 501 for `merge_branch`) | 51 |
+| `roboco/foundation/policy/forge.py` | Pure host/provider detection (`extract_host`, `detect_provider`) + registration-time validation (`validate_project_forge`) | 99 |
+| `roboco/foundation/policy/pr_labels.py` | `derive_pr_labels` — the org-structure label vocabulary (`to <base_branch>`, `root`, `MegaTask`, layer labels) applied at every PR-open site | ~90 |
+
+## Key Symbols
+
+| Name | Kind | File:Line | Responsibility |
+|------|------|-----------|----------------|
+| `WorkSessionService` | class | work_session.py:29 | Session lifecycle + single-active invariant |
+| `WorkSessionService.create` | method | work_session.py:50 | Validate project/task, refuse duplicate, supersede stale ACTIVE, insert row |
+| `WorkSessionService.get_active_for_task` | method | work_session.py:184 | Most-recent ACTIVE row (resilient to dup-rows defect) |
+| `WorkSessionService.supersede_active_sessions_for_task` | method | work_session.py:247 | ABANDON every other ACTIVE session for a task (single-active) |
+| `WorkSessionService.add_commit` | method | work_session.py:363 | Append dedup'd commit SHA to session.commits |
+| `WorkSessionService.create_pr` | method | work_session.py:427 | Record pr_number/pr_url/pr_created_at |
+| `WorkSessionService.merge_pr` | method | work_session.py:488 | Record merge + COMPLETED; idempotent active-guard (F062) |
+| `WorkSessionService.close` | method | work_session.py:618 | Idempotent COMPLETED on task completion |
+| `WorkSessionService.abandon` | method | work_session.py:577 | ABANDONED + ended_at (non-active → warning + None) |
+| `WorkSessionService.has_unpushed_commits` | method | work_session.py:662 | PR-existence proxy for unpushed commit detection |
+| `WorkSessionService.task_team_for_session` | method | work_session.py:147 | Return the task's team (cell) for a given session; used by route layer's PM cell-ownership check on `merge_pr` |
+| `get_work_session_service` | factory | work_session.py:682 | Construct service from AsyncSession |
+| `GitService` | class | git.py:234 | All git operations + GitHub API |
+| `_GIT_EXECUTOR` | module const | git.py:116 | Dedicated ThreadPoolExecutor for git subprocesses (16 workers) |
+| `resolve_git_dir` | func | git.py:129 | Resolve `.git` dir for clone OR linked worktree |
+| `_remove_stale_git_locks` | func | git.py:156 | Best-effort clear orphaned `.git/**/*.lock` after timeout SIGKILL |
+| `_select_ci_head_run` | func | git.py:220 | Pick CI run matching current HEAD (anti-stale-green) |
+| `GitService._run_git` | method | git.py:247 | Run git subprocess in dedicated pool, token header, chown-back, lock cleanup |
+| `GitService._token_for_project` | method | git.py:344 | Decrypted project PAT (logs loudly on key-rotation failure) |
+| `GitService.get_workspace` | method | git.py:387 | Resolve/clone agent workspace (auto_clone aware) |
+| `GitService.get_status` | method | git.py:499 | Porcelain status + ahead/behind |
+| `GitService._classify_porcelain` | static | git.py:439 | Split porcelain into staged/unstaged/untracked (column-safe) |
+| `GitService._parse_git_url` | static | git.py:557 | Extract (owner,repo) from tokened/https/ssh GitHub URL |
+| `GitService.create_commit` | method | git.py:640 | Stage + commit with template message + worktree ensure |
+| `GitService._worktree_for_task` | static | git.py:747 | Per-task worktree path `{clone_root}/.worktrees/{task_id[:8]}` (F123) |
+| `GitService._ensure_worktree_for_commit` | method | git.py:756 | Re-attach a pruned worktree before cwd-dependent op |
+| `GitService._assert_on_task_branch` | method | git.py:771 | Recover drifted clone onto task branch (never discards work) |
+| `GitService.commit_for_task` | method | git.py:875 | Agent-facing commit verb backing the `commit` content tool |
+| `GitService.create_branch` | method | git.py:989 | Build branch name, fetch base, `worktree add` (F123), push -u |
+| `GitService.create_branch_for_task` | method | git.py:1188 | Resolve workspace/team, create branch, commit DB |
+| `GitService.checkout_branch_for_agent` | method | git.py:1276 | Allowlist-bounded checkout for agent verb |
+| `GitService.push_for_task` | method | git.py:1428 | Push the task's recorded branch by name (clone-checkout-independent); runs `_run_codegen_and_commit` first so any codegen drift lands in the SAME push |
+| `GitService._codegen_command_for` | staticmethod | git.py:4397 | The project's `codegen_command` (nullable string column, migration 078), or `None` — a bare `MagicMock` test double auto-vivifies attributes, so the `isinstance` check also keeps unrelated tests inert |
+| `GitService._run_codegen_and_commit` | method | git.py:4474 | Runs the project's `codegen_command` in the task's worktree right before push (hooked at both `push_for_task`/`push_branch` at git.py:1886 and `push_task_branch` at git.py:4689); fail-open (a broken/timeout command logs a warning and lets the push proceed — CI's own drift gate is the safety net) and a no-op for the common case of no declared command; a clean run with actual drift stages + commits it under the task's normal commit format before the push carries it |
+| `GitService.push_task_branch` | method | git.py:1467 | Gateway branch-keyed push |
+| `GitService.create_pull_request` | method | git.py:2132 | Open PR via GitHub API (legacy project-scoped) |
+| `GitService.create_pr_for_task` | method | git.py:2639 | Agent-facing open_pr verb |
+| `GitService.update_pr_for_task` | method | git.py:2506 | Patch PR title/body; 404→typed GitError |
+| `GitService.get_pr_head_sha` | method | git.py:2451 | PR head SHA for pr_fail re-submit loop guard (fail-open) |
+| `GitService.get_latest_ci_conclusion` | method | git.py:1929 | Per-project CI signal (unknown never false-green) |
+| `GitService.get_pr_ci_status` | method | git.py:2662 | CI status of a PR's current head commit for the in-path pr_pass gate; returns {state, failing_checks?, head_sha} or None on config gaps (fail-open) |
+| `GitService._ci_status_prereqs` | method | git.py:2698 | Resolve (owner, repo, auth headers, head_sha) for CI-status lookup or None on any gap |
+| `GitService._fetch_check_runs` | method | git.py:2730 | GET check-runs for head_sha; None on any API failure |
+| `GitService._classify_check_runs` | method | git.py:2770 | State classification: success/failure/pending from check-run conclusions list |
+| `GitService._classify_zero_check_runs` | method | git.py:2790 | State classification when zero check-runs exist: pending_not_scheduled or no_ci_configured (depends on workflow count) |
+| `GitService.list_open_prs` | method | git.py:1844 | Normalized open-PR list |
+| `GitService.post_pr_review` | method | git.py:2329 | Post reviewer comments via GitHub API |
+| `GitService.merge_pull_request` | method | git.py:2914 | GitHub merge API + method fallback + already-merged disambiguation |
+| `GitService.merge_pr_for_task` | method | git.py:3046 | Role-gated merge + recorded-PR verification + auto-complete |
+| `GitService._assert_merge_role` | method | git.py:2989 | PM/CEO approval-chain role gate |
+| `GitService.pr_merge` | method | git.py:3616 | Gateway merge: project_id-scoped, parent row lock, 409 retry, CEO-only default guard |
+| `GitService._merge_with_retry` | method | git.py:3555 | Single 409 retry + already-merged disambiguation → MergeConflictError |
+| `GitService._lock_parent_task_for_merge` | method | git.py:3503 | SELECT FOR UPDATE on parent task (sibling merge serialization) |
+| `GitService._resolve_merger_id` | static | git.py:3530 | merged_by attribution: actor→assigned→created→UUID(0) |
+| `GitService.rebase_onto_base` | method | git.py:5158 | Rebase primitive: rebased/superseded/conflicts/**diverged** classification. Post-fetch, `_reset_head_or_diverged` classifies local vs `origin/<head_branch>` BEFORE the old unconditional `reset --hard`: behind-or-equal resets to origin (unchanged); strictly ahead skips the reset and rebases from the local tip (the committed-but-unpushed-work case `commit` leaves behind); a real divergence returns `{"status": "diverged", "local_only", "origin_only"}` untouched — no reset, no rebase, no push. A patch-equivalence probe (`rev-list --right-only --cherry-pick`) first tries to recognize the diverged shape as a prior rebase whose force-push failed (self-heals as "ahead" on retry) before declaring a genuine two-sided divergence (#683). |
+| `GitService.rebase_pr_for_task` | method | git.py:3792 | PR-keyed rebase via PR refs (project_id scoped) |
+| `GitService.sync_task_branch` | method | git.py:3847 | Task-keyed rebase through dev `sync_branch` verb (pre-PR) |
+| `GitService.is_behind_base` | method | git.py:3889 | `(behind, ahead)` counts for i_am_done submit gate |
+| `GitService.close_pull_request` | method | git.py:3940 | Close superseded PR + optional comment + branch cleanup (idempotent) |
+| `GitService._delete_remote_branch_best_effort` | method | git.py:3608 | Best-effort remote delete; skips main/master/develop + open-dependent-PR branches, UNIONED with `_protected_branches_for_deletion(project_slug)` — the shared chokepoint every remote-delete path (task cleanup, PR-merge/close cleanup, the stale-branch sweep) routes through; returns `bool` (issued vs skipped/failed) |
+| `GitService._protected_branches_for` | method | git.py:1183 | The project's own declared `protected_branches`, normalized (stripped, deduped into a `frozenset`) and unioned into the hardcoded `{master, main}` floor for rebase refusal (`rebase_onto_base`) and `sync_task_branch`'s force-push refusal; fails OPEN (empty set, logs a warning) on a project-lookup error — a wrongly-blocked rebase over a transient DB blip is the worse tradeoff |
+| `GitService._protected_branches_for_deletion` | method | git.py:1219 | Deletion-only superset of `_protected_branches_for`: the declared field UNIONED with the project's env-ladder rung branches (`effective_environments` — a null ladder's synthesized single rung off `default_branch` is protected too, so a renamed trunk like `trunk` is covered even with no declared list); fails CLOSED (returns the hardcoded floor only, on a lookup error) since a skipped delete is free (next sweep retries) but silently deleting a real declared rung on an unresolvable project is not |
+| `GitService.delete_task_branch` | method | git.py:3671 | Cancel-path remote branch delete; chokepoint for the environment-ladder skip (`effective_environments`) so a task's `branch_name` can never collide-delete a ladder rung; returns `bool` |
+| `GitService.close_task_pr_best_effort` | method | git.py:3655 | No-clone-needed cancel-path cleanup: resolves the project token + `git_url`→`RepoRef`, fetches the PR via `self._forge.get_pr`, no-ops unless `state=="open"`, else `update_pr(payload={"state":"closed"})`; every failure path (missing token/project, unparseable URL, `httpx.HTTPError`) returns `False` rather than raising |
+| `GitService.cleanup_stale_branches` | method | git.py:3697 | `POST /git/branches/cleanup` backing sweep: terminal (completed/cancelled) tasks' branches, remote (`delete_task_branch`) + local force-delete in the assignee's clone; capped 200/call, cursor-resumable |
+| `GitService._stale_branch_window` | method | git.py:3767 | One deterministic `ORDER BY id` window of sweep candidates; ladder rungs excluded from results but still advance the cursor |
+| `GitService._live_task_dependents` | method | git.py:3810 | Companion sweep guard: excludes a terminal candidate's branch when a non-terminal task still records that exact `branch_name`, or when a non-terminal task is a direct child of the candidate (the child's future PR base would resolve to the parent's branch via `resolve_parent_branch` even before it has opened a PR — catches what the OPEN-PR-only `_branch_has_open_dependents` can't see) |
+| `GitService._cleanup_one_stale_branch` | method | git.py:3841 | Per-branch remote+local delete for one sweep candidate; raises on unexpected failure so the caller's try/except counts it as an error |
+| `GitService.pr_target` | method | git.py:4021 | Return PR base branch (project_id scoped) |
+| `GitService.create_pr` | method | git.py:3418 | Branch-keyed open PR (gateway path; ensures base on remote) |
+| `GitService._record_pr_atomically` | method | git.py:2601 | Atomic pr_number/url write to task |
+| `GitService.run_pre_submit_quality_gate` | method | git.py:3208 | `make quality` gate before submit |
+| `GitService.conventions_check_for_task` | method | git.py:6206 | Run conventions validator on changed files (fail-closed); optional `changed_files` kwarg lets a caller that already resolved the branch's file list (e.g. via `diff_and_files`) thread it in instead of paying for a third `list_changed_files` resolution + subprocess |
+| `GitService._run_conventions_validator` | method | git.py:4408 | Subprocess `python -m roboco.conventions` with 120s cap |
+| `GitService.open_conventions_pr` | method | git.py:4456 | Scaffold `.roboco/conventions.yml` on a branch + open PR |
+| `GitService._resolve_diff_refs` | method | git.py:5961 | Shared `(workspace, head_ref, base_ref)` resolution for the whole diff family (`diff`/`list_changed_files`/`diff_and_files`) — factored out so the four sequential lookups (workspace, token, head ref, base ref) aren't repeated per method body |
+| `GitService.diff` / `list_changed_files` / `diff_and_files` / `read_file_at_branch` | methods | git.py:5990/6030/6063/6097 | Read-only git queries (gateway + routes). `diff` and `list_changed_files` each resolve through `_resolve_diff_refs` then run one subprocess; `diff_and_files` resolves ONCE and runs the full diff + the `--name-only` diff CONCURRENTLY via `asyncio.gather`, for a caller (`_build_qa_claim_evidence` in `choreographer/qa.py`, `content_actions.evidence()`) that previously called `diff()` then `list_changed_files()` back to back — each re-resolving workspace/token/head/base from scratch and spawning its own subprocess. `read_file_at_branch` resolves separately through `_resolve_head_ref` (it has no base ref to resolve). |
+| `GitService._resolve_head_ref` | method | git.py:5893 | Shared reader-ref resolution for `diff`/`list_changed_files`/`read_file_at_branch`/`/api/git/log`. Fetches `branch_name`, then prefers `origin/<branch_name>` over the bare local ref whenever origin carries commits local lacks (`origin_only > 0` via `rev-list`) — a reviewer's clone parked on pre-rebase history no longer stays frozen there across every later round; local wins only when it strictly contains everything origin has. Unlike the write-path's `_reset_head_or_diverged`, a read never needs to tell genuine divergence apart from a rewritten history — both resolve to "serve origin" (#690). |
+| `GitService.commit` | method | git.py:4286 | Gateway content-verb commit (branch-keyed) |
+| `get_git_service` | factory | git.py:4594 | Construct GitService from AsyncSession |
+| `build_branch_name` | func | templates/git/branch.py:37 | `{type}/{team}/{root}--{sub}--...` up to MAX_TASK_DEPTH |
+| `get_root_task_id` | func | templates/git/branch.py:97 | Walk parent chain to root |
+| `BranchNameError` | exc | templates/git/branch.py:33 | Bad type / missing task / over-depth |
+| `build_commit_message` | func | templates/git/commit.py:63 | Rich commit msg with task/root/agent/session links |
+| `CommitContext` | dataclass | templates/git/commit.py:34 | Validated commit-message input |
+| `build_pr_body_internal` / `build_pr_title_internal` | funcs | templates/git/pr_internal.py:75/130 | Subtask→parent PR rendering |
+| `build_pr_body_root` / `build_pr_title_root` | funcs | templates/git/pr_root.py:167/235 | Root PR rendering with task tree + AC checklist |
+| `MAX_TASK_DEPTH` | const | templates/git/constants.py:45 | 4 (umbrella→root→cell→dev) |
+| `BRANCH_TYPES` / `COMMIT_TYPES` | consts | templates/git/constants.py:10/21 | Allowed prefixes |
+| `RepoRef` | dataclass | forge/base.py:26 | Provider-opaque repo identity (`owner`, `repo`, `host`); GitLab packs the full URL-encoded namespace path into `owner`, leaving `repo` empty |
+| `GitProvider` | ABC | forge/base.py:49 | The ~20-method transport contract every forge implements (PR CRUD, review flow, `merge_branch`, CI signal surface, repo/label/branch/release/provisioning) |
+| `GitService._forge` | property | git.py:399 | A fresh `ForgeRouter()` per access (cheap, no I/O — built this way, not `__init__`-cached, so tests can `GitService.__new__` bypass the constructor) |
+| `ForgeRouter` | class | forge/router.py:37 | Implements `GitProvider` by picking a transport per call from `RepoRef.host` |
+| `ForgeRouter._provider_for_ref` | staticmethod | forge/router.py:40 | `None` host → `GitHubProvider()`; a registered `"gitea"`/`"gitlab"` host → that provider constructed with its remembered scheme; unregistered → `GitError` naming the fix |
+| `register_project_forge` | func | forge/registry.py:50 | Records a project's host→provider(+scheme) mapping; called from `ProjectService.create`/`update`/`get`/`get_by_slug` — in-memory, per-process, self-healing (a restart forgets it; the next project read re-registers) |
+| `provider_for` | func | forge/registry.py:77 | Resolve a `GitProvider` for a project (duck-typed on `.git_provider`/`.git_url`) |
+| `GitHubProvider` | class | forge/github.py:71 | GitHub.com/GHE REST transport — the pre-existing inline `httpx` logic, byte-for-byte; owns the sole retry policy in the package (`list_ci_runs`, 3 attempts/0.5s backoff, retryable on 429+5xx) |
+| `GiteaProvider` | class | forge/gitea.py:55 | Self-hosted Gitea transport: `token`-scheme auth (Bearer is rejected by classic PATs); duplicate-PR 409→422 reshape on `create_pr`; `merge_pr` POSTs (not PUTs) with the method under a `"Do"` key; commit-status → synthetic `check_runs`/`workflow_runs`; branch names with slashes URL-`quote()`-encoded before hitting Gitea's router (caught live by the e2e suite) |
+| `GitLabProvider` | class | forge/gitlab.py:85 | GitLab REST v4 transport — the most semantically divergent: MR `iid`→`number`, `source_branch`/`target_branch`→`head.ref`/`base.ref`; `get_pr_diff` reassembles a unified-diff string from up to 3 pages of per-file JSON diffs (no raw-diff media type); `post_review` routes APPROVE to `/approve` and everything else to a plain note (no request-changes verb exists); `request_reviewers` synthetic-skips (needs numeric user ids RoboCo doesn't store); `create_org_repo` resolves a group path to a numeric namespace id, falling back to the token's personal namespace on 404 |
+| `ShapedResponse` | class | forge/shaping.py:17 | `httpx.Response`-compatible stand-in a non-GitHub provider returns to synthesize a status the wire call didn't produce (e.g. `merge_branch`'s shaped 501) |
+| `extract_host` / `detect_provider` / `validate_project_forge` | funcs | foundation/policy/forge.py:27/45/62 | Pure host extraction (https/ssh/scp-like URLs), github.com/gitlab.com auto-detection, and registration-time validation (a self-hosted host with no explicit `git_provider` is a registration-time rejection — the GHE/self-hosted escape hatch requires the operator to set the column) |
+| `derive_pr_labels` | func | foundation/policy/pr_labels.py | Org-structure label vocabulary: `base_branch` (required kwarg, the PR's real resolved target — never assumed from `is_root_pr`) → `f"to {base_branch}"`, plus `root`/`MegaTask`/layer labels (`main-pm`, `cell/{team}`, `subtask/{team}`) |
+
+Neither Gitea nor GitLab has GitHub's server-side merges API for the env-sync cascade: both return a shaped 501 from `merge_branch`, landing `GitService.sync_env_branch` on the local-git fallback (`_local_merge_branch`: throwaway clone → merge → push; a conflict aborts leaving the remote untouched, same status vocabulary as the GitHub server-side path) — this fallback lives entirely in `GitService`, not the forge package. Plain git (clone/fetch/push) needed zero forge-specific work: all three forges accept a PAT as the Basic-auth password with username ignored, so the existing `x-access-token:<token>` extraheader works unchanged (verified live against a dockerized Gitea).
+
+## Data Flow
+
+A developer claims a task → the orchestrator/choreographer calls `create_branch_for_task` → `build_branch_name` walks the task parent chain (`TaskService.get`) up to `MAX_TASK_DEPTH=4`, joins `--`-separated 8-char UUID prefixes, and yields `{type}/{team}/{root}--{sub}--...`. `create_branch` fetches only the needed refs from origin, runs `git worktree add` under `{clone_root}/.worktrees/{task_id[:8]}` (F123 per-task isolation), force-pushes the branch with `-u`, and stores `branch_name` on the task. A `WorkSession` row is created (`WorkSessionService.create`), first superseding any other agent's stale ACTIVE session on that task.
+
+The agent commits via the `commit` content verb → `GitService.commit` (or `commit_for_task` route), which ensures the worktree is attached, asserts the workspace is on the task branch (recovering a drifted clone), stages, runs `build_commit_message` (`CommitContext` → header + metadata + links), commits, then best-effort links the SHA to the task + work session (`_link_commit_to_task`). Every `_run_git` call re-chowns the tree to the agent uid and clears orphaned lock files on timeout.
+
+`open_pr` → `create_pr` resolves the task by branch name, ensures the parent branch exists on origin, POSTs the PR via GitHub REST, and atomically records `pr_number`/`pr_url` on the task (`_record_pr_atomically`) and work session (`create_pr`). PR title/body come from `task.title`/`task.description` for gateway PRs; the rich `build_pr_body_root`/`_internal` templates are used by the older `create_pull_request` path.
+
+Merge: a cell PM `complete`/`submit_up` → `pr_merge` (gateway) scopes the task lookup by `project_id` (cross-repo PR-number collision guard), takes a `SELECT FOR UPDATE` lock on the parent task, calls `_merge_with_retry` (squash; on 409 re-syncs target + retries once; on 405 disambiguates already-merged vs real conflict → `MergeConflictError`), deletes the PR branch, syncs the local target, and records the merge on the work session (`merge_pr`, idempotent). The CEO-only root→master merge goes through `merge_pr_for_task` (role-gated, recorded-PR verification) → `merge_pull_request`. The CEO-merge never targets the default branch via `pr_merge` (the `target == default_branch` guard refuses it) — `default_branch` here is `_project_default_branch`, which now resolves via `roboco.models.env_branches.head_branch(project)` (the env-ladder head rung) rather than reading `project.default_branch` directly; a project with no declared ladder resolves to the same value via the read-time shim.
+
+Behind-base recovery: `is_behind_base` feeds the `i_am_done` submit gate; on a non-zero behind, the dev calls `sync_branch` → `sync_task_branch` → `rebase_onto_base` (rebased/superseded/conflicts). On a merge conflict, the choreographer calls `rebase_pr_for_task`, then either re-merges or `close_pull_request`s a superseded PR. `get_pr_head_sha` feeds the `submit_root` re-submit loop guard.
+
+## Mermaid
+
+```mermaid
+stateDiagram-v2
+    [*] --> Active: create() (supersede stale)
+    Active --> Active: add_commit / add_files_modified
+    Active --> Active: create_pr (pr_number set)
+    Active --> Completed: merge_pr (idempotent active-guard)
+    Active --> Completed: close() (task completion)
+    Active --> Abandoned: abandon() / supersede_active_sessions_for_task
+    Completed --> [*]: terminal
+    Abandoned --> [*]: terminal
+    note right of Active
+      single-active per task enforced at
+      create + DB partial-unique index (mig 047)
+    end note
+```
+
+```mermaid
+sequenceDiagram
+    participant G as Choreographer/Gateway
+    participant GS as GitService
+    participant GH as GitHub REST API
+    participant WS as WorkSessionService
+    participant DB as DB (TaskTable)
+
+    G->>GS: pr_merge(pr_number, target, project_id)
+    GS->>DB: SELECT task WHERE pr_number AND project_id (scoped)
+    GS->>DB: SELECT FOR UPDATE parent_task (serialize siblings)
+    GS->>GH: PUT /pulls/{n}/merge (squash)
+    alt 409 conflict
+        GS->>GS: _sync_target_branch (re-pull)
+        GS->>GH: PUT /pulls/{n}/merge (retry once)
+    end
+    alt non-success
+        GS->>GH: GET /pulls/{n} (already-merged?)
+        opt already merged
+            GS-->>G: idempotent success
+        end
+        opt real conflict
+            GS-->>G: raise MergeConflictError
+        end
+    end
+    GS->>GH: DELETE PR branch (best-effort)
+    GS->>GS: _sync_target_branch_best_effort
+    GS->>WS: merge_pr(session_id, merger_id)
+    WS->>WS: guard status==ACTIVE else return unchanged
+    WS-->>GS: COMPLETED + merged_by
+    GS-->>G: {"merge_commit_sha": ...}
+```
+
+## Logical Tree
+
+```
+roboco/
+├── services/
+│   ├── work_session.py
+│   │   └── WorkSessionService (BaseService)
+│   │       ├── create / get / get_or_raise / update
+│   │       ├── get_active_for_task(_and_agent)
+│   │       ├── supersede_active_sessions_for_task   # single-active invariant
+│   │       ├── list_by_agent / list_by_project / list_active_sessions
+│   │       ├── add_commit / add_files_modified
+│   │       ├── create_pr / update_pr_status / merge_pr
+│   │       ├── complete / abandon / close
+│   │       └── files_changed / has_unpushed_commits  # gateway backfill
+│   └── git.py
+│       ├── _GIT_EXECUTOR (ThreadPoolExecutor, 16)
+│       ├── resolve_git_dir / _remove_stale_git_locks / _select_ci_head_run
+│       └── GitService (BaseService)
+│           ├── _run_git (token, timeout, chown, lock-cleanup)
+│           ├── _token_for_project / _token_for_workspace / get_workspace
+│           ├── status: get_status / get_current_branch / _classify_porcelain / _ahead_behind
+│           ├── commit: create_commit / commit_for_task / commit (gateway) / _link_commit_to_task
+│           ├── worktree (F123): _worktree_for_task / _ensure_worktree_for_commit / _assert_on_task_branch
+│           ├── branch: create_branch / create_branch_for_task / create_branch_from_pr_head / checkout*
+│           ├── push/pull/fetch/rebase: push_for_task / push_task_branch / pull / fetch / rebase
+│           ├── PR context: _build_root_pr_context / _build_internal_pr_context / _generate_pr_title_body
+│           ├── PR list/find: _find_existing_pr / list_open_prs / _fetch_open_prs / _normalize_open_pr
+│           ├── PR create: create_pull_request / create_pr_for_task / create_pr (branch-keyed)
+│           ├── PR update/review: update_pr_for_task / post_pr_review / _patch_pr_title_body
+│           ├── PR read: get_pr_diff / get_pr_head_sha / pr_target
+│           ├── CI: get_latest_ci_conclusion / _get_ci_runs_response / _fetch_latest_ci_run
+│           ├── merge: merge_pull_request / merge_pr_for_task / pr_merge / _merge_with_retry
+│           │            _assert_merge_role / _lock_parent_task_for_merge / _resolve_merger_id
+│           │            _pr_is_merged / _auto_complete_on_merge / _first_allowed_merge_method
+│           ├── branch cleanup: _delete_remote_branch_best_effort / _delete_pr_branch_best_effort
+│           │            delete_task_branch / _branch_has_open_dependents
+│           │            cleanup_stale_branches / _stale_branch_window / _cleanup_one_stale_branch (sweep)
+│           ├── rebase/sync: rebase_onto_base / rebase_pr_for_task / sync_task_branch / is_behind_base
+│           ├── close: close_pull_request
+│           ├── quality: run_pre_submit_quality_gate / toolchain_status_for_task / _fast_gate_commands
+│           ├── conventions: conventions_check_for_task / _run_conventions_validator / open_conventions_pr
+│           ├── read-only: diff / list_changed_files / read_file_at_branch / _ref_exists / _resolve_diff_base
+│           └── helpers: _task_for_branch / _project_for_task / _workspace_for_branch / _token_for_branch ...
+└── templates/git/
+    ├── __init__.py            # re-exports
+    ├── constants.py           # BRANCH_TYPES / COMMIT_TYPES / MAX_TASK_DEPTH=4
+    ├── branch.py              # build_branch_name / get_root_task_id / BranchNameError
+    ├── commit.py              # CommitContext / build_commit_message / CommitMessageError
+    ├── pr_internal.py         # InternalPRContext / build_pr_body_internal / build_pr_title_internal
+    └── pr_root.py             # RootPRContext / SubtaskInfo / build_pr_body_root / build_pr_title_root
+```
+
+## Dependencies
+
+Internal:
+- `roboco.config.settings` (timeouts, URLs, workspace root, auto_clone)
+- `roboco.exceptions` (`GitCommandError`, `GitError`, `GitTimeoutError`, `MergeConflictError`)
+- `roboco.foundation.policy.lifecycle` (role/intent parity)
+- `roboco.models.base` (`AgentRole`, `TaskStatus`)
+- `roboco.models.work_session` (`WorkSessionCreate/Update/Status`)
+- `roboco.db.tables` (`ProjectTable`, `TaskTable`, `WorkSessionTable`)
+- `roboco.services.base` (`BaseService`, `NotFoundError`, `ConflictError`, `ValidationError`, `UnauthorizedError`, `ServiceError`)
+- `roboco.services.project` / `roboco.services.task` / `roboco.services.workspace` (composed for clone/workspace/branch resolution)
+- `roboco.services.gateway.quality_gate` (`GateResult`, `run_quality_commands`)
+- `roboco.templates.git` (all template builders)
+- `roboco.utils.converters.require_uuid`, `roboco.utils.crypto.EncryptionError`
+- `roboco.api.schemas.git` (TYPE_CHECKING only — runtime duck-typed)
+
+External:
+- `sqlalchemy` / `sqlalchemy.ext.asyncio`
+- `httpx` (GitHub REST API)
+- `asyncio`, `subprocess`, `concurrent.futures.ThreadPoolExecutor`
+- `dataclasses`, `pathlib`, `uuid`, `base64`, `re`, `json`, `time`, `os`, `sys`
+
+## Entry Points
+
+- **HTTP routes** (`roboco/api/routes/git.py`): `get_status`, `log`, `diff`, `commit_for_task`, `push_for_task`, `create_branch_for_task`, `checkout_branch_for_agent`, `create_pr_for_task`, `merge_pr_for_task`, `pull`, `fetch`, `rebase`, `cleanup_stale_branches` (`POST /git/branches/cleanup`, PM/CEO role-gated like `/rebase`, rate-limit 5/60) — all construct via `get_git_service(db)`.
+- **HTTP routes** (`roboco/api/routes/tasks.py:253`): `get_git_service` for task-scoped git.
+- **Gateway Choreographer** (`roboco/services/gateway/choreographer/`):
+  - `_verb_runner._do_pr_merge` → `pr_merge`
+  - `_impl` → `conventions_check_for_task` (i_am_done + pr_pass gates), `is_behind_base` (submit gate), `sync_task_branch` (sync_branch verb), `pr_merge` / `rebase_pr_for_task` / `close_pull_request` (merge-conflict resolution), `get_pr_head_sha` (submit_root re-submit guard)
+  - `pr_gate.py` → `get_pr_head_sha`
+  - `qa.py` → `conventions_check_for_task`
+- **WorkspaceService** calls `ensure_worktree` / `ensure_worktree_for_resume` (F123).
+- **Lifespan/CLI**: none direct; `git_service` is constructed per-request via `deps.py` (`git=GitService(db_session)`).
+
+## Config Flags
+
+| Flag / setting | Source | Used for |
+|----------------|--------|----------|
+| `ROBOCO_GIT_EXECUTOR_WORKERS` (env, default 16) | `os.environ` at git.py:117 | Dedicated git subprocess pool size |
+| `settings.git_command_timeout_seconds` | config.py:728 | Default `_run_git` timeout |
+| `settings.git_commit_timeout_seconds` | config.py:737 | Staging/commit large changeset timeout |
+| `settings.git_network_timeout_seconds` | config.py:748 | fetch/pull/push/ls-remote timeout |
+| `settings.git_diff_timeout_seconds` | config.py:1739 | `GET /api/git/diff`'s outer "diff" stage bound (default 60s) around the paired `git diff` + `git diff --stat` calls — on top of, not instead of, `git_command_timeout_seconds` bounding each call individually |
+| `settings.workspaces_root` | config.py:603 | Workspace path root (token derivation) |
+| `settings.workspace_auto_clone` | config.py:607 | `get_workspace` auto-clone branch |
+| `settings.public_base_url` | config.py:827 | Commit/PR template link base (`+ /api`) |
+| `settings.internal_api_url` | config.py:57 | Internal PR body link base |
+| `settings.github_api_base_url` | config.py:327 | GitHub REST API base (PR/CI/review) |
+| `settings.release_ci_workflow` | config.py:597 | Named workflow file (e.g. `ci.yml`) used by the release CI gate in `get_latest_ci_conclusion`; always resolves a named workflow so the gate never degrades to the imprecise all-workflows mode |
+
+Module-level tunables (not env): `_SLOW_GIT_OP_MS=5000`, `_CI_RUN_WINDOW=20`, `_CI_FETCH_ATTEMPTS=3`, `_CI_FETCH_BACKOFF_SECONDS=0.5`, `_CI_RETRYABLE_STATUS`, `_CONVENTIONS_VALIDATOR_TIMEOUT_SECONDS=120`, `_GH_UNPROCESSABLE=422`, `_HTTP_NOT_FOUND=404`, `_HTTP_CONFLICT=409`.
+
+## Gotchas
+
+- **`protected_branches` is exact-match, case-sensitive, and additive-only**: an operator-declared list (panel: chips editor in the edit-project dialog) is UNIONED into — never replaces — the hardcoded `{master, main}` floor. The two consuming scopes deliberately fail differently on a project-lookup error: `_protected_branches_for` (rebase + `sync_task_branch` force-push refusal) fails OPEN to the hardcoded floor (a skipped rebase gets no free retry, so refusing wrongly is worse); `_protected_branches_for_deletion` (the shared remote-delete chokepoint) fails CLOSED (a skipped delete just retries at the next sweep, so silently proceeding on an unresolvable project is worse). An empty `protected_branches` list degrades to exactly the prior hardcoded-only behavior.
+- **Token resolution is GitHub-App-first, PAT-fallback**: `ProjectService._resolve_token` (`roboco/services/project.py`, called from `GitService._token_for_project` → `get_decrypted_token_by_slug`) mints a short-lived installation token via `github_app_auth.mint_installation_token` when `project.github_installation_id` is set AND App credentials are stored; ANY minting failure (App not configured, installation revoked, network hiccup, the JWT/HTTP/parse path all wrapped so nothing escapes uncaught) falls back to the stored PAT instead of raising — a GitHub App outage never bricks git ops for an App-bound project that also has a PAT on file. `github_app_credentials.py` mirrors the `x_credentials`/`telegram_credentials` singleton-Fernet-row pattern (migration 077); the PEM is validated at credential-SET time (not first-mint) and the installation-token cache clears when credentials are deleted.
+- **Token transport split**: git-over-HTTPS uses HTTP **Basic** (`x-access-token:...`) via `http.extraheader` (git.py:289); the GitHub REST API uses **Bearer**. Swapping them causes silent credential-prompt failures.
+- **`pr_number` is NOT repo-scoped in `tasks.pr_number`** — every gateway merge/close path (`pr_merge`, `close_pull_request`, `pr_target`, `rebase_pr_for_task`) requires `project_id` to scope the task lookup. The route `merge_pr_for_task` instead verifies `data.pr_number == task.pr_number` (recorded PR is source of truth).
+- **`get_active_for_task` returns the most-recent ACTIVE row**, not `scalar_one_or_none` — the historical duplicate-ACTIVE defect would otherwise raise `MultipleResultsFound`. The invariant is also enforced at `create` and by a DB partial-unique index (migration 047).
+- **`merge_pr` idempotency guard (F062)**: a terminal session is returned unchanged; `complete`/`abandon` on a non-active session return `None` (warning). `close` returns the session unchanged. Behavior differs between these three on terminal state — `merge_pr`/`close` are silent, `complete`/`abandon` warn-and-None.
+- **F123 per-task worktrees**: commit/checkout/rebase/conventions MUST run inside `{clone_root}/.worktrees/{task_id[:8]}`, not the clone root (which sits on the default branch). `_worktree_for_task` + `_ensure_worktree_for_commit` are the seam; forgetting them makes checkout fail with "already checked out at '<worktree>'" or false-passes the conventions validator.
+- **`create_branch` runs `reset --hard` on a no-commit branch** in the worktree (git.py:1104) — safe because `unique == 0`, but a branch carrying real work is left as-is. The fresh-claim path only; resume short-circuits before it.
+- **`_run_git` re-chowns the tree** after every op (root → agent uid 1000); without it the agent's next commit fails with "unable to append to .git/logs/refs/...".
+- **Porcelain parsing** uses `splitlines()` not `strip().split("\n")` — strip eats the leading space on ` D file` and false-stages deletions.
+- **`get_current_branch` raises on detached HEAD** instead of returning `""` — the empty string used to leak "(HEAD detached at ...)" into `checkout -b`.
+- **`MAX_TASK_DEPTH=4`** (was 3) — MegaTask's umbrella→root→cell→dev needs 4; validator rejects a child whose depth would *reach* MAX_TASK_DEPTH, so 4 permits dev at depth 3.
+- **Branch name uses 8-char UUID prefix** (`_SHORT_ID_LEN=8`), not full UUID — full UUIDs produced 140-char branch names.
+- **`rebase_onto_base` force-pushes with `--force-with-lease`** only the head branch; never touches base. `superseded` (unique==0) means close-without-merge. It no longer resets a local tip that is ahead of origin (a committed-but-unpushed dev tip used to be silently discarded before the rebase); a `diverged` result leaves BOTH sides untouched — the sync_branch verb maps it to `i_am_blocked` with a stash-preserved note (#683).
+- **Reader git queries prefer origin over a diverged local ref** (`_resolve_head_ref`, #690): a QA/PM/reviewer clone that never pushed can go stale relative to origin after a force-push sync; `diff`/`list_changed_files`/`read_file_at_branch` and `roboco_git_log` all resolve through the same fixed helper now, so a repeated review round no longer re-examines a frozen pre-rebase checkout.
+- **`is_behind_base` raises on git failure**; the i_am_done gate fail-opens on the raised error so a flaky fetch can't strand the task.
+- **`get_git_diff` (`GET /api/git/diff`) is bounded and fails CLOSED, unlike `run_bounded_leg`'s soft-degrade** (#801 salvage, git.py's `_bounded_git_stage`): two named `asyncio.wait_for` stages — "workspace resolution" around `get_workspace` (`settings.workspace_clone_timeout`, reused since it's the same setting bounding the cold-clone path this stage exists to catch) and "diff" around the paired `git diff`/`git diff --stat` calls (`settings.git_diff_timeout_seconds`, new, default 60s). Both `asyncio.TimeoutError` (the `wait_for` cancellation) and `GitTimeoutError` (raised from inside `_run_git`'s own internal subprocess bound) translate to the same stage-naming `HTTPException(504)`, e.g. `"git diff timed out during workspace resolution after 300s"` — no default empty diff, no soft degrade. Same thread-cancellation caveat `evidence_legs.py` documents applies here too: cancelling a thread-backed `get_workspace` call stops AWAITING it, not necessarily the underlying clone subprocess.
+- **Conventions validator fails closed** (`could_not_run=True` blocks submit) on resolution error / timeout / non-zero exit; branchless + no-changed-files fail open.
+- **`_assert_on_task_branch` never discards work** — it does `checkout`, not `reset --hard`, to preserve a resumed agent's unpushed commits.
+- **CEO-only master merge**: `pr_merge` refuses `target == default_branch` for agents; only `merge_pr_for_task` (CEO role-gated from `awaiting_ceo_approval`) may merge to master. `default_branch` resolves through the env-ladder head rung (`_project_default_branch` → `head_branch(project)`), not the raw `projects.default_branch` column.
+- **`cleanup_stale_branches` cursor is required, not optional**: task rows never change as a side effect of the sweep (unlike, say, a queue that drains), so a repeat call with no `after_cursor` re-scans the identical first 200-row window forever instead of progressing. `_stale_branch_window` still advances the cursor past ladder-rung rows even though they're excluded from `candidates`, so `truncated` can't false-negative when a rung lands inside the window.
+- **Local branch delete in the sweep is always `force=True`** (`-D`) regardless of completed vs cancelled — a completed task's PR was squash-merged, so its local ref is never an ancestor of base and a "safe" `-d` would refuse every single candidate.
+- **`diff_and_files` dedupes the two named evidence-assembly legs, but only where they were named.** `_build_qa_claim_evidence` (`choreographer/qa.py`, backing `claim_review`) and `content_actions.evidence()` used to call `GitService.diff()` then `list_changed_files()` sequentially — four redundant workspace/token/head/base resolutions and two independent `git diff` subprocesses per call — with `conventions_check_for_task` re-deriving the same file list a third time. `diff_and_files()` collapses that to one resolution + two concurrent subprocesses, and its file list threads into `conventions_check_for_task(changed_files=...)` so the validator never re-resolves. The independent DB reads (journal highlights / ancestor context / open findings) are awaited SEQUENTIALLY, not gathered with the git leg — `GitService`/`EvidenceRepo`/the task repo share one request-scoped `AsyncSession` (see `deps.py`), and the git leg's own workspace/token resolution runs DB lookups against that same session, so concurrently awaiting it alongside the DB reads risks two queries racing one `AsyncSession` (unsupported by SQLAlchemy) plus a `wait_for`-cancelled DB query mid-flight on a git-leg timeout. In `content_actions.evidence()` the three DB reads additionally run BEFORE the deliberate pool-release commit that precedes the (potentially minutes-long) git work — gathering them alongside the git leg there would also hold the connection open across it, reopening the 2026-07-29 connection-pool-exhaustion incident (see `get_git_diff` bullet above). The combined git leg's timeout gap note is labeled `"pr diff + files_changed"` (not just `"pr diff"`) in both call sites so QA can tell `files_changed` is empty because of a timeout, not genuinely empty — a combined-leg timeout kills both the diff and the file list together. `pr_gate.py`'s `claim_gate_review` evidence build has the identical `diff()`+`list_changed_files()` duplication pattern and was deliberately left untouched — only the two call sites named in the originating diagnosis were deduped.
+
+## Drift from CLAUDE.md
+
+- **CLAUDE.md "WorkSessionService" table** claims the service handles "Git session management, PR lifecycle" — accurate. No drift.
+- **CLAUDE.md says** `ROBOCO_WORKSPACE_CLONE_TIMEOUT=300` is a WorkspaceService config; not referenced in this slice (lives in `workspace.py`). No drift in scope.
+- **CLAUDE.md verb table** lists `sync_branch` for developers and `/rebase` for PM/CEO. The code matches: `sync_task_branch` is the dev path, `rebase_pr_for_task` the PR-keyed path. No drift.
+- **CLAUDE.md** states "A task has at most one active WorkSession ... enforced both at the service layer and by a DB partial-unique index (migration 047)." Code matches (`supersede_active_sessions_for_task` + `get_active_for_task` resilient return). No drift.
+- **CLAUDE.md** "PR is created BEFORE QA review" — `create_pr`/`create_pr_for_task` only sets `pr_number`; QA pass requires it. Matches.
+- **Minor doc vs code**: CLAUDE.md commit-format example is `[{task-id[:8]}] {message}` (single ID), but `build_commit_message` (templates/git/commit.py:80) emits `[{root_short}:{task_short}] {type}({scope}): {desc}` — a richer two-ID header. The doc undersells the actual format; not a bug, but the template header is not the literal `[{task-id[:8]}]` the doc shows.
+- **CLAUDE.md** lists `merge_pull_request`-style PM merges; the agent-facing path is now `pr_merge` (gateway) with parent-row locking + 409 retry, which the doc does not describe. Additive (the route `merge_pr_for_task` still exists) — doc is incomplete rather than wrong.
+
+## Changes Since Baseline
+
+Baseline: `fd10cc862c2020b3f639cdb686d427b0198a2441` (master tip before the metrics-granularity branch). Diff stat: `git.py +614/-107`-ish, `work_session.py +11`, `branch.py +9/-`, `constants.py +12/-`. Commits touching these files: `15effce0` (#283 "141 Gaps fill-in"), `3aff6e04` (#285 "Close gaps").
+
+| Commit | IMPACT (one line) |
+|--------|-------------------|
+| `15effce0` (141 Gaps fill-in) | Added `resolve_git_dir` + worktree-aware `_remove_stale_git_locks`; added F123 `_worktree_for_task`/`_ensure_worktree_for_commit` and routed commit/checkout/rebase/conventions into the per-task worktree; added `get_pr_head_sha` (pr_fail re-submit guard); added `sync_task_branch` + `is_behind_base` (dev sync_branch verb + i_am_done behind gate); added `rebase_onto_base`/`rebase_pr_for_task` (merge-conflict resolver); added `close_pull_request` (superseded-PR close); added `pr_merge` with `project_id` scoping + parent-row lock + 409 retry + CEO-only default-branch guard + already-merged disambiguation; added `_merge_with_retry`/`_pr_is_merged`/`_resolve_merger_id`/`_lock_parent_task_for_merge`; added conventions validator runner (`conventions_check_for_task`/`_run_conventions_validator`/`open_conventions_pr`); raised `MAX_TASK_DEPTH` 3→4 (MegaTask depth-cap fix); `WorkSessionService.merge_pr` idempotent active-guard (F062). |
+| `3aff6e04` (Close gaps) | Same mega-commit (the PR body is identical — #285 is the merge closure of the #283 batch); the in-scope file deltas are the same set of additions. No additional logic change to these files beyond what #283 listed. |
+
+> Post-snapshot updates (since 2026-06-29): `536bbb64` (Chore/all/logical gaps sweep #286 — closed regression risks #108 and #109 in this slice: `_merge_with_retry` now falls back to a permitted merge method on 405 via `_first_allowed_merge_method` before raising `MergeConflictError`; `close_pull_request` default flipped to `delete_branch=False`, choreographer caller now passes `delete_branch=True` explicitly). `00513399` ([bug] push_branch — `push_branch(branch_name)` now passes `branch=branch_name` to `self.push()` so the gateway `open_pr` path pushes the actual named task branch rather than the clone root's current checkout; fixes the "No commits between" 422 → `i_am_blocked` wedge observed in the F123 per-worktree model). `2759edf7` ([B-REL] release executor — added `_CiRunQuery` dataclass at git.py:241 to bundle per-project CI-fetch inputs; `get_latest_ci_conclusion` and `_fetch_latest_ci_run` now accept an optional `head_sha` so the release CI gate polls a specific release commit's own run rather than branch-latest; `settings.release_ci_workflow` config flag added). `69071030` ([chore] work-session-routes — added `WorkSessionService.task_team_for_session` helper (route layer PM cell-ownership check for `merge_pr`); route layer now stamps `merged_by` from the authenticated caller rather than the request body — `WorkSessionService.merge_pr` signature is unchanged, but `MergePRRequest` schema dropped `merged_by` field).
+>
+> `496c24d1` (PR #548, "git hygiene", 2026-07-17) Local branch refs stop leaking alongside remote ones: `delete_task_branch` now also skips environment-ladder rungs (previously only the remote-delete's own main/master/develop guard existed) and returns `bool`; new `cleanup_stale_branches` + `_stale_branch_window` + `_cleanup_one_stale_branch` back a PM/CEO-only `POST /git/branches/cleanup` sweep of terminal tasks' remote+local branches, exposed as a confirm-dialog button on the panel Git page. See `docs/map/task-service.md` for the paired per-task reap at cancel/completion and `docs/map/workspace.md` for the new `WorkspaceService.delete_local_branch` primitive both routes share.
+>
+> `71f5426e` (PR #683, "never discard committed local work in rebase_onto_base", 2026-07-24) The stale-state family fix for the write path: `rebase_onto_base` classifies local vs `origin/<head_branch>` post-fetch instead of an unconditional `reset --hard` — behind/equal resets as before, strictly-ahead skips the reset and rebases from the local tip, and a genuine two-sided divergence (patch-equivalence-checked first, so a prior failed force-push self-heals as "ahead" on retry) returns `{"status": "diverged", ...}` with neither side touched. `sync_branch`/submit-freshen/the merge-conflict resolver all gained a `diverged` handling branch. `e97f46af` (PR #690, "reviewer reads must prefer origin over a diverged local ref", same day) is the read-path sibling: `_resolve_head_ref` (backing `diff`/`list_changed_files`/`read_file_at_branch`/`roboco_git_log`) now prefers origin whenever it carries commits the local ref lacks, closing the QA/PM-clone-frozen-on-pre-rebase-history bounce loop.
+>
+> **Forge providers — GitHub + Gitea + GitLab (2026-07-18/19, PRs #569/#571/#575/#579/#581).** A new `roboco/services/forge/` package (`base.py`/`github.py`/`gitea.py`/`gitlab.py`/`registry.py`/`router.py`/`shaping.py`) plus `roboco/foundation/policy/forge.py` route every REST call `GitService` makes (PRs/CI/reviews/labels/releases/provisioning) through a provider-agnostic transport. `388bab24` (Phase 0, #569): `projects.git_provider` column (migration 076, nullable, plain string not a pg enum — validated at the service layer, not the DB) + `validate_project_forge`/`detect_provider` (github.com auto-detects, self-hosted needs an explicit column value — the GHE/self-hosted escape hatch). `461a6e1a` (Phase 1, #571): the `GitProvider` ABC + `GitHubProvider` extracted byte-for-byte from `GitService`'s old inline `httpx` calls; `GitService._forge` (git.py:399) becomes the seam every call site routes through. `96401f4c` (Phases 2/2.1/3, #575): `GiteaProvider` + `GitLabProvider` + `ForgeRouter` (per-call transport dispatch off `RepoRef.host`) + the local-git `merge_branch` fallback for forges with no server-side merges API. `5f32d876` (Phase 4, #581): `roboco/services/github_provisioning.py` becomes provider-aware (`ROBOCO_PROVISIONING_PROVIDER`/`ROBOCO_PROVISIONING_HOST` — see `docs/map/product-strategy-research-pitch.md`) so pitch-driven repo creation works on all three forges. `d4cb5797` (#579) + the pre-existing `tests/e2e_smoke/test_gitea_live.py` are the live contract suites (self-seeding against a dockerized `gitea/gitea` / real `gitlab.com`, env-gated) that caught the slash-encoding and http-scheme gaps in the Gitea provider. Panel: the edit-project dialog's "Forge" `<Select>` (`edit-project-dialog.tsx`) offers Auto-detect/GitHub/Gitea/GitLab.
+>
+> **Protected branches + env-ladder deletion protection (#649, #651).** `GitService._protected_branches_for`/`_protected_branches_for_deletion` (git.py:1183/1219) consult the new `projects.protected_branches` column end-to-end for the first time (the column previously existed with nothing reading it): the deletion scope additionally unions in the project's env-ladder rung branches (`effective_environments`), closing the gap where the post-merge PR-source cleanup and the stale-branch sweep could still delete a branch that IS a ladder rung — `delete_task_branch`'s own local rung check is now exactly subsumed and removed. Panel: a chips editor on the edit-project dialog.
+>
+> **GitHub App credentials + auto-regenerated codegen drift (#621/#633/5ca8a9c4, #632).** `roboco/services/github_app_auth.py`/`github_app_credentials.py` (new files) add a singleton Fernet-encrypted App id + private key (migration 077) and RS256 JWT + cached-installation-token minting; `ProjectTable.github_installation_id` lets a project bind to an installation (create-dialog repo picker, or an existing PAT project via the edit dialog's Unbind/re-bind section) with PAT fallback on any mint failure (see Gotchas). Independently, `GitService._run_codegen_and_commit` (git.py:4474, migration 078's `projects.codegen_command`) runs a per-project codegen command in the task's worktree right before every push and commits any resulting drift into the SAME push — RoboCo's own `codegen_command='make codegen'` keeps its checked-in lifecycle renders/verb tables from drifting invisibly past the agent's own gate (which omits `foundation-check`) until CI's separate drift gate catches it with no link back to the task.
+>
+> **Branch-list route fix (#610).** `roboco/api/routes/git.py`'s `list_branches` classified a remote-tracking ref by a literal `'remotes/'` prefix that `git for-each-ref --format=%(refname:short)` never emits, so every `origin/*` ref (including the symbolic `origin/HEAD`) rendered as a fake LOCAL branch. Listing now reads the full `%(refname)` and `_parse_branch_line` classifies on `refs/heads/` vs `refs/remotes/` (dropping `origin/HEAD`); the route also runs a best-effort `git remote prune origin` before listing so a branch already deleted upstream stops persisting in the panel's Git page forever, and the manual Fetch action now fetches with `--prune`.
+>
+> **PR label base-branch agnosticism + cancel-path PR close (2026-07-18/19, "agnosticism-residue" + "cancel-pr-dependents-guard").** `derive_pr_labels` gained a required `base_branch: str` keyword-only param; the label is now `f"to {base_branch}"` (the PR's real resolved target) instead of `"to master" if is_root_pr else "to slave"` — a prerequisite for the env-branches ladder and non-GitHub forges, where "master"/"slave" aren't universal. All three `GitService` call sites (`_labels_for_pr_request`, the assembled cell→root/root→master PR opener) now thread the real resolved base branch through. Separately, `GitService.close_task_pr_best_effort` (git.py:3655) closes a task's forge PR on cancel — `TaskService._close_task_pr_best_effort` (task.py:6767) calls it once per cascaded descendant and once for the cancelled task itself, alongside the existing `_delete_task_branch_best_effort` — closing a gap where a cancelled task's branch was force-deleted but its open PR lingered on the forge forever. The same change adds `GitService._live_task_dependents` (git.py:3810) so `cleanup_stale_branches` never deletes a terminal task's branch while a non-terminal task still records it, or is a direct child of it (whose future PR base would resolve to that branch before it even opens a PR).
+
+## Regression Risks
+
+| Title | File:Line | Claim | Severity |
+|-------|-----------|-------|----------|
+| `merge_pr` idempotent guard silently drops retried merge attribution | work_session.py:517 | A retried merge after a successful-but-unconfirmed GitHub merge returns the *existing* COMPLETED row unchanged, so the retry's `merged_by`/`pr_merged_at` are NOT updated. Correct for audit-trail integrity, but a caller that relied on `merge_pr` returning a freshly-updated row (e.g. reading `pr_merged_at` as "now") now gets the original timestamp. Low risk but a behavior change worth a regression test. | low |
+| `pr_merge` CEO-only guard refuses default-branch target | git.py:3671 | If a non-root PR's target legitimately resolves to the repo default branch (e.g. a mis-configured `default_branch` or a single-branch repo), `pr_merge` now hard-fails with `UnauthorizedError`. Any cell that previously merged a leaf PR into master via this path (shouldn't happen per policy, but the route existed) is now blocked. Since the env-branches ladder (#534) the comparison target is the env-ladder **head** rung (`_project_default_branch` → `head_branch(project)`), not necessarily prod — a project that declares head != prod has this guard protect the head rung, not the CEO's actual prod branch. | medium |
+| `pr_merge` parent-row `SELECT FOR UPDATE` can deadlock | git.py:3503/3683 | Two PMs merging sibling subtasks of *different* parents that share an ancestor, under并发 lock ordering, could deadlock if lock acquisition order diverges. Lock is only on the immediate parent, so risk is bounded, but a deadlock surfaces as a rollback (not a clean 409 retry). | medium |
+| `create_branch` `reset --hard` on zero-commit branch inside worktree | git.py:1104 | If `rev-list --count {base_ref}..{branch_name}` returns `0` for a branch that actually carries work (e.g. base_ref mis-resolved to a ref that already contains the work), the worktree is hard-reset and uncommitted work in the worktree is lost. The `unique==0` check is the only guard; a stale `base_ref` could trip it. | medium |
+| Panel Forge-select help text is stale vs. the shipped GitLab provider | `panel/src/components/projects/edit-project-dialog.tsx:315` | The `HelpTip` copy next to the Forge `<Select>` still reads "...GitLab support is planned" even though `gitlab` is a live `SelectItem` one line below and the backend has full GitLab Phase 3 support (`GitLabProvider`, `ForgeRouter`) — cosmetic only, no functional gap, but confusing to an operator reading the tooltip before picking GitLab. | low |
+| F123 worktree routing — commit/conventions/rebase run in worktree, merge sync runs in clone root | git.py:3696/3785 | `pr_merge` calls `_sync_target_branch_best_effort(workspace,...)` with the clone-root workspace (from `get_workspace`), not the per-task worktree. If the target branch is checked out in a worktree, the sync's `checkout` of target in the clone root fails ("already checked out"). Best-effort swallows it, but the local target ref may stay stale for the next sibling merge. | medium |
+| ~~`_merge_with_retry` retries on 409 only; 405 falls through to already-merged check then `MergeConflictError`~~ | git.py:3597 | **FIXED** (`536bbb64` #108) — `_merge_with_retry` now falls back to a permitted merge method (via `_first_allowed_merge_method`, exclude='squash') on 405 before raising `MergeConflictError`, mirroring the CEO `merge_pull_request` path. A 405 with no permitted fallback or a second 405 still falls through to disambiguation/`MergeConflictError`. | ~~medium~~ resolved |
+| `is_behind_base` raises on fetch failure; gate fail-opens | git.py:3922/3938 | A flaky origin fetch makes `is_behind_base` raise; the i_am_done gate catches it and fail-opens, letting a behind branch submit. The merge layer's own behind check is the backstop, but a genuinely-behind branch can reach QA. Documented, but a regression in the "gate is authoritative" expectation. | low |
+| `MAX_TASK_DEPTH` 3→4 changes branch-name length + validation | constants.py:45 / branch.py:71 | Any pre-existing task hierarchy at depth 4 that was previously rejected now builds a 4-segment branch name; tasks created under the old cap that stored a shorter branch are unaffected, but new subtasks of a previously-maxed tree now cut branches where they couldn't before — could surface latent assumptions in downstream consumers parsing branch names. | low |
+| ~~`close_pull_request` deletes branch on close by default~~ | git.py:4005 | **FIXED** (`536bbb64` #109) — default flipped to `delete_branch=False` (opt-in deletion); the choreographer supersede caller now passes `delete_branch=True` explicitly when it wants deletion, matching the orchestrator supersede path. A superseded PR's branch is preserved by default. | ~~medium~~ resolved |
+| Conventions validator fail-closed on resolution error | git.py:4392 | A workspace resolution failure (missing clone, diff error) returns `could_not_run=True`, which the block-gate treats as a hard refuse. A transient workspace/clone issue can now block `i_am_done`/`pr_pass` where previously the gate would have passed. Intentional but a new stranding vector. | low |
+| `get_pr_head_sha` fail-open returns None on any error | git.py:2496 | The `submit_root` re-submit loop guard only hard-blocks on an *exact* unchanged head SHA; any GitHub error / closed PR returns None and the guard passes, so a flaky API call lets a weak coordinator re-submit the same failed PR. Documented fail-open, but a regression vs. a strict gate. | low |
+
+## Health
+
+Integrity is **good and actively hardened**. The slice carries the scars of multiple live meltdowns (single-active work-session defect, pr_fail re-submit loop, cell_pm merge block<->unblock, MegaTask depth cap, cross-repo PR-number collision) and each is closed with a deterministic guard plus a comment explaining the failure mode. The F123 per-task-worktree routing is consistently threaded through commit/checkout/rebase/conventions, and the merge path has layered defenses (parent-row lock, 409 retry, already-merged disambiguation, CEO-only master guard). Two formerly-medium risks in the merge path have since been closed: `_merge_with_retry` now has the 405 method-fallback that `merge_pull_request` has (`536bbb64`), and `close_pull_request` now defaults to `delete_branch=False` (`536bbb64`). The remaining residual risk is **`pr_merge`'s post-merge target sync** running in the clone root (not the worktree) and best-effort-swallowing a checkout conflict — the local target ref may stay stale for the next sibling merge. Test coverage of the work-session lifecycle is solid; the newer `pr_merge`/`sync_task_branch`/`rebase_onto_base`/`close_pull_request` quartet deserves the most scrutiny on any future change. No outright bugs found; the drift vs CLAUDE.md is documentation undersell (commit header format, gateway merge-path description), not behavioral mismatch. The forge-providers rollout (GitHub/Gitea/GitLab) added real breadth without touching the merge-path defenses above — `GitService`'s callers still reason in GitHub-shaped responses, and `ForgeRouter`/`GiteaProvider`/`GitLabProvider` carry the entire adaptation burden behind that seam; the live-forge e2e suites (`tests/e2e_smoke/test_gitea_live.py`/`test_gitlab_live.py`, both env-gated and self-seeding) are the only coverage that exercises a real forge over the wire rather than a mocked transport, and they already caught two real gaps (slash-encoding, http scheme) the mocked unit tests couldn't have found.

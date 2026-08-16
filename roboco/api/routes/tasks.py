@@ -1,0 +1,2375 @@
+"""
+Task API Routes
+
+Full CRUD operations and lifecycle management for tasks.
+"""
+
+from typing import Annotated, Any, cast
+from uuid import UUID
+
+from fastapi import APIRouter, Body, HTTPException, Query, status
+
+from roboco.api.deps import (
+    CurrentAgentContext,
+    DbSession,
+    PermissionServiceDep,
+    get_permission_service,
+    require_pm_or_above,
+)
+from roboco.api.schemas.tasks import (
+    BoardReviewEntry,
+    CancelTaskRequest,
+    CheckpointRequest,
+    ClaimRequest,
+    CollisionMapResponse,
+    CollisionSibling,
+    CommitRequest,
+    CompleteTaskRequest,
+    EscalateRequest,
+    EscalateResponse,
+    ProgressRequest,
+    QANotes,
+    SoftBlockRequest,
+    SubstituteRequest,
+    TaskCountResponse,
+    TaskFindingsResponse,
+    TaskResponse,
+    TaskSummaryResponse,
+    TaskUpdate,
+    TeamTasksQuery,
+    ValidTransitionsResponse,
+    enrich_task_with_context,
+    finding_to_response,
+    findings_summary,
+    task_list_to_response,
+    task_list_to_summary_response,
+    task_to_response,
+    transform_update_data,
+)
+from roboco.api.utils.tasks import (
+    _apply_forced_status_override,
+    _apply_null_clears,
+    _enforce_pm_lighter_fields,
+    _merge_pr_if_awaiting_pm_review,
+    _pm_editor_scope,
+    _pop_null_clears,
+    _reassert_batch_shape,
+    _resolve_assigned_to_slug,
+    _resolve_project_for_merge,
+    _StatusOverride,
+    _translate_error,
+)
+from roboco.enforcement import get_valid_transitions
+from roboco.exceptions import GitError, TaskLifecycleError
+from roboco.foundation.policy import task_completeness as tc
+from roboco.logging import get_logger
+from roboco.models.base import AgentRole, TaskStatus, Team
+from roboco.models.task import TaskCreate
+from roboco.security import (
+    guard_deco,
+    prompt_injection_validator,
+    secret_exfil_validator,
+)
+from roboco.services.audit import get_audit_service
+from roboco.services.base import ServiceError
+from roboco.services.gateway.choreographer.collision import build_collision_context
+from roboco.services.journal import get_journal_service
+from roboco.services.notification_delivery import (
+    EscalationError,
+    get_notification_delivery_service,
+)
+from roboco.services.permissions import TaskAction
+from roboco.services.repositories.review_findings import ReviewFindingsRepository
+from roboco.services.task import (
+    SoftBlockInput,
+    TaskCreateRequest,
+    extract_original_developer,
+    get_task_service,
+)
+from roboco.utils.converters import require_uuid
+
+router = APIRouter()
+_logger = get_logger(__name__)
+
+# Minimum character count for notes fields that must be substantive
+# (QA pass notes, doc-complete notes, escalation notes). Below this the
+# note is useless for the next reader, so the transition is refused.
+_MIN_NOTES_CHARS = 20
+
+# Structural / ownership fields a bare task owner (UPDATE_OWN) must NOT
+# self-edit — they reassign the task, move it between teams, re-parent the task
+# tree, rewire the sequencing DAG, re-route it to another repo, or rewrite the
+# delegation plan. These are PM/ASSIGN-gated operations; the verb layer gates
+# them to PM roles (reassign/delegate/triage), so the REST PATCH surface must
+# not let an owner bypass that by setattr-ing them directly. Only a caller with
+# the higher ASSIGN permission may set them. budget_usd joins this set too — a
+# self-serve budget raise on your own task would defeat the whole cap.
+_PRIVILEGED_UPDATE_FIELDS: frozenset[str] = frozenset(
+    {
+        "assigned_to",
+        "team",
+        "parent_task_id",
+        "dependency_ids",
+        "blocker_ids",
+        "plan",
+        "project_id",
+        "budget_usd",
+    }
+)
+
+# =============================================================================
+# CRUD ENDPOINTS
+# =============================================================================
+
+
+@router.post("", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+@guard_deco.rate_limit(requests=30, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.custom_validation(prompt_injection_validator)
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+async def create_task(
+    data: TaskCreate,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+) -> TaskResponse:
+    """Create a new task."""
+    # Check create permission
+    if not permissions.can_perform_task_action(agent, TaskAction.CREATE, data.team):
+        # Log the denial. No task row exists yet, so record the attempted
+        # payload (title/team/type/project) under details with a distinct
+        # target_type — a "N/A" task_id would coerce to NULL and leave the
+        # denial unattributable, exactly where role-escalation attempts surface.
+        audit = get_audit_service()
+        await audit.log_task_creation_denial(
+            agent_id=agent.agent_id,
+            agent_role=agent.role.value,
+            action="create",
+            details={
+                "reason": "Role not permitted to create tasks",
+                "attempted_title": getattr(data, "title", None),
+                "attempted_team": getattr(getattr(data, "team", None), "value", None),
+                "attempted_task_type": getattr(
+                    getattr(data, "task_type", None), "value", None
+                ),
+                "attempted_project_id": str(getattr(data, "project_id", None) or ""),
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to create tasks",
+        )
+
+    # `data.project_id` is `UUID` (required) on TaskCreate, so pydantic
+    # rejects missing/null values with 422 before this handler runs.
+
+    # Defense-in-depth completeness check. TaskCreate's Pydantic schema
+    # already enforces the structural rules in TASK_AT_CREATE (min_length
+    # on title/description/acceptance_criteria; the discriminator enums
+    # for task_type/nature/estimated_complexity/team are required). What
+    # Pydantic does NOT catch are the denylist phrases — placeholder ACs
+    # like "completed and reviewed by assignee" or stub descriptions —
+    # because those are well-formed strings. Re-running the canonical
+    # checker here catches them at the route boundary, so route, schema,
+    # and service all share one notion of "complete".
+    completeness = tc.check(tc.TASK_AT_CREATE, data)
+    if not completeness.passed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "incomplete_input",
+                "missing": completeness.missing,
+                "field_hints": completeness.field_hints,
+            },
+        )
+
+    # Resolve assigned_to: accept either a UUID string or an agent slug
+    # (e.g. "main-pm"). Slugs are how agents are addressed everywhere else
+    # in the tooling, so requiring a raw UUID here was a paper cut.
+    assigned_to_uuid: UUID | None = None
+    if data.assigned_to:
+        try:
+            assigned_to_uuid = UUID(data.assigned_to)
+        except ValueError:
+            from roboco.services.repositories.query_helpers import (
+                get_agent_by_slug,
+            )
+
+            agent_row = await get_agent_by_slug(db, data.assigned_to)
+            if agent_row is None:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail={
+                        "error": {
+                            "code": "ASSIGNEE_NOT_FOUND",
+                            "message": (
+                                f"No agent with slug or UUID '{data.assigned_to}'"
+                            ),
+                            "hint": "Use an agent slug (e.g. 'main-pm') or UUID",
+                        }
+                    },
+                ) from None
+            assigned_to_uuid = cast("UUID", agent_row.id)
+
+    # Prompter origin tracking: enforce human confirmation gate so
+    # LLM-drafted tasks cannot bypass review and enter the workflow.
+    if data.source == "prompter" and not data.confirmed_by_human:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Prompter-originated tasks require human confirmation",
+        )
+
+    service = get_task_service(db)
+    req = TaskCreateRequest(
+        title=data.title,
+        description=data.description,
+        acceptance_criteria=data.acceptance_criteria,
+        team=data.team,
+        created_by=agent.agent_id,
+        priority=data.priority,
+        parent_task_id=data.parent_task_id,
+        assigned_to=assigned_to_uuid,
+        target_date=data.target_date,
+        estimated_complexity=data.estimated_complexity,
+        nature=data.nature,
+        status=data.status,
+        sequence=data.sequence,  # Task ordering within siblings
+        dependency_ids=data.dependency_ids,  # Dependencies for claim filtering
+        # Git configuration (all tasks follow git workflow)
+        task_type=data.task_type,
+        project_id=data.project_id,
+        product_id=data.product_id,
+        # Prompter origin tracking
+        source=data.source,
+        confirmed_by_human=data.confirmed_by_human,
+    )
+    task = await service.create(req)
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.get("", response_model=list[TaskResponse])
+async def list_tasks(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    team: Team | None = None,
+    status: TaskStatus | None = None,
+    limit: int = Query(100, ge=1, le=500),
+) -> list[TaskResponse]:
+    """
+    List tasks with optional filters.
+
+    View permissions:
+    - Main PM, Board, Auditor: Can see all tasks
+    - Cell PM: Can see own cell's tasks
+    - Cell members: Can only see own cell's tasks
+    """
+    service = get_task_service(db)
+    permissions = get_permission_service()
+
+    # Determine effective team filter based on permissions
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    effective_team = team
+
+    if not can_view_all:
+        # Cell members can only see their own team's tasks
+        if agent.team:
+            effective_team = agent.team
+        else:
+            # No team assigned - return empty list
+            return []
+
+    if effective_team and status:
+        tasks = await service.list_by_team(effective_team, status, limit)
+    elif effective_team:
+        tasks = await service.list_by_team(effective_team, limit=limit)
+    elif status:
+        # list_by_status has no limit param — slice so the status-only
+        # branch can't return the whole table (it silently skipped the
+        # declared limit until 2026-07-02).
+        tasks = (await service.list_by_status(status))[:limit]
+    else:
+        tasks = await service.list_all(limit)
+
+    return task_list_to_response(tasks)
+
+
+@router.get("/summary", response_model=list[TaskSummaryResponse])
+async def list_tasks_summary(
+    *,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    team: Team | None = None,
+    status: TaskStatus | None = None,
+    q: Annotated[str | None, Query(max_length=200)] = None,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 500,
+) -> list[TaskSummaryResponse]:
+    """List tasks as trimmed summaries for panel list views.
+
+    Same filters and view permissions as the full list, ~50x lighter per
+    task: no description/plan/progress/commits/notes. The panel task tree
+    needs the whole set at once, so the default limit is higher than the
+    full route's. ``q`` searches title, description, and id prefix
+    server-side — summaries carry no description, so the search must
+    happen here, not in the browser.
+    """
+    service = get_task_service(db)
+    permissions = get_permission_service()
+
+    effective_team = team
+    if not permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL):
+        if agent.team:
+            effective_team = agent.team
+        else:
+            return []
+
+    if q:
+        tasks = await service.search_tasks(
+            q, team=effective_team, status=status, limit=limit
+        )
+        return task_list_to_summary_response(tasks)
+
+    if effective_team and status:
+        tasks = await service.list_by_team(effective_team, status, limit)
+    elif effective_team:
+        tasks = await service.list_by_team(effective_team, limit=limit)
+    elif status:
+        tasks = (await service.list_by_status(status))[:limit]
+    else:
+        tasks = await service.list_all(limit)
+
+    return task_list_to_summary_response(tasks)
+
+
+@router.get("/my", response_model=list[TaskResponse])
+async def get_my_tasks(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    status: TaskStatus | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+) -> list[TaskResponse]:
+    """Get tasks assigned to the current agent."""
+    service = get_task_service(db)
+    tasks = (await service.list_by_assignee(agent.agent_id, status))[:limit]
+    return task_list_to_response(tasks)
+
+
+@router.get("/pending", response_model=list[TaskResponse])
+async def get_pending_tasks(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+    team: Team | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+) -> list[TaskResponse]:
+    """Get pending tasks available to claim."""
+    service = get_task_service(db)
+
+    # Apply team filter based on permissions
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    effective_team = team if can_view_all else agent.team
+
+    tasks = (await service.list_pending(effective_team))[:limit]
+    return task_list_to_response(tasks)
+
+
+@router.get("/blocked", response_model=list[TaskResponse])
+async def get_blocked_tasks(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+    team: Team | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+) -> list[TaskResponse]:
+    """Get blocked tasks."""
+    service = get_task_service(db)
+
+    # Apply team filter based on permissions
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    effective_team = team if can_view_all else agent.team
+
+    tasks = (await service.list_blocked(effective_team))[:limit]
+    return task_list_to_response(tasks)
+
+
+@router.get("/awaiting-qa", response_model=list[TaskResponse])
+async def get_awaiting_qa_tasks(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+    team: Team | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+) -> list[TaskResponse]:
+    """Get tasks awaiting QA review."""
+    service = get_task_service(db)
+
+    # Apply team filter based on permissions
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    effective_team = team if can_view_all else agent.team
+
+    tasks = (await service.list_awaiting_qa(effective_team))[:limit]
+    return task_list_to_response(tasks)
+
+
+@router.get("/awaiting-docs", response_model=list[TaskResponse])
+async def get_awaiting_docs_tasks(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+    team: Team | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+) -> list[TaskResponse]:
+    """Get tasks awaiting documentation."""
+    service = get_task_service(db)
+
+    # Apply team filter based on permissions
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    effective_team = team if can_view_all else agent.team
+
+    tasks = (await service.list_awaiting_docs(effective_team))[:limit]
+    return task_list_to_response(tasks)
+
+
+@router.get("/team/{team}", response_model=list[TaskResponse])
+async def get_team_tasks(
+    team: Team,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+    params: Annotated[TeamTasksQuery, Query()],
+) -> list[TaskResponse]:
+    """Get tasks for a specific team."""
+    # Check if agent can view this team's tasks
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    is_own_team = agent.team == team
+
+    if not can_view_all and not is_own_team:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this team's tasks",
+        )
+
+    service = get_task_service(db)
+    tasks = await service.list_by_team(team, params.task_status, params.limit)
+    return task_list_to_response(tasks)
+
+
+@router.get("/stats", response_model=TaskCountResponse)
+async def get_task_stats(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+    team: Team | None = None,
+) -> TaskCountResponse:
+    """Get task counts by status."""
+    service = get_task_service(db)
+
+    # Apply team filter based on permissions
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    effective_team = team if can_view_all else agent.team
+
+    counts = await service.count_by_status(effective_team)
+    return TaskCountResponse(counts=counts)
+
+
+@router.get("/stats/by-team", response_model=TaskCountResponse)
+async def get_task_stats_by_team(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+) -> TaskCountResponse:
+    """Get task counts by team."""
+    # Only agents with VIEW_ALL can see cross-team stats
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    if not can_view_all:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view cross-team statistics",
+        )
+
+    service = get_task_service(db)
+    counts = await service.count_by_team()
+    return TaskCountResponse(counts=counts)
+
+
+# Static-segment routes must be declared BEFORE `/{task_id}` so FastAPI
+# matches the literal path instead of treating the segment as a UUID
+# (which would 422 on these names).
+
+
+@router.get("/awaiting-pm-review", response_model=list[TaskResponse])
+async def get_awaiting_pm_review_tasks(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+    team: Team | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+) -> list[TaskResponse]:
+    """Get tasks awaiting PM review."""
+    service = get_task_service(db)
+
+    # Apply team filter based on permissions
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    effective_team = team if can_view_all else agent.team
+
+    tasks = (await service.list_awaiting_pm_review(effective_team))[:limit]
+    return task_list_to_response(tasks)
+
+
+@router.get("/awaiting-ceo-approval", response_model=list[TaskResponse])
+async def get_awaiting_ceo_approval_tasks(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+) -> list[TaskResponse]:
+    """Get tasks awaiting CEO approval.
+
+    CEO approval queue is org-wide (no team filter).
+    Only visible to PMs and above.
+    """
+    # Only PMs and above can view the CEO approval queue
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    is_pm = agent.role in (AgentRole.CELL_PM, AgentRole.MAIN_PM)
+    is_ceo = agent.role == AgentRole.CEO
+
+    if not (can_view_all or is_pm or is_ceo):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only PMs and management can view CEO approval queue",
+        )
+
+    service = get_task_service(db)
+    tasks = (await service.list_awaiting_ceo_approval())[:200]
+    return task_list_to_response(tasks)
+
+
+@router.get("/external-pr-reviews", response_model=list[TaskResponse])
+async def get_external_pr_reviews(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+) -> list[TaskResponse]:
+    """Inbound external PRs the org is reviewing or has reviewed.
+
+    The PR-review queue: external-PR review tasks still in flight (the reviewer
+    is working) OR completed and awaiting the CEO's decision (not yet superseded
+    or dismissed). Active reviews surface so the panel shows a review underway
+    and links to the PR where the change-request is posted, instead of going
+    dark until it finishes. Org-wide; visible to PMs and above.
+    """
+    can_view_all = permissions.can_perform_task_action(agent, TaskAction.VIEW_ALL)
+    is_pm = agent.role in (AgentRole.CELL_PM, AgentRole.MAIN_PM)
+    is_ceo = agent.role == AgentRole.CEO
+    if not (can_view_all or is_pm or is_ceo):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only PMs and management can view the PR-review queue",
+        )
+    service = get_task_service(db)
+    tasks = (await service.list_external_pr_reviews())[:200]
+    return task_list_to_response(tasks)
+
+
+@router.post("/{task_id}/supersede-external-pr")
+@guard_deco.rate_limit(requests=10, window=60)
+@guard_deco.block_clouds()
+@guard_deco.usage_monitor(max_calls=30, window=3600)
+async def supersede_external_pr(
+    task_id: UUID,
+    agent: CurrentAgentContext,
+) -> dict[str, Any]:
+    """CEO-authorized takeover of a reviewed external PR.
+
+    Confirms the review task and hands the contribution to the org: a
+    roboco-owned branch is cut from the contributor's fork head and a supersede
+    task is created for Main PM to delegate to a cell. This is the human
+    confirmation that authorizes fetching + running the contributor's code, so
+    it is CEO-only.
+    """
+    if agent.role != AgentRole.CEO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="only the CEO may supersede an external PR",
+        )
+    from roboco.api.deps import get_orchestrator
+
+    result = await get_orchestrator().supersede_external_pr(task_id)
+    if not result.get("ok"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(result.get("error", "supersede failed")),
+        )
+    return result
+
+
+@router.post("/{task_id}/dismiss-external-pr")
+@guard_deco.rate_limit(requests=10, window=60)
+@guard_deco.block_clouds()
+async def dismiss_external_pr(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> dict[str, Any]:
+    """CEO declines to act on a reviewed external PR — drop it from the queue.
+
+    The review stays on the GitHub PR; this only records that the CEO chose not
+    to supersede, so the PR-review decision queue stops surfacing it. CEO-only.
+    """
+    if agent.role != AgentRole.CEO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="only the CEO may dismiss an external-PR review",
+        )
+    service = get_task_service(db)
+    task = await service.dismiss_external_pr_review(task_id)
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="external-PR review task not found",
+        )
+    await db.commit()
+    return {"ok": True, "task_id": str(task_id)}
+
+
+@router.get("/lifecycle-transitions", response_model=dict[str, list[str]])
+async def get_lifecycle_transitions() -> dict[str, list[str]]:
+    """Return the task lifecycle state graph as a JSON-serialisable dict.
+
+    Each key is a status name (string); each value is a list of valid next
+    status names (strings).  The data is drawn directly from the canonical
+    ``STATUS_GRAPH`` constant so it is always in sync with the enforcement
+    layer.
+    """
+    from roboco.foundation.policy.lifecycle import STATUS_GRAPH
+
+    return {
+        src.value: sorted(tgt.value for tgt in targets)
+        for src, targets in STATUS_GRAPH.items()
+    }
+
+
+@router.get("/{task_id}/valid-transitions", response_model=ValidTransitionsResponse)
+async def get_valid_transitions_for_task(
+    task_id: UUID,
+    db: DbSession,
+) -> ValidTransitionsResponse:
+    """Return valid next statuses for a task given its current state.
+
+    Uses the canonical lifecycle enforcement layer so the response is always
+    in sync with what the backend will actually allow.
+    """
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+    valid_statuses = get_valid_transitions(task.status)
+    return ValidTransitionsResponse(
+        valid_statuses=[TaskStatus(s) for s in valid_statuses]
+    )
+
+
+@router.get("/{task_id}", response_model=TaskResponse)
+async def get_task(
+    task_id: UUID,
+    db: DbSession,
+) -> TaskResponse:
+    """Get a specific task with full context (work session, project)."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    response = task_to_response(task)
+
+    # Enrich with work session and project context
+    response = await enrich_task_with_context(response, db)
+
+    # Gated the same as the budgets feature: an extra DB read, so only pay
+    # for it when the panel can actually make use of it (ROBOCO_TASK_BUDGETS_ENABLED).
+    from roboco.config import settings as _settings
+
+    if _settings.task_budgets_enabled:
+        response.spend_usd = await service.task_spend_usd(task_id)
+
+    return response
+
+
+@router.put("/{task_id}", response_model=TaskResponse)
+@router.patch("/{task_id}", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.custom_validation(prompt_injection_validator)
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+async def update_task(
+    task_id: UUID,
+    data: TaskUpdate,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+) -> TaskResponse:
+    """Update a task. Supports both PUT and PATCH for partial updates.
+
+    CEO and privileged roles can update any field including:
+    - Basic info (title, description, acceptance_criteria, priority, etc.)
+    - Ownership (team, assigned_to)
+    - Relationships (parent_task_id, dependency_ids, blocker_ids)
+    - Planning (plan with sub_tasks, risks, open_questions)
+    - Execution tracking (progress_updates, checkpoints)
+    - Artifacts (commits)
+    - Notes (dev_notes, qa_notes, auditor_notes, quick_context)
+    """
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Check if agent can update this task
+    # UPDATE_OWN requires agent to be assigned to or created the task
+    is_owner = agent.agent_id in {task.assigned_to, task.created_by}
+    can_update_own = permissions.can_perform_task_action(
+        agent, TaskAction.UPDATE_OWN, task.team
+    )
+    has_higher_perms = permissions.can_perform_task_action(
+        agent, TaskAction.ASSIGN, task.team
+    )
+
+    # PM roles (cell_pm/main_pm) ride the ASSIGN-holding bypass above like
+    # CEO/Board/Auditor, but get the narrower "PM lighter" content-only slice
+    # instead of unrestricted admin access (see _pm_editor_scope).
+    is_pm_editor = _pm_editor_scope(agent, task, has_higher_perms=has_higher_perms)
+
+    if not ((can_update_own and is_owner) or has_higher_perms):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this task",
+        )
+
+    # Resolve assigned_to slug → UUID (null is left for the null-clear path).
+    data = await _resolve_assigned_to_slug(data, db)
+
+    # Transform input data for database storage.
+    updates = transform_update_data(data)
+
+    # `status` is not a free-form field — it is an audited admin override so a
+    # privileged operator can recover a task wedged in a state with no valid
+    # in-band transition. Pop it out of the generic field update and apply it
+    # through the audited path, gated on elevated permissions.
+    new_status = updates.pop("status", None)
+    # #13: ``force`` is the explicit acknowledgement of the lifecycle bypass.
+    # Pop it so it is never passed to TaskService.update as a field set.
+    force = bool(updates.pop("force", False))
+
+    # Pop explicitly-set-to-None nullable fields. TaskService.update() skips
+    # None values (not-None guard), so null-clear intent is re-applied directly
+    # on the ORM object after the update returns.
+    null_clears = _pop_null_clears(updates)
+
+    # PM-lighter: restrict to the content-only allowlist, and refuse a status
+    # change outright — "no status changes beyond what they already have"
+    # (the lifecycle verbs), not a new capability riding this PATCH surface.
+    if is_pm_editor:
+        _enforce_pm_lighter_fields(updates, null_clears, new_status)
+
+    # A bare task owner (UPDATE_OWN) may edit dev-facing fields only. The
+    # structural / ownership fields are gated to ASSIGN/PM; an owner PATCHing
+    # any of them (set or explicitly nulled) without higher perms is refused —
+    # otherwise a dev self-reassigns / re-parents / re-routes their task past
+    # the verb layer's PM gate with no audited override.
+    touched_privileged = (
+        updates.keys() | null_clears.keys()
+    ) & _PRIVILEGED_UPDATE_FIELDS
+    if touched_privileged and not has_higher_perms:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Not authorized to set structural/ownership fields"
+                f" ({sorted(touched_privileged)}); reassign / re-parent /"
+                " re-route requires a PM role."
+            ),
+        )
+
+    task = await service.update(task_id, **updates)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Task update failed unexpectedly",
+        )
+    _apply_null_clears(task, null_clears)
+    # Null-clears apply AFTER service.update() (and its shape guard), so re-assert
+    # the MegaTask shape here too — a cleared parent_task_id / project_id must not
+    # turn a root-subtask into an umbrella-shaped-but-targeted spoof.
+    _reassert_batch_shape(task)
+    if new_status is not None:
+        task = await _apply_forced_status_override(
+            _StatusOverride(
+                service=service,
+                task_id=task_id,
+                task=task,
+                new_status=new_status,
+                force=force,
+                has_higher_perms=has_higher_perms,
+                agent=agent,
+            )
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+@guard_deco.rate_limit(requests=20, window=60)
+async def delete_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+) -> None:
+    """Delete a task."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only creators or agents with ASSIGN permission can delete tasks
+    is_creator = task.created_by == agent.agent_id
+    has_assign_perms = permissions.can_perform_task_action(
+        agent, TaskAction.ASSIGN, task.team
+    )
+
+    if not (is_creator or has_assign_perms):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this task",
+        )
+
+    await service.delete(task_id)
+    await db.commit()
+
+
+@router.get("/{task_id}/subtasks", response_model=list[TaskResponse])
+async def get_subtasks(
+    task_id: UUID,
+    db: DbSession,
+) -> list[TaskResponse]:
+    """Get subtasks of a task."""
+    service = get_task_service(db)
+    tasks = (await service.get_subtasks(task_id))[:500]
+    return task_list_to_response(tasks)
+
+
+@router.get("/{task_id}/descendants", response_model=list[TaskResponse])
+async def get_descendants(
+    task_id: UUID,
+    db: DbSession,
+) -> list[TaskResponse]:
+    """Get ALL descendants of a task (recursive - children, grandchildren, etc.)."""
+    service = get_task_service(db)
+    tasks = (await service.get_all_descendants(task_id))[:500]
+    return task_list_to_response(tasks)
+
+
+@router.get("/{task_id}/board-review", response_model=list[BoardReviewEntry])
+async def get_board_review(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> list[dict[str, Any]]:
+    """Return the board's review of a task — the Product Owner + Head of
+    Marketing decision-log entries — so the CEO can read the actual analysis at
+    the approval/redraft gate instead of a placeholder. PM-or-above only.
+    Empty list when the board has not reviewed yet.
+    """
+    require_pm_or_above(agent.role, "view the board review")
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+    return await get_journal_service(db).board_review_brief(task_id)
+
+
+@router.get("/{task_id}/findings", response_model=TaskFindingsResponse)
+async def get_task_findings(
+    task_id: UUID,
+    db: DbSession,
+    _agent: CurrentAgentContext,
+) -> TaskFindingsResponse:
+    """The revision-findings ledger for a task (qa_fail / pr_fail /
+    request_changes / ceo_reject), newest round first, plus per-origin
+    status counts. Read-only feed for the panel's Findings tab.
+
+    The list is capped (repository default); ``summary``/``total`` are SQL
+    aggregates over the whole ledger, with ``truncated`` flagging a capped
+    list — so the counts are never silently wrong for a big ledger.
+    """
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+    repo = ReviewFindingsRepository(db)
+    rows = await repo.list_for_task(task_id)
+    counts = await repo.status_counts_for_task(task_id)
+    total = sum(count for _, _, count in counts)
+    return TaskFindingsResponse(
+        findings=[finding_to_response(r) for r in rows],
+        summary=findings_summary(counts),
+        total=total,
+        truncated=total > len(rows),
+    )
+
+
+@router.get("/{task_id}/collision-map", response_model=CollisionMapResponse)
+async def get_task_collision_map(
+    task_id: UUID,
+    db: DbSession,
+    _agent: CurrentAgentContext,
+) -> CollisionMapResponse:
+    """The reviewer/PM collision map for a task — its own declared surface
+    (``intends_to_touch`` / ``adds_migration`` / ``touches_shared``) plus
+    the surfaced siblings (same parent) that would collide with it: file
+    globs that overlap or a shared migration chain. Read-only feed for the
+    panel's Collision tab; the QA/PR-gate evidence envelopes carry the same
+    block inline (with declared-vs-actual drift, which needs the real
+    touched files the panel route doesn't resolve a workspace for).
+    """
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+    # No actual files here — the panel shows the declared surface + sibling
+    # overlap only; drift stays in the in-context evidence envelope.
+    # Best-effort: a fetch/build failure degrades to no siblings rather than
+    # a 500 — the route still returns the task's own declared surface.
+    ctx: list[dict[str, Any]] | None = None
+    try:
+        siblings = (
+            await service.get_subtasks(UUID(str(task.parent_task_id)))
+            if task.parent_task_id
+            else []
+        )
+        ctx = build_collision_context(task=task, siblings=siblings)
+    except Exception as exc:
+        _logger.warning(
+            "collision_map_route_skip", task_id=str(task.id), error=str(exc)
+        )
+    return CollisionMapResponse(
+        task_id=str(task.id),
+        parent_task_id=str(task.parent_task_id) if task.parent_task_id else None,
+        intends_to_touch=list(task.intends_to_touch or []),
+        adds_migration=bool(task.adds_migration),
+        touches_shared=bool(task.touches_shared),
+        siblings=[
+            CollisionSibling(
+                id=s["id"],
+                title=s.get("title"),
+                status=s.get("status", ""),
+                branch_name=s.get("branch_name"),
+                pr_number=s.get("pr_number"),
+                sequence=s.get("sequence"),
+                intends_to_touch=s.get("intends_to_touch", []),
+                adds_migration=s.get("adds_migration", False),
+                touches_shared=s.get("touches_shared", False),
+                overlap=s.get("overlap", []),
+                undeclared=s.get("undeclared", []),
+            )
+            for s in (ctx or [])
+        ],
+    )
+
+
+# =============================================================================
+# LIFECYCLE ENDPOINTS
+# =============================================================================
+
+
+@router.post("/{task_id}/claim", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+async def claim_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+    data: Annotated[ClaimRequest | None, Body()] = None,
+) -> TaskResponse:
+    """Claim a task (privileged roles may claim on behalf of another agent)."""
+    service = get_task_service(db)
+    try:
+        task = await service.claim_task_for_agent(
+            task_id,
+            agent,
+            permissions,
+            claim_target_slug=(data.agent_id if data else None),
+        )
+    except ServiceError as e:
+        raise _translate_error(e) from e
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/start", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+async def start_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Start working on a task."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only assigned agent can start the task
+    if task.assigned_to != agent.agent_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the assigned agent can start this task",
+        )
+
+    # Field-level gates: must have a branch and (if claimed-first-time) a
+    # plan. The service checks plan internally but returns a generic None
+    # on failure; surface the specific cause here so the agent knows
+    # what to call next.
+    if not task.branch_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "NO_BRANCH: Task has no branch assigned. Unclaim and "
+                "reclaim to regenerate the hierarchical branch, then "
+                "start."
+            ),
+        )
+    if task.status.value == "claimed" and not task.plan:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "NO_PLAN: Cannot start a claimed task without a plan. "
+                "Set task.plan via PATCH /api/tasks/{id} (panel) or "
+                "call gateway i_will_work_on(task_id, plan='...') (agents)."
+            ),
+        )
+
+    # Pass agent_id and role for defense-in-depth validation in service layer
+    task = await service.start(task_id, agent_id=agent.agent_id, agent_role=agent.role)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Cannot start task - invalid status (must be claimed, "
+                "paused, or needs_revision)."
+            ),
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/block", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+async def block_task(
+    task_id: UUID,
+    blocker_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Block a task due to a dependency."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only assigned agent, PM, or the CEO can block a task
+    if task.assigned_to != agent.agent_id and agent.role not in (
+        AgentRole.CELL_PM,
+        AgentRole.MAIN_PM,
+        AgentRole.CEO,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to block this task",
+        )
+
+    task = await service.block(task_id, blocker_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Task block failed unexpectedly",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/soft-block", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.custom_validation(secret_exfil_validator)
+@guard_deco.content_type_filter(["application/json"])
+async def soft_block_task(
+    task_id: UUID,
+    data: SoftBlockRequest,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Soft-block a task due to an external factor (not a task dependency)."""
+    service = get_task_service(db)
+    try:
+        task = await service.soft_block_task_for_agent(
+            task_id,
+            agent,
+            SoftBlockInput(
+                blocker_type=data.blocker_type,
+                reason=data.reason,
+                what_needed=data.what_needed,
+                resolver_type=data.resolver_type,
+            ),
+        )
+    except ServiceError as e:
+        raise _translate_error(e) from e
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/unblock", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+async def unblock_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Unblock a task and notify the assigned agent."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only assigned agent, PM, or the CEO can unblock a task
+    if task.assigned_to != agent.agent_id and agent.role not in (
+        AgentRole.CELL_PM,
+        AgentRole.MAIN_PM,
+        AgentRole.CEO,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to unblock this task",
+        )
+
+    task = await service.unblock(task_id, agent.role)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot unblock task - not blocked",
+        )
+
+    # TaskService.unblock() already sends the ALERT unblock notification
+    # (send_unblock_notification) to the restored owner + CEO — do not
+    # duplicate it here.
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/assign-review-pm", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+async def assign_review_pm(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+) -> TaskResponse:
+    """Recovery seam: (re)assign an awaiting_pm_review task to its owning PM.
+
+    CLAIM_RULES deliberately excludes AWAITING_PM_REVIEW — no claim() edge
+    into it (the i_will_plan re-claim-loop fix) — so the orchestrator's
+    pm-review dispatchers call this instead of the claim route to place an
+    unassigned or stale-assigned review task with its real owner before
+    spawning it. Gated on the same ASSIGN permission that guards ownership
+    fields on the generic task PATCH.
+    """
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+    if not permissions.can_perform_task_action(agent, TaskAction.ASSIGN, task.team):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to assign this task",
+        )
+    task = await service.assign_review_pm(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot assign review PM - task not awaiting_pm_review",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/pause", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+async def pause_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Pause a task."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only the assigned agent or the CEO can pause a task. The lifecycle
+    # spec's in_progress->paused transition carries no role restriction of
+    # its own (enforced upstream by the gateway's flow verbs, which never
+    # expose pause to agents at all) — this route is the sole gate, and the
+    # CEO carve-out here is deliberately narrower than unblock/block's
+    # (assignee-or-{CELL_PM, MAIN_PM, CEO}): pause has no PM-role carve-out.
+    if task.assigned_to != agent.agent_id and agent.role != AgentRole.CEO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the assigned agent or the CEO can pause this task",
+        )
+
+    task = await service.pause(task_id, agent.role)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot pause task - not in progress",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/resume", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+async def resume_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Resume a paused task."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only the assigned agent or the CEO can resume a task — same carve-out
+    # as pause above, so a CEO who paused a task through the front door can
+    # also resume it through the front door.
+    if task.assigned_to != agent.agent_id and agent.role != AgentRole.CEO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the assigned agent or the CEO can resume this task",
+        )
+
+    task = await service.resume(task_id, agent.role)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot resume task - not paused",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/verify", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+async def submit_for_verification(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Submit task for self-verification."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only assigned agent can submit for verification
+    if task.assigned_to != agent.agent_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the assigned agent can submit for verification",
+        )
+
+    task = await service.submit_for_verification(task_id, agent.role)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot verify task - not in progress",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/submit-qa", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+async def submit_for_qa(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Submit task for QA review."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only assigned agent can submit for QA
+    if task.assigned_to != agent.agent_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the assigned agent can submit for QA",
+        )
+
+    # Field-level gates: dev must have committed, pushed, opened a PR,
+    # reported progress, and self-verified before QA can review. PR is
+    # REQUIRED at this stage — QA reviews on GitHub, not in a raw
+    # workspace diff. Without the pre-QA PR gate, the system falls into
+    # needless QA-fail → dev-creates-PR-in-revision cycles (pure token
+    # burn). A legitimate QA-fail (actual defect) is fine; a PR-missing
+    # fail is always avoidable.
+    if not task.self_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "NOT_SELF_VERIFIED: Cannot submit for QA without a prior "
+                "self-verification step. Call gateway i_am_done() "
+                "(handles verification + QA submit), or for the panel "
+                "POST /api/tasks/{id}/verify before /submit-qa."
+            ),
+        )
+    if not task.commits:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "NO_COMMITS: Cannot submit for QA without at least one "
+                "commit on this task. Use the roboco-do `commit(message, "
+                "files)` verb before `i_am_done()` via gateway, or POST "
+                "/api/tasks/{id}/submit-qa."
+            ),
+        )
+    if task.pr_number is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "NO_PR: Cannot submit for QA without a PR. The PR is "
+                "opened automatically by the choreographer when you call "
+                "`submit_for_qa(task_id)` (gateway flow verb) — make sure "
+                "you have at least one `commit(...)` on this task first "
+                "so the choreographer has something to push."
+            ),
+        )
+    if not task.progress_updates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "NO_PROGRESS: Cannot submit for QA without any "
+                "progress updates. Make at least one commit() during "
+                "execution — commit() auto-records a progress entry."
+            ),
+        )
+
+    task = await service.submit_for_qa(task_id, agent.role)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot submit for QA - not verifying",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/pass-qa", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.custom_validation(secret_exfil_validator)
+@guard_deco.content_type_filter(["application/json"])
+async def pass_qa(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    data: QANotes | None = None,
+) -> TaskResponse:
+    """Mark task as passed QA."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only QA agents can pass/fail QA
+    if agent.role != AgentRole.QA:
+        audit = get_audit_service()
+        await audit.log_task_action_denial(
+            agent_id=agent.agent_id,
+            agent_role=agent.role.value,
+            task_id=task_id,
+            action="pass_qa",
+            reason="Only QA agents can pass QA reviews",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only QA agents can pass QA reviews",
+        )
+
+    # QA cannot review their own tasks (prevent self-review)
+    # Check against original developer stored in quick_context, not current assigned_to
+    original_dev = extract_original_developer(task)
+
+    if original_dev and str(agent.agent_id) == original_dev:
+        audit = get_audit_service()
+        await audit.log_task_action_denial(
+            agent_id=agent.agent_id,
+            agent_role=agent.role.value,
+            task_id=task_id,
+            action="pass_qa",
+            reason="Self-review not permitted",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot QA review your own task",
+        )
+
+    # Defense-in-depth PR gate (submit_for_qa already blocks the no-PR
+    # case). If a task reaches awaiting_qa without a PR for any reason
+    # (legacy task, direct status manipulation), fail-qa with the note
+    # below is the right move — don't silently pass.
+    if task.pr_number is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "NO_PR_ATTACHED: Cannot pass QA without a PR on this "
+                "task. Call gateway fail(task_id, issues=['PR not created'])"
+                " or POST /api/tasks/{id}/fail-qa with the same issue, "
+                "so the dev fixes it."
+            ),
+        )
+
+    # QA pass requires notes summarizing what was verified; without
+    # these, the dev can't learn from the review and the audit trail is
+    # empty.
+    if not data or not data.notes or len(data.notes.strip()) < _MIN_NOTES_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "QA_NOTES_REQUIRED: QA pass must include notes (>=20 "
+                "chars) summarizing what was verified against the "
+                "acceptance criteria. Call gateway pass(task_id, "
+                "notes='...') or POST /api/tasks/{id}/pass-qa with "
+                "notes set."
+            ),
+        )
+
+    notes = data.notes
+    task = await service.pass_qa(task_id, notes, agent.role)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot pass QA - invalid status for QA workflow",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/fail-qa", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.custom_validation(secret_exfil_validator)
+@guard_deco.content_type_filter(["application/json"])
+async def fail_qa(
+    task_id: UUID,
+    data: QANotes,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Mark task as failed QA."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only QA agents can pass/fail QA
+    if agent.role != AgentRole.QA:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only QA agents can fail QA reviews",
+        )
+
+    # QA cannot review their own tasks (prevent self-review)
+    # Check against original developer stored in quick_context, not current assigned_to
+    original_dev = extract_original_developer(task)
+
+    if original_dev and str(agent.agent_id) == original_dev:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot QA review your own task",
+        )
+
+    task = await service.fail_qa(task_id, data.notes, agent.role)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot fail QA - invalid status for QA workflow",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/docs-complete", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.custom_validation(secret_exfil_validator)
+@guard_deco.content_type_filter(["application/json"])
+async def docs_complete(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    data: QANotes | None = None,
+) -> TaskResponse:
+    """Mark documentation as complete (documenter only).
+
+    Transitions task from awaiting_documentation to awaiting_pm_review.
+    """
+    # Audit: the documenter must record what was documented, so the next
+    # reader knows what exists. No note → empty trail, so reject.
+    if not data or not data.notes or len(data.notes.strip()) < _MIN_NOTES_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "DOC_NOTES_REQUIRED: docs-complete must include notes (>=20 "
+                "chars) describing what was documented and where."
+            ),
+        )
+    service = get_task_service(db)
+    try:
+        task = await service.docs_complete_for_task(task_id, agent, notes=data.notes)
+    except ServiceError as e:
+        raise _translate_error(e) from e
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/submit-pm-review", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.custom_validation(secret_exfil_validator)
+@guard_deco.content_type_filter(["application/json"])
+async def submit_for_pm_review(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    data: QANotes | None = None,
+) -> TaskResponse:
+    """Submit a task directly for PM review.
+
+    Use this for tasks that don't follow the standard dev→QA→docs workflow,
+    such as PM validation tasks, QA audit tasks, or other directly-assigned work.
+
+    Only the assigned agent can submit their task for PM review.
+    """
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only assigned agent can submit for PM review
+    if task.assigned_to != agent.agent_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the assigned agent can submit for PM review",
+        )
+
+    # Audit: the submitter must record what is ready for review.
+    if not data or not data.notes or len(data.notes.strip()) < _MIN_NOTES_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "PM_REVIEW_NOTES_REQUIRED: submit-pm-review must include notes "
+                "(>=20 chars) summarizing what is ready for the PM to review."
+            ),
+        )
+
+    notes = data.notes
+    task = await service.submit_for_pm_review(task_id, agent.role.value, notes)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot submit for PM review - task not in progress",
+        )
+
+    delivery = get_notification_delivery_service(db)
+    await delivery.notify_pm_of_review_submission(
+        task=task,
+        task_id=task_id,
+        submitter_agent_id=agent.agent_id,
+        notes=notes,
+    )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/complete", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=20, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+async def complete_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+    data: Annotated[CompleteTaskRequest | None, Body()] = None,
+) -> TaskResponse:
+    """Mark task as completed (PM only).
+
+    Two completion paths:
+    1. Developer work: task must be in awaiting_pm_review (went through QA/Docs)
+    2. PM's own task: task can be in_progress if assigned to the completing PM
+
+    PM Override for cancelled subtasks:
+    If force_with_cancelled=True, PM can complete despite cancelled subtasks.
+    Requires justification. Does NOT apply to pending/in_progress subtasks.
+    """
+    # Audit: completing a task is a decision that must carry its rationale.
+    justification = data.justification if data else None
+    if not justification or len(justification.strip()) < _MIN_NOTES_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "COMPLETE_JUSTIFICATION_REQUIRED: complete must include a "
+                "justification (>=20 chars) recording why the task is done."
+            ),
+        )
+    service = get_task_service(db)
+
+    # For tasks in awaiting_pm_review that still have an open PR, merge the PR
+    # first so the branch lands before the task is marked completed.
+    # _auto_complete_on_merge inside the git service will transition the task
+    # to completed automatically; re-fetch and detect that to avoid a
+    # double-completion error.
+    pre_task = await service.get(task_id)
+    await _merge_pr_if_awaiting_pm_review(task_id, pre_task, agent, db)
+
+    # Re-fetch: if the merge auto-completed the task, return without a second call.
+    merged_task = await service.get(task_id)
+    if merged_task and merged_task.status == TaskStatus.COMPLETED:
+        return task_to_response(merged_task)
+
+    try:
+        task = await service.complete_task_for_agent(
+            task_id,
+            agent,
+            permissions,
+            force_with_cancelled=(data.force_with_cancelled if data else False),
+            justification=justification,
+        )
+    except ServiceError as e:
+        raise _translate_error(e) from e
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/cancel", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=20, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+async def cancel_task(
+    task_id: UUID,
+    data: CancelTaskRequest,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+) -> TaskResponse:
+    """Cancel a task. Reason is required for audit trail."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only PM or higher can cancel tasks
+    can_cancel = permissions.can_perform_task_action(
+        agent, TaskAction.CHANGE_PRIORITY, task.team
+    )
+    if not can_cancel:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to cancel tasks",
+        )
+
+    task = await service.cancel(
+        task_id,
+        agent_role=agent.role.value,
+        cancellation_note=f"[CANCELLED by {agent.role.value}] {data.reason}",
+    )
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Task cancel failed unexpectedly",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+# =============================================================================
+# CEO APPROVAL WORKFLOW
+# =============================================================================
+
+
+@router.post("/{task_id}/escalate-to-ceo", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=20, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+@guard_deco.block_clouds()
+async def escalate_to_ceo(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+    data: QANotes | None = None,
+) -> TaskResponse:
+    """Escalate a task to CEO for final approval (PM only).
+
+    For major tasks that need CEO sign-off before merge: parent tasks
+    with subtasks, high-priority features, breaking changes.
+    """
+    service = get_task_service(db)
+    try:
+        task = await service.escalate_to_ceo_for_agent(
+            task_id, agent, permissions, notes=(data.notes if data else None)
+        )
+    except ServiceError as e:
+        raise _translate_error(e) from e
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/ceo-approve", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=10, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+@guard_deco.block_clouds()
+@guard_deco.usage_monitor(max_calls=30, window=3600)
+async def ceo_approve_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    data: QANotes | None = None,
+) -> TaskResponse:
+    """CEO approves and completes a task.
+
+    Final approval step for major tasks. Only CEO can perform this action.
+    """
+    # Only CEO can approve
+    if agent.role != AgentRole.CEO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only CEO can approve tasks in CEO approval queue",
+        )
+
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # The CEO sign-off note is the audit record for merging to production —
+    # it must be present and substantive. An approval with no rationale leaves
+    # the audit trail empty, so reject it (the panel collects the note before
+    # POSTing). Order mirrors pass-qa: 404 before the notes gate.
+    if not data or not data.notes or len(data.notes.strip()) < _MIN_NOTES_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "CEO_NOTES_REQUIRED: CEO approval must include notes (>=20 "
+                "chars) recording why the work is approved for production. "
+                "POST /api/tasks/{id}/ceo-approve with notes='...'."
+            ),
+        )
+
+    task = await service.ceo_approve(task_id, data.notes)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot approve - task not awaiting CEO approval",
+        )
+
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.get("/{task_id}/ceo-approve", response_model=TaskResponse)
+async def ceo_approve_eligibility_check(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Pre-flight check: can this task be CEO-approved?
+
+    Returns the task if it is eligible (has a PR attached).
+    Returns HTTP 400 with 'NO_PR' if the task has no pull request.
+    Useful for panel gates and automated pre-checks before POSTing to
+    ceo-approve or approve-and-merge.
+    """
+    if agent.role != AgentRole.CEO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only CEO can check CEO-approval eligibility",
+        )
+
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    if task.pr_number is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "NO_PR: Task has no pull request attached. A PR must be "
+                "opened and approved by QA before CEO approval. Use the "
+                "developer's open_pr flow to create the PR."
+            ),
+        )
+
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/approve-and-merge", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=10, window=60)
+@guard_deco.block_clouds()
+@guard_deco.usage_monitor(max_calls=30, window=3600)
+async def approve_and_merge_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """CEO merge + complete in one step.
+
+    Merges the task's PR, updates the work session, and marks the task
+    completed. Only CEO can perform this action. The PR must already exist
+    on the task (pr_number set). Merge failures are returned as structured
+    HTTP errors rather than unhandled exceptions.
+    """
+    if agent.role != AgentRole.CEO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only CEO can approve-and-merge tasks",
+        )
+
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    if task.pr_number is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "NO_PR: Cannot approve-and-merge — task has no PR. "
+                "The developer must open a PR (open_pr gateway verb or "
+                "POST /api/git/create-pr) before CEO can merge."
+            ),
+        )
+
+    # Resolve the project from the task's project_id / product_id.
+    project = await _resolve_project_for_merge(task, db)
+
+    from roboco.api.schemas.git import GitMergePRRequest
+    from roboco.services.git import get_git_service
+
+    git_service = get_git_service(db)
+    try:
+        await git_service.merge_pr_for_task(
+            agent.agent_id,
+            agent.role,
+            GitMergePRRequest(
+                project_slug=project.slug,
+                pr_number=task.pr_number,
+                task_id=task_id,
+                merge_method="squash",
+            ),
+        )
+    except (ServiceError, GitError) as e:
+        msg = getattr(e, "message", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Merge failed: {msg}",
+        ) from e
+    except Exception as e:
+        _logger.exception(
+            "Unexpected error in approve-and-merge",
+            task_id=str(task_id),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Merge failed due to an unexpected error",
+        ) from e
+
+    # merge_pr_for_task commits the session internally; re-fetch the
+    # updated task to return the merged state.
+    updated_task = await service.get(task_id)
+    if not updated_task:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Task disappeared after merge",
+        )
+
+    return task_to_response(updated_task)
+
+
+@router.post("/{task_id}/approve-and-start", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=10, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+@guard_deco.block_clouds()
+@guard_deco.usage_monitor(max_calls=30, window=3600)
+async def approve_and_start_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    data: QANotes | None = None,
+) -> TaskResponse:
+    """CEO gate #1: approve a board-reviewed task and hand it to Main PM.
+
+    Re-targets assigned_to -> main-pm while the task stays pending, so the
+    orchestrator spawns Main PM. Only CEO; requires substantive notes.
+    """
+    if agent.role != AgentRole.CEO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only CEO can approve-and-start tasks",
+        )
+
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Order mirrors ceo-approve: 404 before the notes gate.
+    if not data or not data.notes or len(data.notes.strip()) < _MIN_NOTES_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "START_NOTES_REQUIRED: approve-and-start must include notes "
+                "(>=20 chars) recording why the board work is ready to build. "
+                "POST /api/tasks/{id}/approve-and-start with notes='...'."
+            ),
+        )
+
+    # A board task can't be started until the board has finished reviewing.
+    # The service enforces this too (defense in depth); the route surfaces a
+    # precise message rather than the generic "not startable".
+    if task.team == Team.BOARD and not task.board_review_complete:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "BOARD_REVIEW_INCOMPLETE: the Product Owner and Head of "
+                "Marketing must finish reviewing before this task can be "
+                "approved and started."
+            ),
+        )
+
+    task = await service.approve_and_start(task_id, data.notes)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot start - task is not in a pending/startable state",
+        )
+
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/ceo-reject", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=10, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+@guard_deco.block_clouds()
+async def ceo_reject_task(
+    task_id: UUID,
+    data: QANotes,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """CEO rejects a task and sends back for revision.
+
+    Task goes back to NEEDS_REVISION status. Notes are required.
+    """
+    # Only CEO can reject
+    if agent.role != AgentRole.CEO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only CEO can reject tasks in CEO approval queue",
+        )
+
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    task = await service.ceo_reject(task_id, data.notes)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot reject - task not awaiting CEO approval",
+        )
+
+    # Notify original developer if reassigned
+    if task.assigned_to:
+        delivery = get_notification_delivery_service(db)
+        await delivery.notify_assignee_of_ceo_rejection(
+            task=task,
+            task_id=task_id,
+            from_agent_id=agent.agent_id,
+            assignee_agent_id=require_uuid(task.assigned_to),
+            notes=data.notes,
+        )
+
+    await db.commit()
+    return task_to_response(task)
+
+
+# =============================================================================
+# ESCALATION (ALL AGENTS CAN ESCALATE)
+# =============================================================================
+
+
+@router.post("/{task_id}/escalate", response_model=EscalateResponse)
+@guard_deco.rate_limit(requests=20, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+@guard_deco.suspicious_detection(enabled=True)
+async def escalate_task(
+    task_id: UUID,
+    data: EscalateRequest,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> EscalateResponse:
+    """
+    Escalate a task to PM/management.
+
+    IMPORTANT: Unlike normal notifications, escalation is available to ALL agents.
+    This is a critical workflow tool for getting help when blocked.
+    Permission checks are intentionally bypassed for escalation.
+
+    Escalation chain:
+    - Developers → Cell PM
+    - QA → Cell PM
+    - Documenters → Cell PM
+    - Cell PM → Main PM
+    - Main PM → Product Owner
+    - Product Owner → CEO
+    """
+    # Verify task exists
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+    # A terminal task (completed / cancelled) must not be resurrected to BLOCKED
+    # via escalation — refuse BEFORE sending the notification so a finished task
+    # isn't yanked back into the workflow. apply_escalation guards this too
+    # (defense in depth).
+    if task.status in (TaskStatus.COMPLETED, TaskStatus.CANCELLED):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Task is in a terminal state ({task.status.value}) and cannot"
+                " be escalated — terminal tasks must not be resurrected."
+            ),
+        )
+
+    delivery = get_notification_delivery_service(db)
+    try:
+        outcome = await delivery.escalate_and_notify(
+            task=task,
+            task_id=task_id,
+            escalator_agent_id=agent.agent_id,
+            reason=data.reason,
+            explicit_target_slug=data.escalate_to,
+        )
+    except EscalationError as e:
+        # Preserve the pre-refactor status-code mapping exactly:
+        #   - missing escalator agent   -> 404 (agent lookup failure)
+        #   - override rejected         -> 403 (chain violation)
+        #   - no chain / target missing -> 400 (validation / config)
+        detail = str(e)
+        if detail.startswith("escalator agent"):
+            http_code = status.HTTP_404_NOT_FOUND
+        elif "Cannot escalate to" in detail:
+            http_code = status.HTTP_403_FORBIDDEN
+        else:
+            http_code = status.HTTP_400_BAD_REQUEST
+        raise HTTPException(status_code=http_code, detail=detail) from e
+
+    # BLOCKED (not PENDING) prevents the orchestrator from respawning the
+    # original dev until the PM unblocks. Task state mutations live in
+    # TaskService.apply_escalation — routes never touch task fields directly.
+    await service.apply_escalation(
+        task=task,
+        target_agent_id=outcome.target_agent_id,
+        escalator_slug=outcome.escalator_slug,
+        target_slug=outcome.target_slug,
+        reason=data.reason,
+    )
+
+    await db.commit()
+
+    msg = (
+        f"Task escalated to {outcome.target_slug} and set to BLOCKED. "
+        f"PM will receive notification and must call gateway unblock(task_id) "
+        "to provide guidance or reassign."
+    )
+    return EscalateResponse(
+        status="escalated",
+        task_id=task_id,
+        escalated_to=outcome.target_slug,
+        reason=data.reason,
+        message=msg,
+    )
+
+
+# =============================================================================
+# SUBSTITUTION (ALL AGENTS CAN SUBSTITUTE OUT)
+# =============================================================================
+
+
+@router.post("/{task_id}/substitute", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=20, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+async def substitute_task(
+    task_id: UUID,
+    data: SubstituteRequest,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Request to be substituted out of a task — graceful release.
+
+    Bypasses the "can't claim while in_progress" rule. Reasons:
+    `low_context`, `out_of_scope_team`, `out_of_scope_role`, `task_complete`,
+    `max_retries`, `blocked_external`.
+    """
+    service = get_task_service(db)
+    try:
+        task = await service.substitute_task_for_agent(
+            task_id, agent, reason_raw=data.reason, details=data.details
+        )
+    except ServiceError as e:
+        raise _translate_error(e) from e
+    return task_to_response(task)
+
+
+# =============================================================================
+# PROGRESS AND ARTIFACTS
+# =============================================================================
+
+
+@router.post("/{task_id}/progress", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=60, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.custom_validation(secret_exfil_validator)
+@guard_deco.content_type_filter(["application/json"])
+async def add_progress(
+    task_id: UUID,
+    data: ProgressRequest,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Add a progress update to a task."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only assigned agent can add progress
+    if task.assigned_to != agent.agent_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the assigned agent can add progress updates",
+        )
+
+    task = await service.add_progress(
+        task_id, agent.agent_id, data.message, data.percentage
+    )
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Add progress failed unexpectedly",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/checkpoint", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=60, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.custom_validation(secret_exfil_validator)
+@guard_deco.content_type_filter(["application/json"])
+async def add_checkpoint(
+    task_id: UUID,
+    data: CheckpointRequest,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Add a checkpoint for state recovery."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only assigned agent can add checkpoints
+    if task.assigned_to != agent.agent_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the assigned agent can add checkpoints",
+        )
+
+    task = await service.add_checkpoint(
+        task_id,
+        agent.agent_id,
+        data.state_summary,
+        data.remaining_work,
+        data.notes,
+    )
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Add checkpoint failed unexpectedly",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+@router.post("/{task_id}/commit", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=60, window=60)
+@guard_deco.max_request_size(size_bytes=65536)
+@guard_deco.custom_validation(secret_exfil_validator)
+@guard_deco.content_type_filter(["application/json"])
+async def add_commit(
+    task_id: UUID,
+    data: CommitRequest,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> TaskResponse:
+    """Link a commit to a task."""
+    service = get_task_service(db)
+    task = await service.get(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+
+    # Only assigned agent can link commits
+    if task.assigned_to != agent.agent_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the assigned agent can link commits",
+        )
+
+    task = await service.add_commit(task_id, data.hash, data.message, agent.agent_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Add commit failed unexpectedly",
+        )
+    await db.commit()
+    return task_to_response(task)
+
+
+# =============================================================================
+# TASK ACTIVATION (PM ONLY)
+# =============================================================================
+
+
+@router.post("/{task_id}/activate", response_model=TaskResponse)
+@guard_deco.rate_limit(requests=30, window=60)
+async def activate_task(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+    permissions: PermissionServiceDep,
+) -> TaskResponse:
+    """
+    Activate a task from BACKLOG to PENDING status (PM only).
+
+    This is the final step in PM setup. After creating a session and
+    linking the task, the PM activates it to make it ready for work.
+
+    REQUIRES: Task must have at least one linked session.
+    """
+    # Check PM permission (CREATE permission required for activation)
+    if not permissions.can_perform_task_action(agent, TaskAction.CREATE):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only PMs and management can activate tasks",
+        )
+
+    service = get_task_service(db)
+
+    try:
+        task = await service.activate(task_id, agent.role)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except TaskLifecycleError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e),
+        ) from e
+
+    await db.commit()
+    return task_to_response(task)

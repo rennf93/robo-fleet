@@ -1,0 +1,740 @@
+"""NotificationService coverage — mock the DB context.
+
+The service uses `get_db_context()` internally rather than taking a session.
+We patch it to a fake context that records inserted notification rows so we
+can assert each `send_*` helper builds the right `CreateNotificationParams`
+without spinning up a Postgres + Redis stack.
+"""
+
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import UUID, uuid4
+
+import pytest
+from roboco.config import settings
+from roboco.foundation.policy.communications import ACK_REQUIRED_BY_TYPE
+from roboco.models import NotificationPriority, NotificationType
+from roboco.models.notification import CreateNotificationParams
+from roboco.services.notification import (
+    NotificationService,
+    _resolve_agent_uuid,
+)
+
+
+class _FakeDb:
+    """Stand-in for AsyncSession that records inserts and pretends to flush."""
+
+    def __init__(self, *, agent_uuid: UUID | None = None) -> None:
+        self.added: list = []
+        self.committed = False
+        self._agent_uuid = agent_uuid
+
+    def add(self, obj: Any) -> None:
+        self.added.append(obj)
+        # The notification row needs an `id` for delivery_service.deliver().
+        obj.id = uuid4()
+
+    async def flush(self) -> None:
+        return None
+
+    async def commit(self) -> None:
+        self.committed = True
+
+    async def execute(self, *_args: Any, **_kwargs: Any) -> Any:
+        # Two paths use this: agent slug→UUID resolution and the
+        # notification_delivery service's own DB queries. We return a
+        # MagicMock that supports `scalar_one_or_none()` returning either
+        # an agent (with .id) or None depending on the configured agent_uuid.
+        result = MagicMock()
+        if self._agent_uuid:
+            agent = MagicMock()
+            agent.id = self._agent_uuid
+            agent.slug = "test-agent"
+            result.scalar_one_or_none.return_value = agent
+        else:
+            result.scalar_one_or_none.return_value = None
+        result.scalars.return_value.all.return_value = []
+        # _duplicate_unacked_exists runs `db.execute(...).all()` and iterates;
+        # an empty list ⇒ no exact-set-equal candidate ⇒ not suppressed.
+        result.all.return_value = []
+        return result
+
+    async def scalar(self, *_args: Any, **_kwargs: Any) -> Any:
+        # _create_notification's purpose-dedup lookup runs db.scalar(); model
+        # "no existing duplicate" so creation proceeds.
+        return None
+
+
+@asynccontextmanager
+async def _fake_ctx(db: _FakeDb) -> AsyncIterator[_FakeDb]:
+    yield db
+
+
+@pytest.fixture
+def svc() -> NotificationService:
+    return NotificationService()
+
+
+@pytest.mark.asyncio
+async def test_resolve_agent_uuid_returns_none_for_blank() -> None:
+    db = _FakeDb()
+    assert await _resolve_agent_uuid(cast("Any", db), None) is None
+    assert await _resolve_agent_uuid(cast("Any", db), "") is None
+
+
+@pytest.mark.asyncio
+async def test_resolve_agent_uuid_passes_through_uuid() -> None:
+    aid = uuid4()
+    db = _FakeDb()
+    assert await _resolve_agent_uuid(cast("Any", db), aid) == aid
+
+
+@pytest.mark.asyncio
+async def test_resolve_agent_uuid_parses_uuid_string() -> None:
+    aid = uuid4()
+    db = _FakeDb()
+    assert await _resolve_agent_uuid(cast("Any", db), str(aid)) == aid
+
+
+@pytest.mark.asyncio
+async def test_resolve_agent_uuid_resolves_slug() -> None:
+    expected = uuid4()
+    db = _FakeDb(agent_uuid=expected)
+    resolved = await _resolve_agent_uuid(cast("Any", db), "be-dev-1")
+    assert resolved == expected
+
+
+@pytest.mark.asyncio
+async def test_resolve_agent_uuid_returns_none_for_unknown_slug() -> None:
+    db = _FakeDb(agent_uuid=None)
+    assert await _resolve_agent_uuid(cast("Any", db), "ghost") is None
+
+
+class _PatchDbContext:
+    """Patch get_db_context + notification_delivery in one block."""
+
+    def __init__(self, db: _FakeDb) -> None:
+        self.db = db
+        delivery_mock = MagicMock()
+        delivery_mock.deliver = AsyncMock(return_value=None)
+        self._patches: list[Any] = [
+            patch(
+                "roboco.services.notification.get_db_context",
+                lambda: _fake_ctx(db),
+            ),
+            patch(
+                "roboco.services.notification_delivery.get_notification_delivery_service",
+                lambda _db: delivery_mock,
+            ),
+        ]
+
+    def __enter__(self) -> None:
+        for p in self._patches:
+            p.start()
+
+    def __exit__(self, *_args: Any) -> None:
+        for p in self._patches:
+            p.stop()
+
+
+def _patch_db_context(db: _FakeDb) -> _PatchDbContext:
+    return _PatchDbContext(db)
+
+
+@pytest.mark.asyncio
+async def test_send_blocker_notification(svc: NotificationService) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_blocker_notification(
+            task_id="t1",
+            blocker_reason="reason",
+            from_agent="system",
+            to_pm="cell-pm",
+        )
+    # No task_title passed → falls back to the short-id display, not the raw id.
+    assert any("Task #t1" in row.subject for row in db.added)
+
+
+@pytest.mark.asyncio
+async def test_send_qa_ready_notification(svc: NotificationService) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_qa_ready_notification(
+            task_id="t1", from_agent="be-dev-1", to_qa="be-qa"
+        )
+    assert any("ready for QA" in row.subject for row in db.added)
+
+
+@pytest.mark.asyncio
+async def test_send_docs_ready_notification(svc: NotificationService) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_docs_ready_notification(
+            task_id="t1", from_agent="be-qa", to_documenter="be-doc"
+        )
+    assert any("needs documentation" in row.subject for row in db.added)
+
+
+@pytest.mark.asyncio
+async def test_send_handoff_notification(svc: NotificationService) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_handoff_notification(
+            task_id="t1",
+            handoff_id="h1",
+            from_agent="be-pm",
+            to_documenter="be-doc",
+        )
+    assert any("Handoff required" in row.subject for row in db.added)
+
+
+@pytest.mark.asyncio
+async def test_send_qa_failed_notification(svc: NotificationService) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_qa_failed_notification(
+            task_id="t1", qa_notes="fix this", to_developer="be-dev-1"
+        )
+    assert any("QA Failed" in row.subject for row in db.added)
+
+
+@pytest.mark.asyncio
+async def test_send_a2a_notification(svc: NotificationService) -> None:
+    """priority=URGENT writes the row + the [URGENT] cosmetic prefix.
+
+    Pre-P3-Task-9 this used `urgent: True`; the contract is now a
+    tristate `priority` so HIGH can survive end-to-end. See
+    tests/integration/test_a2a_priority_tristate.py for the full
+    HIGH/NORMAL coverage.
+    """
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_a2a_notification(
+            task_id="t1",
+            a2a_context={
+                "from_agent": "be-dev-1",
+                "to_agent": "fe-dev-1",
+                "skill": "react",
+                "message": "hi",
+                "priority": NotificationPriority.URGENT,
+            },
+        )
+    # Urgent prefix appears in subject.
+    assert any("URGENT" in row.subject for row in db.added)
+    assert any(row.priority == NotificationPriority.URGENT for row in db.added)
+
+
+@pytest.mark.asyncio
+async def test_send_board_review_complete_notification(
+    svc: NotificationService,
+) -> None:
+    """Board-review-complete handoff is an APPROVAL notification to the CEO
+    carrying the task_id (cluster C5 / finding #2)."""
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_board_review_complete_notification(task_id="t1")
+    assert any("Board review complete" in row.subject for row in db.added)
+    assert any(row.type == NotificationType.APPROVAL for row in db.added)
+    assert any(row.priority == NotificationPriority.HIGH for row in db.added)
+    assert any(row.related_task_id == "t1" for row in db.added)
+
+
+@pytest.mark.asyncio
+async def test_send_ack_notification(svc: NotificationService) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_ack_notification(
+            from_agent="main-pm",
+            to_agent="ceo",
+            body="please review",
+            priority=NotificationPriority.HIGH,
+        )
+    assert db.added  # Notification row recorded.
+
+
+@pytest.mark.asyncio
+async def test_create_notification_skips_when_from_agent_unresolvable(
+    svc: NotificationService,
+) -> None:
+    """Unresolvable from_agent → log and skip, no row inserted."""
+    db = _FakeDb(agent_uuid=None)  # All slug lookups return None.
+    with _patch_db_context(db):
+        await svc._create_notification(
+            CreateNotificationParams(
+                notification_type=NotificationType.BLOCKER_ESCALATION,
+                priority=NotificationPriority.HIGH,
+                from_agent="ghost-agent",
+                to_agents=["be-pm"],
+                subject="x",
+                body="y",
+            )
+        )
+    assert db.added == []
+
+
+@pytest.mark.asyncio
+async def test_create_notification_skips_when_no_resolvable_recipients(
+    svc: NotificationService,
+) -> None:
+    """All recipients unresolvable → skip with warn."""
+    aid = uuid4()
+
+    # First call resolves from_agent, subsequent slug lookups still hit our
+    # fake — which always returns the same agent. Use a fake that returns the
+    # configured agent only on the first lookup.
+    class _OnceFake(_FakeDb):
+        def __init__(self) -> None:
+            super().__init__(agent_uuid=aid)
+            self._calls = 0
+
+        async def execute(self, *_args: Any, **_kwargs: Any) -> Any:
+            self._calls += 1
+            result = MagicMock()
+            if self._calls == 1:
+                # from_agent resolution succeeds
+                agent = MagicMock()
+                agent.id = aid
+                result.scalar_one_or_none.return_value = agent
+            else:
+                result.scalar_one_or_none.return_value = None
+            result.scalars.return_value.all.return_value = []
+            return result
+
+    db = _OnceFake()
+    with _patch_db_context(db):
+        await svc._create_notification(
+            CreateNotificationParams(
+                notification_type=NotificationType.BLOCKER_ESCALATION,
+                priority=NotificationPriority.HIGH,
+                from_agent="be-pm",
+                to_agents=["ghost1", "ghost2"],
+                subject="x",
+                body="y",
+            )
+        )
+    assert db.added == []
+
+
+# ---------------------------------------------------------------------------
+# requires_ack must follow ACK_REQUIRED_BY_TYPE, not the True default
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_informational_notification_does_not_require_ack(
+    svc: NotificationService,
+) -> None:
+    """REVIEW_REQUEST / DOCUMENTATION_REQUEST / A2A_REQUEST are informational
+    (pickup proves receipt) — requires_ack must be False, not the
+    NotificationTable True default. A False type forced to True inflates the
+    recipient's unacked set and soft-blocks i_am_idle → respawn churn."""
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_qa_ready_notification(
+            task_id="t1", from_agent="be-dev-1", to_qa="be-qa"
+        )
+        await svc.send_a2a_notification(
+            task_id="t2",
+            a2a_context={
+                "from_agent": "be-dev-1",
+                "to_agent": "fe-dev-1",
+                "skill": "react",
+                "message": "hi",
+                "priority": NotificationPriority.NORMAL,
+            },
+        )
+    qa_rows = [r for r in db.added if r.type == NotificationType.REVIEW_REQUEST]
+    a2a_rows = [r for r in db.added if r.type == NotificationType.A2A_REQUEST]
+    assert qa_rows, "REVIEW_REQUEST row should have been inserted"
+    assert a2a_rows, "A2A_REQUEST row should have been inserted"
+    # Identity checks (``is False``) — the mocked flush doesn't apply SQLA's
+    # insert-time default, so pre-fix the attribute is None, not False. The fix
+    # must set it explicitly on the NotificationTable constructor.
+    assert all(r.requires_ack is False for r in qa_rows)
+    assert all(r.requires_ack is False for r in a2a_rows)
+
+
+@pytest.mark.asyncio
+async def test_action_required_notification_still_requires_ack(
+    svc: NotificationService,
+) -> None:
+    """BLOCKER_ESCALATION / APPROVAL / ALERT are action-required —
+    requires_ack stays True (ACK_REQUIRED_BY_TYPE maps them True)."""
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_blocker_notification(
+            task_id="t1", blocker_reason="r", from_agent="system", to_pm="cell-pm"
+        )
+        await svc.send_board_review_complete_notification(task_id="t2")
+    blocker_rows = [
+        r for r in db.added if r.type == NotificationType.BLOCKER_ESCALATION
+    ]
+    approval_rows = [r for r in db.added if r.type == NotificationType.APPROVAL]
+    assert blocker_rows and all(r.requires_ack is True for r in blocker_rows)
+    assert approval_rows and all(r.requires_ack is True for r in approval_rows)
+
+
+@pytest.mark.asyncio
+async def test_create_notification_requires_ack_derives_from_type(
+    svc: NotificationService,
+) -> None:
+    """A raw _create_notification call derives requires_ack from the type via
+    ACK_REQUIRED_BY_TYPE (KNOWLEDGE_SHARE → False)."""
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc._create_notification(
+            CreateNotificationParams(
+                notification_type=NotificationType.KNOWLEDGE_SHARE,
+                priority=NotificationPriority.NORMAL,
+                from_agent="be-dev-1",
+                to_agents=["fe-dev-1"],
+                subject="tip",
+                body="reuse the helper",
+            )
+        )
+    rows = [r for r in db.added if r.type == NotificationType.KNOWLEDGE_SHARE]
+    assert rows
+    assert (
+        rows[0].requires_ack is ACK_REQUIRED_BY_TYPE[NotificationType.KNOWLEDGE_SHARE]
+    )
+
+
+# ---------------------------------------------------------------------------
+# expires_at stamping (notification_ack_ttl_hours) — feeds
+# NotificationDeliveryService.sweep_expired_notifications' re-escalation.
+# Column existed but was never written, so the sweep query always matched
+# zero rows.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_ack_required_notification_gets_expires_at(
+    svc: NotificationService,
+) -> None:
+    """An ack-required row (BLOCKER_ESCALATION) is stamped expires_at ~=
+    now + notification_ack_ttl_hours."""
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    before = datetime.now(UTC)
+    with _patch_db_context(db):
+        await svc.send_blocker_notification(
+            task_id="t1", blocker_reason="r", from_agent="system", to_pm="cell-pm"
+        )
+    after = datetime.now(UTC)
+    rows = [r for r in db.added if r.type == NotificationType.BLOCKER_ESCALATION]
+    assert rows
+    expires_at = rows[0].expires_at
+    assert expires_at is not None
+    ttl = timedelta(hours=settings.notification_ack_ttl_hours)
+    assert before + ttl <= expires_at <= after + ttl
+
+
+@pytest.mark.asyncio
+async def test_informational_notification_gets_no_expires_at(
+    svc: NotificationService,
+) -> None:
+    """A non-ack-required row (REVIEW_REQUEST) never gets a deadline — the
+    sweep only ever re-escalates ack-required rows, so stamping one would be
+    dead weight."""
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_qa_ready_notification(
+            task_id="t1", from_agent="be-dev-1", to_qa="be-qa"
+        )
+    rows = [r for r in db.added if r.type == NotificationType.REVIEW_REQUEST]
+    assert rows
+    assert rows[0].expires_at is None
+
+
+@pytest.mark.asyncio
+async def test_ack_required_notification_expires_at_disabled_by_zero_ttl(
+    svc: NotificationService,
+) -> None:
+    """notification_ack_ttl_hours=0 disables stamping entirely (legacy: NULL,
+    never expires) even for an ack-required type."""
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with (
+        patch("roboco.services.notification.settings.notification_ack_ttl_hours", 0),
+        _patch_db_context(db),
+    ):
+        await svc.send_blocker_notification(
+            task_id="t1", blocker_reason="r", from_agent="system", to_pm="cell-pm"
+        )
+    rows = [r for r in db.added if r.type == NotificationType.BLOCKER_ESCALATION]
+    assert rows
+    assert rows[0].expires_at is None
+
+
+# ---------------------------------------------------------------------------
+# Coordination-event producers (reassignment / collision / unblock /
+# dependency-revival / stale-claim-reaped)
+# ---------------------------------------------------------------------------
+
+# previous_assignee + new_assignee + ceo, resolved to UUIDs pre-insert.
+_REASSIGN_RECIPIENT_COUNT = 3
+# {task-owner, ceo} for the other four coordination producers.
+_TWO_RECIPIENT_COUNT = 2
+
+
+@pytest.mark.asyncio
+async def test_send_reassignment_notification(svc: NotificationService) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_reassignment_notification(
+            task_id="t1", previous_assignee="be-dev-1", new_assignee="be-dev-2"
+        )
+    rows = [r for r in db.added if r.related_task_id == "t1"]
+    assert rows
+    assert all(len(r.to_agents) == _REASSIGN_RECIPIENT_COUNT for r in rows)
+    assert any("reassigned" in r.subject for r in rows)
+
+
+@pytest.mark.asyncio
+async def test_send_reassignment_notification_no_recipients_is_noop(
+    svc: NotificationService,
+) -> None:
+    """All three recipients falsy ⇒ nothing is created (no crash)."""
+    db = _FakeDb()
+    with _patch_db_context(db):
+        await svc.send_reassignment_notification(
+            task_id="t1",
+            previous_assignee=None,
+            new_assignee=None,
+            to_ceo="",
+        )
+    assert db.added == []
+
+
+@pytest.mark.asyncio
+async def test_send_collision_sequencing_notification(
+    svc: NotificationService,
+) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_collision_sequencing_notification(
+            held_back_task_id="t2",
+            blocking_task_id="t1",
+            held_back_assignee="be-dev-1",
+        )
+    rows = [r for r in db.added if r.related_task_id == "t2"]
+    assert rows
+    assert all(len(r.to_agents) == _TWO_RECIPIENT_COUNT for r in rows)
+    assert any("sequenced behind" in r.subject for r in rows)
+
+
+@pytest.mark.asyncio
+async def test_send_collision_sequencing_notification_rides_caller_session(
+    svc: NotificationService,
+) -> None:
+    """2026-07-29: delegate wires collision edges inside a transaction whose
+    held-back task row is not yet committed — the notification INSERT must
+    ride that same session, or its related_task_id FK fails on any other
+    connection. No _patch_db_context here: opening a separate connection
+    would hit the real engine and fail the test."""
+    db = _FakeDb(agent_uuid=uuid4())
+    await svc.send_collision_sequencing_notification(
+        held_back_task_id="t2",
+        blocking_task_id="t1",
+        held_back_assignee="be-dev-1",
+        db_session=cast("Any", db),
+    )
+    assert [r for r in db.added if r.related_task_id == "t2"]
+
+
+@pytest.mark.asyncio
+async def test_send_unblock_notification(svc: NotificationService) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_unblock_notification(task_id="t1", restored_owner="be-dev-1")
+    rows = [r for r in db.added if r.related_task_id == "t1"]
+    assert rows
+    assert all(len(r.to_agents) == _TWO_RECIPIENT_COUNT for r in rows)
+    assert any("unblocked" in r.subject for r in rows)
+
+
+@pytest.mark.asyncio
+async def test_send_dependency_revival_notification(
+    svc: NotificationService,
+) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_dependency_revival_notification(
+            task_id="t1", assignee="be-dev-1", completed_dependency_id="dep1"
+        )
+    rows = [r for r in db.added if r.related_task_id == "t1"]
+    assert rows
+    assert all(len(r.to_agents) == _TWO_RECIPIENT_COUNT for r in rows)
+    assert any("revived" in r.subject for r in rows)
+    assert any("dep1" in r.body for r in rows)
+
+
+@pytest.mark.asyncio
+async def test_send_stale_claim_reaped_notification(
+    svc: NotificationService,
+) -> None:
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    with _patch_db_context(db):
+        await svc.send_stale_claim_reaped_notification(
+            task_id="t1", reaped_agent="be-dev-1", last_heartbeat="2026-07-11T00:00:00"
+        )
+    rows = [r for r in db.added if r.related_task_id == "t1"]
+    assert rows
+    assert all(len(r.to_agents) == _TWO_RECIPIENT_COUNT for r in rows)
+    assert any(r.priority == NotificationPriority.HIGH for r in rows)
+    assert any("stale claim reaped" in r.subject for r in rows)
+
+
+# ---------------------------------------------------------------------------
+# bypass_purpose_dedup — notification-spawn-cap notifications must not
+# collapse distinct (agent_slug, notification_id) trips into one dedup
+# bucket via a shared null related_task_id (F-8ba108e4).
+# ---------------------------------------------------------------------------
+
+_EXPECTED_CAP_TRIP_CEO_ROWS = 2  # two distinct cap trips → two CEO rows
+
+
+class _StatefulDedup:
+    """Replays ``duplicate_unacked_notification_exists``'s real semantics
+    against a fake DB: a second call with the SAME (from_agent, type,
+    related_task_id, exact recipient set) is a duplicate of an unacked prior
+    one; anything else is not. Every notification created via this double is
+    treated as still unacked, matching what the caller-under-test never acks."""
+
+    def __init__(self) -> None:
+        self.seen: set[tuple[Any, Any, Any, frozenset[Any]]] = set()
+
+    async def __call__(
+        self,
+        _db: Any,
+        *,
+        from_agent: Any,
+        notification_type: Any,
+        related_task_id: Any,
+        to_agents: Any,
+    ) -> bool:
+        key = (from_agent, notification_type, related_task_id, frozenset(to_agents))
+        if key in self.seen:
+            return True
+        self.seen.add(key)
+        return False
+
+
+@pytest.mark.asyncio
+async def test_spawn_cap_trips_on_different_keys_both_reach_ceo(
+    svc: NotificationService,
+) -> None:
+    """Two notification-spawn-cap trips on DIFFERENT (agent_slug,
+    notification_id) pairs must both persist and reach the CEO, even though
+    both share from_agent="system"/type=BLOCKER_ESCALATION/related_task_id=
+    None/to_agents=["ceo"] — the exact shape the purpose-dedup would
+    otherwise collapse into one bucket. Regression for F-8ba108e4."""
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    dedup = _StatefulDedup()
+    with (
+        _patch_db_context(db),
+        patch(
+            "roboco.services.notification.duplicate_unacked_notification_exists",
+            dedup,
+        ),
+    ):
+        await svc.send_notification_spawn_cap_notification(
+            agent_slug="fe-pm", notification_id="stuck-1", to_agent="ceo", attempts=3
+        )
+        await svc.send_notification_spawn_cap_notification(
+            agent_slug="fe-qa", notification_id="stuck-2", to_agent="ceo", attempts=3
+        )
+    ceo_rows = [r for r in db.added if r.type == NotificationType.BLOCKER_ESCALATION]
+    assert len(ceo_rows) == _EXPECTED_CAP_TRIP_CEO_ROWS, (
+        "both distinct cap trips must reach the CEO — the second must not be "
+        "silently dropped as a 'duplicate' of the first unacked notification"
+    )
+    assert all(r.related_task_id is None for r in ceo_rows)
+    assert any("stuck-1" in r.subject for r in ceo_rows)
+    assert any("stuck-2" in r.subject for r in ceo_rows)
+
+
+@pytest.mark.asyncio
+async def test_spawn_cap_notification_sets_bypass_purpose_dedup(
+    svc: NotificationService,
+) -> None:
+    """Even a THIRD trip re-using the exact same (agent_slug,
+    notification_id) key as an already-unacked prior trip must still reach
+    the CEO — bypass_purpose_dedup exempts this caller entirely rather than
+    keying dedup on the pair, matching the fix's chosen approach."""
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    dedup = _StatefulDedup()
+    with (
+        _patch_db_context(db),
+        patch(
+            "roboco.services.notification.duplicate_unacked_notification_exists",
+            dedup,
+        ),
+    ):
+        await svc.send_notification_spawn_cap_notification(
+            agent_slug="fe-pm", notification_id="stuck-1", to_agent="ceo", attempts=3
+        )
+        await svc.send_notification_spawn_cap_notification(
+            agent_slug="fe-pm", notification_id="stuck-1", to_agent="ceo", attempts=4
+        )
+    ceo_rows = [r for r in db.added if r.type == NotificationType.BLOCKER_ESCALATION]
+    assert len(ceo_rows) == _EXPECTED_CAP_TRIP_CEO_ROWS
+
+
+@pytest.mark.asyncio
+async def test_other_callers_purpose_dedup_still_suppresses_duplicates(
+    svc: NotificationService,
+) -> None:
+    """Every other notification caller's dedup behavior is unchanged: a
+    second send_blocker_notification for the same task/sender/recipient
+    while the first is unacked is still suppressed (bypass_purpose_dedup
+    defaults to False everywhere except the cap-trip caller)."""
+    aid = uuid4()
+    db = _FakeDb(agent_uuid=aid)
+    dedup = _StatefulDedup()
+    with (
+        _patch_db_context(db),
+        patch(
+            "roboco.services.notification.duplicate_unacked_notification_exists",
+            dedup,
+        ),
+    ):
+        await svc.send_blocker_notification(
+            task_id="t1", blocker_reason="r", from_agent="system", to_pm="cell-pm"
+        )
+        await svc.send_blocker_notification(
+            task_id="t1", blocker_reason="r again", from_agent="system", to_pm="cell-pm"
+        )
+    blocker_rows = [
+        r for r in db.added if r.type == NotificationType.BLOCKER_ESCALATION
+    ]
+    assert len(blocker_rows) == 1, (
+        "the second same-purpose blocker notification must still be "
+        "suppressed as a duplicate of the unacked first"
+    )

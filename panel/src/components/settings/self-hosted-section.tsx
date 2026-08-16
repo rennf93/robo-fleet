@@ -1,0 +1,383 @@
+"use client";
+
+import { useState, useCallback } from "react";
+import {
+  useSelfHostedConfig,
+  useSetSelfHostedConfig,
+  useTestSelfHosted,
+  useSelfHostedModels,
+  useRefreshSelfHostedModels,
+} from "@/hooks/use-providers";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { HelpTip } from "@/components/ui/help-tip";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Server,
+  XCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+import type { SelfHostedTestResult } from "@/lib/api/providers";
+
+// Relative-time helper (no date-fns dependency).
+function relativeTime(isoDate: string | null): string {
+  if (!isoDate) return "never";
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : "Unknown error";
+}
+
+/** Props exposed to the parent (ai-routing-card) so it can read test status. */
+export interface SelfHostedSectionProps {
+  /** Called whenever a successful connection test completes. */
+  onTestSuccess?: (modelCount: number) => void;
+  /** The last known test result — driven by parent if the parent stores it. */
+  testResult?: SelfHostedTestResult | null;
+  /** Called when the user clicks "Test Connection" and we get any result. */
+  onTestResult?: (result: SelfHostedTestResult) => void;
+}
+
+export function SelfHostedSection({
+  onTestSuccess,
+  testResult,
+  onTestResult,
+}: SelfHostedSectionProps) {
+  const { data: config } = useSelfHostedConfig();
+  const { data: models = [] } = useSelfHostedModels();
+
+  const saveConfig = useSetSelfHostedConfig();
+  const testConnection = useTestSelfHosted();
+  const refreshModels = useRefreshSelfHostedModels();
+
+  // Local form state
+  const [baseUrl, setBaseUrl] = useState("");
+  const [authToken, setAuthToken] = useState("");
+  const [showToken, setShowToken] = useState(false);
+
+  // Timestamps for "Last refreshed" label
+  const [lastRefreshed, setLastRefreshed] = useState<string | null>(null);
+
+  const hasSavedUrl = !!config?.base_url;
+
+  // ---- Save handler --------------------------------------------------------
+  const handleSave = async () => {
+    const url = baseUrl.trim();
+    if (!url) {
+      toast.error("Enter a base URL first");
+      return;
+    }
+    try {
+      await saveConfig.mutateAsync({
+        base_url: url,
+        ...(authToken ? { auth_token: authToken } : {}),
+      });
+      toast.success("Self-hosted config saved");
+      setBaseUrl("");
+      setAuthToken("");
+    } catch (e) {
+      toast.error("Save failed: " + errMsg(e));
+    }
+  };
+
+  // ---- Test Connection handler ---------------------------------------------
+  const handleTest = async () => {
+    try {
+      const result = await testConnection.mutateAsync();
+      onTestResult?.(result);
+      if (result.ok) {
+        onTestSuccess?.(result.model_count ?? 0);
+        setLastRefreshed(new Date().toISOString());
+        const count = result.model_count ?? 0;
+        toast.success(
+          `Connected — ${count} model${count === 1 ? "" : "s"} available`,
+        );
+      } else {
+        toast.error(`Connection failed: ${result.error ?? "unknown error"}`);
+      }
+    } catch (e) {
+      toast.error("Test failed: " + errMsg(e));
+    }
+  };
+
+  // ---- Refresh Models handler ----------------------------------------------
+  const handleRefresh = useCallback(async () => {
+    try {
+      await refreshModels.mutateAsync();
+      setLastRefreshed(new Date().toISOString());
+      toast.success("Model list refreshed");
+    } catch (e) {
+      toast.error("Refresh failed: " + errMsg(e));
+    }
+  }, [refreshModels]);
+
+  // ---- Retry handler (from error empty state) ------------------------------
+  const handleRetry = () => handleTest();
+
+  // Determine which empty state to show, if any.
+  const showNoUrlState = !hasSavedUrl;
+  const showErrorState =
+    hasSavedUrl && testResult?.ok === false && !showNoUrlState;
+  const showNoModelsState =
+    hasSavedUrl &&
+    testResult?.ok === true &&
+    models.length === 0 &&
+    !showNoUrlState;
+  const showModelList =
+    hasSavedUrl && testResult?.ok === true && models.length > 0;
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Server className="h-4 w-4 text-muted-foreground" />
+        <HelpTip label="Routes agents to any locally-run OpenAI-compatible endpoint (Ollama, vLLM, LM Studio) instead of a cloud provider.">
+          <Label className="text-sm font-medium">Self-Hosted LLM</Label>
+        </HelpTip>
+        {testResult?.ok === true && (
+          <HelpTip label="The last Test Connection call succeeded — the model list below reflects this endpoint.">
+            <Badge className="bg-emerald-500/10 text-emerald-600 border-0">
+              <CheckCircle2 className="h-3 w-3" /> connected
+            </Badge>
+          </HelpTip>
+        )}
+        {testResult?.ok === false && (
+          <HelpTip label="The last Test Connection call failed — see the error detail below.">
+            <Badge className="bg-red-500/10 text-red-600 border-0">
+              <XCircle className="h-3 w-3" /> error
+            </Badge>
+          </HelpTip>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        <HelpTip label="Any OpenAI-compatible endpoint — e.g. Ollama, vLLM, LM Studio.">
+          <Label className="text-xs text-muted-foreground">Base URL</Label>
+        </HelpTip>
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder={
+              hasSavedUrl
+                ? (config.base_url ?? "http://localhost:11434")
+                : "http://localhost:11434"
+            }
+            className="font-mono text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <HelpTip label="Stored encrypted server-side; never displayed once saved.">
+          <Label className="text-xs text-muted-foreground">
+            Auth token{" "}
+            <span className="text-muted-foreground/60">(optional)</span>
+          </Label>
+        </HelpTip>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Input
+              type={showToken ? "text" : "password"}
+              value={authToken}
+              onChange={(e) => setAuthToken(e.target.value)}
+              placeholder={
+                config?.has_token
+                  ? "•••••••••••• (leave blank to keep)"
+                  : "sk-… or Bearer token"
+              }
+              className="pr-10"
+            />
+            <HelpTip label={showToken ? "Hide token" : "Show token"}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowToken((v) => !v)}
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showToken ? "Hide token" : "Show token"}
+              >
+                {showToken ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+            </HelpTip>
+          </div>
+          <HelpTip label="Saves the Base URL above together with any token typed here, in one combined config — not just this token.">
+            <Button onClick={handleSave} disabled={saveConfig.isPending}>
+              {saveConfig.isPending ? "Saving…" : "Save"}
+            </Button>
+          </HelpTip>
+        </div>
+        {config?.has_token && (
+          <p className="text-xs text-muted-foreground">
+            A token is stored. Type a new value to update it.
+          </p>
+        )}
+        {!config?.has_token && (
+          <p className="text-xs text-muted-foreground">
+            Stored Fernet-encrypted server-side; never returned by the API.
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleTest}
+          disabled={!hasSavedUrl || testConnection.isPending}
+        >
+          {testConnection.isPending ? (
+            <>
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              Testing…
+            </>
+          ) : (
+            "Test Connection"
+          )}
+        </Button>
+
+        {testResult?.ok === true && (
+          <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-0 px-3 py-1 text-xs">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Connected &mdash; {testResult.model_count ?? 0} model
+            {(testResult.model_count ?? 0) === 1 ? "" : "s"} available
+          </Badge>
+        )}
+        {testResult?.ok === false && (
+          <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border-0 px-3 py-1 text-xs">
+            <XCircle className="h-3.5 w-3.5" />
+            {testResult.error ?? "Connection failed"}
+          </Badge>
+        )}
+      </div>
+
+      {showNoUrlState && (
+        <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+          <p className="font-medium">No base URL configured</p>
+          <p className="mt-1 text-xs">
+            Enter the URL of your self-hosted LLM endpoint (e.g.{" "}
+            <code>http://localhost:11434</code> for Ollama) and click{" "}
+            <strong>Save</strong>. Then click <strong>Test Connection</strong>{" "}
+            to verify and discover available models.
+          </p>
+        </div>
+      )}
+
+      {showErrorState && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+            <div className="flex-1 space-y-1 text-sm">
+              <p className="font-medium text-red-700 dark:text-red-400">
+                Last test failed
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-500">
+                {testResult?.error ?? "Unknown error"}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              disabled={testConnection.isPending}
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {showNoModelsState && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              Connected but no models found. Pull a model first (e.g.{" "}
+              <code className="font-mono">ollama pull llama3.2</code>) then
+              click <strong>Refresh Models</strong>.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showModelList && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Last refreshed:{" "}
+              <HelpTip
+                label={
+                  lastRefreshed
+                    ? new Date(lastRefreshed).toLocaleString()
+                    : undefined
+                }
+              >
+                <span className="font-medium">
+                  {relativeTime(lastRefreshed)}
+                </span>
+              </HelpTip>
+            </p>
+            <HelpTip label="Re-queries the endpoint's model list only — doesn't re-run the connection test above.">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshModels.isPending}
+              >
+                {refreshModels.isPending ? (
+                  <>
+                    <RefreshCw className="mr-1.5 h-3 w-3 animate-spin" />
+                    Refreshing…
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-1.5 h-3 w-3" />
+                    Refresh Models
+                  </>
+                )}
+              </Button>
+            </HelpTip>
+          </div>
+          <div className="divide-y rounded-md border">
+            {models.map((m) => (
+              <div
+                key={m.model_name}
+                className="flex items-center justify-between px-3 py-2"
+              >
+                <div>
+                  <span className="text-sm font-medium">{m.display_name}</span>
+                  <span className="ml-2 font-mono text-xs text-muted-foreground">
+                    {m.model_name}
+                  </span>
+                </div>
+                <HelpTip label="Found by probing the endpoint's model list — not manually added.">
+                  <Badge variant="secondary" className="text-xs">
+                    auto-discovered
+                  </Badge>
+                </HelpTip>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

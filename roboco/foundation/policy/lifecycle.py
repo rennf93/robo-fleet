@@ -1,0 +1,2109 @@
+"""Canonical lifecycle + permissions spec.
+
+Single source of truth for:
+  - task lifecycle status transitions
+  - per-role permissions on atomic actions
+  - per-role permissions on gateway intent verbs
+  - claim restrictions
+  - team-based access rules
+  - self-review prevention rules
+
+Every consumer (choreographer, MCP manifest, RAG corpus, agent prompts,
+panel UI, tests, middleware) reads its behavior from this module.
+
+Predecessor canon (prose):
+  - docs/internal/old/workflows/STATUS_TRANSITIONS.md
+  - docs/internal/old/workflows/PERMISSIONS.md
+
+If this module disagrees with those documents, the discrepancy is
+recorded in the spec design doc:
+  docs/superpowers/specs/2026-05-09-lifecycle-canonical-spec-design.md
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any, Literal
+
+# Role enum is canonicalized in roboco/foundation/identity.py.
+# Re-exported here so callers can import `Role` from this module alongside
+# the lifecycle tables that depend on it. New consumers may also import
+# from `roboco.foundation.identity` directly.
+from roboco.foundation.identity import Role, Team
+from roboco.foundation.policy.content import markers
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from uuid import UUID
+
+
+class Status(StrEnum):
+    BACKLOG = "backlog"
+    PENDING = "pending"
+    CLAIMED = "claimed"
+    IN_PROGRESS = "in_progress"
+    BLOCKED = "blocked"
+    PAUSED = "paused"
+    VERIFYING = "verifying"
+    AWAITING_QA = "awaiting_qa"
+    NEEDS_REVISION = "needs_revision"
+    AWAITING_DOCUMENTATION = "awaiting_documentation"
+    AWAITING_PR_REVIEW = "awaiting_pr_review"
+    AWAITING_PM_REVIEW = "awaiting_pm_review"
+    AWAITING_CEO_APPROVAL = "awaiting_ceo_approval"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class TaskType(StrEnum):
+    CODE = "code"
+    DOCUMENTATION = "documentation"
+    RESEARCH = "research"
+    PLANNING = "planning"
+    DESIGN = "design"
+    ADMINISTRATIVE = "administrative"
+
+
+RejectionKind = Literal[
+    "not_authorized",
+    "invalid_state",
+    "tracing_gap",
+    "self_review",
+    "not_found",
+]
+
+
+@dataclass(frozen=True)
+class Decision:
+    """Single shape every consumer maps onto its native rejection format.
+
+    `allow()`, `reject(kind, ...)`, and `tracing_gap(missing, remediate)`
+    are the three canonical constructors. Direct __init__ is supported
+    but enforces the invariants below so callers can't build a malformed
+    Decision.
+
+    Invariants (enforced in __post_init__):
+      * allowed=True  ⇒ rejection_kind is None and missing == []
+      * allowed=False ⇒ rejection_kind is not None
+    """
+
+    allowed: bool
+    rejection_kind: RejectionKind | None
+    message: str | None
+    missing: list[str] = field(default_factory=list)
+    remediate: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.allowed and self.rejection_kind is not None:
+            raise ValueError(
+                "Decision invariant: allowed=True requires rejection_kind=None"
+            )
+        if not self.allowed and self.rejection_kind is None:
+            raise ValueError(
+                "Decision invariant: allowed=False requires rejection_kind set"
+            )
+        if self.allowed and (self.missing or self.remediate is not None):
+            raise ValueError("allowed=True requires missing=[] and remediate=None")
+
+    @classmethod
+    def allow(cls) -> Decision:
+        return cls(
+            allowed=True,
+            rejection_kind=None,
+            message=None,
+            missing=[],
+            remediate=None,
+        )
+
+    @classmethod
+    def reject(
+        cls,
+        *,
+        kind: RejectionKind,
+        message: str,
+        remediate: str,
+    ) -> Decision:
+        return cls(
+            allowed=False,
+            rejection_kind=kind,
+            message=message,
+            missing=[],
+            remediate=remediate,
+        )
+
+    @classmethod
+    def tracing_gap(cls, *, missing: list[str], remediate: str) -> Decision:
+        return cls(
+            allowed=False,
+            rejection_kind="tracing_gap",
+            message=None,
+            missing=list(missing),
+            remediate=remediate,
+        )
+
+
+@dataclass(frozen=True)
+class Precondition:
+    """Declarative gate-table row.
+
+    `check` returns True if the precondition holds. `remediate` is the
+    human-readable hint surfaced verbatim on rejection. `missing_token`
+    is what shows up in the `tracing_gap.missing[]` field of the
+    envelope (so agents can do exact-string checks).
+
+    `rejection_kind` controls which Decision flavor is returned when
+    this precondition fails. The default `'tracing_gap'` surfaces a
+    missing-token list. Use `'not_authorized'` for ownership / identity
+    gates whose failure is an authorization issue, not a tracing gap.
+    """
+
+    key: str
+    check: Callable[[Any, Any, Any], bool]
+    remediate: str
+    missing_token: str
+    rejection_kind: RejectionKind = "tracing_gap"
+
+
+@dataclass(frozen=True)
+class ActionSpec:
+    """Atomic, pre-gateway-style action (claim, start, submit_qa, ...).
+
+    `target_status=None` means the action does not transition the task
+    (e.g. progress-recording actions). `allowed_task_types=None` means
+    no restriction. `needs_team_match` is the agent.team == task.team
+    rule from PERMISSIONS.md (Team-Based Restrictions).
+    """
+
+    name: str
+    allowed_roles: frozenset[Role]
+    source_statuses: frozenset[Status]
+    target_status: Status | None
+    allowed_task_types: frozenset[TaskType] | None
+    preconditions: tuple[Precondition, ...]
+    self_review_block: bool
+    needs_team_match: bool
+
+
+@dataclass(frozen=True)
+class IntentSpec:
+    """Gateway intent verb — a named, atomic composition of ActionSpecs.
+
+    `composes` lists the atomic action names in the order they execute.
+    `extra_preconditions` are verb-level checks the composing actions
+    don't cover (e.g. open_pr's "no PR already open" check).
+    `side_effects` is a tuple of named git/branch/PR operations the
+    runner invokes after the DB savepoint commits.
+    `pre_side_effects` are git/branch/PR operations the runner invokes
+    BEFORE the composing actions — for transitions that depend on a git
+    op having already run (e.g. submit_up must open the cell→root PR
+    before submit_pm_review's pr_created gate can pass).
+    """
+
+    name: str
+    allowed_roles: frozenset[Role]
+    description: str
+    composes: tuple[str, ...]
+    extra_preconditions: tuple[Precondition, ...]
+    side_effects: tuple[str, ...]
+    next_hint: Callable[[Any], str]
+    pre_side_effects: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class StatusTransition:
+    """A row from STATUS_TRANSITIONS.md, machine-readable.
+
+    `role_constraint=None` means: inherit whatever the
+    `triggered_by_action`'s ActionSpec.allowed_roles says. Set explicitly
+    only when the transition's role gate differs from the action's.
+    """
+
+    source: Status
+    target: Status
+    triggered_by_action: str
+    role_constraint: frozenset[Role] | None
+
+
+# ---------------------------------------------------------------------------
+# Status transitions (predecessor canon: STATUS_TRANSITIONS.md)
+# ---------------------------------------------------------------------------
+
+_STATUS_TRANSITIONS: tuple[StatusTransition, ...] = (
+    # PM setup
+    StatusTransition(Status.BACKLOG, Status.PENDING, "activate", None),
+    # Claim path. role_constraint=None on rows below means "any role —
+    # the per-role-vs-status filtering is in CLAIM_RULES".
+    # A None here is NOT an oversight; it is the explicit handoff
+    # point between the StatusTransition table (state machine) and
+    # CLAIM_RULES (per-role claim authority).
+    StatusTransition(Status.PENDING, Status.CLAIMED, "claim", None),
+    StatusTransition(Status.AWAITING_QA, Status.CLAIMED, "claim", frozenset({Role.QA})),
+    StatusTransition(
+        Status.AWAITING_DOCUMENTATION,
+        Status.CLAIMED,
+        "claim",
+        frozenset({Role.DOCUMENTER}),
+    ),
+    StatusTransition(Status.NEEDS_REVISION, Status.CLAIMED, "claim", None),
+    # No AWAITING_PM_REVIEW -> CLAIMED edge: a PM re-entering its own
+    # review-queue task is steered by the choreographer's i_will_plan
+    # re-entry contract straight to complete/request_changes, never via a
+    # claim (a claim edge here let i_will_plan legally reset the task and
+    # loop the submit_up -> pr_pass -> awaiting_pm_review cycle forever —
+    # see the CLAIM_RULES comment below).
+    # Start
+    StatusTransition(Status.CLAIMED, Status.IN_PROGRESS, "start", None),
+    # Block / pause / resume
+    StatusTransition(Status.IN_PROGRESS, Status.BLOCKED, "block", None),
+    StatusTransition(Status.IN_PROGRESS, Status.PAUSED, "pause", None),
+    StatusTransition(Status.BLOCKED, Status.IN_PROGRESS, "unblock", None),
+    # A task blocked before it was ever claimed (a dependency-gated claim that
+    # got escalated) has no branch — unblocking it returns it to the claim pool
+    # rather than a branchless in_progress the dispatcher refuses to spawn.
+    StatusTransition(Status.BLOCKED, Status.PENDING, "unblock", None),
+    StatusTransition(Status.PAUSED, Status.IN_PROGRESS, "resume", None),
+    # Dev verify + submit
+    StatusTransition(Status.IN_PROGRESS, Status.VERIFYING, "submit_verification", None),
+    StatusTransition(Status.VERIFYING, Status.AWAITING_QA, "submit_qa", None),
+    # PR reviewer posts its change-request and the review task is done
+    StatusTransition(
+        Status.IN_PROGRESS,
+        Status.COMPLETED,
+        "pr_review_done",
+        frozenset({Role.PR_REVIEWER}),
+    ),
+    # QA pass / fail
+    StatusTransition(
+        Status.AWAITING_QA,
+        Status.AWAITING_DOCUMENTATION,
+        "qa_pass",
+        frozenset({Role.QA}),
+    ),
+    StatusTransition(
+        Status.AWAITING_QA,
+        Status.NEEDS_REVISION,
+        "qa_fail",
+        frozenset({Role.QA}),
+    ),
+    # Documenter completes
+    StatusTransition(
+        Status.AWAITING_DOCUMENTATION,
+        Status.AWAITING_PM_REVIEW,
+        "docs_complete",
+        frozenset({Role.DOCUMENTER}),
+    ),
+    # In-path PR-review gate (assembled cell→root + root→master PRs). The
+    # assembled-PR task enters the gate via submit_for_review (composed by the
+    # cell PM's submit_up and the main PM's submit_root); the reviewer claims it
+    # without transitioning (mirrors QA's claim_review), then pr_pass moves it on
+    # to awaiting_pm_review for the PM merge, or pr_fail routes it back exactly
+    # like a QA fail. Leaf tasks and branchless coordination roots never enter
+    # this gate — they reach awaiting_pm_review via docs_complete / submit_pm_review.
+    StatusTransition(
+        Status.IN_PROGRESS,
+        Status.AWAITING_PR_REVIEW,
+        "submit_for_review",
+        None,
+    ),
+    StatusTransition(
+        Status.AWAITING_PR_REVIEW,
+        Status.CLAIMED,
+        "claim",
+        frozenset({Role.PR_REVIEWER}),
+    ),
+    StatusTransition(
+        Status.AWAITING_PR_REVIEW,
+        Status.AWAITING_PM_REVIEW,
+        "pr_pass",
+        frozenset({Role.PR_REVIEWER}),
+    ),
+    StatusTransition(
+        Status.AWAITING_PR_REVIEW,
+        Status.NEEDS_REVISION,
+        "pr_fail",
+        frozenset({Role.PR_REVIEWER}),
+    ),
+    # PM completes / escalates
+    StatusTransition(
+        Status.AWAITING_PM_REVIEW,
+        Status.COMPLETED,
+        "complete",
+        frozenset({Role.CELL_PM, Role.MAIN_PM}),
+    ),
+    # PM merge-level reject: a PM that catches an AC/scope violation at merge
+    # review sends the work back with concrete issues — previously its only
+    # verbs here were complete/escalate, so it looped block→escalate instead.
+    StatusTransition(
+        Status.AWAITING_PM_REVIEW,
+        Status.NEEDS_REVISION,
+        "request_changes",
+        frozenset({Role.CELL_PM, Role.MAIN_PM}),
+    ),
+    StatusTransition(
+        Status.AWAITING_PM_REVIEW,
+        Status.AWAITING_CEO_APPROVAL,
+        "escalate_to_ceo",
+        frozenset({Role.MAIN_PM, Role.PRODUCT_OWNER, Role.HEAD_MARKETING}),
+    ),
+    # A blocked task the PM cannot resolve can be surfaced to the CEO directly.
+    StatusTransition(
+        Status.BLOCKED,
+        Status.AWAITING_CEO_APPROVAL,
+        "escalate_to_ceo",
+        frozenset({Role.MAIN_PM, Role.PRODUCT_OWNER, Role.HEAD_MARKETING}),
+    ),
+    # CEO approve / reject
+    StatusTransition(
+        Status.AWAITING_CEO_APPROVAL,
+        Status.COMPLETED,
+        "ceo_approve",
+        frozenset({Role.CEO}),
+    ),
+    StatusTransition(
+        Status.AWAITING_CEO_APPROVAL,
+        Status.NEEDS_REVISION,
+        "ceo_reject",
+        frozenset({Role.CEO}),
+    ),
+    # A branchless coordination root (product integration root / MegaTask
+    # umbrella) has no developer to revise it, so CEO rejection routes it to
+    # PENDING for the Main PM to re-plan — not NEEDS_REVISION (dev-claim-only,
+    # would deadlock the root). The runtime applies this via the audited
+    # privileged override (admin_set_status); the edge is in the spec so future
+    # admin-override tightening can't wedge the path, and so the transition is
+    # acknowledged as CEO-legal rather than an unsanctioned out-of-band write.
+    StatusTransition(
+        Status.AWAITING_CEO_APPROVAL,
+        Status.PENDING,
+        "ceo_reject_to_pool",
+        frozenset({Role.CEO}),
+    ),
+    # Direct PM submission for non-dev tasks
+    StatusTransition(
+        Status.IN_PROGRESS,
+        Status.AWAITING_PM_REVIEW,
+        "submit_pm_review",
+        None,
+    ),
+    # Cancel — PM/CEO can cancel from any non-terminal status. A task sitting
+    # in the CEO approval queue is the CEO's decision to make: a Cell/Main PM
+    # cancelling it would bypass the human CEO gate (CLAUDE.md role table pins
+    # awaiting_ceo_approval -> cancelled as CEO-only), so that one source is
+    # gated to {CEO} while every other non-terminal source stays PM+CEO.
+    *(
+        StatusTransition(
+            src,
+            Status.CANCELLED,
+            "cancel",
+            frozenset({Role.CEO})
+            if src is Status.AWAITING_CEO_APPROVAL
+            else frozenset({Role.CELL_PM, Role.MAIN_PM, Role.CEO}),
+        )
+        for src in Status
+        if src not in (Status.COMPLETED, Status.CANCELLED)
+    ),
+)
+
+
+def _build_status_graph() -> dict[Status, frozenset[Status]]:
+    """`source → frozenset(targets)` view derived from _STATUS_TRANSITIONS."""
+    graph: dict[Status, set[Status]] = {s: set() for s in Status}
+    for t in _STATUS_TRANSITIONS:
+        graph[t.source].add(t.target)
+    return {src: frozenset(targets) for src, targets in graph.items()}
+
+
+STATUS_GRAPH: dict[Status, frozenset[Status]] = _build_status_graph()
+
+
+# ---------------------------------------------------------------------------
+# Atomic actions (predecessor canon: PERMISSIONS.md "Task Management Tools")
+# ---------------------------------------------------------------------------
+
+_PM_ROLES: frozenset[Role] = frozenset({Role.CELL_PM, Role.MAIN_PM})
+_DEV_ROLES: frozenset[Role] = frozenset({Role.DEVELOPER})
+_QA_ROLES: frozenset[Role] = frozenset({Role.QA})
+_DOC_ROLES: frozenset[Role] = frozenset({Role.DOCUMENTER})
+
+
+_ATOMIC_ACTIONS: dict[str, ActionSpec] = {
+    "activate": ActionSpec(
+        name="activate",
+        allowed_roles=_PM_ROLES,
+        source_statuses=frozenset({Status.BACKLOG}),
+        target_status=Status.PENDING,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    # claim's source_statuses is the UNION across all roles — see CLAIM_RULES
+    # for per-role authority. Both tables are authoritative; a validator
+    # checks consistency between them.
+    "claim": ActionSpec(
+        name="claim",
+        allowed_roles=frozenset(
+            _DEV_ROLES | _QA_ROLES | _DOC_ROLES | _PM_ROLES | {Role.PR_REVIEWER}
+        ),
+        source_statuses=frozenset(
+            {
+                Status.PENDING,
+                Status.NEEDS_REVISION,
+                Status.AWAITING_QA,
+                Status.AWAITING_DOCUMENTATION,
+                Status.AWAITING_PR_REVIEW,
+            }
+        ),
+        target_status=Status.CLAIMED,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "start": ActionSpec(
+        name="start",
+        allowed_roles=frozenset(
+            _DEV_ROLES | _QA_ROLES | _DOC_ROLES | _PM_ROLES | {Role.PR_REVIEWER}
+        ),
+        source_statuses=frozenset({Status.CLAIMED}),
+        target_status=Status.IN_PROGRESS,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "set_plan": ActionSpec(
+        name="set_plan",
+        allowed_roles=frozenset(_DEV_ROLES | _PM_ROLES),
+        source_statuses=frozenset({Status.CLAIMED}),
+        target_status=None,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "block": ActionSpec(
+        name="block",
+        allowed_roles=frozenset(_DEV_ROLES | _QA_ROLES | _DOC_ROLES | _PM_ROLES),
+        source_statuses=frozenset({Status.IN_PROGRESS}),
+        target_status=Status.BLOCKED,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "unblock": ActionSpec(
+        name="unblock",
+        allowed_roles=_PM_ROLES,
+        source_statuses=frozenset({Status.BLOCKED}),
+        target_status=Status.IN_PROGRESS,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "pause": ActionSpec(
+        name="pause",
+        allowed_roles=frozenset(_DEV_ROLES | _PM_ROLES),
+        source_statuses=frozenset({Status.IN_PROGRESS}),
+        target_status=Status.PAUSED,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "resume": ActionSpec(
+        name="resume",
+        allowed_roles=frozenset(_DEV_ROLES | _QA_ROLES | _DOC_ROLES | _PM_ROLES),
+        source_statuses=frozenset({Status.PAUSED}),
+        target_status=Status.IN_PROGRESS,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "submit_verification": ActionSpec(
+        name="submit_verification",
+        allowed_roles=_DEV_ROLES,
+        source_statuses=frozenset({Status.IN_PROGRESS}),
+        target_status=Status.VERIFYING,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "submit_qa": ActionSpec(
+        name="submit_qa",
+        allowed_roles=_DEV_ROLES,
+        source_statuses=frozenset({Status.VERIFYING}),
+        target_status=Status.AWAITING_QA,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "qa_pass": ActionSpec(
+        name="qa_pass",
+        allowed_roles=_QA_ROLES,
+        source_statuses=frozenset({Status.AWAITING_QA}),
+        target_status=Status.AWAITING_DOCUMENTATION,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=True,
+        needs_team_match=True,
+    ),
+    "qa_fail": ActionSpec(
+        name="qa_fail",
+        allowed_roles=_QA_ROLES,
+        source_statuses=frozenset({Status.AWAITING_QA}),
+        target_status=Status.NEEDS_REVISION,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=True,
+        needs_team_match=True,
+    ),
+    "pr_review_done": ActionSpec(
+        name="pr_review_done",
+        allowed_roles=frozenset({Role.PR_REVIEWER}),
+        source_statuses=frozenset({Status.IN_PROGRESS}),
+        target_status=Status.COMPLETED,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=False,
+    ),
+    "docs_complete": ActionSpec(
+        name="docs_complete",
+        allowed_roles=_DOC_ROLES,
+        source_statuses=frozenset({Status.AWAITING_DOCUMENTATION}),
+        target_status=Status.AWAITING_PM_REVIEW,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=True,
+        needs_team_match=True,
+    ),
+    # PR-review gate: enter the gate (PM-driven, on an assembled PR), then the
+    # reviewer passes or fails it. pr_pass/pr_fail mirror qa_pass/qa_fail.
+    "submit_for_review": ActionSpec(
+        name="submit_for_review",
+        allowed_roles=_PM_ROLES,
+        source_statuses=frozenset({Status.IN_PROGRESS}),
+        target_status=Status.AWAITING_PR_REVIEW,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "pr_pass": ActionSpec(
+        name="pr_pass",
+        allowed_roles=frozenset({Role.PR_REVIEWER}),
+        source_statuses=frozenset({Status.AWAITING_PR_REVIEW}),
+        target_status=Status.AWAITING_PM_REVIEW,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=True,
+        needs_team_match=True,
+    ),
+    "pr_fail": ActionSpec(
+        name="pr_fail",
+        allowed_roles=frozenset({Role.PR_REVIEWER}),
+        source_statuses=frozenset({Status.AWAITING_PR_REVIEW}),
+        target_status=Status.NEEDS_REVISION,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=True,
+        needs_team_match=True,
+    ),
+    "complete": ActionSpec(
+        name="complete",
+        allowed_roles=_PM_ROLES,
+        source_statuses=frozenset({Status.AWAITING_PM_REVIEW}),
+        target_status=Status.COMPLETED,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "request_changes": ActionSpec(
+        name="request_changes",
+        allowed_roles=_PM_ROLES,
+        source_statuses=frozenset({Status.AWAITING_PM_REVIEW}),
+        target_status=Status.NEEDS_REVISION,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "submit_pm_review": ActionSpec(
+        name="submit_pm_review",
+        allowed_roles=frozenset(_PM_ROLES | _QA_ROLES | _DOC_ROLES | _DEV_ROLES),
+        source_statuses=frozenset({Status.IN_PROGRESS}),
+        target_status=Status.AWAITING_PM_REVIEW,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+    "escalate_to_ceo": ActionSpec(
+        name="escalate_to_ceo",
+        allowed_roles=frozenset(
+            {
+                Role.MAIN_PM,
+                Role.PRODUCT_OWNER,
+                Role.HEAD_MARKETING,
+            }
+        ),
+        # Reachable from a completed review (the normal sign-off escalation) AND
+        # from a blocked task the PM cannot resolve — so a wedged task has a
+        # clean verb to a human decision instead of only the admin override.
+        source_statuses=frozenset({Status.AWAITING_PM_REVIEW, Status.BLOCKED}),
+        target_status=Status.AWAITING_CEO_APPROVAL,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=False,
+    ),
+    "ceo_approve": ActionSpec(
+        name="ceo_approve",
+        allowed_roles=frozenset({Role.CEO}),
+        source_statuses=frozenset({Status.AWAITING_CEO_APPROVAL}),
+        target_status=Status.COMPLETED,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=False,
+    ),
+    "ceo_reject": ActionSpec(
+        name="ceo_reject",
+        allowed_roles=frozenset({Role.CEO}),
+        source_statuses=frozenset({Status.AWAITING_CEO_APPROVAL}),
+        target_status=Status.NEEDS_REVISION,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=False,
+    ),
+    "ceo_reject_to_pool": ActionSpec(
+        name="ceo_reject_to_pool",
+        allowed_roles=frozenset({Role.CEO}),
+        source_statuses=frozenset({Status.AWAITING_CEO_APPROVAL}),
+        target_status=Status.PENDING,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=False,
+    ),
+    "cancel": ActionSpec(
+        name="cancel",
+        allowed_roles=frozenset(_PM_ROLES | {Role.CEO}),
+        source_statuses=frozenset(
+            s for s in Status if s not in (Status.COMPLETED, Status.CANCELLED)
+        ),
+        target_status=Status.CANCELLED,
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=False,
+    ),
+    "create_subtask": ActionSpec(
+        name="create_subtask",
+        allowed_roles=_PM_ROLES,
+        source_statuses=frozenset({Status.IN_PROGRESS}),  # parent must be in_progress
+        target_status=None,  # creates a NEW task; doesn't transition the parent
+        allowed_task_types=None,
+        preconditions=(),
+        self_review_block=False,
+        needs_team_match=True,
+    ),
+}
+
+
+# ---------------------------------------------------------------------------
+# Claim rules (predecessor canon: PERMISSIONS.md "Claim Restrictions by Role")
+# ---------------------------------------------------------------------------
+
+CLAIM_RULES: dict[Role, frozenset[Status]] = {
+    Role.DEVELOPER: frozenset({Status.PENDING, Status.NEEDS_REVISION}),
+    Role.QA: frozenset({Status.AWAITING_QA}),
+    Role.DOCUMENTER: frozenset({Status.PENDING, Status.AWAITING_DOCUMENTATION}),
+    # PMs re-claim NEEDS_REVISION to recover a rejected coordination task: when
+    # an assembled cell→root / root→master PR fails the in-path gate (pr_fail),
+    # QA fails a planning task, or the CEO rejects (ceo_reject), the task lands
+    # in NEEDS_REVISION. Before this, that state was developer-claim-only, so a
+    # PM-owned coordination task had NO actor and no exit but cancel — the cell
+    # PM escalated in a loop (the in-path PR-review gate introduced this path;
+    # pre-gate, the PM re-delegated from in_progress). The PM now re-claims via
+    # i_will_plan, revises the plan, and re-delegates the fixes. pr_fail/qa_fail
+    # reassign the task to its owning PM, so this is scoped by the SAME mechanism
+    # that scopes a developer's leaf-revision: give_me_work only ever offers an
+    # agent its own assigned tasks. (A per-instance ownership gate at the gateway
+    # would diverge from this spec — the parity invariant forbids that.)
+    #
+    # AWAITING_PM_REVIEW is deliberately ABSENT here — do not re-add it. A task
+    # in this status already passed the in-path PR gate and is waiting on the
+    # owning PM's merge decision (complete / request_changes), not on
+    # re-planning. A prior revision granted CELL_PM/MAIN_PM a claim from
+    # AWAITING_PM_REVIEW so a respawned PM could "re-claim its own review-queue
+    # task", but claim composes into i_will_plan's (claim, set_plan, start)
+    # sequence: every respawn legally re-claimed the task, reset it to
+    # in_progress, and re-ran the full submit_up -> pr_pass ->
+    # awaiting_pm_review cycle — looping forever with no progress (one
+    # production task cycled 11 times across 37 spawns in 4h before this was
+    # caught). A PM re-entering its own AWAITING_PM_REVIEW task is now steered
+    # by the choreographer's i_will_plan re-entry contract (_handle_pm_reentry)
+    # straight to complete/request_changes, with no claim and no status change
+    # — closing the edge that made the reset possible in the first place.
+    Role.CELL_PM: frozenset({Status.PENDING, Status.NEEDS_REVISION}),
+    Role.MAIN_PM: frozenset({Status.PENDING, Status.NEEDS_REVISION}),
+    Role.PRODUCT_OWNER: frozenset(),
+    Role.HEAD_MARKETING: frozenset(),
+    Role.AUDITOR: frozenset(),
+    Role.PR_REVIEWER: frozenset({Status.PENDING, Status.AWAITING_PR_REVIEW}),
+    Role.CEO: frozenset(),
+}
+
+
+# ---------------------------------------------------------------------------
+# Team rules (predecessor canon: PERMISSIONS.md "Team-Based Restrictions")
+# Per-slug. None means "any team" (cross-cell or board roles).
+# ---------------------------------------------------------------------------
+
+ROLE_TEAM_RULES: dict[str, str | None] = {
+    "be-dev-1": "backend",
+    "be-dev-2": "backend",
+    "be-qa": "backend",
+    "be-pm": "backend",
+    "be-doc": "backend",
+    "fe-dev-1": "frontend",
+    "fe-dev-2": "frontend",
+    "fe-qa": "frontend",
+    "fe-pm": "frontend",
+    "fe-doc": "frontend",
+    "ux-dev-1": "ux_ui",
+    "ux-dev-2": "ux_ui",
+    "ux-qa": "ux_ui",
+    "ux-pm": "ux_ui",
+    "ux-doc": "ux_ui",
+    "main-pm": None,
+    "product-owner": None,
+    "head-marketing": None,
+    "auditor": None,
+    "pr-reviewer-1": None,
+    "be-pr-reviewer": "backend",
+    "fe-pr-reviewer": "frontend",
+    "ux-pr-reviewer": "ux_ui",
+    "ceo": None,
+}
+
+
+# ---------------------------------------------------------------------------
+# Intent verbs (gateway-facing surface; each composes >=0 atomic actions)
+# ---------------------------------------------------------------------------
+
+
+def _next_hint_idle(_t: Any) -> str:
+    return "idle until next work arrives"
+
+
+def _next_hint_open_pr(_t: Any) -> str:
+    return "PR opened; call i_am_done(task_id, notes='...') when self-verified"
+
+
+def _next_hint_synced(_t: Any) -> str:
+    return (
+        "branch synced onto its base; continue editing + commit(message),"
+        " then open_pr(task_id) / i_am_done(task_id)"
+    )
+
+
+def _next_hint_after_claim(_t: Any) -> str:
+    return (
+        "edit + commit(message) for each meaningful change,"
+        " then open_pr(task_id) and i_am_done(task_id)"
+    )
+
+
+def _next_hint_after_plan(_t: Any) -> str:
+    return (
+        "delegate(parent_task_id, title, description, assigned_to,"
+        " team, task_type) for each subtask"
+    )
+
+
+def _next_hint_continue_delegating(t: Any) -> str:
+    # Name the bubble-up verb proactively so PMs don't have to discover it via
+    # a rejection: a root (no parent) is the Main PM's submit_root (root→master
+    # PR); a cell parent is the Cell PM's submit_up (cell→root PR).
+    bubble = (
+        "submit_root" if getattr(t, "parent_task_id", None) is None else "submit_up"
+    )
+    return (
+        "continue delegating subtasks; when every subtask is terminal,"
+        f" call {bubble}(task_id, notes='...') to open the PR + enter the"
+        " review gate (or i_am_idle if not ready)"
+    )
+
+
+def _next_hint_qa_review(_t: Any) -> str:
+    return (
+        "review the diff. Then call pass(notes) to accept or fail(issues) to"
+        " request changes."
+    )
+
+
+def _next_hint_dev_revise(_t: Any) -> str:
+    return "idle - dev will revise and re-submit"
+
+
+def _next_hint_pr_fail(t: Any) -> str:
+    # Steer a pr_fail verdict by owner shape. A Main-PM branch-bearing root is
+    # an assembled cell→root / root→master PR — coordination, not the Main PM's
+    # own code. The rejection is about the cells' merged code, which the Main PM
+    # cannot fix directly (no code verb); it must re-delegate the fixes to the
+    # owning cell PM(s) and wait for re-assembly. Re-submitting the unchanged
+    # root is the 2026-06-27 infinite pr_fail loop. A cell/dev task is revised
+    # in place by its dev, so keep the dev-revise hint there.
+    team = getattr(t, "team", None)
+    team_value = str(getattr(team, "value", team))
+    branch = bool(getattr(t, "branch_name", None))
+    if team_value == Team.MAIN_PM.value and branch:
+        return (
+            "assembled cell work failed review — re-delegate the fixes to the"
+            " owning cell PM(s) via delegate(...), then wait for the cell"
+            " subtasks to complete and the PR to be re-assembled; do NOT"
+            " re-submit the root until then"
+        )
+    return "idle - dev will revise and re-submit"
+
+
+def _next_hint_doc_after_claim(_t: Any) -> str:
+    return (
+        "write docs in your workspace, commit them, then call"
+        " i_documented(task_id, notes, files)"
+    )
+
+
+def _next_hint_doc_done(_t: Any) -> str:
+    return "idle until PM completes"
+
+
+def _next_hint_pm_complete(_t: Any) -> str:
+    return "merged into target; triage() for next item"
+
+
+def _next_hint_pm_idle(_t: Any) -> str:
+    return "idle until subtasks finish"
+
+
+def _next_hint_submit_up(t: Any) -> str:
+    if markers.is_pr_waived(t):
+        return (
+            "no diff to review — PR creation was waived (report-only"
+            " subtree); complete(task_id) merges it directly"
+        )
+    return (
+        "cell→root PR opened + in review; the cell reviewer will pr_pass,"
+        " then complete(task_id) merges it"
+    )
+
+
+def _next_hint_pr_gate_review(_t: Any) -> str:
+    return (
+        "review the assembled PR diff against the parent objective + full"
+        " acceptance criteria + the cross-cell contract. Then pr_pass(notes)"
+        " to accept or pr_fail(issues) to send back."
+    )
+
+
+def _next_hint_submit_root(t: Any) -> str:
+    if markers.is_pr_waived(t):
+        return (
+            "no diff to review — PR creation was waived (report-only"
+            " subtree); complete(task_id) escalates to the CEO directly"
+        )
+    return (
+        "root→master PR opened; the main reviewer will review it,"
+        " then complete(task_id) escalates to the CEO"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Context — the third arg to Precondition.check (caller-supplied state)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Context:
+    """Carrier for caller-supplied state the spec needs to evaluate
+    preconditions (e.g. the agent's `plan` argument on i_will_work_on,
+    the journal:decision presence flag).
+
+    Pure data; no behavior. The choreographer builds one of these per
+    request before calling spec.can_invoke_intent.
+    """
+
+    actor_id: UUID | None = None
+    # The calling agent's team, for the needs_team_match rule. None means
+    # "caller did not supply it" — team-match is then enforced at the service
+    # layer (the historical sole enforcer), so the spec gate stays permissive
+    # and backward-compatible. Supplying it lets the spec gate close the gap
+    # for any consumer that trusts can_invoke_action as authoritative.
+    agent_team: str | None = None
+    plan: str | dict[str, Any] | None = None
+    has_journal_decision: bool = False
+    has_journal_reflect: bool = False
+    has_journal_learning: bool = False
+    progress_count: int = 0
+    qa_evidence_inspected: bool = False
+    actor_slug: str | None = None
+    original_developer_slug: str | None = None
+    notes: str | None = None
+    issues: tuple[str, ...] = ()
+    files: tuple[str, ...] = ()
+
+
+# ---------------------------------------------------------------------------
+# Pre-defined preconditions wired into IntentSpecs
+# ---------------------------------------------------------------------------
+
+
+def _p_has_plan_or_supplied(task: Any, _agent: Any, ctx: Any) -> bool:
+    return bool(getattr(task, "plan", None)) or bool(getattr(ctx, "plan", None))
+
+
+def _p_has_commits(task: Any, _agent: Any, _ctx: Any) -> bool:
+    return bool(getattr(task, "commits", None))
+
+
+def _p_no_pr_yet(task: Any, _agent: Any, _ctx: Any) -> bool:
+    return getattr(task, "pr_number", None) is None
+
+
+def _p_owns_task(task: Any, _agent: Any, ctx: Any) -> bool:
+    return getattr(task, "assigned_to", None) == getattr(ctx, "actor_id", None)
+
+
+def _p_non_terminal(task: Any, _agent: Any, _ctx: Any) -> bool:
+    """True unless the task is in a terminal state (completed / cancelled).
+
+    Escalation is a "I'm blocked, hand this up" action — it must never resurrect
+    a task the lifecycle has already terminated. ``escalate_up`` has
+    ``composes=()`` (no composed action supplies a source-status gate), so
+    without this precondition the spec gate accepts a COMPLETED/CANCELLED task
+    and ``apply_escalation`` sets it back to BLOCKED, bypassing the state
+    machine's terminal-state invariant (F043).
+    """
+    status = getattr(task, "status", None)
+    value = status.value if isinstance(status, Status) else str(status)
+    return value not in (Status.COMPLETED.value, Status.CANCELLED.value)
+
+
+PRECONDITION_PLAN = Precondition(
+    key="plan",
+    check=_p_has_plan_or_supplied,
+    remediate=(
+        "call again with plan='<one-paragraph plan describing what you will do>'"
+    ),
+    missing_token="plan",
+)
+
+PRECONDITION_COMMITS = Precondition(
+    key="commits>=1",
+    check=_p_has_commits,
+    remediate=(
+        "commit at least one change before opening a PR — call commit(message='...')"
+    ),
+    missing_token="commits>=1",
+)
+
+PRECONDITION_NO_PR = Precondition(
+    key="no_prior_pr",
+    check=_p_no_pr_yet,
+    remediate="a PR is already open for this task; call i_am_done(task_id, notes=...)",
+    missing_token="no_prior_pr",
+)
+
+PRECONDITION_OWNERSHIP = Precondition(
+    key="owns_task",
+    check=_p_owns_task,
+    remediate="task is not assigned to you; call give_me_work() to find your work",
+    missing_token="owns_task",
+    rejection_kind="not_authorized",
+)
+
+PRECONDITION_NON_TERMINAL = Precondition(
+    key="non_terminal",
+    check=_p_non_terminal,
+    remediate=(
+        "task is in a terminal state (completed / cancelled) and cannot be"
+        " escalated — terminal tasks must not be resurrected to blocked"
+    ),
+    missing_token="non_terminal",
+    rejection_kind="invalid_state",
+)
+
+
+def _p_external_review_pending(task: Any, _agent: Any, _ctx: Any) -> bool:
+    """True iff the task is PENDING — the only valid source for an inbound
+    external-PR review task (claim_pr_review). An awaiting_pr_review task is a
+    gate review, a distinct verb (claim_gate_review); letting claim_pr_review's
+    composed ``claim`` action's union source_statuses accept awaiting_pr_review
+    made the spec gate looser than the runtime and pointed the reviewer at the
+    wrong verb."""
+    status = getattr(task, "status", None)
+    value = status.value if isinstance(status, Status) else str(status)
+    return value == Status.PENDING.value
+
+
+PRECONDITION_EXTERNAL_REVIEW_STATE = Precondition(
+    key="external_review_state",
+    check=_p_external_review_pending,
+    remediate=(
+        "claim_pr_review is for an inbound external-PR task in pending only;"
+        " an assembled in-path gate review uses claim_gate_review"
+    ),
+    missing_token="external_review_state",
+    rejection_kind="invalid_state",
+)
+
+
+# The set of states from which a PR may be opened — the lifecycle-owned canon.
+# The HTTP PR-create path (GitService._assert_pr_create_allowed) and the gateway
+# ``open_pr`` intent must agree on this, so it lives here (the policy layer) as
+# the single source and the service derives its str set from it. A PR opens
+# during active dev (in_progress / verifying), the doc phase
+# (awaiting_documentation), QA review (awaiting_qa), or a rework cycle
+# (needs_revision) — never from claim/pause/block/terminal, which the HTTP path
+# already blocked but the gateway ``open_pr`` (composes=() → no source-status
+# gate) historically did not (F101).
+PR_OPEN_STATES: frozenset[Status] = frozenset(
+    {
+        Status.IN_PROGRESS,
+        Status.VERIFYING,
+        Status.AWAITING_QA,
+        Status.AWAITING_DOCUMENTATION,
+        Status.NEEDS_REVISION,
+    }
+)
+
+
+def _p_pr_open_state(task: Any, _agent: Any, _ctx: Any) -> bool:
+    """True iff the task is in a PR-open-eligible state (see ``PR_OPEN_STATES``)."""
+    status = getattr(task, "status", None)
+    value = status.value if isinstance(status, Status) else str(status)
+    return value in {s.value for s in PR_OPEN_STATES}
+
+
+PRECONDITION_PR_OPEN_STATE = Precondition(
+    key="pr_open_state",
+    check=_p_pr_open_state,
+    remediate=(
+        "open_pr is only valid during active dev states "
+        "(in_progress / verifying / awaiting_qa / awaiting_documentation / "
+        "needs_revision); move the task into one of those first"
+    ),
+    missing_token="pr_open_state",
+    rejection_kind="invalid_state",
+)
+
+
+# The states from which a dev may re-sync their branch onto its base. A rebase
+# is meaningful only while the dev actively works the task and the branch is
+# live — once the task is paused / blocked / handed to QA-doc-PM-CEO review /
+# terminal, the dev is no longer the actor and a rebase runs against a branch
+# whose task is no longer theirs to move. ``sync_branch`` composes=() (no
+# composed action supplies a source-status gate), so without this precondition
+# the spec gate accepted a COMPLETED/CANCELLED/PAUSED/BLOCKED task and the
+# choreographer handler rebased a dead/parked branch (#50).
+SYNC_BRANCH_STATES: frozenset[Status] = frozenset(
+    {
+        Status.CLAIMED,
+        Status.IN_PROGRESS,
+        Status.VERIFYING,
+        Status.NEEDS_REVISION,
+    }
+)
+
+
+def _p_sync_branch_state(task: Any, _agent: Any, _ctx: Any) -> bool:
+    """True iff the task is in a sync_branch-eligible active dev state."""
+    status = getattr(task, "status", None)
+    value = status.value if isinstance(status, Status) else str(status)
+    return value in {s.value for s in SYNC_BRANCH_STATES}
+
+
+PRECONDITION_SYNC_BRANCH_STATE = Precondition(
+    key="sync_branch_state",
+    check=_p_sync_branch_state,
+    remediate=(
+        "sync_branch is only valid while you actively work the task "
+        "(claimed / in_progress / verifying / needs_revision); a paused, "
+        "blocked, reviewing, or terminal task's branch is not yours to move"
+    ),
+    missing_token="sync_branch_state",
+    rejection_kind="invalid_state",
+)
+
+
+# submit_root's prose asserts "a Main-PM root is planning-typed, never code".
+# The creation path (``main_pm_cannot_own_code``) already blocks a code-typed
+# Main-PM root at TaskService.create / intake / approve_and_start, so such a
+# root is unreachable in production — but the spec gate must back the claim too
+# (defense in depth: a future creation-path change can't quietly make submit_root
+# accept a code root). Scoped to submit_root only, NOT the shared
+# ``submit_for_review`` action (which cell_pm+code submit_up legitimately uses).
+def _p_root_not_code(task: Any, _agent: Any, _ctx: Any) -> bool:
+    tt = getattr(task, "task_type", None)
+    value = (
+        tt.value if isinstance(tt, TaskType) else (str(tt) if tt is not None else None)
+    )
+    return value != TaskType.CODE.value
+
+
+PRECONDITION_ROOT_NOT_CODE = Precondition(
+    key="root_not_code",
+    check=_p_root_not_code,
+    remediate=(
+        "a Main-PM root is planning-typed, never code; the root assembles the "
+        "cells' merged work — a code-typed root belongs to a developer, not the "
+        "Main PM. Reassign the code work to a dev and keep the root planning-typed"
+    ),
+    missing_token="root_not_code",
+    rejection_kind="invalid_state",
+)
+
+
+_INTENT_VERBS: dict[str, IntentSpec] = {
+    # Phase 1: developer verbs
+    "give_me_work": IntentSpec(
+        name="give_me_work",
+        allowed_roles=frozenset(
+            {
+                Role.DEVELOPER,
+                Role.QA,
+                Role.DOCUMENTER,
+                Role.CELL_PM,
+                Role.MAIN_PM,
+                Role.PR_REVIEWER,
+            }
+        ),
+        description="Return your most-actionable task or signal idle.",
+        composes=(),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: "act on the task returned, or i_am_idle if none",
+    ),
+    "i_will_work_on": IntentSpec(
+        name="i_will_work_on",
+        allowed_roles=_DEV_ROLES,
+        description=(
+            "Claim a task, set the plan, and transition to in_progress."
+            " Atomic - preconditions checked before any state mutation."
+        ),
+        composes=("claim", "set_plan", "start"),
+        extra_preconditions=(PRECONDITION_PLAN,),
+        side_effects=(),
+        next_hint=_next_hint_after_claim,
+    ),
+    "i_will_plan": IntentSpec(
+        name="i_will_plan",
+        allowed_roles=_PM_ROLES,
+        description=(
+            "PM mirror of i_will_work_on for parent tasks. Claim, plan,"
+            " transition to in_progress; from there delegate subtasks."
+        ),
+        composes=("claim", "set_plan", "start"),
+        extra_preconditions=(PRECONDITION_PLAN,),
+        side_effects=(),
+        next_hint=_next_hint_after_plan,
+    ),
+    "delegate": IntentSpec(
+        name="delegate",
+        allowed_roles=_PM_ROLES,
+        description=(
+            "Create a subtask under the current task. Validates the"
+            " delegation chain (main_pm->cell_pm; cell_pm->its team's devs)"
+            " and the assignee-vs-task_type rule (Cell PMs get planning-typed"
+            " tasks; devs get code/research, UX devs also design)."
+            " documentation is NOT delegatable — the lifecycle auto-creates"
+            " the doc phase after the code subtask passes QA."
+        ),
+        composes=("create_subtask",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_continue_delegating,
+    ),
+    "open_pr": IntentSpec(
+        name="open_pr",
+        allowed_roles=_DEV_ROLES,
+        description=(
+            "Push the branch and open a PR. Atomic - preconditions"
+            " (assignee, >=1 commit, no prior PR) checked BEFORE any git"
+            " operation. After success, call i_am_done."
+        ),
+        composes=(),
+        extra_preconditions=(
+            PRECONDITION_OWNERSHIP,
+            PRECONDITION_PR_OPEN_STATE,
+            PRECONDITION_COMMITS,
+            PRECONDITION_NO_PR,
+        ),
+        side_effects=("push_branch", "create_pr"),
+        next_hint=_next_hint_open_pr,
+    ),
+    "i_am_done": IntentSpec(
+        name="i_am_done",
+        allowed_roles=_DEV_ROLES,
+        description=(
+            "Submit work for QA. Auto-runs in_progress->verifying then"
+            " verifying->awaiting_qa. Strict - PR must be open (call"
+            " open_pr first) and >=1 commit."
+        ),
+        composes=("submit_verification", "submit_qa"),
+        extra_preconditions=(PRECONDITION_OWNERSHIP, PRECONDITION_COMMITS),
+        side_effects=(),
+        next_hint=_next_hint_idle,
+    ),
+    "sync_branch": IntentSpec(
+        name="sync_branch",
+        allowed_roles=_DEV_ROLES,
+        description=(
+            "Rebase your task's branch onto its current base THROUGH the gate"
+            " (raw git is denied). Use when your branch has fallen behind its"
+            " base — e.g. a sibling task's PR merged into the parent branch"
+            " while you worked. Fetches origin, rebases head onto base, and"
+            " force-pushes (with-lease). No DB state change. On conflicts the"
+            " rebase is aborted and the conflicted files are returned — resolve"
+            " by hand, commit, then sync_branch again. Pass stash=True to"
+            " auto-stash uncommitted changes instead of refusing"
+            " DIRTY_WORKSPACE; they are restored after the rebase."
+        ),
+        composes=(),  # git-only verb — no DB transition; the handler runs the git op
+        extra_preconditions=(
+            PRECONDITION_OWNERSHIP,
+            PRECONDITION_SYNC_BRANCH_STATE,
+        ),
+        side_effects=(),
+        next_hint=_next_hint_synced,
+    ),
+    "i_am_blocked": IntentSpec(
+        name="i_am_blocked",
+        allowed_roles=frozenset(_DEV_ROLES | _QA_ROLES | _DOC_ROLES),
+        description="Escalate to PM. Logs a struggle journal entry.",
+        composes=("block",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: "idle - PM will resolve and notify",
+    ),
+    "unclaim": IntentSpec(
+        name="unclaim",
+        allowed_roles=frozenset(
+            _DEV_ROLES | _QA_ROLES | _DOC_ROLES | _PM_ROLES | {Role.PR_REVIEWER}
+        ),
+        description=(
+            "Voluntarily release a claim back to pending. The"
+            " work-in-progress branch is preserved. A PR reviewer who claimed"
+            " an external review (in_progress) or a gate review"
+            " (awaiting_pr_review) and cannot finish releases the claim here"
+            " rather than wedging the lane until the stale-claim reaper."
+        ),
+        composes=(),  # special - cleared in service layer
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: (
+            "task returned to pending; another agent (or you, fresh) can claim"
+        ),
+    ),
+    "reassign": IntentSpec(
+        name="reassign",
+        allowed_roles=frozenset({Role.CELL_PM}),
+        description=(
+            "Hand a claimed/in_progress task to another developer in your own"
+            " cell. The branch is keyed to the task (not the agent), so it is"
+            " preserved — the new developer continues the work-in-progress. No"
+            " status change."
+        ),
+        composes=(),  # special — the verb body owns the assignee write
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: (
+            "reassigned; the new developer will be respawned to continue"
+        ),
+    ),
+    "declare_coverage": IntentSpec(
+        name="declare_coverage",
+        allowed_roles=_PM_ROLES,
+        description=(
+            "Stamp parent acceptance criteria onto an existing child's"
+            " parent_ac_refs after the fact — for a replacement child whose"
+            " delegate omitted covers_parent_criteria. Or, targeting your OWN"
+            " root/coordination task, declare criteria as root-owned (only"
+            " your own machinery satisfies them — never push these into a"
+            " cell). No status change; the verb body owns ownership +"
+            " criterion validation."
+        ),
+        composes=(),  # special — no transition, just an AC-ref write + audit
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: (
+            "coverage declared; check evidence.remaining_uncovered_parent_acs"
+        ),
+    ),
+    "resume": IntentSpec(
+        name="resume",
+        allowed_roles=frozenset(_DEV_ROLES | _QA_ROLES | _DOC_ROLES | _PM_ROLES),
+        description="Resume a paused task you own. paused -> in_progress.",
+        composes=("resume",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: "resumed; continue working",
+    ),
+    "i_am_idle": IntentSpec(
+        name="i_am_idle",
+        allowed_roles=frozenset(
+            _DEV_ROLES
+            | _QA_ROLES
+            | _DOC_ROLES
+            | _PM_ROLES
+            | {
+                Role.PRODUCT_OWNER,
+                Role.HEAD_MARKETING,
+                Role.AUDITOR,
+                Role.PROMPTER,
+                Role.SECRETARY,
+                Role.PR_REVIEWER,
+            }
+        ),
+        description=(
+            "Signal you have no active work. PMs auto-pause owned in_progress tasks."
+        ),
+        composes=(),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_idle,
+    ),
+    # Phase 2: QA verbs
+    "claim_review": IntentSpec(
+        name="claim_review",
+        allowed_roles=_QA_ROLES,
+        description="Claim a task in awaiting_qa for review. Returns evidence inline.",
+        composes=(),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_qa_review,
+    ),
+    "pass_review": IntentSpec(
+        name="pass_review",
+        allowed_roles=_QA_ROLES,
+        description="Pass QA. Transitions awaiting_qa -> awaiting_documentation.",
+        composes=("qa_pass",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_idle,
+    ),
+    "fail_review": IntentSpec(
+        name="fail_review",
+        allowed_roles=_QA_ROLES,
+        description="Fail QA with concrete issues. Transitions to needs_revision.",
+        composes=("qa_fail",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_dev_revise,
+    ),
+    # PR reviewer verbs (inbound external/fork PRs — distinct from QA's surface)
+    "claim_pr_review": IntentSpec(
+        name="claim_pr_review",
+        allowed_roles=frozenset({Role.PR_REVIEWER}),
+        description=(
+            "Claim an inbound external-PR review task and start work."
+            " pending -> claimed -> in_progress."
+        ),
+        composes=("claim", "start"),
+        extra_preconditions=(PRECONDITION_EXTERNAL_REVIEW_STATE,),
+        side_effects=(),
+        next_hint=lambda _t: (
+            "review the contributor's diff, then post_pr_review(task_id, ...)"
+        ),
+    ),
+    "post_pr_review": IntentSpec(
+        name="post_pr_review",
+        allowed_roles=frozenset({Role.PR_REVIEWER}),
+        description=(
+            "Post one complete change-request to the external PR and finish the"
+            " review task. in_progress -> completed."
+        ),
+        composes=("pr_review_done",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_idle,
+    ),
+    # In-path PR-review gate verbs (assembled cell→root + root→master PRs).
+    # Distinct from the external/fork reviewer surface above: these GATE an
+    # internal delivery task between docs/submit and the PM merge.
+    "claim_gate_review": IntentSpec(
+        name="claim_gate_review",
+        allowed_roles=frozenset({Role.PR_REVIEWER}),
+        description=(
+            "Claim an assembled-PR review task (awaiting_pr_review) WITHOUT"
+            " transitioning it — mirrors QA's claim_review. The assembled diff"
+            " and the parent task's acceptance criteria are returned inline."
+        ),
+        composes=(),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_pr_gate_review,
+    ),
+    "pr_pass": IntentSpec(
+        name="pr_pass",
+        allowed_roles=frozenset({Role.PR_REVIEWER}),
+        description=(
+            "Pass the assembled-PR review. Transitions awaiting_pr_review ->"
+            " awaiting_pm_review so the PM can merge."
+        ),
+        composes=("pr_pass",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_idle,
+    ),
+    "pr_fail": IntentSpec(
+        name="pr_fail",
+        allowed_roles=frozenset({Role.PR_REVIEWER}),
+        description=(
+            "Fail the assembled-PR review with concrete issues. Transitions"
+            " awaiting_pr_review -> needs_revision, routed back like a QA fail."
+        ),
+        composes=("pr_fail",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_pr_fail,
+    ),
+    # Phase 3: documenter verbs
+    "claim_doc_task": IntentSpec(
+        name="claim_doc_task",
+        allowed_roles=_DOC_ROLES,
+        description="Claim awaiting_documentation. Returns evidence inline.",
+        composes=(),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_doc_after_claim,
+    ),
+    "i_documented": IntentSpec(
+        name="i_documented",
+        allowed_roles=_DOC_ROLES,
+        description="Signal docs complete. Transitions to awaiting_pm_review.",
+        composes=("docs_complete",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_doc_done,
+    ),
+    # Phase 4: PM verbs
+    "complete": IntentSpec(
+        name="complete",
+        allowed_roles=_PM_ROLES,
+        description=(
+            "Cell PM merges the PR (leaf into the cell branch, or the gated"
+            " cell→root PR into the root branch) + transitions to completed;"
+            " Main PM escalates the root to the CEO (who merges root→master)."
+            " The merge runs BEFORE the complete transition: TaskService.complete"
+            " asserts the PR is already merged, so the choreographer verb body"
+            " (cell_pm_complete / main_pm_complete) owns the merge-first"
+            " ordering — no trailing pr_merge side_effect is declared here."
+        ),
+        composes=("complete",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_pm_complete,
+    ),
+    "request_changes": IntentSpec(
+        name="request_changes",
+        allowed_roles=_PM_ROLES,
+        description=(
+            "Reject the merge review with concrete issues. Transitions"
+            " awaiting_pm_review -> needs_revision, routed back like a QA fail"
+            " (original developer for a leaf, revision PM for an assembled"
+            " task). Use this for an AC/scope violation caught at merge review"
+            " — never i_am_blocked/escalate, which have no revision routing."
+        ),
+        composes=("request_changes",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=_next_hint_idle,
+    ),
+    "escalate_up": IntentSpec(
+        name="escalate_up",
+        allowed_roles=_PM_ROLES,
+        description="Escalate to your role's escalation_target.",
+        composes=(),  # special - uses TaskService.escalate
+        extra_preconditions=(PRECONDITION_NON_TERMINAL,),
+        side_effects=(),
+        next_hint=lambda _t: "idle until escalation target acts",
+    ),
+    "escalate_to_ceo": IntentSpec(
+        name="escalate_to_ceo",
+        allowed_roles=frozenset(
+            {
+                Role.MAIN_PM,
+                Role.PRODUCT_OWNER,
+                Role.HEAD_MARKETING,
+            }
+        ),
+        description=(
+            "Escalate to CEO with reason. Transitions to awaiting_ceo_approval."
+        ),
+        composes=("escalate_to_ceo",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: "idle until CEO acts via UI",
+    ),
+    "submit_up": IntentSpec(
+        name="submit_up",
+        allowed_roles=frozenset({Role.CELL_PM}),
+        description=(
+            "Cell PM opens the cell→root PR and moves the cell task into the"
+            " PR-review gate (awaiting_pr_review). The cell reviewer reviews the"
+            " assembled diff; after pr_pass the same Cell PM completes it."
+        ),
+        composes=("submit_for_review",),
+        extra_preconditions=(),
+        # The cell→root PR must exist BEFORE submit_pm_review runs — its
+        # pr_created gate rejects (returning None) otherwise, which then
+        # crashed the trailing create_pr on a None task. create_pr persists
+        # pr_number onto the task row, so submit_pm_review (which re-fetches)
+        # sees pr_created=True. Mirrors the dev's open_pr→i_am_done split.
+        pre_side_effects=("create_pr",),
+        side_effects=(),
+        # The Cell PM owns cell completion — it merges the cell→root PR
+        # via complete(). Main PM only completes the ROOT task.
+        next_hint=_next_hint_submit_up,
+    ),
+    "submit_root": IntentSpec(
+        name="submit_root",
+        allowed_roles=frozenset({Role.MAIN_PM}),
+        description=(
+            "Main PM opens the root→master PR and moves the root task to"
+            " awaiting_pr_review for the main reviewer (the root analogue of the"
+            " cell PM's submit_up). After pr_pass, call complete to escalate to"
+            " the CEO. For branch-bearing roots (a Main-PM root-subtask assembles"
+            " the cells' merged work); branchless coordination roots skip the"
+            " gate and complete directly. The gate is branch-keyed, not"
+            " task_type-keyed — a Main-PM root is planning-typed, never code."
+        ),
+        composes=("submit_for_review",),
+        extra_preconditions=(PRECONDITION_ROOT_NOT_CODE,),
+        # The root→master PR must exist before the reviewer can review it —
+        # opened here (parent=master, is_root_pr=True), mirroring submit_up's
+        # pre-create of the cell→root PR.
+        pre_side_effects=("create_root_pr",),
+        side_effects=(),
+        next_hint=_next_hint_submit_root,
+    ),
+    "unblock": IntentSpec(
+        name="unblock",
+        allowed_roles=_PM_ROLES,
+        description="PM unblocks a blocked task; restores pre-block state.",
+        composes=("unblock",),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: "task restored; original assignee will resume",
+    ),
+    "triage": IntentSpec(
+        name="triage",
+        allowed_roles=frozenset(
+            _PM_ROLES | {Role.PRODUCT_OWNER, Role.HEAD_MARKETING, Role.AUDITOR}
+        ),
+        description="List actionable tasks in your scope.",
+        composes=(),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: "act on a listed task or i_am_idle",
+    ),
+    "triage_all": IntentSpec(
+        name="triage_all",
+        allowed_roles=frozenset({Role.MAIN_PM}),
+        description="List actionable tasks across all teams (Main PM only).",
+        composes=(),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: "act on a listed task or i_am_idle",
+    ),
+    "waive_finding": IntentSpec(
+        name="waive_finding",
+        allowed_roles=frozenset({Role.AUDITOR}),
+        description=(
+            "Waive one minor/nit review finding by id with a required note. "
+            "Blocker/major findings must be fixed, never waived. No task "
+            "status change."
+        ),
+        composes=(),
+        extra_preconditions=(),
+        side_effects=(),
+        next_hint=lambda _t: "finding waived; triage() for next item or i_am_idle",
+    ),
+}
+
+
+# ---------------------------------------------------------------------------
+# Public lookups
+# ---------------------------------------------------------------------------
+
+
+def can_claim(role: Role, task: Any) -> Decision:
+    """Return Decision for whether `role` can claim `task` right now.
+
+    Thin wrapper around can_invoke_action("claim", ...) for backward
+    compatibility. The actual enforcement happens in can_invoke_action
+    when action == "claim", which applies CLAIM_RULES per-role narrowing.
+
+    Rejection-kind disambiguation:
+      * `not_authorized` — the status belongs to a DIFFERENT role's claim
+        domain (e.g. dev tries to claim awaiting_qa, which is QA-only),
+        OR the role has no claim privileges at all.
+      * `invalid_state` — the role principally CAN claim, but the task is
+        in a terminal/non-claimable state (e.g. completed, in_progress).
+    """
+    return can_invoke_action(role, "claim", task)
+
+
+def _invalid_source_remediate(
+    status: Status, action: str, spec_action: ActionSpec
+) -> str:
+    """Directed recovery hint for a wrong-source-status rejection.
+
+    Doc-stage bail special case: awaiting_documentation has exactly one exit
+    — i_documented. A documenter on a revision pass whose docs already exist
+    must re-affirm them, not bail; the generic hint fed the live 26-respawn
+    fe-doc loop (2026-07-02).
+
+    awaiting_qa bail special case: a dev whose task moved on to QA while it
+    was still trying to call i_am_blocked isn't stuck — its part is DONE. The
+    generic "find a task in [...]" hint reads as a dead end (a live 5h+ wedge
+    incident: the dev kept retrying i_am_blocked against a task QA already
+    owned). Tell it the truth and point at the real exit.
+    """
+    if status is Status.AWAITING_DOCUMENTATION and action == "block":
+        return (
+            "awaiting_documentation has one exit: i_documented. If the "
+            "docs for this task already exist and are accurate (a "
+            "revision pass), call i_documented(files=[...], "
+            "notes='verified existing docs are complete and accurate') "
+            "to re-affirm them — do NOT retry i_am_blocked/unclaim."
+        )
+    if status is Status.AWAITING_QA and action == "block":
+        return (
+            "your part is done — this task already moved to QA review; you "
+            "are not blocked on it anymore. Call i_am_idle() to pick up new "
+            "work. Do NOT retry i_am_blocked/unclaim against a task QA owns."
+        )
+    if status is Status.NEEDS_REVISION and action == "block":
+        return (
+            f"the task has moved to '{status.value}' (an admin/reviewer "
+            "action) while you held it; you no longer hold the active claim "
+            "on it. Call unclaim() to release it, then give_me_work() to "
+            "pick up new work — do NOT retry i_am_blocked against a task "
+            "that has already moved on."
+        )
+    return (
+        f"call give_me_work() to find a task in"
+        f" {sorted(s.value for s in spec_action.source_statuses)}"
+    )
+
+
+def _check_role_status_type(
+    role: Role, action: str, spec_action: ActionSpec, task: Any
+) -> Decision | None:
+    """Role + source-status + task_type gate. Returns rejection or None."""
+    if role not in spec_action.allowed_roles:
+        return Decision.reject(
+            kind="not_authorized",
+            message=f"role '{role.value}' may not call '{action}'",
+            remediate=(
+                f"action '{action}' is restricted to:"
+                f" {sorted(r.value for r in spec_action.allowed_roles)}"
+            ),
+        )
+    status = Status(getattr(task, "status", ""))
+    if status not in spec_action.source_statuses:
+        return Decision.reject(
+            kind="invalid_state",
+            message=(
+                f"task is in '{status.value}', '{action}' requires:"
+                f" {sorted(s.value for s in spec_action.source_statuses)}"
+            ),
+            remediate=_invalid_source_remediate(status, action, spec_action),
+        )
+    if (
+        spec_action.allowed_task_types is not None
+        and TaskType(getattr(task, "task_type", "code"))
+        not in spec_action.allowed_task_types
+    ):
+        return Decision.reject(
+            kind="invalid_state",
+            message=(
+                f"task_type='{task.task_type}' invalid for '{action}'; allowed:"
+                f" {sorted(t.value for t in spec_action.allowed_task_types)}"
+            ),
+            remediate="adjust task_type or pick a different verb",
+        )
+    return None
+
+
+def _check_self_review_and_preconditions(
+    action: str, spec_action: ActionSpec, task: Any, ctx: Context
+) -> Decision | None:
+    """self_review + declarative preconditions. Returns rejection or None."""
+    if spec_action.self_review_block:
+        original = ctx.original_developer_slug
+        actor = ctx.actor_slug
+        if original is not None and actor is not None and original == actor:
+            return Decision.reject(
+                kind="self_review",
+                message=(
+                    f"'{action}' blocked: you are the original developer of"
+                    f" this task ({actor})"
+                ),
+                remediate=(
+                    "another agent of this role must perform the review;"
+                    " self-review is not permitted"
+                ),
+            )
+    missing = [
+        p.missing_token
+        for p in spec_action.preconditions
+        if not p.check(task, None, ctx)
+    ]
+    if missing:
+        first_missing = next(
+            p for p in spec_action.preconditions if p.missing_token == missing[0]
+        )
+        return Decision.tracing_gap(missing=missing, remediate=first_missing.remediate)
+    return None
+
+
+def _check_claim_rules_narrow(role: Role, task: Any) -> Decision | None:
+    """Per-role narrowing for the `claim` atomic action.
+
+    The atomic `claim` action's source_statuses is the UNION across all
+    claim-eligible roles (PENDING for dev/doc, NEEDS_REVISION for dev,
+    AWAITING_QA for qa, AWAITING_DOCUMENTATION for doc, etc.).
+    CLAIM_RULES narrows by role. Without this narrowing
+    can_invoke_action("claim", ...) would let a developer claim
+    awaiting_qa just because QA can.
+
+    not_authorized vs invalid_state disambiguation matches `can_claim`:
+    if some other role can claim from this status, the rejection is
+    role-mismatch (not_authorized); else it's a wrong-state issue.
+    """
+    status = Status(getattr(task, "status", ""))
+    role_claim_statuses = CLAIM_RULES.get(role, frozenset())
+    # PM/code invariant is NOT enforced here. A PM's only claim verb is
+    # i_will_plan, and a cell/main PM planning a code-typed PARENT (to decompose
+    # + delegate the code) is legitimate (bug-1: scoping pm_cannot_execute_code
+    # to i_will_plan deadlocked the slice). Execution is already blocked at the
+    # intent level — i_will_work_on is _DEV_ROLES only, so a PM cannot execute
+    # code via the execution verb. The create/delegate guards
+    # (pm_cannot_own_code) block a PM from being ASSIGNED a fresh code task; the
+    # needs_revision carve-out (a PM resolving review issues directly) is
+    # naturally allowed because PMs claim NEEDS_REVISION.
+    if status in role_claim_statuses:
+        return None
+    allowed_list = sorted(s.value for s in role_claim_statuses)
+    other_role_owns_status = any(
+        status in r_statuses for r, r_statuses in CLAIM_RULES.items() if r != role
+    )
+    if other_role_owns_status:
+        return Decision.reject(
+            kind="not_authorized",
+            message=(
+                f"role '{role.value}' may not claim from status"
+                f" '{status.value}'; that status is reserved for another role"
+            ),
+            remediate=(f"call give_me_work() to find a task in one of: {allowed_list}"),
+        )
+    return Decision.reject(
+        kind="invalid_state",
+        message=(
+            f"role '{role.value}' cannot claim from status '{status.value}'"
+            f"; allowed: {allowed_list}"
+        ),
+        remediate=(f"call give_me_work() to find a task in one of: {allowed_list}"),
+    )
+
+
+def can_invoke_action(
+    role: Role, action: str, task: Any, context: Context | None = None
+) -> Decision:
+    """Decide whether `role` can invoke atomic `action` on `task`.
+
+    Order: action exists -> role allowed -> source status allowed ->
+    task_type allowed -> self_review check -> preconditions ->
+    claim rules (if action == "claim").
+    """
+    spec_action = _ATOMIC_ACTIONS.get(action)
+    if spec_action is None:
+        return Decision.reject(
+            kind="invalid_state",
+            message=f"unknown action '{action}'",
+            remediate="action is not declared in the lifecycle spec",
+        )
+    rejection = _check_role_status_type(role, action, spec_action, task)
+    if rejection is not None:
+        return rejection
+    ctx = context or Context()
+    rejection = _check_self_review_and_preconditions(action, spec_action, task, ctx)
+    if rejection is not None:
+        return rejection
+    # Team-match rule (historically a dead spec field — enforced only at the
+    # service layer, so a consumer trusting the spec gate alone let a backend
+    # dev claim a frontend task). When the caller supplies the agent's team via
+    # Context, enforce it here; absent, defer to the service layer.
+    rejection = _check_team_match(spec_action, task, ctx, role)
+    if rejection is not None:
+        return rejection
+    if action == "claim":
+        rejection = _check_claim_rules_narrow(role, task)
+        if rejection is not None:
+            return rejection
+    return Decision.allow()
+
+
+# Org-wide actors act across cells by design: the Main PM absorbs every
+# cell's escalations, the board PR reviewer gates root PRs on the main_pm
+# team, and CEO / board decisions are global. Cell-scoped roles (developer,
+# qa, documenter, cell_pm) are the ones a dispatch misroute can weaponize —
+# live 2026-07-02 a frontend cell PM blocked, escalated, and briefly held a
+# backend task through exactly this gap.
+_ORG_WIDE_ROLES: frozenset[Role] = frozenset(
+    {
+        Role.MAIN_PM,
+        Role.CEO,
+        Role.PRODUCT_OWNER,
+        Role.HEAD_MARKETING,
+        Role.AUDITOR,
+        Role.PR_REVIEWER,
+    }
+)
+
+
+def _check_team_match(
+    spec_action: ActionSpec, task: Any, ctx: Context, role: Role | None = None
+) -> Decision | None:
+    """Reject a cross-team action when the caller's team is known.
+
+    ``needs_team_match`` was enforced only at the service layer, so a consumer
+    trusting the spec gate alone let a backend dev claim a frontend task. When
+    the caller supplies the agent's team via Context, enforce it here; absent,
+    defer to the service layer (backward compatible). Org-wide roles
+    (``_ORG_WIDE_ROLES``) are exempt.
+    """
+    if not spec_action.needs_team_match:
+        return None
+    if role is not None and role in _ORG_WIDE_ROLES:
+        return None
+    agent_team = getattr(ctx, "agent_team", None)
+    if agent_team is None:
+        return None
+    task_team = getattr(task, "team", None)
+    if task_team is None or agent_team == task_team:
+        return None
+    return Decision.reject(
+        kind="not_authorized",
+        message=(
+            f"team '{agent_team}' may not act on a"
+            f" '{task_team}' task (team-based restriction)"
+        ),
+        remediate=(
+            "this task belongs to another team; call give_me_work()"
+            " to find a task in your own team"
+        ),
+    )
+
+
+def _check_intent_preconditions(
+    spec_intent: IntentSpec, task: Any, ctx: Context
+) -> Decision | None:
+    """Verb-level extra_preconditions gate. Returns rejection or None.
+
+    If the first failing precondition has ``rejection_kind='not_authorized'``
+    (e.g. PRECONDITION_OWNERSHIP), return ``Decision.reject(kind='not_authorized')``
+    so the envelope correctly signals an authorization failure rather than a
+    tracing gap. All other failures return the standard ``Decision.tracing_gap``.
+    """
+    missing = [
+        p.missing_token
+        for p in spec_intent.extra_preconditions
+        if not p.check(task, None, ctx)
+    ]
+    if not missing:
+        return None
+    first_missing = next(
+        p for p in spec_intent.extra_preconditions if p.missing_token == missing[0]
+    )
+    if first_missing.rejection_kind == "tracing_gap":
+        return Decision.tracing_gap(missing=missing, remediate=first_missing.remediate)
+    # A precondition may declare a non-tracing rejection kind (not_authorized
+    # for ownership, invalid_state for the terminal-state guard on escalate_up).
+    # Honor it directly so the envelope signals the right failure flavor.
+    return Decision.reject(
+        kind=first_missing.rejection_kind,
+        message=first_missing.remediate,
+        remediate=first_missing.remediate,
+    )
+
+
+def can_invoke_intent(
+    role: Role, intent: str, task: Any, context: Context | None = None
+) -> Decision:
+    """Decide whether `role` can invoke gateway intent verb `intent` on `task`.
+
+    Composition: intent's allowed_roles -> task in source statuses of the
+    FIRST composed action (or any of the composed if `composes==()`) ->
+    intent's extra_preconditions -> each composed atomic action's
+    can_invoke_action check.
+    """
+    spec_intent = _INTENT_VERBS.get(intent)
+    if spec_intent is None:
+        return Decision.reject(
+            kind="invalid_state",
+            message=f"unknown intent verb '{intent}'",
+            remediate="verb is not declared in the lifecycle spec",
+        )
+    if role not in spec_intent.allowed_roles:
+        return Decision.reject(
+            kind="not_authorized",
+            message=f"role '{role.value}' may not call '{intent}'",
+            remediate=(
+                f"verb '{intent}' is restricted to:"
+                f" {sorted(r.value for r in spec_intent.allowed_roles)}"
+            ),
+        )
+    ctx = context or Context()
+    rejection = _check_intent_preconditions(spec_intent, task, ctx)
+    if rejection is not None:
+        return rejection
+    # Composed atomic actions: all must be invocable from current state.
+    # For composition, only check the FIRST action's source-status — subsequent
+    # actions transition through their target_status.
+    if spec_intent.composes:
+        first_action = spec_intent.composes[0]
+        d = can_invoke_action(role, first_action, task, ctx)
+        if not d.allowed:
+            return d
+    # Special handling for claim-like verbs with empty composition (claim_review,
+    # claim_doc_task). These verbs don't compose "claim" action, but still need
+    # to enforce claim-status rules via CLAIM_RULES narrowing.
+    elif intent in ("claim_review", "claim_doc_task", "claim_gate_review"):
+        rejection = _check_claim_rules_narrow(role, task)
+        if rejection is not None:
+            return rejection
+    return Decision.allow()
+
+
+def valid_next_verbs(role: Role, task: Any) -> list[str]:
+    """Return sorted list of verb names `role` can usefully call on `task` now.
+
+    This is the role+state applicability list — caller-supplied
+    preconditions (plan, ownership, commits, etc.) are NOT evaluated
+    here. The agent-facing semantics: "these are the verbs that fit
+    your role and the task's current status; missing preconditions
+    surface as `tracing_gap` when you actually invoke them."
+    """
+    out: list[str] = []
+    for name, iv in _INTENT_VERBS.items():
+        if role not in iv.allowed_roles:
+            continue
+        if iv.composes:
+            first_action = iv.composes[0]
+            d = can_invoke_action(role, first_action, task)
+            # Skip ONLY for state-incompatibility; tracing_gap (missing
+            # action-level preconditions) is also surfaced lazily.
+            if not d.allowed and d.rejection_kind in (
+                "not_authorized",
+                "invalid_state",
+            ):
+                continue
+        elif name in ("claim_review", "claim_doc_task", "claim_gate_review"):
+            # Empty-compose claim verbs still gate on CLAIM_RULES (a status
+            # gate, not a Precondition). Mirroring can_invoke_intent, skip the
+            # verb when the role cannot claim from the task's current status —
+            # otherwise a QA reviewer on a non-awaiting_qa task is told
+            # claim_review is callable and wastes a turn on the rejection.
+            rejection = _check_claim_rules_narrow(role, task)
+            if rejection is not None and rejection.rejection_kind in (
+                "not_authorized",
+                "invalid_state",
+            ):
+                continue
+        out.append(name)
+    return sorted(out)
+
+
+def composed_actions_for(intent: str) -> tuple[str, ...]:
+    spec_intent = _INTENT_VERBS.get(intent)
+    if spec_intent is None:
+        raise KeyError(f"unknown intent verb '{intent}'")
+    return spec_intent.composes
+
+
+def intents_for_role(role: Role) -> tuple[str, ...]:
+    """Sorted tuple of intent verbs declared for `role` (regardless of state).
+
+    Used by role_config.py to build per-role MCP manifests.
+    """
+    return tuple(
+        sorted(name for name, iv in _INTENT_VERBS.items() if role in iv.allowed_roles)
+    )
+
+
+def status_after(action: str, current: Status) -> Status | None:
+    """The post-`action` status, or None if `action` doesn't transition."""
+    spec_action = _ATOMIC_ACTIONS.get(action)
+    if spec_action is None:
+        return None
+    if current not in spec_action.source_statuses:
+        return None
+    return spec_action.target_status
+
+
+# ---------------------------------------------------------------------------
+# Known-debt tracking — Phase 3 invariant
+# ---------------------------------------------------------------------------
+
+UNMIGRATED: frozenset[str] = frozenset(
+    {
+        "enforcement.task_lifecycle._LEGACY_OPERATIONAL_EDGES",
+        "enforcement.task_lifecycle._LEGACY_ROLE_GATES",
+    }
+)
+"""Names of consumers / data still NOT migrated to the spec.
+
+Each entry represents a real production path the spec doesn't yet cover.
+Validator (`_check_unmigrated_is_subset`) asserts UNMIGRATED is a subset
+of _KNOWN_UNMIGRATED_CONSUMERS — adding an entry not in the known set
+fails import. Phase 3's terminal invariant is `UNMIGRATED == frozenset()`,
+locked in as a permanent test once the last entry moves to the spec.
+"""
+
+_KNOWN_UNMIGRATED_CONSUMERS: frozenset[str] = frozenset(
+    {
+        "enforcement.task_lifecycle._LEGACY_OPERATIONAL_EDGES",
+        "enforcement.task_lifecycle._LEGACY_ROLE_GATES",
+    }
+)
+
+
+# ---------------------------------------------------------------------------
+# Import-time self-consistency checks
+# ---------------------------------------------------------------------------
+#
+# Validating the spec at module-load time means a misconfigured spec
+# prevents the orchestrator container from starting — by design. The
+# validators themselves live in ``roboco.foundation._validate_lifecycle``
+# (a sibling of ``foundation/_validate.py`` for identity); placing them
+# alongside the identity validators would create an import cycle because
+# ``roboco.foundation.__init__`` eagerly imports ``foundation/_validate``.
+from roboco.foundation._validate_lifecycle import (  # noqa: E402
+    run_all_lifecycle_validators as _run_all_lifecycle_validators,
+)
+
+_run_all_lifecycle_validators()

@@ -1,0 +1,192 @@
+# Task Management Tools
+
+There is **no** `roboco_task_*` tool surface. Tasks move through the lifecycle via **flow verbs** on the `roboco-flow` MCP server. Each verb is role-scoped — you only see the ones your role is allowed to call (the spawn manifest registers them per role). Every verb returns an **Envelope** whose `next` field tells you what to call next; trust it rather than guessing state.
+
+The verbs below are grouped by who calls them.
+
+## Developer flow
+
+```python
+give_me_work()  # returns your most-actionable pending task
+i_will_work_on(task_id, plan="...")
+# claims + sets plan + starts; auto-creates and
+# checks out feature/{team}/{task-hierarchy}
+commit(message, files=None)  # content tool — repeat per change (auto-pushed)
+open_pr(task_id)  # pushes branch + opens the PR
+i_am_done(task_id, notes="", resolved_findings=None)
+# verifying -> awaiting_qa (PR must already be open);
+# on a bounced task, name every open ledger finding
+# via resolved_findings=[{finding_id, commit?, note?}]
+i_am_blocked(task_id, reason)  # external dependency; cell PM unblocks
+unclaim(task_id)  # release a claimed task back to the queue
+resume(task_id)  # recover a paused task after compact/restart
+i_am_idle()  # no work in your queue right now
+```
+
+There is no separate claim / start / pause verb — `i_will_work_on` composes claim + set-plan + start atomically, and `i_am_done` composes verify + submit-qa. Branches are auto-created on `i_will_work_on`; do not checkout by hand — every root task branches from the project's env-ladder **head rung**, not a hardcoded `default_branch`/`master` string (see `CLAUDE.md` "Env-branches ladder"; a project with no declared ladder resolves this identically to its `default_branch`, so nothing changes unless the project opted in).
+
+Call `i_am_done` exactly the same way whether or not the **possibilities matrix** fast path (`ROBOCO_POSSIBILITIES_MATRIX_ENABLED`) is armed — when your task already has commits, an open PR, every AC addressed, and no open findings, `i_am_done` silently takes a fast path straight to QA instead of the standard verify→plan→journal turn. You never call anything different; there's nothing to opt into.
+
+## QA flow
+
+```python
+give_me_work()                  # returns an awaiting_qa task
+claim_review(task_id)           # claim for review (auto-checks-out dev branch)
+pass(task_id, notes, criteria_verified=[{criterion, evidence}, ...])
+                                # awaiting_qa -> awaiting_documentation; one
+                                # criteria_verified entry per task AC, required
+fail(task_id, findings=[{file?, line?, severity, criterion?, expected, actual, fix?, evidence?}])
+                                # awaiting_qa -> needs_revision (dev gets it back);
+                                # the deprecated issues=[str] shim still works this release
+unclaim(task_id) / resume(task_id) / i_am_idle()
+```
+
+The callable MCP tool names are `pass` / `fail` (`pass`/`fail` are reserved words internally, so the IntentSpec/lifecycle layer calls them `pass_review`/`fail_review` — you call the short names).
+
+`notes` (on `pass`) and each `findings` entry (on `fail`) must be substantive — the enforcement layer rejects empty or near-empty content. `criteria_verified` is required whenever the task has acceptance criteria: name every one with concrete `evidence` (matched by AC id or exact text, capped 500 chars) or `pass` is rejected naming which criteria are still unverified; each entry renders into `qa_notes` as `[AC] <criterion> — verified: <evidence>`. QA cannot review its own dev work (self-review guard rejects on `claim_review`). Every `fail` finding is persisted to the append-only revision-findings ledger and rendered into `qa_notes`; a soft nudge fires above 5 findings, a hard reject above 10. On a round ≥2 review, `claim_review` also returns `prior_findings` (the full ledger) and `collision_context` (same-parent siblings that collide with this task's declared file globs or migrations, when any exist) so you check what was filed before and whether a sibling's work overlaps. See `docs/rag/architecture/review-findings.md`.
+
+## Documenter flow
+
+```python
+give_me_work()  # returns an awaiting_documentation task
+claim_doc_task(task_id)  # claim the doc phase
+commit(message, files)  # commit the doc files you write
+i_documented(task_id, notes, files)
+# awaiting_documentation -> awaiting_pm_review
+```
+
+Documentation tasks are **not** delegated — the lifecycle auto-creates the doc phase after a code task passes QA.
+
+## Cell PM flow
+
+```python
+triage()  # list actionable tasks in your cell
+i_will_plan(task_id, plan, approach)
+# claim + plan + start a parent task
+delegate(
+    parent_task_id,
+    title,
+    description,
+    assigned_to,
+    team,
+    task_type,
+    nature,
+    estimated_complexity,
+    acceptance_criteria,
+    covers_parent_criteria=[...],
+)
+# create a subtask; covers_parent_criteria maps
+# it to the parent ACs it is responsible for —
+# REQUIRED whenever the parent has any acceptance
+# criteria (a ref that matches neither an AC id
+# nor exact text is rejected, naming the valid
+# criteria); omit only when the parent has none
+reassign(task_id, assigned_to)  # move a subtask to a different agent
+unblock(task_id, reason)  # blocked -> in_progress (PM only); reason is
+# recorded as your journal:decision (no separate
+# note needed)
+submit_up(task_id, notes, resolved_findings=None)
+# open cell->root PR; -> awaiting_pr_review
+# (the cell PR reviewer gates it; after pr_pass
+#  the same Cell PM completes + merges); a re-submit
+# after pr_fail must resolve every open finding first
+complete(task_id, notes)  # awaiting_pm_review -> completed (merges leaf PR)
+request_changes(task_id, findings=[...])
+# reject a subtask's merge review -> needs_revision,
+# routed to whoever owns the revision; structured
+# findings persist to the ledger + render into pm_notes
+escalate_up(task_id, reason)  # escalate to your escalation target
+```
+
+After `i_will_plan` and each `delegate`, the envelope includes a coverage view of the parent — `parent_ac_coverage` (per-criterion `id` / `text` / `claimed` / `verified`) and `unclaimed_parent_acs` (criteria no subtask covers yet). A parent cannot idle with unclaimed criteria, nor `complete` / `submit_up` / `escalate_to_ceo` until every criterion traces to a child that passed QA. `delegate` refusing a child with no `covers_parent_criteria` (above) is what puts every parent with acceptance criteria under this coverage discipline from its first subtask on — a decomposition can no longer opt out by never declaring. A rejection now includes a copy-pasteable corrected `delegate(...)` skeleton with the parent's real criteria inlined (an id when the parent has one, its exact quoted text otherwise) — retry with that shape verbatim rather than re-deriving the field's syntax. `i_will_plan`'s planning briefing also carries `collision_context` (in `context_briefing`, not `evidence`) surfacing any same-parent siblings that already collide on file globs or migrations, so you can sequence your delegation before you commit to it. See `docs/rag/workflows/task-planning.md`.
+
+**Delegation rules** (enforced): `main_pm -> cell_pm`; `cell_pm -> its team's devs`. Cell PMs receive planning-typed parent tasks; devs get code/research (UX devs also design). Always create subtasks via `delegate` with `parent_task_id` set — there is no standalone task-create verb for agents.
+
+## Main PM flow
+
+The Main PM shares most Cell PM verbs (`i_will_plan`, `delegate`, `complete`, `request_changes`, `unblock`, `triage`, `escalate_up`), **adds** the verbs below, and — unlike a Cell PM — has **no** `submit_up` or `reassign`. Its bubble-up verb is `submit_root` (the root analogue of the Cell PM's `submit_up`):
+
+```python
+triage_all()  # list actionable tasks across all teams
+submit_root(task_id, notes, resolved_findings=None)
+# open root->master PR; -> awaiting_pr_review
+# (the main PR reviewer gates it; after pr_pass,
+#  complete escalates to the CEO); a re-submit
+# after pr_fail must resolve every open finding first
+escalate_to_ceo(task_id, reason)
+# awaiting_pm_review -> awaiting_ceo_approval
+give_me_work()  # Main PM may also pull work directly
+```
+
+For a code root the Main PM **must** `submit_root` first — that opens the root→master PR and enters the in-path gate (`awaiting_pr_review`); only after the main reviewer `pr_pass`es it does `complete` escalate to the CEO. A branchless coordination root (product fan-out, no repo) skips the gate and is completed/escalated directly. The Main PM never merges to `master` — `complete` escalates and only the CEO merges the root→master PR.
+
+## Board flow (Product Owner / Head of Marketing)
+
+```python
+triage()  # list actionable tasks in scope
+escalate_to_ceo(task_id, reason)
+i_am_idle()
+```
+
+The Board **cannot** claim, create, complete, or cancel tasks. Strategic decisions are escalated to the CEO.
+
+The Product Owner additionally has `propose_roadmap(cycle_goal, items)` — a **content tool** on `roboco-do`, not a flow verb, so it doesn't appear above. It authors the weekly board-roadmap-engine exploration cycle (a themed goal + 3-7 item drafts); the CEO approves or rejects each item individually into BACKLOG. See `docs/rag/roles/product-owner.md`.
+
+## Auditor flow
+
+```python
+triage()  # read-only list of actionable tasks
+i_am_idle()
+```
+
+The Auditor is a silent observer: read-only `triage`, no `notify`, no claim/complete/cancel. It carries `dm`/`read_a2a` but only to reply in-thread when the CEO opens a DM with it — it never initiates `dm` to a peer.
+
+## PR Reviewer flow
+
+```python
+give_me_work()  # returns an inbound-PR review task
+claim_pr_review(task_id)  # claim it (planless, branchless — read-only)
+post_pr_review(task_id, ...)  # posts one change-request on the PR; task -> completed
+unclaim(task_id)  # release a claimed inbound or gate review back to the pool
+i_am_idle()
+```
+
+The PR Reviewer reviews inbound external/fork (and, behind a flag, internal) PRs the org did not open. It is read-only: no `commit`/`open_pr`/`merge` — the change-request is posted server-side on the PR itself, and the CEO decides Supersede/Dismiss from the PR Review Queue. It carries `dm`/`read_a2a`, but only to its owning cell_pm/main_pm (the in-path gate verdict) or in reply to a CEO-opened DM — never broader agent chatter.
+
+The same role also runs the **in-path PR-review gate** on the org's own assembled delivery PRs — the merge-level review before the PM merges:
+
+```python
+claim_gate_review(task_id)  # claim an awaiting_pr_review task; returns the assembled
+# diff + collision_context (colliding siblings, if any) +
+# (on round >=2) prior_findings, the full ledger
+pr_pass(task_id, notes)  # assembled PR is correct -> awaiting_pm_review (the PM merges)
+pr_fail(task_id, findings=[...])
+# send it back -> needs_revision, like a QA fail;
+# the deprecated issues=[str] shim still works this release
+```
+
+Both verdicts are also posted on the assembled PR itself as a review (server-side, bot account) so the decision is visible on the PR the PM merges: `pr_pass` → APPROVE, `pr_fail` → REQUEST_CHANGES — except the root→master PR, which only ever gets a plain COMMENT (only the CEO acts on `master`). On a GitLab-backed project `pr_fail` posts as a plain MR note instead (GitLab has no request-changes review primitive) — the task still goes to `needs_revision` normally regardless of forge.
+
+A cell reviewer (be/fe/ux-pr-reviewer) reviews its cell's assembled cell→root PR; `pr-reviewer-1` reviews the root→master PR for the cross-cell integration seam, before the CEO sees it.
+
+## Cancel
+
+Cancelling a task (any non-terminal status -> `cancelled`) is restricted to **PM roles and the CEO** — except `awaiting_ceo_approval -> cancelled`, which is **CEO-only** (a PM cancelling a task already in the CEO's queue would bypass the human approval gate). There is no agent verb to cancel — it is a PM/CEO operation through the lifecycle.
+
+## Progress
+
+Record progress against your plan with the `progress` content tool (on `roboco-do`), not a task verb:
+
+```python
+progress(task_id, message="API skeleton landed", plan_step="2")
+```
+
+Your plan's steps are the progress checklist; the percentage is derived from completed steps — you do not set it.
+
+## Sandbox DB/Redis/Mongo (Developer + QA)
+
+`request_sandbox(services=None, extensions=None)` — a **content tool** on `roboco-do`, not a flow verb — provisions a throwaway sandbox Postgres/Redis/Mongo on demand, for a project that opted in (`projects.sandbox_services`). Only `developer` and `qa` carry it. Omit `services` for the project's whole opted-in set; requesting one outside it is rejected naming the allowed set. `extensions` is an optional per-service map of extensions/modules to activate (e.g. `{"postgres": ["vector"]}`), unioned with the project's standing `sandbox_extensions` set and bounded by a fixed allowlist (pg: vector/postgis/pg_trgm/citext/uuid-ossp; redis: search/json/bloom — no `plpython3u`); an unallowed feature or a feature for a non-opted service is rejected naming the allowed set. Creds come back in the envelope's `evidence`, one entry per service, including ready-to-`export` `ROBOCO_TEST_*` values for gate tooling and an `available_extensions` list of what was activated. Calling it again is a cheap no-op (same creds) as long as the requested features are a subset of the cached set. See `docs/rag/architecture/sandbox-db.md`.
+
+## Video render preview (Developer + QA, video-authoring tasks)
+
+`request_render(composition_id=None, orientation="vertical", frame_count=8, input_props=None)` — a **content tool** on `roboco-do` — renders your ACTUAL HyperFrames composition through the video-renderer sidecar and returns evenly spaced keyframe PNGs. Only valid on a `source=video` authoring task. Omit `composition_id` to use the one you already proposed via `propose_video`. The envelope's `evidence.frames` lists absolute paths (readable from your container): **Read every frame** and verify each scene/feature from the brief appears fully and legibly — the composition source looking right is NOT evidence the rendered clip is right. A developer renders their own working tree; QA renders a read-only export of the assembled branch. A successful render stamps the task's `render_preview` marker — `i_am_done` on a video task refuses without it. If a scene is missing, clipped, or rushed, fix the composition and call it again. See `docs/rag/architecture/video-engine.md`.

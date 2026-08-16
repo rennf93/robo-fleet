@@ -1,0 +1,237 @@
+// video-renderer — HTTP sidecar for the RoboCo video engine.
+//
+// POST /render accepts a gzipped tar of a motion/ composition source (arcname
+// "motion") plus {composition_id, orientation, input_props} form fields, and
+// responds with the rendered MP4 as the raw response body. GET /health is a
+// plain liveness probe. Credential-free and git-free: this process never
+// holds a git token, never shells out to git, and only ever reads what the
+// orchestrator POSTs to it.
+import express from "express";
+import multer from "multer";
+import rateLimit from "express-rate-limit";
+import { createReadStream } from "node:fs";
+import { fileURLToPath } from "node:url";
+import {
+  renderComposition,
+  renderFrames,
+  ExtractedSizeExceededError,
+  MAX_PREVIEW_FRAMES,
+  RenderTimeoutError,
+  UnknownCompositionError,
+} from "./render.js";
+
+const PORT = Number(process.env.PORT ?? 3001);
+
+// composition_id flows into a path.join inside render.js
+// (extractDir/motion/compositions/<composition_id>); restrict it to a single
+// safe path segment so a ".." / "/" / absolute-path value can't escape the
+// composition dir (path traversal). The orchestrator only ever sends a real
+// composition id, but this is the trust boundary — validate here.
+// Letters/digits/_/- plus interior single dots (e.g. release-0.25.0).
+// No leading dot and no adjacent dots, so '.'/'..' path segments and
+// hidden-file names remain unrepresentable — this stays the trust boundary.
+const COMPOSITION_ID_RE = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/;
+
+// motion/ source (no node_modules, no build output) is a few hundred KB in
+// practice; this cap is generous headroom, not a tuned budget.
+const MAX_UPLOAD_BYTES = 256 * 1024 * 1024;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_UPLOAD_BYTES },
+});
+
+const app = express();
+
+// This sidecar is container-network-only (no published ports) with a single
+// trusted caller (the orchestrator), which already renders cuts serially.
+// The limiter is not the primary control — it's a cheap ceiling against a
+// runaway retry storm or a misbehaving caller tying up Chrome headless +
+// the render temp dir. 30/min is well above any legitimate render rate
+// (each render takes seconds, ~a few calls/min) so it never blocks real use.
+const renderLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "rate limit: too many render requests" },
+});
+
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+/**
+ * Validate the optional 'frames' form field. Absent/empty keeps the
+ * existing MP4 behavior (`count: null`); present must be an integer in
+ * 1..MAX_PREVIEW_FRAMES or `error` names the bound for the 400 response.
+ * Pure + exported so the branch is unit-testable without a live server.
+ */
+export function parseFramesField(raw) {
+  if (raw === undefined || raw === null || raw === "") return { count: null };
+  const count = Number(raw);
+  if (!Number.isInteger(count) || count < 1 || count > MAX_PREVIEW_FRAMES) {
+    return {
+      error: `'frames' must be an integer between 1 and ${MAX_PREVIEW_FRAMES}`,
+    };
+  }
+  return { count };
+}
+
+/**
+ * Stream `filePath` as the response body and run `cleanup` once the
+ * response is done — shared by both the MP4 and the frames-tar branches of
+ * /render. See the inline comment below on why cleanup fires from both the
+ * source stream's own "close" and the response's "close" (client abort).
+ */
+function streamFileWithCleanup(res, filePath, { contentType, headers, cleanup }) {
+  res.status(200);
+  res.setHeader("Content-Type", contentType);
+  for (const [name, value] of Object.entries(headers ?? {})) {
+    res.setHeader(name, value);
+  }
+  const stream = createReadStream(filePath);
+  stream.on("error", (err) => {
+    console.error("video-renderer: stream error", err);
+    if (!res.headersSent) {
+      res.status(500);
+    }
+    res.end();
+    cleanup();
+  });
+  stream.on("close", () => {
+    cleanup();
+  });
+  // stream.pipe() never propagates a DESTINATION close back to the
+  // source: if the client aborts, or the orchestrator's retry-on-timeout
+  // hangs up mid-download, `res` closes but the source stream's own
+  // "close" above never fires — leaking this request's render-output
+  // temp dir on every such disconnect. Destroying the still-open source
+  // releases its fd immediately; cleanup() is idempotent (rm force:true)
+  // so also landing here on a normal end-of-stream close is harmless.
+  res.on("close", () => {
+    stream.destroy();
+    cleanup();
+  });
+  stream.pipe(res);
+}
+
+app.post("/render", renderLimiter, upload.single("source"), async (req, res) => {
+  const body = req.body ?? {};
+  const compositionId = body.composition_id;
+  const orientation = body.orientation;
+  const inputPropsRaw = body.input_props;
+
+  if (!req.file) {
+    res
+      .status(400)
+      .json({ error: "missing 'source' file field (gzipped tar of motion/)" });
+    return;
+  }
+  if (
+    typeof compositionId !== "string" ||
+    !compositionId.trim() ||
+    !COMPOSITION_ID_RE.test(compositionId)
+  ) {
+    res.status(400).json({
+      error:
+        "'composition_id' must be letters, digits, '_' or '-', with optional interior dots",
+    });
+    return;
+  }
+  if (orientation !== "vertical" && orientation !== "square") {
+    res
+      .status(400)
+      .json({ error: "'orientation' must be 'vertical' or 'square'" });
+    return;
+  }
+
+  let inputProps;
+  try {
+    inputProps = inputPropsRaw ? JSON.parse(inputPropsRaw) : {};
+  } catch {
+    res.status(400).json({ error: "'input_props' is not valid JSON" });
+    return;
+  }
+
+  const framesField = parseFramesField(body.frames);
+  if (framesField.error) {
+    res.status(400).json({ error: framesField.error });
+    return;
+  }
+
+  try {
+    if (framesField.count !== null) {
+      const { tarPath, duration, cleanup } = await renderFrames({
+        tarBuffer: req.file.buffer,
+        compositionId,
+        inputProps,
+        orientation,
+        frameCount: framesField.count,
+      });
+      streamFileWithCleanup(res, tarPath, {
+        contentType: "application/gzip",
+        headers: { "X-Video-Duration": String(duration) },
+        cleanup,
+      });
+      return;
+    }
+
+    const { outputLocation, cleanup } = await renderComposition({
+      tarBuffer: req.file.buffer,
+      compositionId,
+      inputProps,
+      orientation,
+    });
+    streamFileWithCleanup(res, outputLocation, {
+      contentType: "video/mp4",
+      cleanup,
+    });
+  } catch (err) {
+    if (
+      err instanceof UnknownCompositionError ||
+      err instanceof ExtractedSizeExceededError
+    ) {
+      res.status(err.statusCode).json({ error: err.message });
+      return;
+    }
+    if (err instanceof RenderTimeoutError) {
+      console.error("video-renderer: render timed out", err.message);
+      res.status(500).json({ error: err.message });
+      // ponytail: Promise.race in render.js abandons the wait but can't
+      // cancel a wedged headless-Chrome render tree — hard-exiting this
+      // process is the only reliable kill. Docker's restart policy brings
+      // up a clean container; wait for the response to flush first so the
+      // caller still gets the 500 instead of a dropped connection.
+      res.on("finish", () => process.exit(1));
+      return;
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("video-renderer: render failed", message);
+    res.status(500).json({ error: `render failed: ${message}` });
+  }
+});
+
+// 4-arg signature required for Express to treat this as error-handling
+// middleware. Catches errors `next()`-ed from earlier middleware — in
+// practice, today, that's multer rejecting an oversized/malformed upload
+// before our route body ever runs (otherwise Express's default handler
+// returns a generic 500 HTML page instead of a clear JSON 4xx).
+app.use((err, req, res, _next) => {
+  if (err instanceof multer.MulterError) {
+    const status = err.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+    res.status(status).json({ error: `upload rejected: ${err.message}` });
+    return;
+  }
+  const message = err instanceof Error ? err.message : String(err);
+  console.error("video-renderer: unhandled error", message);
+  res.status(500).json({ error: "internal error" });
+});
+
+// Guarded so a test can `import` this module (for parseFramesField) without
+// also binding the real port — only `node server.js` triggers the listen.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  app.listen(PORT, () => {
+    console.log(`video-renderer listening on :${PORT}`);
+  });
+}

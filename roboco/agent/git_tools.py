@@ -17,7 +17,12 @@ from google.adk.tools import FunctionTool
 
 
 def _worktree() -> Path:
-    return Path(os.environ["ROBOCO_WORKSPACE_DIR"]).resolve()
+    # ROBOCO_WORKSPACE_DIR is the explicit form (set by the Cloud Run provider
+    # and the docker -w path). When unset, fall back to the process cwd: both
+    # deploy targets arrange cwd == workspace (-w / working_dir), so the tools
+    # resolve correctly without a hard KeyError on every git/file call.
+    env_dir = os.environ.get("ROBOCO_WORKSPACE_DIR")
+    return (Path(env_dir) if env_dir else Path.cwd()).resolve()
 
 
 def _resolve(rel: str) -> Path:

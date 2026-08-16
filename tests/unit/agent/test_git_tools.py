@@ -112,3 +112,47 @@ async def test_git_push_missing_token_errors_clean(
 
     res = await git_push(remote="origin", branch="HEAD")
     assert res["status"] == "error"
+
+
+def test_worktree_falls_back_to_cwd_when_env_unset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """_worktree() falls back to the process cwd when ROBOCO_WORKSPACE_DIR is
+    unset. This is the root-cause fix for the latent 3.2 bug: every ADK git/file
+    tool KeyErrored before this fallback because no production path sets the
+    env var (docker only sets cwd via -w, Cloud Run sets working_dir)."""
+    monkeypatch.delenv("ROBOCO_WORKSPACE_DIR", raising=False)
+    monkeypatch.chdir(tmp_path)
+    from roboco.agent.git_tools import _worktree
+
+    assert _worktree() == tmp_path.resolve()
+
+
+@pytest.mark.asyncio
+async def test_read_file_works_via_cwd_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """read_file resolves against the cwd fallback when the env var is unset,
+    proving the fallback makes the file tools functional without the env var."""
+    monkeypatch.delenv("ROBOCO_WORKSPACE_DIR", raising=False)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "notes.txt").write_text("hello via cwd")
+    from roboco.agent.git_tools import read_file
+
+    res = await read_file("notes.txt")
+    assert res["status"] == "ok"
+    assert res["content"] == "hello via cwd"
+
+
+def test_worktree_env_var_wins_over_cwd_when_set(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When ROBOCO_WORKSPACE_DIR IS set, it takes precedence over cwd (the
+    existing setenv path stays unchanged)."""
+    explicit = tmp_path / "explicit"
+    explicit.mkdir()
+    monkeypatch.setenv("ROBOCO_WORKSPACE_DIR", str(explicit))
+    monkeypatch.chdir(tmp_path)
+    from roboco.agent.git_tools import _worktree
+
+    assert _worktree() == explicit.resolve()

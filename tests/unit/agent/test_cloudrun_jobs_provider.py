@@ -283,3 +283,71 @@ async def test_spawn_no_git_token_when_project_has_no_pat(
     assert fake.captured is not None
     env = _env_map(fake.captured.job)
     assert "ROBOCO_GIT_TOKEN" not in env
+
+
+@pytest.mark.asyncio
+async def test_spawn_sets_working_dir_and_workspace_env_for_developer(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Developer role: container working_dir + ROBOCO_WORKSPACE_DIR env set to
+    _resolve_workspace_cwd's path (clone root when no task branch). The ADK
+    git/file tools read ROBOCO_WORKSPACE_DIR; setting both working_dir (process
+    cwd IS the workspace) and the env var keeps them in lockstep."""
+    monkeypatch.setattr("roboco.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("roboco.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("roboco.config.settings.gcp_region", "us-central1")
+    _patch_identity(monkeypatch)
+    # _resolve_workspace_cwd reads the orchestrator module's module-level
+    # get_agent_role / get_agent_team (imported at top of orchestrator.py),
+    # not the lazy in-function import the provider's spawn uses.
+    monkeypatch.setattr("roboco.runtime.orchestrator.get_agent_role", lambda _s: _ROLE)
+    monkeypatch.setattr("roboco.runtime.orchestrator.get_agent_team", lambda _s: _TEAM)
+    fake = _patch_client(monkeypatch)
+
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/roboco/agent")
+    await provider.spawn(
+        _config(git_context=SpawnGitContext(project_slug="roboco")),
+        initial_prompt="do the work",
+    )
+
+    assert fake.captured is not None
+    container = fake.captured.job.template.template.containers[0]
+    expected = "/data/workspaces/roboco/backend/be-dev-1"
+    assert container.working_dir == expected
+    env = _env_map(fake.captured.job)
+    assert env["ROBOCO_WORKSPACE_DIR"] == expected
+
+
+@pytest.mark.asyncio
+async def test_spawn_omits_working_dir_and_workspace_env_for_qa(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """QA role (no workspace): neither working_dir nor ROBOCO_WORKSPACE_DIR is
+    set. git_tools._worktree falls back to the process cwd (Part 1), so a
+    no-workspace role never needs the env var."""
+    monkeypatch.setattr("roboco.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("roboco.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("roboco.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("roboco.agents_config.get_agent_role", lambda _s: "qa")
+    monkeypatch.setattr("roboco.agents_config.get_agent_team", lambda _s: _TEAM)
+    monkeypatch.setattr("roboco.runtime.orchestrator.get_agent_role", lambda _s: "qa")
+    monkeypatch.setattr("roboco.runtime.orchestrator.get_agent_team", lambda _s: _TEAM)
+    monkeypatch.setattr("roboco.seeds.initial_data.AGENT_UUIDS", {_SLUG: _UUID})
+
+    def _qa_token(_uuid: str, _role: str, _team: str, *, ttl_seconds: int) -> str:
+        return _TOKEN
+
+    monkeypatch.setattr("roboco.agents_config.issue_agent_token", _qa_token)
+    fake = _patch_client(monkeypatch)
+
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/roboco/agent")
+    await provider.spawn(
+        _config(git_context=SpawnGitContext(project_slug="roboco")),
+        initial_prompt="do the work",
+    )
+
+    assert fake.captured is not None
+    container = fake.captured.job.template.template.containers[0]
+    assert not container.working_dir
+    env = _env_map(fake.captured.job)
+    assert "ROBOCO_WORKSPACE_DIR" not in env

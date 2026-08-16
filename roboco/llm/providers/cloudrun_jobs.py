@@ -199,7 +199,25 @@ class CloudRunJobsProvider(AgentProvider):
         # "ROBOCO_GIT_TOKEN not set" on push, never a crash).
         await _append_git_token_env(env_vars, config)
 
+        # Workspace cwd + ROBOCO_WORKSPACE_DIR env (developer / product_owner /
+        # head_marketing / documenter). The git/file FunctionTools in
+        # git_tools._worktree() read ROBOCO_WORKSPACE_DIR to resolve every
+        # read_file / write_file / git op; setting both working_dir (so the
+        # process cwd IS the workspace) and the env var (so the tools resolve
+        # even if cwd drifts) keeps the two in lockstep. Roles without a
+        # workspace (qa / cell_pm / main_pm / auditor / pr_reviewer) omit both:
+        # git_tools falls back to cwd gracefully (Part 1). _resolve_workspace_cwd
+        # is a staticmethod on AgentOrchestrator; lazy import avoids the
+        # cloudrun_jobs -> orchestrator -> cloudrun_jobs circular import.
+        from roboco.runtime.orchestrator import AgentOrchestrator
+
+        workspace_cwd = AgentOrchestrator._resolve_workspace_cwd(config)
         container_kwargs: dict[str, Any] = {"image": self._image, "env": env_vars}
+        if workspace_cwd is not None:
+            container_kwargs["working_dir"] = workspace_cwd
+            env_vars.append(
+                run_v2.EnvVar(name="ROBOCO_WORKSPACE_DIR", value=workspace_cwd)
+            )
         volumes: list[run_v2.Volume] = []
         # Filestore NFS workspace volume (GCP only). Mounted at the workspaces
         # root so the agent's per-agent clone resolves to the shared Filestore.

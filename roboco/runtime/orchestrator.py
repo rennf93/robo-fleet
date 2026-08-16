@@ -4123,6 +4123,29 @@ class AgentOrchestrator:
         # instruction. Early-return keeps the docker/ANTHROPIC mcpServers path
         # below byte-for-byte unchanged.
         if provider_type == ModelProvider.ADK_CLOUD_RUN.value:
+            # Provision the per-agent clone onto the Filestore NFS share BEFORE
+            # the Cloud Run Job starts. The docker path does this via
+            # _ensure_worktree_before_spawn (called from _prepare_agent_spawn);
+            # the ADK branch early-returns above that call, so mirror the clone
+            # provisioning here for roles that carry a workspace. Skipped for
+            # no-workspace roles (qa / cell_pm / main_pm / auditor /
+            # pr_reviewer) and for spawns without a real project_slug.
+            adk_role = get_agent_role(agent_id) or ""
+            adk_project = (
+                git_context.project_slug
+                if git_context and git_context.project_slug
+                else None
+            )
+            if adk_project and (
+                adk_role in AgentOrchestrator._ROLES_WITH_AGENT_WORKSPACE
+                or adk_role in AgentOrchestrator._ROLES_WITH_CELL_WORKSPACE
+            ):
+                from roboco.db.base import get_db_context
+                from roboco.services.workspace import WorkspaceService
+
+                async with get_db_context() as db:
+                    ws = WorkspaceService(db)
+                    await ws.ensure_workspace(adk_project, agent_id)
             return await self._generate_adk_manifest(agent_id, git_context, task_id)
 
         # MCP servers run inside agent containers, need to connect to the

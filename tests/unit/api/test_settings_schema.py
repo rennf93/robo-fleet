@@ -8,7 +8,7 @@ the wire shape the route actually receives.
 
 from __future__ import annotations
 
-from roboco.api.schemas.settings import SettingUpdate
+from robofleet.api.schemas.settings import SettingUpdate
 
 
 def test_bool_true_coerces_to_stored_form() -> None:

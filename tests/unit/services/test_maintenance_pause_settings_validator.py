@@ -8,8 +8,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from roboco.foundation.policy.maintenance_pause import MAX_PAUSE_HOURS
-from roboco.services.settings import (
+from robofleet.foundation.policy.maintenance_pause import MAX_PAUSE_HOURS
+from robofleet.services.settings import (
     SettingValidationError,
     get_settings_service,
     validate_setting,

@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _WS = "/data/workspaces/roboco-api/backend/be-dev-1"
 _CELL = "/data/workspaces/roboco-api/backend"
@@ -28,7 +28,7 @@ def _orch() -> AgentOrchestrator:
 
 
 def test_flag_on_ships_doctrine_and_hooks_together() -> None:
-    with patch("roboco.config.settings.fable_mode_enabled", True):
+    with patch("robofleet.config.settings.fable_mode_enabled", True):
         orch = _orch()
         prompt_path = orch._generate_composed_prompt("be-dev-1")
         settings_path = orch._generate_agent_settings(
@@ -45,7 +45,7 @@ def test_flag_on_ships_doctrine_and_hooks_together() -> None:
 
 
 def test_flag_off_ships_neither() -> None:
-    with patch("roboco.config.settings.fable_mode_enabled", False):
+    with patch("robofleet.config.settings.fable_mode_enabled", False):
         orch = _orch()
         prompt_path = orch._generate_composed_prompt("be-dev-1")
         settings_path = orch._generate_agent_settings(

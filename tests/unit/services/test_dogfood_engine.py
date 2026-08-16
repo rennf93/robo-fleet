@@ -4,7 +4,7 @@ authors content itself, and only against an opted-in project.
 Mirrors test_spackle_engine.py — no evidence_context tests (spec §4: walking
 the product live is the PO's own tool work, ordered by the spawn prompt, not
 server-assembled). Also exercises the shared rotation helper
-(``roboco.services.board_programs.pick_rotation_target``) through this
+(``robofleet.services.board_programs.pick_rotation_target``) through this
 engine, proving Dogfood rotates identically to Pest Control/Spackle despite
 its EVENT trigger (rotation logic is trigger-agnostic — see
 ``DogfoodEngine.run_cycle``'s docstring for why it needs no cron-specific
@@ -17,20 +17,20 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, Complexity, Team
-from roboco.models.base import TaskNature as TN
-from roboco.models.base import TaskStatus as TS
-from roboco.models.base import TaskType as TT
-from roboco.services.dogfood_engine import DogfoodEngine
-from roboco.services.task import (
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, Complexity, Team
+from robofleet.models.base import TaskNature as TN
+from robofleet.models.base import TaskStatus as TS
+from robofleet.models.base import TaskType as TT
+from robofleet.services.dogfood_engine import DogfoodEngine
+from robofleet.services.task import (
     DOGFOOD_SOURCE,
     PEST_CONTROL_SOURCE,
     ROADMAP_SOURCE,

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from roboco.foundation import identity as _foundation
+from robofleet.foundation import identity as _foundation
 from tests.e2e_smoke.arcs import Company, seed_company, seed_project
 
 if TYPE_CHECKING:
@@ -31,9 +31,9 @@ def _seed_system_and_po(stack: E2EStack) -> None:
     exact ids must exist as real agent rows for the FK to resolve —
     ``seed_company``'s random ``uuid4()`` agents don't cover this (mirrors
     ``test_feature_spotlight.py``'s ``_seed_system_and_secretary``)."""
-    from roboco.db.tables import AgentTable
-    from roboco.foundation import identity as _foundation
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable
+    from robofleet.foundation import identity as _foundation
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     async def _run(session: AsyncSession) -> None:
         for agent_uuid, slug, role, team in (
@@ -68,13 +68,13 @@ def _seed_system_and_po(stack: E2EStack) -> None:
 
 def _arm_roadmap(stack: E2EStack, project_slug: str) -> None:
     """Arm via the settings-store key ONLY — ``RoadmapEngine.run_cycle`` now
-    routes through ``roboco.services.board_programs.program_armed``, the
+    routes through ``robofleet.services.board_programs.program_armed``, the
     same resolver ``BoardProgramEngine.enabled`` consults, so the legacy
     ``roadmap_engine_enabled`` flag stays False here on purpose: this is the
     end-to-end guard against the double-flag regression where the settings
     store alone used to be silently overridden by a False legacy flag."""
-    from roboco.config import settings as cfg
-    from roboco.db.tables import SystemSettingTable
+    from robofleet.config import settings as cfg
+    from robofleet.db.tables import SystemSettingTable
 
     cfg.self_heal_project_slug = project_slug
 
@@ -87,7 +87,7 @@ def _arm_roadmap(stack: E2EStack, project_slug: str) -> None:
 
 
 def _run_due_programs(stack: E2EStack) -> list[str]:
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> list[str]:
         return await get_board_program_engine(session).run_due_programs()
@@ -97,8 +97,8 @@ def _run_due_programs(stack: E2EStack) -> list[str]:
 
 
 def _find_roadmap_task(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
-    from roboco.services.task import ROADMAP_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.services.task import ROADMAP_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -130,7 +130,7 @@ def _find_roadmap_task(stack: E2EStack) -> dict[str, Any]:
 
 
 def _cycle_counters(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import BoardProgramCycleTable
+    from robofleet.db.tables import BoardProgramCycleTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -160,9 +160,9 @@ def _cycle_counters(stack: E2EStack) -> dict[str, Any]:
 def _approve_fake_item(
     stack: E2EStack, task_id: Any, project_slug: str, company: Company
 ) -> str:
-    from roboco.db.tables import TaskTable
-    from roboco.foundation.policy.content import markers
-    from roboco.services.roadmap_service import get_roadmap_service
+    from robofleet.db.tables import TaskTable
+    from robofleet.foundation.policy.content import markers
+    from robofleet.services.roadmap_service import get_roadmap_service
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> str:
@@ -223,7 +223,7 @@ def test_board_program_loop_originates_dedups_and_records(
     # The dispatcher's own dev-work skip recognizes this exact task shape —
     # board_roadmap is board-dispatched (one-shot PO spawn), never handed to
     # the generic dev dispatch loop's give_me_work/claim path.
-    from roboco.runtime.orchestrator import _is_non_dev_dispatch_source
+    from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
 
     assert _is_non_dev_dispatch_source({"source": row["source"]}) is True
 

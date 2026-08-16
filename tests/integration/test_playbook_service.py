@@ -8,13 +8,13 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.db.tables import BoardProgramCycleTable
-from roboco.foundation import identity as _foundation
-from roboco.models.base import PlaybookStatus
-from roboco.models.playbook import PlaybookCreate
-from roboco.services.base import ConflictError, NotFoundError
-from roboco.services.playbook import PlaybookService
+from robofleet.config import settings as cfg
+from robofleet.db.tables import BoardProgramCycleTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import PlaybookStatus
+from robofleet.models.playbook import PlaybookCreate
+from robofleet.services.base import ConflictError, NotFoundError
+from robofleet.services.playbook import PlaybookService
 from sqlalchemy import select
 
 if TYPE_CHECKING:
@@ -110,7 +110,7 @@ async def test_approve_indexes_when_org_memory_on(
     fake_optimal = AsyncMock()
     fake_optimal.index_playbook = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=fake_optimal),
     )
     svc = PlaybookService(db_session)
@@ -129,7 +129,7 @@ async def test_approve_does_not_index_when_off(
 ) -> None:
     monkeypatch.setattr(cfg, "org_memory_enabled", False)
     getter = AsyncMock()
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", getter)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", getter)
     svc = PlaybookService(db_session)
     pb = await svc.draft(_create(title="Do not index"), created_by=uuid4())
     await svc.approve(pb.id, approver_id=uuid4())
@@ -144,7 +144,7 @@ async def test_approve_survives_index_failure(
     fake_optimal = AsyncMock()
     fake_optimal.index_playbook = AsyncMock(side_effect=RuntimeError("ollama down"))
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=fake_optimal),
     )
     svc = PlaybookService(db_session)

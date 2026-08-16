@@ -1,7 +1,7 @@
 """Project.sandbox_services / ProjectUpdate.sandbox_services validation.
 
 Recognized services are whatever the engine registry exposes
-(``VALID_SANDBOX_SERVICES`` in ``roboco.models.sandbox`` — postgres, redis,
+(``VALID_SANDBOX_SERVICES`` in ``robofleet.models.sandbox`` — postgres, redis,
 mongo) — an unknown value must be rejected with a clear message rather than
 silently accepted and later failing at provision time inside a container spawn.
 """
@@ -12,8 +12,8 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
-from roboco.models.base import Team
-from roboco.models.project import Project, ProjectUpdate
+from robofleet.models.base import Team
+from robofleet.models.project import Project, ProjectUpdate
 
 
 def _project(

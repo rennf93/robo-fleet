@@ -5,7 +5,7 @@ verbatim.
 The stranded-agent eviction used to live at this route layer (a
 `_evict_stranded_agent` + `_schedule_stranded_eviction` pair, scheduled only
 when the request carried `force=true`). It has moved to
-`TaskService.admin_set_status` itself (`roboco/services/task.py`), the
+`TaskService.admin_set_status` itself (`robofleet/services/task.py`), the
 chokepoint every caller of a status override routes through, not just this
 route, so it now fires whenever a live claim actually gets cleared,
 independent of `force`. See
@@ -21,8 +21,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.api.utils.tasks import _apply_forced_status_override, _StatusOverride
-from roboco.models.base import TaskStatus
+from robofleet.api.utils.tasks import _apply_forced_status_override, _StatusOverride
+from robofleet.models.base import TaskStatus
 
 
 @pytest.mark.asyncio

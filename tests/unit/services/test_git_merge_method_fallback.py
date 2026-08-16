@@ -13,10 +13,10 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import roboco.services.git as git_module
-from roboco.exceptions import GitError
-from roboco.services.forge import RepoRef
-from roboco.services.git import GitService
+import robofleet.services.git as git_module
+from robofleet.exceptions import GitError
+from robofleet.services.forge import RepoRef
+from robofleet.services.git import GitService
 
 
 def _git_service() -> GitService:

@@ -10,8 +10,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.services.optimal_brain.indexes.standards import StandardsIndexPlugin
-from roboco.services.optimal_brain.text_chunker import Chunk, Document
+from robofleet.services.optimal_brain.indexes.standards import StandardsIndexPlugin
+from robofleet.services.optimal_brain.text_chunker import Chunk, Document
 
 
 def _wire_plugin(

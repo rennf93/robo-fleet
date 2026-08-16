@@ -11,22 +11,22 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.board_programs import router as board_programs_router
-from roboco.config import settings as cfg
-from roboco.db.tables import (
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.board_programs import router as board_programs_router
+from robofleet.config import settings as cfg
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.maintenance_pause import PauseScope
-from roboco.models import AgentRole, AgentStatus, TaskStatus, Team
-from roboco.models.permissions import AgentContext
-from roboco.services.maintenance_pause import get_maintenance_pause_service
-from roboco.services.task import (
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.maintenance_pause import PauseScope
+from robofleet.models import AgentRole, AgentStatus, TaskStatus, Team
+from robofleet.models.permissions import AgentContext
+from robofleet.services.maintenance_pause import get_maintenance_pause_service
+from robofleet.services.task import (
     BARFLY_SOURCE,
     CORONER_SOURCE,
     DOGFOOD_SOURCE,
@@ -42,7 +42,7 @@ from roboco.services.task import (
     WAR_ROOM_SOURCE,
     X_FEATURE_EXPLORATION_SOURCE,
 )
-from roboco.services.x_credentials import get_x_credentials_service
+from robofleet.services.x_credentials import get_x_credentials_service
 from sqlalchemy import delete, update
 
 CEO_UUID = _foundation.AGENTS["ceo"].uuid

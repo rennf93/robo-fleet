@@ -23,13 +23,13 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.services.git import GitService
-from roboco.services.project import ProjectService
-from roboco.utils.crypto import encrypt_token
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.services.git import GitService
+from robofleet.services.project import ProjectService
+from robofleet.utils.crypto import encrypt_token
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 

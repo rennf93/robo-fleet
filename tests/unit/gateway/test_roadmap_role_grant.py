@@ -3,7 +3,7 @@ reviewer via the normal board gate; see the roadmap spec's non-goals)."""
 
 from __future__ import annotations
 
-from roboco.services.gateway.role_config import get_role_config
+from robofleet.services.gateway.role_config import get_role_config
 
 
 def test_product_owner_gets_propose_roadmap() -> None:

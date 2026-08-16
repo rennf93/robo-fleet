@@ -14,15 +14,15 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.git import router as git_router
-from roboco.api.utils.git import _translate_error
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.exceptions import GitCommandError, GitTimeoutError
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.permissions import AgentContext
-from roboco.services.base import (
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.git import router as git_router
+from robofleet.api.utils.git import _translate_error
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.exceptions import GitCommandError, GitTimeoutError
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.permissions import AgentContext
+from robofleet.services.base import (
     NotFoundError,
     ServiceError,
     UnauthorizedError,
@@ -164,7 +164,7 @@ async def test_status_project_not_found(git_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_status_success(git_client: dict) -> None:
     workspace = "/tmp/ws"
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value=workspace)
         svc.get_status = AsyncMock(return_value=("main", False, [], [], [], 0, 0))
@@ -178,7 +178,7 @@ async def test_status_success(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_status_validation_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(side_effect=ValidationError("bad"))
         mock_get.return_value = svc
@@ -191,7 +191,7 @@ async def test_status_validation_error(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_status_unauthorized(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(side_effect=UnauthorizedError("nope"))
         mock_get.return_value = svc
@@ -204,7 +204,7 @@ async def test_status_unauthorized(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_status_not_found(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(side_effect=NotFoundError("missing"))
         mock_get.return_value = svc
@@ -220,7 +220,7 @@ async def test_status_git_timeout_directly() -> None:
     """Exercise _translate_error's GitTimeoutError branch directly.
 
     The route uses `except ServiceError as e` from services.base, but
-    GitTimeoutError extends roboco.exceptions.ServiceError (different
+    GitTimeoutError extends robofleet.exceptions.ServiceError (different
     class), so it never enters _translate_error in practice. We invoke
     the helper directly to cover the branch.
     """
@@ -253,7 +253,7 @@ async def test_log_with_branch_success(git_client: dict) -> None:
         "abc123\x1fabc\x1ffix bug\x1fme\x1f2026-01-01T00:00:00Z\n"
         "def456\x1fdef\x1fclose curl|sh RCE\x1fyou\x1f2026-01-01T00:00:01Z\n"
     )
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc._run_git = AsyncMock(return_value=log_result)
@@ -281,7 +281,7 @@ async def test_log_resolves_through_head_ref_not_bare_branch(
     log_result = MagicMock()
     log_result.returncode = 0
     log_result.stdout = ""
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc._token_for_branch = AsyncMock(return_value="tok")
@@ -304,7 +304,7 @@ async def test_log_no_branch_fetches_current(git_client: dict) -> None:
     log_result = MagicMock()
     log_result.returncode = 0
     log_result.stdout = ""
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.get_current_branch = AsyncMock(return_value="main")
@@ -323,7 +323,7 @@ async def test_log_unknown_branch_returns_empty(git_client: dict) -> None:
     log_result.returncode = 1
     log_result.stderr = "no such branch"
     log_result.stdout = ""
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc._run_git = AsyncMock(return_value=log_result)
@@ -338,7 +338,7 @@ async def test_log_unknown_branch_returns_empty(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_log_service_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(side_effect=NotFoundError("no ws"))
         mock_get.return_value = svc
@@ -358,7 +358,7 @@ async def test_log_service_error(git_client: dict) -> None:
 async def test_branches_local_only(git_client: dict) -> None:
     branch_result = MagicMock()
     branch_result.stdout = "refs/heads/main|abc123\nrefs/heads/feature/x|def456\n"
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.get_current_branch = AsyncMock(return_value="main")
@@ -390,7 +390,7 @@ async def test_branches_with_remote(git_client: dict) -> None:
         "refs/remotes/origin/feature/y|def456\n"
         "refs/remotes/origin/HEAD|abc123\n"
     )
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.get_current_branch = AsyncMock(return_value="main")
@@ -415,7 +415,7 @@ async def test_branches_skips_empty_lines(git_client: dict) -> None:
     branch_result = MagicMock()
     # Embed an empty line between two branches.
     branch_result.stdout = "refs/heads/main|abc\n\nrefs/heads/feature/x|def\n"
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.get_current_branch = AsyncMock(return_value="main")
@@ -430,7 +430,7 @@ async def test_branches_skips_empty_lines(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_branches_service_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(side_effect=NotFoundError("no ws"))
         mock_get.return_value = svc
@@ -450,7 +450,7 @@ async def test_branches_service_error(git_client: dict) -> None:
 async def test_diff_basic(git_client: dict) -> None:
     diff_res = MagicMock(stdout="some diff")
     stat_res = MagicMock(stdout="a.py | 2\nb.py | 4\n2 files changed\n")
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc._run_git = AsyncMock(side_effect=[diff_res, stat_res])
@@ -466,7 +466,7 @@ async def test_diff_basic(git_client: dict) -> None:
 async def test_diff_staged_with_file(git_client: dict) -> None:
     diff_res = MagicMock(stdout="")
     stat_res = MagicMock(stdout="")
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc._run_git = AsyncMock(side_effect=[diff_res, stat_res])
@@ -481,7 +481,7 @@ async def test_diff_staged_with_file(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_diff_service_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(side_effect=NotFoundError("no ws"))
         mock_get.return_value = svc
@@ -504,7 +504,7 @@ async def test_diff_workspace_resolution_real_stall_returns_bounded_504(
         await asyncio.sleep(0.3)
         return "/tmp/ws"
 
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = _stall
         mock_get.return_value = svc
@@ -528,7 +528,7 @@ async def test_diff_diff_stage_real_stall_returns_bounded_504(
         await asyncio.sleep(0.3)
         return MagicMock(stdout="unreachable")
 
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc._run_git = _stall
@@ -548,7 +548,7 @@ async def test_diff_workspace_resolution_git_timeout_error_returns_bounded_504(
     """A real GitTimeoutError raised inside get_workspace (the internal
     _run_git subprocess bound, not asyncio.wait_for's own cancellation)
     still translates to the same stage-naming 504."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(side_effect=GitTimeoutError("git clone", 30))
         mock_get.return_value = svc
@@ -567,7 +567,7 @@ async def test_diff_workspace_resolution_git_timeout_error_returns_bounded_504(
 
 @pytest.mark.asyncio
 async def test_commit_success(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.commit_for_task = AsyncMock(return_value=("abc123", "msg", 1, 5, 2))
         mock_get.return_value = svc
@@ -587,7 +587,7 @@ async def test_commit_success(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_commit_service_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.commit_for_task = AsyncMock(side_effect=ValidationError("bad"))
         mock_get.return_value = svc
@@ -612,7 +612,7 @@ async def test_commit_service_error(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_push_success(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.push_for_task = AsyncMock(return_value=("feature/x", 2))
         mock_get.return_value = svc
@@ -630,7 +630,7 @@ async def test_push_success(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_push_service_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.push_for_task = AsyncMock(side_effect=NotFoundError("missing"))
         mock_get.return_value = svc
@@ -653,7 +653,7 @@ async def test_push_service_error(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_create_branch_success(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.create_branch_for_task = AsyncMock(
             return_value=("feature/backend/X", "main")
@@ -674,7 +674,7 @@ async def test_create_branch_success(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_create_branch_service_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.create_branch_for_task = AsyncMock(side_effect=UnauthorizedError("no perm"))
         mock_get.return_value = svc
@@ -698,7 +698,7 @@ async def test_create_branch_service_error(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_checkout_success(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.checkout_branch_for_agent = AsyncMock(return_value=None)
         mock_get.return_value = svc
@@ -716,7 +716,7 @@ async def test_checkout_success(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_checkout_service_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.checkout_branch_for_agent = AsyncMock(side_effect=UnauthorizedError("nope"))
         mock_get.return_value = svc
@@ -739,7 +739,7 @@ async def test_checkout_service_error(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_create_pr_success(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.create_pr_for_task = AsyncMock(
             return_value=(42, "https://github.com/x/y/pull/42", "T", "feat", "main")
@@ -759,7 +759,7 @@ async def test_create_pr_success(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_create_pr_service_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.create_pr_for_task = AsyncMock(side_effect=ValidationError("bad"))
         mock_get.return_value = svc
@@ -782,7 +782,7 @@ async def test_create_pr_service_error(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_merge_pr_success(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.merge_pr_for_task = AsyncMock(return_value=("main", "abc"))
         mock_get.return_value = svc
@@ -801,7 +801,7 @@ async def test_merge_pr_success(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_merge_pr_service_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.merge_pr_for_task = AsyncMock(side_effect=NotFoundError("no PR"))
         mock_get.return_value = svc
@@ -826,7 +826,7 @@ async def test_merge_pr_service_error(git_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_status_with_uuid(git_client: dict) -> None:
     """Pass a UUID string instead of slug — should look up by UUID."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.get_status = AsyncMock(return_value=("main", False, [], [], [], 0, 0))
@@ -850,7 +850,7 @@ async def test_status_generic_service_error(git_client: dict) -> None:
     class CustomError(ServiceError):
         pass
 
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(side_effect=CustomError("err"))
         mock_get.return_value = svc
@@ -868,7 +868,7 @@ async def test_status_generic_service_error(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_pull_success(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.pull = AsyncMock(return_value=("main", False, [], [], [], 0, 0))
@@ -895,7 +895,7 @@ async def test_pull_success(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_pull_git_command_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.pull = AsyncMock(side_effect=GitCommandError("pull", "network error"))
@@ -919,7 +919,7 @@ async def test_pull_git_command_error(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_fetch_success(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         _ahead = 2
@@ -950,7 +950,7 @@ async def test_fetch_success(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_fetch_git_command_error(git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.fetch = AsyncMock(side_effect=GitCommandError("fetch", "network error"))
@@ -974,7 +974,7 @@ async def test_fetch_git_command_error(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_rebase_success(pm_git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.rebase = AsyncMock(return_value=(False, []))
@@ -995,7 +995,7 @@ async def test_rebase_success(pm_git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_rebase_conflict(pm_git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.rebase = AsyncMock(return_value=(True, ["src/foo.py", "src/bar.py"]))
@@ -1016,7 +1016,7 @@ async def test_rebase_conflict(pm_git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_rebase_git_command_error(pm_git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.get_workspace = AsyncMock(return_value="/tmp/ws")
         svc.rebase = AsyncMock(side_effect=GitCommandError("rebase", "fatal error"))
@@ -1040,7 +1040,7 @@ async def test_rebase_git_command_error(pm_git_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_commit_without_task_id_no_422(git_client: dict) -> None:
     """POST /commit without task_id must not return 422 (schema validation error)."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.commit_for_task = AsyncMock(
             return_value=("abc123", "feat: add thing", 1, 5, 2)
@@ -1063,7 +1063,7 @@ async def test_commit_without_task_id_no_422(git_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_push_without_task_id_no_422(git_client: dict) -> None:
     """POST /push without task_id must not return 422 (schema validation error)."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.push_for_task = AsyncMock(return_value=("feature/x", 3))
         mock_get.return_value = svc
@@ -1081,7 +1081,7 @@ async def test_push_without_task_id_no_422(git_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_create_pr_without_task_id_no_422(git_client: dict) -> None:
     """POST /pr/create without task_id must not return 422 (schema validation error)."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.create_pr_for_task = AsyncMock(
             return_value=(
@@ -1107,7 +1107,7 @@ async def test_create_pr_without_task_id_no_422(git_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_merge_pr_without_task_id_no_422(git_client: dict) -> None:
     """POST /pr/merge without task_id must not return 422 (schema validation error)."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.merge_pr_for_task = AsyncMock(return_value=("main", "deadbeef"))
         mock_get.return_value = svc
@@ -1130,7 +1130,7 @@ async def test_merge_pr_without_task_id_no_422(git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_cleanup_branches_success(pm_git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.cleanup_stale_branches = AsyncMock(return_value=(3, 2, 1, 0, False, None))
         mock_get.return_value = svc
@@ -1155,7 +1155,7 @@ async def test_cleanup_branches_success(pm_git_client: dict) -> None:
 
 @pytest.mark.asyncio
 async def test_cleanup_branches_reports_truncation(pm_git_client: dict) -> None:
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         svc.cleanup_stale_branches = AsyncMock(
             return_value=(200, 190, 0, 0, True, "0" * 32)
@@ -1173,7 +1173,7 @@ async def test_cleanup_branches_reports_truncation(pm_git_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_cleanup_branches_developer_gets_403(git_client: dict) -> None:
     """git_client carries a DEVELOPER-role agent — same role gate as /rebase."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_get:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_get:
         svc = AsyncMock()
         mock_get.return_value = svc
         response = await git_client["client"].post(

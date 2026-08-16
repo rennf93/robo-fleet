@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 if TYPE_CHECKING:
     from collections.abc import Callable

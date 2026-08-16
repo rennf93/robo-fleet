@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import (
+from robofleet.services.gateway.choreographer import (
     Choreographer,
     ChoreographerDeps,
     DelegateInputs,
@@ -122,12 +122,12 @@ def test_no_silent_fallback_phrase_in_repo() -> None:
     documented locations.
 
     Allowed appearances after Tasks 12 + 18 + 20:
-    - ``roboco/foundation/policy/task_completeness.py`` — the DENYLIST
+    - ``robofleet/foundation/policy/task_completeness.py`` — the DENYLIST
       entry plus the ``_HINT_ACCEPTANCE_CRITERIA`` text that names the
       phrase as a known evasion.
-    - ``roboco/api/routes/tasks.py`` — comment in the POST /tasks handler
+    - ``robofleet/api/routes/tasks.py`` — comment in the POST /tasks handler
       explaining why the route runs ``task_completeness.check`` (Task 20).
-    - ``roboco/services/task.py`` — docstring on ``create_subtask``
+    - ``robofleet/services/task.py`` — docstring on ``create_subtask``
       documenting the Task 18 deletion of the silent fallback.
 
     Any other appearance is a real Phase 1 gap.
@@ -135,15 +135,15 @@ def test_no_silent_fallback_phrase_in_repo() -> None:
     proc = subprocess.run(
         # ``-I`` skips binary files so stray ``__pycache__/*.pyc`` matches
         # (left over from a previous run) don't contaminate the grep.
-        ["grep", "-rnI", "completed and reviewed by assignee", "roboco/"],
+        ["grep", "-rnI", "completed and reviewed by assignee", "robofleet/"],
         capture_output=True,
         text=True,
         check=False,
     )
     allowed_files = (
-        "roboco/foundation/policy/task_completeness.py",
-        "roboco/api/routes/tasks.py",
-        "roboco/services/task.py",
+        "robofleet/foundation/policy/task_completeness.py",
+        "robofleet/api/routes/tasks.py",
+        "robofleet/services/task.py",
     )
     suspicious: list[str] = []
     for line in proc.stdout.splitlines():

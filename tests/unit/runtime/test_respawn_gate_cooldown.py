@@ -22,7 +22,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _WEDGED_COUNT = 63  # a counter driven far past the trip threshold by a storm
 
@@ -45,11 +45,11 @@ def _quiet_audit() -> AsyncMock:
 def _patches() -> Any:
     with (
         patch(
-            "roboco.services.audit.get_audit_service",
+            "robofleet.services.audit.get_audit_service",
             return_value=_quiet_audit(),
         ),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
     ):

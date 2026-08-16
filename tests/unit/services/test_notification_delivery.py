@@ -29,13 +29,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.foundation.policy.communications import (
+from robofleet.config import settings
+from robofleet.foundation.policy.communications import (
     ReescalationPolicy,
     reescalation_decision,
 )
-from roboco.models import NotificationPriority, NotificationType
-from roboco.services.notification_delivery import NotificationDeliveryService
+from robofleet.models import NotificationPriority, NotificationType
+from robofleet.services.notification_delivery import NotificationDeliveryService
 from sqlalchemy import Update
 
 # duplicate_unacked_notification_exists' dedup SELECT names exactly 2
@@ -186,11 +186,11 @@ async def test_sweep_re_escalates_stale_unacked_ack_required() -> None:
 
     with (
         patch(
-            "roboco.services.notification_delivery.all_recipients_recently_notified",
+            "robofleet.services.notification_delivery.all_recipients_recently_notified",
             AsyncMock(return_value=False),
         ),
         patch(
-            "roboco.services.notification_delivery.get_escalation_target",
+            "robofleet.services.notification_delivery.get_escalation_target",
             return_value="main-pm",
         ),
     ):
@@ -229,11 +229,11 @@ async def test_sweep_re_escalation_not_suppressed_by_existing_unacked_duplicate(
 
     with (
         patch(
-            "roboco.services.notification_delivery.all_recipients_recently_notified",
+            "robofleet.services.notification_delivery.all_recipients_recently_notified",
             AsyncMock(return_value=False),
         ),
         patch(
-            "roboco.services.notification_delivery.get_escalation_target",
+            "robofleet.services.notification_delivery.get_escalation_target",
             return_value="main-pm",
         ),
     ):
@@ -259,11 +259,11 @@ async def test_sweep_does_not_re_escalate_already_acked() -> None:
 
     with (
         patch(
-            "roboco.services.notification_delivery.all_recipients_recently_notified",
+            "robofleet.services.notification_delivery.all_recipients_recently_notified",
             AsyncMock(return_value=False),
         ),
         patch(
-            "roboco.services.notification_delivery.get_escalation_target",
+            "robofleet.services.notification_delivery.get_escalation_target",
             return_value="main-pm",
         ),
     ):
@@ -288,11 +288,11 @@ async def test_sweep_does_not_re_escalate_non_ack_required() -> None:
 
     with (
         patch(
-            "roboco.services.notification_delivery.all_recipients_recently_notified",
+            "robofleet.services.notification_delivery.all_recipients_recently_notified",
             AsyncMock(return_value=False),
         ),
         patch(
-            "roboco.services.notification_delivery.get_escalation_target",
+            "robofleet.services.notification_delivery.get_escalation_target",
             return_value="be-pm",
         ),
     ):
@@ -321,11 +321,11 @@ async def test_sweep_skips_re_escalation_when_no_chain_target() -> None:
 
     with (
         patch(
-            "roboco.services.notification_delivery.all_recipients_recently_notified",
+            "robofleet.services.notification_delivery.all_recipients_recently_notified",
             AsyncMock(return_value=False),
         ),
         patch(
-            "roboco.services.notification_delivery.get_escalation_target",
+            "robofleet.services.notification_delivery.get_escalation_target",
             return_value=None,
         ),
     ):
@@ -366,11 +366,11 @@ async def test_sweep_cas_claim_prevents_double_delivery_race() -> None:
 
     with (
         patch(
-            "roboco.services.notification_delivery.all_recipients_recently_notified",
+            "robofleet.services.notification_delivery.all_recipients_recently_notified",
             AsyncMock(return_value=False),
         ),
         patch(
-            "roboco.services.notification_delivery.get_escalation_target",
+            "robofleet.services.notification_delivery.get_escalation_target",
             return_value="main-pm",
         ),
     ):
@@ -505,11 +505,11 @@ async def test_sweep_backoff_does_not_refire_within_the_interval() -> None:
 
     with (
         patch(
-            "roboco.services.notification_delivery.all_recipients_recently_notified",
+            "robofleet.services.notification_delivery.all_recipients_recently_notified",
             AsyncMock(return_value=False),
         ),
         patch(
-            "roboco.services.notification_delivery.get_escalation_target",
+            "robofleet.services.notification_delivery.get_escalation_target",
             return_value="main-pm",
         ),
     ):
@@ -545,11 +545,11 @@ async def test_sweep_capped_row_never_re_escalates_again() -> None:
 
     with (
         patch(
-            "roboco.services.notification_delivery.all_recipients_recently_notified",
+            "robofleet.services.notification_delivery.all_recipients_recently_notified",
             AsyncMock(return_value=False),
         ),
         patch(
-            "roboco.services.notification_delivery.get_escalation_target",
+            "robofleet.services.notification_delivery.get_escalation_target",
             return_value="main-pm",
         ),
     ):

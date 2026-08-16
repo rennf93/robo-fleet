@@ -11,9 +11,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.claim_guards import project_budget_exceeded_guard
+from robofleet.config import settings
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.claim_guards import project_budget_exceeded_guard
 
 # ---------------------------------------------------------------------------
 # Pure predicate: project_budget_exceeded_guard

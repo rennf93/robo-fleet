@@ -11,14 +11,14 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from roboco.mcp.optimal_server import (
+from robofleet.mcp.optimal_server import (
     _LIVE_WRITE_CAVEAT,
     _RESULT_CONTENT_CAP,
     _append_live_write_caveat,
     _cap_result_content,
     create_optimal_mcp_server,
 )
-from roboco.mcp.utils import ApiClient
+from robofleet.mcp.utils import ApiClient
 
 
 async def _tool_names(role: str, monkeypatch: pytest.MonkeyPatch) -> set[str]:
@@ -160,7 +160,7 @@ async def test_full_toolset_escape_hatch(monkeypatch: pytest.MonkeyPatch) -> Non
 # Caveat reach: roboco_ask_mentor's `sources` and roboco_rag_query's
 # `citations` are the same SearchResultResponse shape roboco_kb_search's
 # `results` use (content/source/score/index_type/metadata — confirmed in
-# roboco/api/schemas/optimal.py), so _append_live_write_caveat wires in
+# robofleet/api/schemas/optimal.py), so _append_live_write_caveat wires in
 # unchanged. This exercises the real tool bodies end-to-end (via
 # FastMCP.call_tool), not just the shared helper in isolation above.
 # ---------------------------------------------------------------------------

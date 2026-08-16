@@ -39,10 +39,10 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.exceptions import GitCommandError, GitTimeoutError
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.choreographer.evidence_legs import (
+from robofleet.config import settings
+from robofleet.exceptions import GitCommandError, GitTimeoutError
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer.evidence_legs import (
     LegBudget,
     run_bounded_leg,
 )

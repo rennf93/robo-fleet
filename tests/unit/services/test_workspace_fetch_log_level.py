@@ -12,7 +12,7 @@ from subprocess import CompletedProcess
 from unittest.mock import patch
 
 import pytest
-from roboco.services.workspace import (
+from robofleet.services.workspace import (
     WorkspaceService,
 )
 
@@ -40,9 +40,11 @@ async def test_fetch_auth_fail_logs_at_debug() -> None:
         captured.append(("debug", event))
 
     with (
-        patch("roboco.services.workspace.subprocess.run", return_value=fake_result),
-        patch("roboco.services.workspace.logger.warning", side_effect=capture_warning),
-        patch("roboco.services.workspace.logger.debug", side_effect=capture_debug),
+        patch("robofleet.services.workspace.subprocess.run", return_value=fake_result),
+        patch(
+            "robofleet.services.workspace.logger.warning", side_effect=capture_warning
+        ),
+        patch("robofleet.services.workspace.logger.debug", side_effect=capture_debug),
     ):
         await WorkspaceService._fetch_origin_best_effort(
             workspace=workspace, project_slug="roboco-api"
@@ -78,9 +80,11 @@ async def test_fetch_genuine_failure_still_warns() -> None:
         captured.append(("debug", event))
 
     with (
-        patch("roboco.services.workspace.subprocess.run", return_value=fake_result),
-        patch("roboco.services.workspace.logger.warning", side_effect=capture_warning),
-        patch("roboco.services.workspace.logger.debug", side_effect=capture_debug),
+        patch("robofleet.services.workspace.subprocess.run", return_value=fake_result),
+        patch(
+            "robofleet.services.workspace.logger.warning", side_effect=capture_warning
+        ),
+        patch("robofleet.services.workspace.logger.debug", side_effect=capture_debug),
     ):
         await WorkspaceService._fetch_origin_best_effort(
             workspace=workspace, project_slug="roboco-api"

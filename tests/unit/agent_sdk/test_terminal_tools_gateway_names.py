@@ -10,7 +10,7 @@ exit, wasting tokens and burning the stop-allowance counter.
 
 from __future__ import annotations
 
-from roboco.agent_sdk.server import _TERMINAL_TOOLS, _SessionState
+from robofleet.agent_sdk.server import _TERMINAL_TOOLS, _SessionState
 
 
 def test_idle_is_terminal() -> None:

@@ -9,15 +9,15 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.services.task import TaskService
-from roboco.templates.git.branch import (
+from robofleet.services.task import TaskService
+from robofleet.templates.git.branch import (
     BranchNameError,
     build_branch_name,
     get_root_task_id,

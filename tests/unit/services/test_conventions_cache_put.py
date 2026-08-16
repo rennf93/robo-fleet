@@ -24,8 +24,8 @@ from typing import Any, cast
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.conventions import ConventionsStandard
-from roboco.services.conventions import ConventionsService
+from robofleet.foundation.policy.conventions import ConventionsStandard
+from robofleet.services.conventions import ConventionsService
 from sqlalchemy.exc import IntegrityError
 
 

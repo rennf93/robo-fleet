@@ -10,8 +10,8 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.services.task import VIDEO_SOURCE
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.services.task import VIDEO_SOURCE
 
 
 def _orch() -> AgentOrchestrator:

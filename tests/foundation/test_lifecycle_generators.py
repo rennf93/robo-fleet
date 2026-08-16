@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from roboco.foundation import _generators
+from robofleet.foundation import _generators
 
 
 def test_render_intent_verbs_md_lists_every_intent() -> None:

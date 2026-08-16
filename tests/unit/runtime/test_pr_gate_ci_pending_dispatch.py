@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _orch() -> AgentOrchestrator:
@@ -113,7 +113,9 @@ async def test_ci_status_cache_bounds_repeated_lookups(monkeypatch: Any) -> None
     o = cast("Any", orch)
     o._fetch_gate_ci_state = AsyncMock(return_value="pending")
     clock = [1000.0]
-    monkeypatch.setattr("roboco.runtime.orchestrator.time.monotonic", lambda: clock[0])
+    monkeypatch.setattr(
+        "robofleet.runtime.orchestrator.time.monotonic", lambda: clock[0]
+    )
 
     task = _task()
     assert await orch._gate_task_ci_pending(task) is True
@@ -129,7 +131,9 @@ async def test_ci_status_cache_expires_after_ttl(monkeypatch: Any) -> None:
     o = cast("Any", orch)
     o._fetch_gate_ci_state = AsyncMock(return_value="pending")
     clock = [1000.0]
-    monkeypatch.setattr("roboco.runtime.orchestrator.time.monotonic", lambda: clock[0])
+    monkeypatch.setattr(
+        "robofleet.runtime.orchestrator.time.monotonic", lambda: clock[0]
+    )
 
     task = _task()
     await orch._gate_task_ci_pending(task)

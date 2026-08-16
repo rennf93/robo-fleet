@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.seeds.initial_data import AGENT_UUIDS
-from roboco.services.gateway.choreographer import (
+from robofleet.seeds.initial_data import AGENT_UUIDS
+from robofleet.services.gateway.choreographer import (
     Choreographer,
     ChoreographerDeps,
     DelegateInputs,

@@ -9,7 +9,10 @@ every whitespace token is a placeholder (``wip wip``, ``tbd / na``).
 from __future__ import annotations
 
 import pytest
-from roboco.foundation.policy.content.validators import coerce_str_list, reject_trivial
+from robofleet.foundation.policy.content.validators import (
+    coerce_str_list,
+    reject_trivial,
+)
 
 
 def test_returns_trimmed_value_when_substantive() -> None:

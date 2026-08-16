@@ -11,9 +11,9 @@ from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from roboco.api.deps import get_choreographer
-from roboco.api.routes.v1.flow_main_pm import router
-from roboco.api.schemas.v1.flow import IWillPlanRequest, SubTaskCreate
+from robofleet.api.deps import get_choreographer
+from robofleet.api.routes.v1.flow_main_pm import router
+from robofleet.api.schemas.v1.flow import IWillPlanRequest, SubTaskCreate
 
 _AGENT_ID = "00000000-0000-0000-0004-000000000001"
 _HEADERS = {"X-Agent-ID": _AGENT_ID, "X-Agent-Role": "main_pm"}

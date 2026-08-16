@@ -24,7 +24,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 def _make_deps(task: AsyncMock, git: AsyncMock | None = None) -> ChoreographerDeps:

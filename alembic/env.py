@@ -12,11 +12,11 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from roboco.config import settings
-from roboco.db.base import Base
+from robofleet.config import settings
+from robofleet.db.base import Base
 
 # Import all models to ensure they're registered with Base.metadata
-from roboco.db import tables
+from robofleet.db import tables
 
 # Alembic Config object
 config = context.config

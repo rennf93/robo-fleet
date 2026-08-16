@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from roboco.foundation import identity as _foundation
+from robofleet.foundation import identity as _foundation
 from tests.e2e_smoke.harness import ScriptedAgent, expect_ok
 
 if TYPE_CHECKING:
@@ -36,8 +36,8 @@ def _seed_system_and_hom(stack: E2EStack) -> str:
     ``XEngine.materialize_editorial_post`` (via ``_originate_post``) does the
     same for the drafted post's owner (Secretary). Returns the project's slug.
     """
-    from roboco.db.tables import AgentTable, ProjectTable
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable, ProjectTable
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     slug = f"e2e-megaphone-{uuid4().hex[:8]}"
 
@@ -95,7 +95,7 @@ def _seed_system_and_hom(stack: E2EStack) -> str:
 def _grant_credentials(stack: E2EStack) -> None:
     """Grant real X credentials — the program also refuses to originate
     without these even when armed (see MegaphoneEngine.run_cycle)."""
-    from roboco.services.x_credentials import get_x_credentials_service
+    from robofleet.services.x_credentials import get_x_credentials_service
 
     async def _run(session: AsyncSession) -> None:
         await get_x_credentials_service(session).set_credentials(
@@ -106,7 +106,7 @@ def _grant_credentials(stack: E2EStack) -> None:
 
 
 def _run_due_programs(stack: E2EStack) -> list[str]:
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> list[str]:
         return await get_board_program_engine(session).run_due_programs()
@@ -116,8 +116,8 @@ def _run_due_programs(stack: E2EStack) -> list[str]:
 
 
 def _find_megaphone_task(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
-    from roboco.services.task import MEGAPHONE_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.services.task import MEGAPHONE_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -150,7 +150,7 @@ def _find_megaphone_task(stack: E2EStack) -> dict[str, Any]:
 
 
 def _cycle_state(stack: E2EStack) -> dict[str, Any]:
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
         open_cycle, last_opened_at = await get_board_program_engine(
@@ -163,7 +163,7 @@ def _cycle_state(stack: E2EStack) -> dict[str, Any]:
 
 
 def _x_draft_state(stack: E2EStack, task_id: UUID) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -188,8 +188,8 @@ def test_megaphone_loop_originates_dedups_proposes_and_holds_draft(
 
     # No credentials yet, but armed: origination refuses (spec — drafting for
     # nobody to post is pointless).
-    from roboco.config import settings as cfg
-    from roboco.db.tables import SystemSettingTable
+    from robofleet.config import settings as cfg
+    from robofleet.db.tables import SystemSettingTable
 
     cfg.self_heal_project_slug = project_slug
 
@@ -218,7 +218,7 @@ def test_megaphone_loop_originates_dedups_proposes_and_holds_draft(
     # The dispatcher's own dev-work skip recognizes this exact task shape —
     # board_megaphone is board-dispatched (one-shot HoM spawn), never handed
     # to the generic dev dispatch loop's give_me_work/claim path.
-    from roboco.runtime.orchestrator import _is_non_dev_dispatch_source
+    from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
 
     assert _is_non_dev_dispatch_source({"source": row["source"]}) is True
 
@@ -242,7 +242,7 @@ def test_megaphone_loop_originates_dedups_proposes_and_holds_draft(
         "head-marketing",
         "head_marketing",
     )
-    do_module = hom._module("roboco.mcp.do_server")
+    do_module = hom._module("robofleet.mcp.do_server")
     assert "propose_editorial_post" in do_module._TOOLS, (
         "propose_editorial_post missing from do_server._TOOLS — the MCP "
         "server has no way to expose it to any role"

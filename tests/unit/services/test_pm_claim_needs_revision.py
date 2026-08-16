@@ -20,16 +20,16 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec
-from roboco.models.base import TaskStatus
-from roboco.services.task import (
+from robofleet.foundation.policy import lifecycle as spec
+from robofleet.models.base import TaskStatus
+from robofleet.services.task import (
     _ROLE_CLAIM_STATUSES,
     _default_claim_statuses,
     _get_valid_claim_statuses,
 )
 
 if TYPE_CHECKING:
-    from roboco.db.tables import AgentTable
+    from robofleet.db.tables import AgentTable
 
 
 @pytest.mark.parametrize("role", ["cell_pm", "main_pm"])

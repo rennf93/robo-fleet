@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from roboco.services.workspace import WorkspaceService
+from robofleet.services.workspace import WorkspaceService
 
 if TYPE_CHECKING:
     from pathlib import Path

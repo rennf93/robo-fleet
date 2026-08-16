@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.services.conventions import get_conventions_service
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.services.conventions import get_conventions_service
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -209,7 +209,7 @@ async def test_scaffold_opens_pr_with_rendered_map(
     )
     fake = _FakeGit()
     monkeypatch.setattr(
-        "roboco.services.conventions.get_git_service", lambda _session: fake
+        "robofleet.services.conventions.get_git_service", lambda _session: fake
     )
     result = await get_conventions_service(db_session).scaffold(project)
     assert result.created is True
@@ -233,7 +233,7 @@ async def test_restore_uses_last_good_map(
 
     fake = _FakeGit()
     monkeypatch.setattr(
-        "roboco.services.conventions.get_git_service", lambda _session: fake
+        "robofleet.services.conventions.get_git_service", lambda _session: fake
     )
     result = await svc.restore(project)
     assert result.created is True

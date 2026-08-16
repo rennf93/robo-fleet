@@ -16,8 +16,8 @@ import pytest
 
 if TYPE_CHECKING:
     import asyncio
-from roboco.services import release_proposal as rp
-from roboco.services.release_proposal import sweep_orphan_release_locks
+from robofleet.services import release_proposal as rp
+from robofleet.services.release_proposal import sweep_orphan_release_locks
 
 
 class _KeysRedis:
@@ -69,7 +69,7 @@ async def test_sweep_deletes_orphan_release_locks() -> None:
     rp._INFLIGHT_APPROVES.clear()
     rp._INFLIGHT_APPROVES[in_flight_id] = cast("asyncio.Task[None]", object())
 
-    with patch("roboco.services.release_proposal.redis.from_url", return_value=fake):
+    with patch("robofleet.services.release_proposal.redis.from_url", return_value=fake):
         await rp.sweep_orphan_release_locks()
 
     assert await fake.get(orphan_key) is None  # orphan deleted
@@ -87,7 +87,7 @@ async def test_sweep_ignores_non_uuid_keys() -> None:
     await fake.set(junk_key, "x")
 
     rp._INFLIGHT_APPROVES.clear()
-    with patch("roboco.services.release_proposal.redis.from_url", return_value=fake):
+    with patch("robofleet.services.release_proposal.redis.from_url", return_value=fake):
         await rp.sweep_orphan_release_locks()
 
     assert await fake.get(junk_key) is not None
@@ -106,7 +106,7 @@ async def test_sweep_redis_failure_does_not_raise() -> None:
             return None
 
     with patch(
-        "roboco.services.release_proposal.redis.from_url", return_value=_BoomRedis()
+        "robofleet.services.release_proposal.redis.from_url", return_value=_BoomRedis()
     ):
         # Must not raise.
         await rp.sweep_orphan_release_locks()
@@ -118,7 +118,7 @@ async def test_sweep_no_keys_is_noop() -> None:
 
     fake = _KeysRedis()
     rp._INFLIGHT_APPROVES.clear()
-    with patch("roboco.services.release_proposal.redis.from_url", return_value=fake):
+    with patch("robofleet.services.release_proposal.redis.from_url", return_value=fake):
         await rp.sweep_orphan_release_locks()
     assert await fake.keys(f"{rp._RELEASE_LOCK_PREFIX}*") == []
 

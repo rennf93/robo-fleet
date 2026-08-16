@@ -24,7 +24,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from roboco.foundation import identity as _foundation
+from robofleet.foundation import identity as _foundation
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,8 +42,8 @@ def _seed_system_hom_ceo_and_project(stack: E2EStack) -> str:
     ``arcs.seed_company``'s random ``uuid4()`` agents; mirrors
     test_periscope_loop.py's identical helper). Returns the project's slug.
     """
-    from roboco.db.tables import AgentTable, ProjectTable
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable, ProjectTable
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     slug = f"e2e-mirror-{uuid4().hex[:8]}"
 
@@ -103,7 +103,7 @@ def _seed_system_hom_ceo_and_project(stack: E2EStack) -> str:
 def _arm(stack: E2EStack) -> None:
     """Arm via the settings-store key — the ONLY arming path (no legacy env
     flag exists for mirror)."""
-    from roboco.db.tables import SystemSettingTable
+    from robofleet.db.tables import SystemSettingTable
 
     async def _run(session: AsyncSession) -> None:
         session.add(
@@ -114,7 +114,7 @@ def _arm(stack: E2EStack) -> None:
 
 
 def _run_due_programs(stack: E2EStack) -> list[str]:
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> list[str]:
         return await get_board_program_engine(session).run_due_programs()
@@ -124,8 +124,8 @@ def _run_due_programs(stack: E2EStack) -> list[str]:
 
 
 def _find_mirror_task(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
-    from roboco.services.task import MIRROR_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.services.task import MIRROR_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -157,7 +157,7 @@ def _find_mirror_task(stack: E2EStack) -> dict[str, Any]:
 
 
 def _cycle_counters(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import BoardProgramCycleTable
+    from robofleet.db.tables import BoardProgramCycleTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -185,9 +185,9 @@ def _cycle_counters(stack: E2EStack) -> dict[str, Any]:
 
 
 def _approve_fake_item(stack: E2EStack, task_id: Any, project_slug: str) -> str:
-    from roboco.db.tables import TaskTable
-    from roboco.foundation.policy.content import markers
-    from roboco.services.mirror_service import get_mirror_service
+    from robofleet.db.tables import TaskTable
+    from robofleet.foundation.policy.content import markers
+    from robofleet.services.mirror_service import get_mirror_service
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> str:
@@ -210,7 +210,7 @@ def _approve_fake_item(stack: E2EStack, task_id: Any, project_slug: str) -> str:
                         "priority": 2,
                         "evidence": (
                             "README.md:42 says 'real-time sync'; "
-                            "roboco/services/sync.py:88 polls every 30s"
+                            "robofleet/services/sync.py:88 polls every 30s"
                         ),
                         "status": "proposed",
                         "reject_reason": None,
@@ -250,7 +250,7 @@ def test_mirror_loop_originates_dedups_and_records(
     # The dispatcher's own dev-work skip recognizes this exact task shape —
     # board_mirror is board-dispatched (one-shot HoM spawn), never handed to
     # the generic dev dispatch loop's give_me_work/claim path.
-    from roboco.runtime.orchestrator import _is_non_dev_dispatch_source
+    from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
 
     assert _is_non_dev_dispatch_source({"source": row["source"]}) is True
 

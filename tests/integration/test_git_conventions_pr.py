@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.services.forge import RepoRef
-from roboco.services.git import _ConventionsPr, get_git_service
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.services.forge import RepoRef
+from robofleet.services.git import _ConventionsPr, get_git_service
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -9,8 +9,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.services.optimal_brain.text_chunker import Chunk
-from roboco.services.optimal_brain.vector_store import VectorStore
+from robofleet.services.optimal_brain.text_chunker import Chunk
+from robofleet.services.optimal_brain.vector_store import VectorStore
 
 
 def _chunk(text: str, source: str, embedding: list[float]) -> Chunk:

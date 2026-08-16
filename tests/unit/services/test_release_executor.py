@@ -15,9 +15,9 @@ from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import MagicMock
 
 import pytest
-from roboco.config import settings
-from roboco.services import release_executor as re
-from roboco.services.release_executor import (
+from robofleet.config import settings
+from robofleet.services import release_executor as re
+from robofleet.services.release_executor import (
     ReleaseExecutor,
     ReleaseResult,
     _bump_uv_lock,
@@ -26,12 +26,12 @@ from roboco.services.release_executor import (
     _ReleaseContext,
     _resolve_release_ci_workflow,
 )
-from roboco.services.release_readiness import ReleaseReadinessReport
+from robofleet.services.release_readiness import ReleaseReadinessReport
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-_PLAN = ["pyproject.toml", "roboco/__init__.py", "CHANGELOG.md"]
+_PLAN = ["pyproject.toml", "robofleet/__init__.py", "CHANGELOG.md"]
 _VERSION = "0.13.0"
 _ONE = 1
 
@@ -324,7 +324,7 @@ async def test_wait_for_ci_scoped_to_release_commit_not_branch_latest(
         }
 
     monkeypatch.setattr(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         lambda _session: SimpleNamespace(get_latest_ci_conclusion=_fake_get_ci),
     )
     monkeypatch.setattr(re, "_CI_MAX_POLLS", 2)
@@ -375,7 +375,7 @@ async def test_wait_for_ci_polls_through_rerun(
         }
 
     monkeypatch.setattr(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         lambda _session: SimpleNamespace(get_latest_ci_conclusion=_fake_get_ci),
     )
     monkeypatch.setattr(re, "_CI_MAX_POLLS", 5)
@@ -422,7 +422,7 @@ async def test_wait_for_ci_exhausts_window_on_persistent_failure(
         }
 
     monkeypatch.setattr(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         lambda _session: SimpleNamespace(get_latest_ci_conclusion=_fake_get_ci),
     )
     monkeypatch.setattr(re, "_CI_MAX_POLLS", max_polls)
@@ -729,7 +729,7 @@ async def test_wait_for_ci_polls_the_prod_branch(
         return {"head_sha": "cafebabe", "conclusion": "success"}
 
     monkeypatch.setattr(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         lambda _session: SimpleNamespace(get_latest_ci_conclusion=_fake_get_ci),
     )
     ctx = _ReleaseContext(

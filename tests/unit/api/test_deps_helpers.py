@@ -7,14 +7,14 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from roboco.api.deps import (
+from robofleet.api.deps import (
     _role_value,
     require_cell_access,
     require_developer_or_above,
     require_pm_or_above,
 )
-from roboco.models import AgentRole, Team
-from roboco.models.permissions import AgentContext
+from robofleet.models import AgentRole, Team
+from robofleet.models.permissions import AgentContext
 
 
 def _ctx(role: AgentRole, team: Team | None = None) -> AgentContext:

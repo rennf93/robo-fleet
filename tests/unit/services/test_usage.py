@@ -1,5 +1,5 @@
 """
-Unit tests for roboco.services.usage — UsageService analytics methods.
+Unit tests for robofleet.services.usage — UsageService analytics methods.
 
 These tests mock the SQLAlchemy AsyncSession.execute() boundary and
 verify the arithmetic / logic of each analytics method:
@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
-from roboco.services.usage import UsageService, _parse_period
+from robofleet.services.usage import UsageService, _parse_period
 
 # ---------------------------------------------------------------------------
 # Named constants (ruff PLR2004: magic values in comparisons must be named).

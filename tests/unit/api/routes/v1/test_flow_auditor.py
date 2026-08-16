@@ -12,8 +12,8 @@ from uuid import uuid4
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from roboco.api.deps import get_choreographer
-from roboco.api.routes.v1.flow_auditor import router
+from robofleet.api.deps import get_choreographer
+from robofleet.api.routes.v1.flow_auditor import router
 
 _HTTP_200 = 200
 

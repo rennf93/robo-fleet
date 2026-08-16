@@ -65,7 +65,7 @@ def do_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> types.ModuleTy
     monkeypatch.setenv("ROBOCO_SDK_URL", "http://test-sdk:9000")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
 
-    import roboco.mcp.do_server as srv
+    import robofleet.mcp.do_server as srv
 
     importlib.reload(srv)
     return srv

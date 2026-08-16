@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from roboco.infra import gcs_storage
+from robofleet.infra import gcs_storage
 
 
 def test_upload_calls_blob_upload_from_filename(tmp_path: Path) -> None:
@@ -81,7 +81,7 @@ def test_upload_render_uploads_to_renders_prefix(tmp_path: Path) -> None:
 
 def test_gcs_storage_imports_clean() -> None:
     """Bare import never requires creds; client is lazy."""
-    from roboco.infra.gcs_storage import GcsStorage
+    from robofleet.infra.gcs_storage import GcsStorage
 
     store = GcsStorage.__new__(GcsStorage)
     assert store is not None

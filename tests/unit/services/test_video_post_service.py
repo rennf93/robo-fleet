@@ -18,21 +18,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
     Team,
 )
-from roboco.models.base import TaskNature as TN
-from roboco.models.base import TaskStatus as TS
-from roboco.models.base import TaskType as TT
-from roboco.services.heartbeat_mutex import HeartbeatMutex
-from roboco.services.task import VIDEO_POST_SOURCE, TaskService
-from roboco.services.video_post_service import (
+from robofleet.models.base import TaskNature as TN
+from robofleet.models.base import TaskStatus as TS
+from robofleet.models.base import TaskType as TT
+from robofleet.services.heartbeat_mutex import HeartbeatMutex
+from robofleet.services.task import VIDEO_POST_SOURCE, TaskService
+from robofleet.services.video_post_service import (
     TaskAlreadyCompletedError,
     TikTokPoster,
     TikTokUploadResult,
@@ -365,7 +365,7 @@ async def test_approve_refuses_already_rejected_draft(
         _LOCKED[0],
         _LOCKED[1],
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=fake_engine,
         ),
     ):
@@ -437,7 +437,9 @@ async def test_approve_redis_unavailable_fails_closed(db_session: AsyncSession) 
     broken = MagicMock()
     broken.set = AsyncMock(side_effect=ConnectionError("redis down"))
     broken.aclose = AsyncMock()
-    with patch("roboco.services.heartbeat_mutex.redis.from_url", return_value=broken):
+    with patch(
+        "robofleet.services.heartbeat_mutex.redis.from_url", return_value=broken
+    ):
         result = await _svc(
             db_session, x_poster=x_poster, tiktok_poster=tiktok_poster
         ).approve(_id(task))
@@ -660,7 +662,7 @@ async def test_reject_with_reason_calls_reauthor_with_cancelled_task(
         _LOCKED[0],
         _LOCKED[1],
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=fake_engine,
         ),
     ):
@@ -688,7 +690,7 @@ async def test_reject_succeeds_even_when_reauthor_raises(
         _LOCKED[0],
         _LOCKED[1],
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=fake_engine,
         ),
     ):
@@ -709,7 +711,7 @@ async def test_reject_blank_reason_skips_reauthor(db_session: AsyncSession) -> N
         _LOCKED[0],
         _LOCKED[1],
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=fake_engine,
         ),
     ):
@@ -765,7 +767,9 @@ async def test_reject_redis_unavailable_refuses(db_session: AsyncSession) -> Non
     broken = MagicMock()
     broken.set = AsyncMock(side_effect=ConnectionError("redis down"))
     broken.aclose = AsyncMock()
-    with patch("roboco.services.heartbeat_mutex.redis.from_url", return_value=broken):
+    with patch(
+        "robofleet.services.heartbeat_mutex.redis.from_url", return_value=broken
+    ):
         result = await _svc(
             db_session, x_poster=_StubXPoster(), tiktok_poster=_StubTikTokPoster()
         ).reject(_id(task), "Doesn't match the release")

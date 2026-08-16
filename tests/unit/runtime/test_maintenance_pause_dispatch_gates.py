@@ -14,17 +14,17 @@ from uuid import uuid4
 
 import httpx
 import pytest
-import roboco.db.base as db_base
-import roboco.services.maintenance_pause as mp_module
-from roboco.foundation.policy.maintenance_pause import PauseScope
-from roboco.models.runtime import AgentInstance
-from roboco.runtime.orchestrator import (
+import robofleet.db.base as db_base
+import robofleet.services.maintenance_pause as mp_module
+from robofleet.foundation.policy.maintenance_pause import PauseScope
+from robofleet.models.runtime import AgentInstance
+from robofleet.runtime.orchestrator import (
     ROADMAP_SOURCE,
     AgentOrchestrator,
     AgentState,
     _dispatch_board_program_exploration,
 )
-from roboco.seeds.initial_data import AGENT_UUIDS
+from robofleet.seeds.initial_data import AGENT_UUIDS
 
 
 def _make_orch() -> AgentOrchestrator:
@@ -298,7 +298,7 @@ async def test_dispatch_pm_work_still_dispatches_board_program_when_paused(
     monkeypatch.setattr(orch, "_handle_pm_assigned_task", handle_pm)
     board_dispatch = AsyncMock(return_value=True)
     monkeypatch.setattr(
-        "roboco.runtime.orchestrator._dispatch_board_program_exploration",
+        "robofleet.runtime.orchestrator._dispatch_board_program_exploration",
         board_dispatch,
     )
 

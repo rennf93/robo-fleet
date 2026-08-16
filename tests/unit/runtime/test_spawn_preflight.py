@@ -5,15 +5,15 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from roboco.config import settings
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def test_reason_none_when_flag_disabled() -> None:
     with (
         patch.object(settings, "spawn_preflight_enabled", False),
         patch(
-            "roboco.runtime.orchestrator.GATEWAY_ENABLED_ROLES",
+            "robofleet.runtime.orchestrator.GATEWAY_ENABLED_ROLES",
             frozenset({"developer"}),
         ),
     ):
@@ -24,7 +24,7 @@ def test_reason_set_for_non_gateway_role_when_enabled() -> None:
     with (
         patch.object(settings, "spawn_preflight_enabled", True),
         patch(
-            "roboco.runtime.orchestrator.GATEWAY_ENABLED_ROLES",
+            "robofleet.runtime.orchestrator.GATEWAY_ENABLED_ROLES",
             frozenset({"developer"}),
         ),
     ):

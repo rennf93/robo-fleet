@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import WebSocketDisconnect
-from roboco.api.websocket import ConnectionManager, manager, system_stream
+from robofleet.api.websocket import ConnectionManager, manager, system_stream
 
 
 @pytest.mark.asyncio

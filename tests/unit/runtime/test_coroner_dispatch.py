@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.services.task import CORONER_SOURCE
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.services.task import CORONER_SOURCE
 
 
 def _make_orch() -> AgentOrchestrator:
@@ -201,7 +201,7 @@ async def test_coroner_incident_context_survives_db_failure() -> None:
     orch = _make_orch()
     task = _coroner_task()
     with patch(
-        "roboco.services.coroner_engine.get_coroner_engine",
+        "robofleet.services.coroner_engine.get_coroner_engine",
         side_effect=RuntimeError("db down"),
     ):
         result = await orch._coroner_incident_context(task)

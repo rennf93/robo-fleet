@@ -14,7 +14,7 @@ set -euo pipefail
 # agents run at their workspace-clone cwd, whose own roboco/ dir would shadow it
 # on the sys.path front (the ModuleNotFound lesson). The render reads
 # ROBOCO_MCP_CONFIG + ROBOCO_AGENT_ID and writes the config + an args file.
-( cd /app && python -m roboco.llm.providers.grok_cli_config )
+( cd /app && python -m robofleet.llm.providers.grok_cli_config )
 
 GROK_ARGS_FILE="${ROBOCO_GROK_ARGS_FILE:-/tmp/roboco-grok-args}"
 mapfile -t GROK_ARGS < "$GROK_ARGS_FILE"
@@ -22,7 +22,7 @@ mapfile -t GROK_ARGS < "$GROK_ARGS_FILE"
 # Prompt-injection guard (parity with the Claude UserPromptSubmit hook): the task
 # prompt is DATA, not instructions — refuse a poisoned one before the model sees
 # it. Same patterns as docker/scripts/user-prompt-hook.sh; run from /app too.
-if ! ( cd /app && python -m roboco.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
+if ! ( cd /app && python -m robofleet.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
   echo "Refusing to run: task prompt matched a prompt-injection pattern." >&2
   exit 1
 fi
@@ -43,7 +43,7 @@ fi
 # ~/.grok. `rm -f` first in case the image baked a stub auth.json.
 rm -f /home/agent/.grok/auth.json
 ln -s /home/agent/.grok-auth-ro/auth.json /home/agent/.grok/auth.json
-if ! ( cd /app && python -m roboco.llm.providers.grok_auth --check ); then
+if ! ( cd /app && python -m robofleet.llm.providers.grok_auth --check ); then
   echo "[grok] auth token missing or expired — refusing to run (would hang at" \
     "the login prompt). Refresh ~/.grok/auth.json (orchestrator auto-refresh or" \
     "'grok login' on the host)." >&2
@@ -91,7 +91,7 @@ set -e
 # analogue of the Claude transcript. Best-effort; never fails the run. Run from
 # /app for the same module-resolution reason as the render above.
 ( cd /app && ROBOCO_GROK_RUN_CWD="$WORKSPACE" ROBOCO_GROK_RUN_LOG="$RUN_LOG" \
-    python -m roboco.llm.providers.grok_cli_usage ) || true
+    python -m robofleet.llm.providers.grok_cli_usage ) || true
 
 # Rate-limit detection: an xAI 429 / quota error ends the run without a terminal
 # verb. Detect it from the run output and exit 75 (EX_TEMPFAIL) so the

@@ -15,11 +15,11 @@ if TYPE_CHECKING:
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway import quality_gate
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.choreographer._impl import _IAmDoneContext
-from roboco.services.gateway.quality_gate import GateResult, run_quality_commands
-from roboco.services.git import GitService
+from robofleet.services.gateway import quality_gate
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer._impl import _IAmDoneContext
+from robofleet.services.gateway.quality_gate import GateResult, run_quality_commands
+from robofleet.services.git import GitService
 
 # --- the runner (real subprocess) -------------------------------------------
 
@@ -170,14 +170,14 @@ def test_fast_gate_commands_picks_lint_and_typecheck() -> None:
     project = SimpleNamespace(
         quality_command=None,  # not set → fall back to lint + typecheck
         lint_command="uv run ruff check .",
-        typecheck_command="uv run mypy roboco/",
+        typecheck_command="uv run mypy robofleet/",
         format_command="uv run ruff format .",  # excluded (mutating)
         test_command="uv run pytest",  # excluded (slow; CI only)
     )
     commands = GitService._fast_gate_commands(project)
     assert commands == [
         ("lint", "uv run ruff check ."),
-        ("typecheck", "uv run mypy roboco/"),
+        ("typecheck", "uv run mypy robofleet/"),
     ]
 
 
@@ -187,7 +187,7 @@ def test_quality_command_takes_precedence_and_runs_alone() -> None:
     project = SimpleNamespace(
         quality_command="make gate",
         lint_command="uv run ruff check .",
-        typecheck_command="uv run mypy roboco/",
+        typecheck_command="uv run mypy robofleet/",
     )
     assert GitService._fast_gate_commands(project) == [("quality", "make gate")]
 
@@ -239,7 +239,9 @@ async def test_gate_failure_blocks_with_output_in_remediate() -> None:
     git = MagicMock()
     git.run_pre_submit_quality_gate = AsyncMock(
         return_value=GateResult(
-            passed=False, failures=("lint",), output="roboco/x.py:1 E501 line too long"
+            passed=False,
+            failures=("lint",),
+            output="robofleet/x.py:1 E501 line too long",
         )
     )
     env = await _choreo(git)._check_quality_gate(_ctx())

@@ -1,4 +1,4 @@
-"""roboco.services.gateway.evidence_repo coverage (mapping + empty paths).
+"""robofleet.services.gateway.evidence_repo coverage (mapping + empty paths).
 
 These are mocked unit tests for the row-mapping and empty/not-found paths. The
 actual SQL (WHERE clauses, array operators) is exercised against a real DB in
@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.evidence_repo import (
+from robofleet.services.gateway.evidence_repo import (
     _ANCESTOR_DESC_CAP,
     _HIERARCHY_DEPTH_CAP,
     EvidenceRepo,

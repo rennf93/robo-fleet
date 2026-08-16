@@ -54,19 +54,19 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     ProjectTable,
     TaskTable,
     WorkSessionTable,
 )
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-from roboco.models.work_session import WorkSessionStatus
-from roboco.services.forge import RepoRef
-from roboco.services.git import GitService
-from roboco.services.work_session import get_work_session_service
-from roboco.services.workspace import WorkspaceService
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+from robofleet.models.work_session import WorkSessionStatus
+from robofleet.services.forge import RepoRef
+from robofleet.services.git import GitService
+from robofleet.services.work_session import get_work_session_service
+from robofleet.services.workspace import WorkspaceService
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 if TYPE_CHECKING:
@@ -96,7 +96,7 @@ async def test_h11_pat_not_in_argv(e2e_stack: E2EStack) -> None:
         captured.append(list(argv))
         return subprocess.CompletedProcess(argv, 0, "", "")
 
-    with patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run):
+    with patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run):
         WorkspaceService._sync_read_clone(clone, git_url, "master", token)
 
     fetch_argv = next(a for a in captured if "fetch" in a)
@@ -288,7 +288,7 @@ async def test_m38_pr_is_merged_returns_none_on_httperror() -> None:
     ``MergeConflictError`` and respawn the PM against an already-merged PR."""
     svc = _git_service()
     with patch(
-        "roboco.services.git.httpx.AsyncClient",
+        "robofleet.services.git.httpx.AsyncClient",
         return_value=_httpx_raising_client(),
     ):
         out = await svc._pr_is_merged(RepoRef("acme", "repo"), 11, "tok")

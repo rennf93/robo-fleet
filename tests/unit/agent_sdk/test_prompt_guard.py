@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from roboco.agent_sdk.prompt_guard import detect_injection, main, refusal_message
+from robofleet.agent_sdk.prompt_guard import detect_injection, main, refusal_message
 
 
 @pytest.mark.parametrize(

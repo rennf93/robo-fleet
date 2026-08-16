@@ -22,7 +22,7 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.git import GitService
+from robofleet.services.git import GitService
 
 
 def _svc_with_git_responses(

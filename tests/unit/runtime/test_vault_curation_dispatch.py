@@ -11,8 +11,8 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _make_orch() -> AgentOrchestrator:
@@ -26,7 +26,7 @@ def _make_orch() -> AgentOrchestrator:
 async def test_dispatch_noop_when_flag_off(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "obsidian_vault_enabled", False)
     orch = _make_orch()
-    with patch("roboco.db.base.get_db_context") as get_ctx:
+    with patch("robofleet.db.base.get_db_context") as get_ctx:
         await orch._dispatch_vault_curation_work(cast("Any", object()))
     get_ctx.assert_not_called()
 

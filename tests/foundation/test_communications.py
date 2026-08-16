@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from roboco.foundation import identity
-from roboco.foundation.policy import communications
-from roboco.models.base import NotificationPriority, NotificationType
+from robofleet.foundation import identity
+from robofleet.foundation.policy import communications
+from robofleet.models.base import NotificationPriority, NotificationType
 
 
 def test_priority_enum_matches_notification_priority() -> None:

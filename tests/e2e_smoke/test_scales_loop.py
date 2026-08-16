@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from roboco.foundation import identity as _foundation
+from robofleet.foundation import identity as _foundation
 from tests.e2e_smoke.harness import ScriptedAgent, expect_ok
 
 if TYPE_CHECKING:
@@ -33,8 +33,8 @@ def _seed_system_and_po(stack: E2EStack) -> tuple[str, Any]:
     against this project (the RoboCo-project FK anchor every org-scoped
     program's task still needs). Returns (project slug, project id).
     """
-    from roboco.db.tables import AgentTable, ProjectTable
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable, ProjectTable
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     slug = f"e2e-scales-{uuid4().hex[:8]}"
     project_id = uuid4()
@@ -87,9 +87,9 @@ def _seed_system_and_po(stack: E2EStack) -> tuple[str, Any]:
 def _seed_target_task(
     stack: E2EStack, project_id: Any, *, title: str, priority: int = 2
 ) -> Any:
-    from roboco.db.tables import TaskTable
-    from roboco.models import Team
-    from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
+    from robofleet.db.tables import TaskTable
+    from robofleet.models import Team
+    from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
 
     task_id = uuid4()
 
@@ -119,8 +119,8 @@ def _arm(stack: E2EStack, project_slug: str) -> None:
     """Arm via the settings-store key — the ONLY arming path (no legacy env
     flag exists for scales) — and point ``self_heal_project_slug`` at the
     seeded project (the RoboCo-project resolution roadmap/periscope share)."""
-    from roboco.config import settings as cfg
-    from roboco.db.tables import SystemSettingTable
+    from robofleet.config import settings as cfg
+    from robofleet.db.tables import SystemSettingTable
 
     cfg.self_heal_project_slug = project_slug
 
@@ -133,7 +133,7 @@ def _arm(stack: E2EStack, project_slug: str) -> None:
 
 
 def _run_due_programs(stack: E2EStack) -> list[str]:
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> list[str]:
         return await get_board_program_engine(session).run_due_programs()
@@ -143,8 +143,8 @@ def _run_due_programs(stack: E2EStack) -> list[str]:
 
 
 def _find_scales_task(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
-    from roboco.services.task import SCALES_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.services.task import SCALES_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -176,7 +176,7 @@ def _find_scales_task(stack: E2EStack) -> dict[str, Any]:
 
 
 def _cycle_counters(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import BoardProgramCycleTable
+    from robofleet.db.tables import BoardProgramCycleTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -204,7 +204,7 @@ def _cycle_counters(stack: E2EStack) -> dict[str, Any]:
 
 
 def _approve_item(stack: E2EStack, task_id: Any, item_id: str, ceo_id: Any) -> str:
-    from roboco.services.scales_service import get_scales_service
+    from robofleet.services.scales_service import get_scales_service
 
     async def _run(session: AsyncSession) -> str:
         result = await get_scales_service(session).approve_item(
@@ -218,7 +218,7 @@ def _approve_item(stack: E2EStack, task_id: Any, item_id: str, ceo_id: Any) -> s
 
 
 def _target_state(stack: E2EStack, task_id: Any) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -258,7 +258,7 @@ def test_scales_loop_originates_dedups_proposes_and_executes(
     # The dispatcher's own dev-work skip recognizes this exact task shape —
     # board_scales is board-dispatched (one-shot PO spawn), never handed to
     # the generic dev dispatch loop's give_me_work/claim path.
-    from roboco.runtime.orchestrator import _is_non_dev_dispatch_source
+    from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
 
     assert _is_non_dev_dispatch_source({"source": row["source"]}) is True
 
@@ -279,7 +279,7 @@ def test_scales_loop_originates_dedups_proposes_and_executes(
         "product-owner",
         "product_owner",
     )
-    do_module = po._module("roboco.mcp.do_server")
+    do_module = po._module("robofleet.mcp.do_server")
     assert "propose_rebalance" in do_module._TOOLS, (
         "propose_rebalance missing from do_server._TOOLS — the MCP server "
         "has no way to expose it to any role"
@@ -320,8 +320,8 @@ def test_scales_loop_originates_dedups_proposes_and_executes(
     # Approving each item EXECUTES its action against the live target task —
     # neither materializes a new task.
     ceo_id = _foundation.AGENTS["ceo"].uuid
-    from roboco.db.tables import AgentTable
-    from roboco.models import AgentRole, AgentStatus
+    from robofleet.db.tables import AgentTable
+    from robofleet.models import AgentRole, AgentStatus
 
     async def _seed_ceo(session: AsyncSession) -> None:
         if await session.get(AgentTable, ceo_id) is not None:

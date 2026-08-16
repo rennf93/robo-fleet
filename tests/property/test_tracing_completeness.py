@@ -30,13 +30,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     AuditLogTable,
     JournalEntryTable,
     JournalTable,
 )
-from roboco.models.base import AgentRole, JournalEntryType
+from robofleet.models.base import AgentRole, JournalEntryType
 from sqlalchemy import select, text
 
 if TYPE_CHECKING:

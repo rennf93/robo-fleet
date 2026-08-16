@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from roboco.llm.providers import codex_cli_usage as cu
+from robofleet.llm.providers import codex_cli_usage as cu
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -154,6 +154,6 @@ def test_main_warns_when_run_log_env_missing(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     monkeypatch.delenv("ROBOCO_CODEX_RUN_LOG", raising=False)
-    with caplog.at_level("WARNING", logger="roboco.llm.providers.codex_cli_usage"):
+    with caplog.at_level("WARNING", logger="robofleet.llm.providers.codex_cli_usage"):
         assert cu.main() == 0
     assert any("ROBOCO_CODEX_RUN_LOG" in r.message for r in caplog.records)

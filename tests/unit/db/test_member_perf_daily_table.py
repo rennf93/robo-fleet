@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from roboco.db.tables import MemberPerformanceDailyTable
+from robofleet.db.tables import MemberPerformanceDailyTable
 from sqlalchemy import UniqueConstraint
 
 if TYPE_CHECKING:

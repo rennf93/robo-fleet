@@ -8,8 +8,8 @@ from unittest import mock
 
 import pytest
 from pydantic import ValidationError
-from roboco.config import Settings
-from roboco.services.settings import FEATURE_FLAGS, validate_setting
+from robofleet.config import Settings
+from robofleet.services.settings import FEATURE_FLAGS, validate_setting
 
 _DEFAULT_ARCHIVE_DAYS = 30
 

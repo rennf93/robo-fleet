@@ -15,7 +15,7 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     AuditLogTable,
     BoardProgramCycleTable,
@@ -23,24 +23,24 @@ from roboco.db.tables import (
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.foundation.policy.lifecycle import _next_hint_pr_fail
-from roboco.models.base import (
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.foundation.policy.lifecycle import _next_hint_pr_fail
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
     Team,
 )
-from roboco.models.base import TaskNature as TN
-from roboco.models.base import TaskStatus as TS
-from roboco.models.base import TaskType as TT
-from roboco.services import board_programs as bp_module
-from roboco.services.spackle_service import (
+from robofleet.models.base import TaskNature as TN
+from robofleet.models.base import TaskStatus as TS
+from robofleet.models.base import TaskType as TT
+from robofleet.services import board_programs as bp_module
+from robofleet.services.spackle_service import (
     SpackleService,
     get_spackle_service,
 )
-from roboco.services.task import (
+from robofleet.services.task import (
     PEST_CONTROL_SOURCE,
     ROADMAP_SOURCE,
     SPACKLE_ITEM_SOURCE,
@@ -97,7 +97,7 @@ def _item(idx: int, *, status: str = "proposed", project_slug: str) -> dict:
         "team": "backend",
         "priority": 2,
         "evidence": (
-            f"route /widgets{idx} exists at roboco/api/routes/widgets.py:1{idx} "
+            f"route /widgets{idx} exists at robofleet/api/routes/widgets.py:1{idx} "
             "with no matching panel page"
         ),
         "status": status,

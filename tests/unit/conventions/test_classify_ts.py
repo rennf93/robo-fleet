@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roboco.conventions.classify_ts import classify_definitions
+from robofleet.conventions.classify_ts import classify_definitions
 
 
 def test_zod_schema_const_is_model() -> None:

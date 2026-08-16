@@ -16,8 +16,8 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.models.runtime import AgentInstance
-from roboco.runtime.orchestrator import AgentConfig, AgentOrchestrator, AgentState
+from robofleet.models.runtime import AgentInstance
+from robofleet.runtime.orchestrator import AgentConfig, AgentOrchestrator, AgentState
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -129,6 +129,6 @@ def test_every_spawn_agent_call_site_passes_spawned_by() -> None:
     """Sweep-guard over the whole package: a dispatcher added without
     attribution fails here, not in a 3am live-debug session."""
     missing: list[str] = []
-    for path in sorted((REPO_ROOT / "roboco").rglob("*.py")):
+    for path in sorted((REPO_ROOT / "robofleet").rglob("*.py")):
         missing.extend(_spawn_agent_calls_missing_spawned_by(path))
     assert not missing, f"spawn_agent() calls missing spawned_by=: {missing}"

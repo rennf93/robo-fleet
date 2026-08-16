@@ -15,8 +15,8 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -25,7 +25,7 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.services.task import TaskService
+from robofleet.services.task import TaskService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

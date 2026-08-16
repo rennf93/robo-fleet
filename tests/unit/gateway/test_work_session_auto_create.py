@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 # #172: a developer fresh claim must carry a substantive step checklist.
 # Inert on re-entry/error/non-dev paths, so safe to pass everywhere.

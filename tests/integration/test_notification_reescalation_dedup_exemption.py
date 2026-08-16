@@ -22,10 +22,15 @@ from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, NotificationTable, ProjectTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, NotificationPriority, NotificationType
-from roboco.models.base import TaskNature, TaskStatus, TaskType, Team
-from roboco.services.notification_delivery import get_notification_delivery_service
+from robofleet.db.tables import AgentTable, NotificationTable, ProjectTable, TaskTable
+from robofleet.models import (
+    AgentRole,
+    AgentStatus,
+    NotificationPriority,
+    NotificationType,
+)
+from robofleet.models.base import TaskNature, TaskStatus, TaskType, Team
+from robofleet.services.notification_delivery import get_notification_delivery_service
 from sqlalchemy import select
 
 if TYPE_CHECKING:
@@ -133,11 +138,11 @@ async def test_two_sequential_due_reescalations_both_deliver(
     await db_session.flush()
 
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.all_recipients_recently_notified",
+        "robofleet.services.notification_delivery.all_recipients_recently_notified",
         AsyncMock(return_value=False),
     )
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_escalation_target",
+        "robofleet.services.notification_delivery.get_escalation_target",
         lambda slug: target.slug if slug == recipient.slug else None,
     )
 

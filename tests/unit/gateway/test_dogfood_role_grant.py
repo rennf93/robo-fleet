@@ -3,7 +3,7 @@ propose_gap_fill."""
 
 from __future__ import annotations
 
-from roboco.services.gateway.role_config import get_role_config
+from robofleet.services.gateway.role_config import get_role_config
 
 
 def test_product_owner_gets_propose_friction_fixes() -> None:

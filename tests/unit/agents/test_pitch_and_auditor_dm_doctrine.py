@@ -8,7 +8,7 @@ grants it a reply-only, CEO-thread-only `dm`/`read_a2a`.
 
 from __future__ import annotations
 
-from roboco.agents.factories._base import _get_prompts_base_path, _load_layer
+from robofleet.agents.factories._base import _get_prompts_base_path, _load_layer
 
 _PROMPTS = _get_prompts_base_path()
 

@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import yaml
-from roboco.services.vault_writer import (
+from robofleet.services.vault_writer import (
     A2AMessageData,
     AgentNoteData,
     BottleneckRow,
@@ -381,7 +381,7 @@ def test_write_task_renders_findings_section(tmp_path: Path) -> None:
     finding = FindingRow(
         id8="aaaaaaaa",
         severity="blocker",
-        file="roboco/services/task.py",
+        file="robofleet/services/task.py",
         line=42,
         expected="the endpoint returns 404",
         actual="the endpoint returns 500",
@@ -394,7 +394,7 @@ def test_write_task_renders_findings_section(tmp_path: Path) -> None:
     )
     assert "## Findings" in text
     assert "[F-aaaaaaaa] (blocker, round 2, open)" in text
-    assert "roboco/services/task.py:42" in text
+    assert "robofleet/services/task.py:42" in text
     assert (
         "the endpoint returns 404 → the endpoint returns 500 → "
         "add a not-found guard" in text

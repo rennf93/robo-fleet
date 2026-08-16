@@ -13,8 +13,8 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from roboco.models.optimal import IndexType, SearchResult
-from roboco.services.proactive import ContextPackage, ProactiveKnowledgeService
+from robofleet.models.optimal import IndexType, SearchResult
+from robofleet.services.proactive import ContextPackage, ProactiveKnowledgeService
 
 
 def _result(content: str) -> SearchResult:

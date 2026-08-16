@@ -1,4 +1,4 @@
-"""roboco.models.llm coverage — TOON config and metrics dataclasses.
+"""robofleet.models.llm coverage — TOON config and metrics dataclasses.
 
 Covers ToonConfig defaults, EncodedBlock __str__, LLMUsage totals, and
 ToonMetrics record/reset/savings/fallback rate computations.
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from roboco.models.llm import (
+from robofleet.models.llm import (
     EncodedBlock,
     LLMUsage,
     ToonConfig,

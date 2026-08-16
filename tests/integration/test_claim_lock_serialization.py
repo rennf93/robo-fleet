@@ -12,7 +12,7 @@ import contextlib
 from uuid import uuid4
 
 import pytest
-from roboco.services.task import TaskService
+from robofleet.services.task import TaskService
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,

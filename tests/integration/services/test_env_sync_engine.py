@@ -17,13 +17,13 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, TaskStatus, Team
-from roboco.services import env_sync_engine as env_sync_module
-from roboco.services.env_sync_engine import get_env_sync_engine
-from roboco.services.task import ENV_SYNC_SOURCE, get_task_service
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, TaskStatus, Team
+from robofleet.services import env_sync_engine as env_sync_module
+from robofleet.services.env_sync_engine import get_env_sync_engine
+from robofleet.services.task import ENV_SYNC_SOURCE, get_task_service
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

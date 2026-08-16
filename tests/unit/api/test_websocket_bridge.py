@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.api.websocket_bridge import (
+from robofleet.api.websocket_bridge import (
     _handle_a2a_message_event,
     _handle_agent_event,
     _handle_notification_sent,
@@ -21,7 +21,7 @@ from roboco.api.websocket_bridge import (
     register_websocket_bridge_handlers,
     start_websocket_bridge,
 )
-from roboco.models.events import Event, EventType
+from robofleet.models.events import Event, EventType
 
 
 def _evt(event_type: EventType, data: dict, source_agent: str | None = None) -> Event:
@@ -37,7 +37,7 @@ def _evt(event_type: EventType, data: dict, source_agent: str | None = None) -> 
 async def test_handle_notification_sent_skips_when_missing_ids() -> None:
     """Incomplete event (missing recipient/notification IDs) → log + return."""
     event = _evt(EventType.NOTIFICATION_SENT, {})  # No notification_id/recipient_id
-    with patch("roboco.api.websocket_bridge.broadcast_notification") as bcast:
+    with patch("robofleet.api.websocket_bridge.broadcast_notification") as bcast:
         await _handle_notification_sent(event)
     bcast.assert_not_called()
 
@@ -49,7 +49,7 @@ async def test_handle_notification_sent_skips_invalid_uuid() -> None:
         EventType.NOTIFICATION_SENT,
         {"notification_id": "not-a-uuid", "recipient_id": str(uuid4())},
     )
-    with patch("roboco.api.websocket_bridge.broadcast_notification") as bcast:
+    with patch("robofleet.api.websocket_bridge.broadcast_notification") as bcast:
         await _handle_notification_sent(event)
     bcast.assert_not_called()
 
@@ -70,8 +70,8 @@ async def test_handle_notification_sent_skips_when_no_connections() -> None:
         },
     )
     with (
-        patch("roboco.api.websocket_bridge.broadcast_notification") as bcast,
-        patch("roboco.api.websocket_bridge.manager") as mgr,
+        patch("robofleet.api.websocket_bridge.broadcast_notification") as bcast,
+        patch("robofleet.api.websocket_bridge.manager") as mgr,
     ):
         mgr.notification_connections = {}  # No connections for any agent.
         await _handle_notification_sent(event)
@@ -95,8 +95,8 @@ async def test_handle_notification_sent_broadcasts_when_connected() -> None:
     )
     bcast = AsyncMock()
     with (
-        patch("roboco.api.websocket_bridge.broadcast_notification", bcast),
-        patch("roboco.api.websocket_bridge.manager") as mgr,
+        patch("robofleet.api.websocket_bridge.broadcast_notification", bcast),
+        patch("robofleet.api.websocket_bridge.manager") as mgr,
     ):
         mgr.notification_connections = {rid: {"socket-1"}}  # Has a connection.
         await _handle_notification_sent(event)
@@ -120,8 +120,8 @@ async def test_handle_notification_acked_broadcasts_using_agent_id() -> None:
     )
     bcast = AsyncMock()
     with (
-        patch("roboco.api.websocket_bridge.broadcast_notification", bcast),
-        patch("roboco.api.websocket_bridge.manager") as mgr,
+        patch("robofleet.api.websocket_bridge.broadcast_notification", bcast),
+        patch("robofleet.api.websocket_bridge.manager") as mgr,
     ):
         mgr.notification_connections = {aid: {"socket-1"}}
         await _handle_notification_sent(event)
@@ -140,7 +140,7 @@ async def test_handle_notification_acked_broadcasts_using_agent_id() -> None:
 @pytest.mark.asyncio
 async def test_handle_agent_event_skips_when_no_agent_id() -> None:
     event = _evt(EventType.AGENT_SPAWNED, {})
-    with patch("roboco.api.websocket_bridge.manager") as mgr:
+    with patch("robofleet.api.websocket_bridge.manager") as mgr:
         mgr.broadcast_to_agent_watchers = AsyncMock()
         await _handle_agent_event(event)
         mgr.broadcast_to_agent_watchers.assert_not_called()
@@ -149,7 +149,7 @@ async def test_handle_agent_event_skips_when_no_agent_id() -> None:
 @pytest.mark.asyncio
 async def test_handle_agent_event_skips_invalid_uuid() -> None:
     event = _evt(EventType.AGENT_SPAWNED, {"agent_id": "bad"})
-    with patch("roboco.api.websocket_bridge.manager") as mgr:
+    with patch("robofleet.api.websocket_bridge.manager") as mgr:
         mgr.broadcast_to_agent_watchers = AsyncMock()
         await _handle_agent_event(event)
         mgr.broadcast_to_agent_watchers.assert_not_called()
@@ -160,7 +160,7 @@ async def test_handle_agent_event_uses_source_agent_fallback() -> None:
     """When data has no agent_id, falls back to event.source_agent."""
     aid = uuid4()
     event = _evt(EventType.AGENT_STOPPED, {}, source_agent=str(aid))
-    with patch("roboco.api.websocket_bridge.manager") as mgr:
+    with patch("robofleet.api.websocket_bridge.manager") as mgr:
         mgr.agent_connections = {aid: {"sock"}}
         mgr.broadcast_to_agent_watchers = AsyncMock()
         await _handle_agent_event(event)
@@ -171,7 +171,7 @@ async def test_handle_agent_event_uses_source_agent_fallback() -> None:
 async def test_handle_agent_event_skips_when_no_connections() -> None:
     aid = uuid4()
     event = _evt(EventType.AGENT_SPAWNED, {"agent_id": str(aid)})
-    with patch("roboco.api.websocket_bridge.manager") as mgr:
+    with patch("robofleet.api.websocket_bridge.manager") as mgr:
         mgr.agent_connections = {}
         mgr.broadcast_to_agent_watchers = AsyncMock()
         await _handle_agent_event(event)
@@ -182,7 +182,7 @@ async def test_handle_agent_event_skips_when_no_connections() -> None:
 async def test_handle_agent_event_broadcasts() -> None:
     aid = uuid4()
     event = _evt(EventType.AGENT_RESUMED, {"agent_id": str(aid)})
-    with patch("roboco.api.websocket_bridge.manager") as mgr:
+    with patch("robofleet.api.websocket_bridge.manager") as mgr:
         mgr.agent_connections = {aid: {"sock"}}
         mgr.broadcast_to_agent_watchers = AsyncMock()
         await _handle_agent_event(event)
@@ -210,7 +210,7 @@ async def test_handle_rate_limit_hit_broadcasts_to_system() -> None:
             "timestamp": "2026-06-11T00:00:00+00:00",
         },
     )
-    with patch("roboco.api.websocket_bridge.manager") as mgr:
+    with patch("robofleet.api.websocket_bridge.manager") as mgr:
         mgr.broadcast_system = AsyncMock()
         await _handle_rate_limit_event(event)
     mgr.broadcast_system.assert_awaited_once()
@@ -227,7 +227,7 @@ async def test_handle_rate_limit_lifted_broadcasts_to_system() -> None:
         EventType.RATE_LIMIT_LIFTED,
         {"provider": "anthropic", "timestamp": "2026-06-11T00:01:00+00:00"},
     )
-    with patch("roboco.api.websocket_bridge.manager") as mgr:
+    with patch("robofleet.api.websocket_bridge.manager") as mgr:
         mgr.broadcast_system = AsyncMock()
         await _handle_rate_limit_event(event)
     msg = mgr.broadcast_system.await_args.args[0]
@@ -239,7 +239,7 @@ async def test_handle_rate_limit_lifted_broadcasts_to_system() -> None:
 async def test_handle_rate_limit_ignores_unrelated_event() -> None:
     """A non-rate-limit event type is a no-op (defensive guard)."""
     event = _evt(EventType.AGENT_SPAWNED, {"provider": "anthropic"})
-    with patch("roboco.api.websocket_bridge.manager") as mgr:
+    with patch("robofleet.api.websocket_bridge.manager") as mgr:
         mgr.broadcast_system = AsyncMock()
         await _handle_rate_limit_event(event)
     mgr.broadcast_system.assert_not_called()
@@ -272,7 +272,7 @@ async def test_handle_usage_snapshot_broadcasts_to_system() -> None:
             "timestamp": "2026-06-11T00:01:00+00:00",
         },
     )
-    with patch("roboco.api.websocket_bridge.manager") as mgr:
+    with patch("robofleet.api.websocket_bridge.manager") as mgr:
         mgr.broadcast_system = AsyncMock()
         await _handle_usage_event(event)
     mgr.broadcast_system.assert_awaited_once()
@@ -305,7 +305,7 @@ async def test_handle_a2a_message_event_broadcasts_to_system() -> None:
             "timestamp": "2026-07-02T00:00:00+00:00",
         },
     )
-    with patch("roboco.api.websocket_bridge.manager") as mgr:
+    with patch("robofleet.api.websocket_bridge.manager") as mgr:
         mgr.broadcast_system = AsyncMock()
         await _handle_a2a_message_event(event)
     mgr.broadcast_system.assert_awaited_once()
@@ -337,7 +337,7 @@ def test_register_websocket_bridge_handlers_subscribes_all_event_types() -> None
             self.subscribed.append((event_type, handler))
 
     fake = _FakeBus()
-    with patch("roboco.api.websocket_bridge.get_event_bus", return_value=fake):
+    with patch("robofleet.api.websocket_bridge.get_event_bus", return_value=fake):
         register_websocket_bridge_handlers()
     types = [t for t, _ in fake.subscribed]
     # All expected event types appear at least once.
@@ -359,6 +359,8 @@ def test_register_websocket_bridge_handlers_subscribes_all_event_types() -> None
 @pytest.mark.asyncio
 async def test_start_websocket_bridge_registers_handlers() -> None:
     """start_websocket_bridge() calls register_websocket_bridge_handlers."""
-    with patch("roboco.api.websocket_bridge.register_websocket_bridge_handlers") as reg:
+    with patch(
+        "robofleet.api.websocket_bridge.register_websocket_bridge_handlers"
+    ) as reg:
         await start_websocket_bridge()
     reg.assert_called_once()

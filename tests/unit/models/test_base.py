@@ -1,6 +1,6 @@
-"""Tests for the ModelProvider enum in roboco.models.base."""
+"""Tests for the ModelProvider enum in robofleet.models.base."""
 
-from roboco.models.base import ModelProvider
+from robofleet.models.base import ModelProvider
 
 
 def test_adk_cloud_run_provider_value() -> None:

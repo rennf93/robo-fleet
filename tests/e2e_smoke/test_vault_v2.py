@@ -34,15 +34,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation import identity as _foundation
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-from roboco.models.optimal import IndexType
-from roboco.services.task import TaskCreateRequest, TaskService
-from roboco.services.vault_janitor import VaultJanitor
-from roboco.services.vault_kb_engine import VaultKBEngine
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+from robofleet.models.optimal import IndexType
+from robofleet.services.task import TaskCreateRequest, TaskService
+from robofleet.services.vault_janitor import VaultJanitor
+from robofleet.services.vault_kb_engine import VaultKBEngine
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -339,7 +339,7 @@ async def test_kb_cycle_ingests_clean_quarantines_flagged_dedups_second_run(
     stub = _OptimalStub()
     engine = VaultKBEngine(MagicMock())
     with patch(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=stub),
     ):
         first = await engine.run_cycle()

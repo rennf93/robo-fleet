@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import TikTokCredentialsTable
-from roboco.services.tiktok_credentials import (
+from robofleet.db.tables import TikTokCredentialsTable
+from robofleet.services.tiktok_credentials import (
     TikTokCredentialsService,
     TikTokCredentialsValidationError,
     get_tiktok_credentials_service,

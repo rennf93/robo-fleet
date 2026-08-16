@@ -14,17 +14,17 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     Complexity,
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.task import TaskCreateRequest
-from roboco.services.base import ConflictError
-from roboco.services.task import SoftBlockInfo, TaskService, get_task_service
+from robofleet.models.task import TaskCreateRequest
+from robofleet.services.base import ConflictError
+from robofleet.services.task import SoftBlockInfo, TaskService, get_task_service
 from sqlalchemy import select, text
 
 if TYPE_CHECKING:
@@ -2050,9 +2050,9 @@ async def test_stamp_wave_sequence_after_collision_wiring_matches_delegate_flow(
         await svc.stamp_wave_sequence(t.id)
         return t
 
-    a = await _delegate("touches a.py", ["roboco/api/a.py"])
-    b = await _delegate("touches b.py", ["roboco/api/b.py"])
-    c = await _delegate("touches a.py too", ["roboco/api/a.py"])
+    a = await _delegate("touches a.py", ["robofleet/api/a.py"])
+    b = await _delegate("touches b.py", ["robofleet/api/b.py"])
+    c = await _delegate("touches a.py too", ["robofleet/api/a.py"])
 
     assert (a.sequence, b.sequence) == (0, 0)  # disjoint → parallel
     assert c.sequence == 1  # collides with a → next wave

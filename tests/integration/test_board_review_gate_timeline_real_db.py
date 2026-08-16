@@ -30,13 +30,13 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
-from roboco.db import base as db_base
-from roboco.db.tables import AgentTable, NotificationTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import NotificationType, TaskNature, TaskStatus, TaskType
-from roboco.models.runtime import AgentInstance, OrchestratorAgentState
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.seeds.initial_data import AGENT_UUIDS
+from robofleet.db import base as db_base
+from robofleet.db.tables import AgentTable, NotificationTable, TaskTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import NotificationType, TaskNature, TaskStatus, TaskType
+from robofleet.models.runtime import AgentInstance, OrchestratorAgentState
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.seeds.initial_data import AGENT_UUIDS
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncSession,

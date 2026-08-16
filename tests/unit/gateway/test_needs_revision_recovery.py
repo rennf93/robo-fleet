@@ -20,8 +20,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.foundation.policy import lifecycle as spec
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 # --------------------------------------------------------------------------- #
 # Lifecycle authority: PMs may now claim needs_revision

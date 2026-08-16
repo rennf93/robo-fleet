@@ -10,7 +10,7 @@ import os
 import time
 from typing import TYPE_CHECKING
 
-from roboco.runtime.transcript_retention import (
+from robofleet.runtime.transcript_retention import (
     is_agent_owned_dir,
     select_prunable_transcripts,
 )

@@ -9,8 +9,8 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_db
-from roboco.api.routes.kanban import router as kanban_router
+from robofleet.api.deps import get_db
+from robofleet.api.routes.kanban import router as kanban_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

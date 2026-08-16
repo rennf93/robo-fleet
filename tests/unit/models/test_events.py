@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from roboco.events.bus import Event, EventType
+from robofleet.events.bus import Event, EventType
 
 
 def test_event_default_id_and_timestamp() -> None:

@@ -1,4 +1,4 @@
-"""roboco.services.cockpit + route — read-only company summary (mocked deps)."""
+"""robofleet.services.cockpit + route — read-only company summary (mocked deps)."""
 
 from __future__ import annotations
 
@@ -10,13 +10,13 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from roboco.api.routes import cockpit as croute
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
-from roboco.services import cockpit as cm
-from roboco.services.cockpit import CockpitService
-from roboco.services.strategy_engine import StrategyObservation
-from roboco.services.task import TaskService
+from robofleet.api.routes import cockpit as croute
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
+from robofleet.services import cockpit as cm
+from robofleet.services.cockpit import CockpitService
+from robofleet.services.strategy_engine import StrategyObservation
+from robofleet.services.task import TaskService
 
 _IN_PROGRESS = 2
 _CLAIMED = 1

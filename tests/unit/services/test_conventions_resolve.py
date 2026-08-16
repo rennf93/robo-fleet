@@ -9,17 +9,17 @@ from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import patch
 
 import pytest
-from roboco.services.conventions import ConventionsService
+from robofleet.services.conventions import ConventionsService
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from roboco.db.tables import ProjectTable
+    from robofleet.db.tables import ProjectTable
 
 
 def _git_repo(root: Path) -> str:
-    (root / "roboco" / "services").mkdir(parents=True)
-    (root / "roboco" / "services" / "x.py").write_text("def f():\n    return 1\n")
+    (root / "robofleet" / "services").mkdir(parents=True)
+    (root / "robofleet" / "services" / "x.py").write_text("def f():\n    return 1\n")
     for cmd in (
         ["git", "init", "-q"],
         ["git", "add", "-A"],
@@ -86,7 +86,7 @@ async def test_resolve_workspace_force_refetches() -> None:
 
     project = SimpleNamespace(slug="p", workspace_path=None, head_commit=None)
     with patch(
-        "roboco.services.workspace.get_workspace_service",
+        "robofleet.services.workspace.get_workspace_service",
         return_value=_FakeWS(),
     ):
         root = await _svc().resolve_workspace(cast("ProjectTable", project))

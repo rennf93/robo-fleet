@@ -11,7 +11,7 @@ from __future__ import annotations
 import importlib
 from typing import TYPE_CHECKING
 
-import roboco.agent_sdk.server as srv
+import robofleet.agent_sdk.server as srv
 
 if TYPE_CHECKING:
     import pytest

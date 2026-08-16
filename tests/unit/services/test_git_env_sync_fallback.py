@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import roboco.services.git as git_module
-from roboco.services.git import GitService
+import robofleet.services.git as git_module
+from robofleet.services.git import GitService
 
 if TYPE_CHECKING:
     from pathlib import Path

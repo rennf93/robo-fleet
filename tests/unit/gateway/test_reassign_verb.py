@@ -13,10 +13,10 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.models.base import AgentStatus, TaskStatus
-from roboco.seeds.initial_data import AGENT_UUIDS
-from roboco.services.gateway.choreographer._impl import Choreographer
-from roboco.services.task import TaskService
+from robofleet.models.base import AgentStatus, TaskStatus
+from robofleet.seeds.initial_data import AGENT_UUIDS
+from robofleet.services.gateway.choreographer._impl import Choreographer
+from robofleet.services.task import TaskService
 
 _BE_PM = UUID(AGENT_UUIDS["be-pm"])
 

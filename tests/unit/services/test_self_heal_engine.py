@@ -11,10 +11,10 @@ from unittest.mock import AsyncMock
 
 import pytest
 import redis.asyncio as redis_asyncio
-from roboco.config import settings as cfg
-from roboco.services.notification import NotificationService
-from roboco.services.self_heal_engine import SelfHealEngine, _fingerprint
-from roboco.services.telemetry import TelemetrySample
+from robofleet.config import settings as cfg
+from robofleet.services.notification import NotificationService
+from robofleet.services.self_heal_engine import SelfHealEngine, _fingerprint
+from robofleet.services.telemetry import TelemetrySample
 
 
 class _FakeSource:

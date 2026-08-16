@@ -18,15 +18,15 @@ from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.runtime.orchestrator import (
+from robofleet.config import settings
+from robofleet.runtime.orchestrator import (
     _INTAKE_WORKSPACE_AMBIENT,
     INTAKE_AGENT_ID,
     AgentInstance,
     AgentOrchestrator,
     _IntakeRunSpec,
 )
-from roboco.services import prompter_live
+from robofleet.services import prompter_live
 
 
 def _make_minimal_orchestrator() -> AgentOrchestrator:
@@ -164,9 +164,9 @@ class TestIntakeScopeSlugs:
                 return SimpleNamespace(slug=f"proj-{str(pid)[0]}")
 
         with (
-            patch("roboco.services.product.ProductService", _FakeProduct),
+            patch("robofleet.services.product.ProductService", _FakeProduct),
             patch(
-                "roboco.services.project.get_project_service",
+                "robofleet.services.project.get_project_service",
                 lambda _db: _FakeProjectSvc(),
             ),
         ):
@@ -185,8 +185,10 @@ class TestIntakeScopeSlugs:
                 return []
 
         with (
-            patch("roboco.services.product.ProductService", _FakeProduct),
-            patch("roboco.services.project.get_project_service", lambda _db: object()),
+            patch("robofleet.services.product.ProductService", _FakeProduct),
+            patch(
+                "robofleet.services.project.get_project_service", lambda _db: object()
+            ),
             pytest.raises(ValueError, match="no projects"),
         ):
             await AgentOrchestrator._intake_scope_slugs(
@@ -209,7 +211,7 @@ class TestIntakeScopeSlugs:
                 return SimpleNamespace(slug=f"proj-{str(pid)[0]}")
 
         with patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             lambda _db: _FakeProjectSvc(),
         ):
             slugs = await AgentOrchestrator._intake_scope_slugs(
@@ -228,7 +230,7 @@ class TestIntakeScopeSlugs:
 
         with (
             patch(
-                "roboco.services.project.get_project_service",
+                "robofleet.services.project.get_project_service",
                 lambda _db: _FakeProjectSvc(),
             ),
             pytest.raises(ValueError, match="not found"),
@@ -253,7 +255,7 @@ class TestIntakeScopeSlugs:
 
         with (
             patch(
-                "roboco.services.project.get_project_service",
+                "robofleet.services.project.get_project_service",
                 lambda _db: _FakeProjectSvc(),
             ),
             pytest.raises(ValueError, match="not found"),
@@ -332,7 +334,7 @@ class TestResolveHistoryDigestProjects:
                 return SimpleNamespace(slug=slug, id=uuid4())
 
         with patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             lambda _db: _FakeProjectSvc(),
         ):
             projects = await AgentOrchestrator._resolve_history_digest_projects(
@@ -347,7 +349,7 @@ class TestResolveHistoryDigestProjects:
                 return None
 
         with patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             lambda _db: _FakeProjectSvc(),
         ):
             projects = await AgentOrchestrator._resolve_history_digest_projects(
@@ -388,7 +390,7 @@ class TestResolveHistoryDigestProjects:
                 return SimpleNamespace(slug=f"proj-{str(pid)[0]}", id=pid)
 
         with patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             lambda _db: _FakeProjectSvc(),
         ):
             projects = await AgentOrchestrator._resolve_history_digest_projects(
@@ -424,7 +426,7 @@ class TestResolveHistoryDigestAmbient:
         def _boom() -> Any:
             raise RuntimeError("db unavailable")
 
-        monkeypatch.setattr("roboco.db.base.get_session_factory", _boom)
+        monkeypatch.setattr("robofleet.db.base.get_session_factory", _boom)
 
         result = await orch._resolve_history_digest_ambient("roboco")
         assert result is None
@@ -448,7 +450,7 @@ class TestResolveAmbientProjects:
                 return SimpleNamespace(slug=slug, id=uuid4())
 
         with patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             lambda _db: _FakeProjectSvc(),
         ):
             projects = await orch._resolve_ambient_projects(
@@ -468,7 +470,7 @@ class TestResolveAmbientProjects:
                 return None
 
         with patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             lambda _db: _FakeProjectSvc(),
         ):
             projects = await orch._resolve_ambient_projects(
@@ -523,7 +525,7 @@ class TestResolveAmbientProjects:
                 return SimpleNamespace(slug=f"proj-{str(pid)[0]}", id=pid)
 
         with patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             lambda _db: _FakeProjectSvc(),
         ):
             projects = await orch._resolve_ambient_projects(
@@ -554,7 +556,7 @@ class TestResolveAmbientProjects:
 
         monkeypatch.setattr(orch, "_ambient_product_projects", _fail_product_projects)
         with patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             lambda _db: _FakeProjectSvc(),
         ):
             projects = await orch._resolve_ambient_projects(
@@ -604,7 +606,7 @@ class TestResolveConventionsAmbient:
         def _boom() -> Any:
             raise RuntimeError("db unavailable")
 
-        monkeypatch.setattr("roboco.db.base.get_session_factory", _boom)
+        monkeypatch.setattr("robofleet.db.base.get_session_factory", _boom)
 
         result = await orch._resolve_conventions_ambient(
             None, project_ids=["11111111-1111-1111-1111-111111111111"]
@@ -630,7 +632,7 @@ class TestResolveConventionsAmbient:
             async def __aexit__(self, *_a: Any) -> None:
                 return None
 
-        monkeypatch.setattr("roboco.db.base.get_session_factory", _FakeFactory)
+        monkeypatch.setattr("robofleet.db.base.get_session_factory", _FakeFactory)
 
         sentinel_projects = [SimpleNamespace(slug="proj-1")]
         captured: dict[str, Any] = {}
@@ -647,7 +649,7 @@ class TestResolveConventionsAmbient:
             AgentOrchestrator, "_resolve_ambient_projects", _fake_resolve_projects
         )
         monkeypatch.setattr(
-            "roboco.agents.factories._base.conventions_ambient_layer", _fake_layer
+            "robofleet.agents.factories._base.conventions_ambient_layer", _fake_layer
         )
 
         result = await orch._resolve_conventions_ambient(
@@ -806,7 +808,7 @@ class TestSpawnIntakeSession:
             return ["--label", f"com.docker.compose.service={service}"]
 
         monkeypatch.setattr(
-            "roboco.runtime.orchestrator.compose_label_args", _fake_label_args
+            "robofleet.runtime.orchestrator.compose_label_args", _fake_label_args
         )
 
         await orch.spawn_intake_session("sess-labels", project_slug="roboco")
@@ -830,7 +832,7 @@ class TestSpawnIntakeSession:
             return []
 
         monkeypatch.setattr(
-            "roboco.runtime.orchestrator.compose_label_args", _no_labels
+            "robofleet.runtime.orchestrator.compose_label_args", _no_labels
         )
 
         await orch.spawn_intake_session("sess-no-labels", project_slug="roboco")
@@ -1182,9 +1184,9 @@ class TestPersistIntakeFirstMessage:
             yield fake_db
 
         prompter = AsyncMock()
-        monkeypatch.setattr("roboco.db.base.get_db_context", _fake_ctx)
+        monkeypatch.setattr("robofleet.db.base.get_db_context", _fake_ctx)
         monkeypatch.setattr(
-            "roboco.services.prompter.get_prompter_service", lambda _db: prompter
+            "robofleet.services.prompter.get_prompter_service", lambda _db: prompter
         )
 
         await orch._persist_intake_first_message("sess-p", "build X")
@@ -1202,7 +1204,7 @@ class TestPersistIntakeFirstMessage:
         def _boom_ctx() -> Any:
             raise RuntimeError("db unreachable")
 
-        monkeypatch.setattr("roboco.db.base.get_db_context", _boom_ctx)
+        monkeypatch.setattr("robofleet.db.base.get_db_context", _boom_ctx)
 
         await orch._persist_intake_first_message("sess-p2", "text")  # must not raise
 

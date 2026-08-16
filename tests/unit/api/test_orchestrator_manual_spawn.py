@@ -19,25 +19,25 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-import roboco.api.utils.orchestrator as orch_utils
+import robofleet.api.utils.orchestrator as orch_utils
 from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
-from roboco.agents_config import AGENT_UUIDS
-from roboco.api.deps import _ServiceHolder, set_orchestrator
-from roboco.api.routes.orchestrator import (
+from robofleet.agents_config import AGENT_UUIDS
+from robofleet.api.deps import _ServiceHolder, set_orchestrator
+from robofleet.api.routes.orchestrator import (
     router as orch_router,
 )
-from roboco.api.utils.orchestrator import (
+from robofleet.api.utils.orchestrator import (
     _build_manual_spawn_prompt,
     _resolve_manual_spawn_prompt,
     _validated_agent_id,
 )
-from roboco.runtime.orchestrator import AgentReadinessError, AgentState
+from robofleet.runtime.orchestrator import AgentReadinessError, AgentState
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
 
 _HDR = {"X-Agent-ID": str(uuid4()), "X-Agent-Role": "ceo"}
 

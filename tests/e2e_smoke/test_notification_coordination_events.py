@@ -1,7 +1,7 @@
 """Scenario: coordination-event notification producers land real DB rows.
 
 Drives three of the coordination-event notification producers wired at
-``TaskService``'s transition chokepoints (``roboco/services/task.py``) —
+``TaskService``'s transition chokepoints (``robofleet/services/task.py``) —
 soft-block (BLOCKER_ESCALATION to the cell PM), unblock (ALERT to the
 restored owner + CEO, ``send_unblock_notification``), and dependency-revival
 (ALERT to the revived owner + CEO, ``send_dependency_revival_notification``)
@@ -28,7 +28,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 import httpx
-from roboco.services.notification_text import task_display
+from robofleet.services.notification_text import task_display
 from tests.e2e_smoke.arcs import seed_company, seed_project, seed_task
 
 if TYPE_CHECKING:
@@ -50,9 +50,9 @@ def _seed_system_agent(stack: E2EStack) -> None:
     exercise ``send_unblock_notification`` / ``send_dependency_revival_notification``
     need it — both resolve ``from_agent="system"`` to a UUID via DB lookup.
     """
-    from roboco.db.tables import AgentTable
-    from roboco.foundation import identity as _foundation
-    from roboco.models import AgentRole, AgentStatus
+    from robofleet.db.tables import AgentTable
+    from robofleet.foundation import identity as _foundation
+    from robofleet.models import AgentRole, AgentStatus
 
     async def _run(session: AsyncSession) -> None:
         session.add(
@@ -78,7 +78,7 @@ def _seed_system_agent(stack: E2EStack) -> None:
 def _notifications_for_task(
     stack: E2EStack, task_id: Any, notification_type: Any
 ) -> list[dict[str, Any]]:
-    from roboco.db.tables import NotificationTable
+    from robofleet.db.tables import NotificationTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> list[dict[str, Any]]:
@@ -117,7 +117,7 @@ def test_soft_block_persists_blocker_escalation_notification(
     company = seed_company(stack)
     project_id, _project_slug = seed_project(stack, company)
 
-    from roboco.models.base import TaskStatus
+    from robofleet.models.base import TaskStatus
 
     task_id = seed_task(
         stack,
@@ -151,7 +151,7 @@ def test_soft_block_persists_blocker_escalation_notification(
         f"soft-block: {resp.status_code} {resp.text[:1500]}"
     )
 
-    from roboco.models import NotificationType
+    from robofleet.models import NotificationType
 
     notifications = _notifications_for_task(
         stack, task_id, NotificationType.BLOCKER_ESCALATION
@@ -176,7 +176,7 @@ def test_unblock_persists_alert_notification(e2e_stack: E2EStack) -> None:
     project_id, _project_slug = seed_project(stack, company)
     _seed_system_agent(stack)
 
-    from roboco.models.base import TaskStatus
+    from robofleet.models.base import TaskStatus
 
     task_id = seed_task(
         stack,
@@ -219,7 +219,7 @@ def test_unblock_persists_alert_notification(e2e_stack: E2EStack) -> None:
         f"unblock: {unblock_resp.status_code} {unblock_resp.text[:1500]}"
     )
 
-    from roboco.models import NotificationType
+    from robofleet.models import NotificationType
 
     notifications = _notifications_for_task(stack, task_id, NotificationType.ALERT)
     assert len(notifications) == 1, notifications
@@ -253,7 +253,7 @@ def test_dependency_revival_persists_alert_notification(e2e_stack: E2EStack) -> 
     project_id, _project_slug = seed_project(stack, company)
     _seed_system_agent(stack)
 
-    from roboco.models.base import TaskStatus
+    from robofleet.models.base import TaskStatus
 
     dependency_id = seed_task(
         stack,
@@ -282,14 +282,14 @@ def test_dependency_revival_persists_alert_notification(e2e_stack: E2EStack) -> 
         branch_name="feature/backend/e2e-dependency-revival",
     )
 
-    from roboco.services.task import get_task_service
+    from robofleet.services.task import get_task_service
 
     async def _complete_dependency(session: AsyncSession) -> None:
         await get_task_service(session)._unblock_dependents(dependency_id)
 
     stack.run_db(_complete_dependency)
 
-    from roboco.models import NotificationType
+    from robofleet.models import NotificationType
 
     notifications = _notifications_for_task(stack, dependent_id, NotificationType.ALERT)
     assert len(notifications) == 1, notifications

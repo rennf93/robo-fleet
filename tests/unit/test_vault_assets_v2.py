@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from roboco.vault import ensure_vault_assets
+from robofleet.vault import ensure_vault_assets
 
 
 def test_ensure_vault_assets_materializes_base_files(tmp_path: Path) -> None:
@@ -21,7 +21,9 @@ def test_ensure_vault_assets_materializes_base_files(tmp_path: Path) -> None:
 
 
 def test_base_files_are_valid_yaml() -> None:
-    meta_dir = Path(__file__).resolve().parents[2] / "roboco" / "vault_assets" / "meta"
+    meta_dir = (
+        Path(__file__).resolve().parents[2] / "robofleet" / "vault_assets" / "meta"
+    )
     for name in ("Task Board.base", "Reports.base"):
         data = yaml.safe_load((meta_dir / name).read_text(encoding="utf-8"))
         assert isinstance(data, dict)

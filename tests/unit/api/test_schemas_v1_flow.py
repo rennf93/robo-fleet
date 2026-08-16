@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
-from roboco.api.schemas.v1.flow import (
+from robofleet.api.schemas.v1.flow import (
     _APPROACH_MAX_CHARS,
     DelegateRequest,
     IWillPlanRequest,
@@ -16,7 +16,7 @@ from roboco.api.schemas.v1.flow import (
     RiskCreate,
     SubTaskCreate,
 )
-from roboco.models.base import Complexity
+from robofleet.models.base import Complexity
 
 
 def test_delegate_request_requires_task_type() -> None:

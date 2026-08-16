@@ -16,7 +16,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.services.git import GitService
+from robofleet.services.git import GitService
 
 
 def _git_service() -> GitService:

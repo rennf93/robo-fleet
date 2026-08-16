@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec
-from roboco.services.gateway.envelope import Envelope
+from robofleet.foundation.policy import lifecycle as spec
+from robofleet.services.gateway.envelope import Envelope
 
 
 def test_from_decision_not_authorized_maps_to_not_authorized_envelope() -> None:

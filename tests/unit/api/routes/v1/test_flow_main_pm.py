@@ -12,8 +12,8 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from roboco.api.deps import get_choreographer
-from roboco.api.routes.v1.flow_main_pm import router
+from robofleet.api.deps import get_choreographer
+from robofleet.api.routes.v1.flow_main_pm import router
 
 _HTTP_200 = 200
 _HTTP_422 = 422
@@ -300,7 +300,7 @@ async def test_delegate_forwards_collision_surfaces_to_inputs() -> None:
                 "all subtasks created with acceptance criteria",
                 "branch + PR opened against the slice",
             ],
-            "intends_to_touch": ["roboco/services/foo.py"],
+            "intends_to_touch": ["robofleet/services/foo.py"],
             "adds_migration": True,
             "touches_shared": True,
             "depends_on": [dep_id],
@@ -310,7 +310,7 @@ async def test_delegate_forwards_collision_surfaces_to_inputs() -> None:
 
     assert resp.status_code == _HTTP_200, resp.text
     inputs = mock_chore.delegate.await_args.args[2]
-    assert inputs.intends_to_touch == ["roboco/services/foo.py"]
+    assert inputs.intends_to_touch == ["robofleet/services/foo.py"]
     assert inputs.adds_migration is True
     assert inputs.touches_shared is True
     assert inputs.depends_on == [UUID(dep_id)]

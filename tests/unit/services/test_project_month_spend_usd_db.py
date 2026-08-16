@@ -15,9 +15,14 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.billing.pricing import calculate_cost
-from roboco.db.tables import AgentSpawnSessionTable, AgentTable, ProjectTable, TaskTable
-from roboco.models.base import (
+from robofleet.billing.pricing import calculate_cost
+from robofleet.db.tables import (
+    AgentSpawnSessionTable,
+    AgentTable,
+    ProjectTable,
+    TaskTable,
+)
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -26,7 +31,7 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.services.task import TaskService
+from robofleet.services.task import TaskService
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

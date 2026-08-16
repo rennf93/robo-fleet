@@ -11,8 +11,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from roboco.foundation.policy import lifecycle as spec
-from roboco.foundation.policy.lifecycle import Role, Status
+from robofleet.foundation.policy import lifecycle as spec
+from robofleet.foundation.policy.lifecycle import Role, Status
 
 
 def _task(status: str, team: str = "backend", **kw: Any) -> SimpleNamespace:

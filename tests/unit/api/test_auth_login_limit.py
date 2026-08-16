@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
-from roboco.api.auth.login_limit import LoginRateLimiter
+from robofleet.api.auth.login_limit import LoginRateLimiter
 
 
 class _FakeRedis:

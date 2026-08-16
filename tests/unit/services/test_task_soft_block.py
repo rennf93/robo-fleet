@@ -12,18 +12,18 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     BlockerResolverType,
     Complexity,
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.permissions import AgentContext
-from roboco.models.task import TaskCreateRequest
-from roboco.services.task import SoftBlockInput, TaskService
+from robofleet.models.permissions import AgentContext
+from robofleet.models.task import TaskCreateRequest
+from robofleet.services.task import SoftBlockInput, TaskService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -95,7 +95,7 @@ async def test_soft_block_handler_preserves_human_resolver(
     await db_session.flush()
 
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: AsyncMock(),
     )
 

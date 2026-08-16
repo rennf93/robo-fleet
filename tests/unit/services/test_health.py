@@ -1,4 +1,4 @@
-"""roboco.services.health coverage — DB / Redis connectivity probes.
+"""robofleet.services.health coverage — DB / Redis connectivity probes.
 
 Both probes are thin wrappers: they execute a trivial command and return
 ("ok", True) on success, (str(error), False) on failure. We mock the
@@ -12,10 +12,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.api.routes.health import health_check
-from roboco.db.tables import RagIndexFailureTable
-from roboco.services.health import check_database, check_redis
-from roboco.services.rag_index_failures import _reindex_journal_entry, reclaim_due
+from robofleet.api.routes.health import health_check
+from robofleet.db.tables import RagIndexFailureTable
+from robofleet.services.health import check_database, check_redis
+from robofleet.services.rag_index_failures import _reindex_journal_entry, reclaim_due
 
 _EXPECTED_FAILURES = 3
 _BUMPED_ATTEMPTS = 3
@@ -38,7 +38,7 @@ async def test_check_database_ok() -> None:
         async def __aexit__(self, *_args: object) -> None:
             return None
 
-    with patch("roboco.services.health.get_db_context", return_value=_Ctx()):
+    with patch("robofleet.services.health.get_db_context", return_value=_Ctx()):
         msg, ok = await check_database()
     assert ok is True
     assert msg == "ok"
@@ -55,7 +55,7 @@ async def test_check_database_error() -> None:
         async def __aexit__(self, *_args: object) -> None:
             return None
 
-    with patch("roboco.services.health.get_db_context", return_value=_BadCtx()):
+    with patch("robofleet.services.health.get_db_context", return_value=_BadCtx()):
         msg, ok = await check_database()
     assert ok is False
     assert "connection refused" in msg
@@ -73,7 +73,7 @@ async def test_check_redis_ok() -> None:
     mock_client.ping = AsyncMock(return_value=True)
     mock_client.close = AsyncMock()
 
-    with patch("roboco.services.health.redis.from_url", return_value=mock_client):
+    with patch("robofleet.services.health.redis.from_url", return_value=mock_client):
         msg, ok = await check_redis()
     assert ok is True
     assert msg == "ok"
@@ -87,7 +87,7 @@ async def test_check_redis_error() -> None:
     mock_client = MagicMock()
     mock_client.ping = AsyncMock(side_effect=ConnectionError("redis down"))
 
-    with patch("roboco.services.health.redis.from_url", return_value=mock_client):
+    with patch("robofleet.services.health.redis.from_url", return_value=mock_client):
         msg, ok = await check_redis()
     assert ok is False
     assert "redis down" in msg
@@ -103,11 +103,11 @@ async def test_health_check_reports_failed_index_count() -> None:
     """The /health response carries failed_index_count from the dead-letter."""
     with (
         patch(
-            "roboco.api.routes.health.count_failures",
+            "robofleet.api.routes.health.count_failures",
             AsyncMock(return_value=3),
         ),
         patch(
-            "roboco.api.routes.health.settings",
+            "robofleet.api.routes.health.settings",
             MagicMock(app_version="9.9.9", environment="test"),
         ),
     ):
@@ -120,11 +120,11 @@ async def test_health_check_failed_index_count_zero_when_table_unavailable() -> 
     """count_failures swallows errors and returns 0 — health never 500s."""
     with (
         patch(
-            "roboco.api.routes.health.count_failures",
+            "robofleet.api.routes.health.count_failures",
             AsyncMock(return_value=0),
         ),
         patch(
-            "roboco.api.routes.health.settings",
+            "robofleet.api.routes.health.settings",
             MagicMock(app_version="9.9.9", environment="test"),
         ),
     ):
@@ -180,7 +180,7 @@ async def test_reclaim_due_deletes_row_on_success() -> None:
     optimal.index_journal_entry = AsyncMock(return_value=None)
 
     with patch(
-        "roboco.services.rag_index_failures.get_db_context", return_value=_Ctx()
+        "robofleet.services.rag_index_failures.get_db_context", return_value=_Ctx()
     ):
         reclaimed = await reclaim_due(optimal)
 
@@ -235,7 +235,7 @@ async def test_reclaim_due_bumps_attempts_on_failure() -> None:
     optimal.index_journal_entry = AsyncMock(side_effect=RuntimeError("still down"))
 
     with patch(
-        "roboco.services.rag_index_failures.get_db_context", return_value=_Ctx()
+        "robofleet.services.rag_index_failures.get_db_context", return_value=_Ctx()
     ):
         reclaimed = await reclaim_due(optimal)
 

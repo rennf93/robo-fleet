@@ -1,6 +1,6 @@
 """Pin: Choreographer must call task.claim/start with (task_id, agent_id).
 
-Service signatures in ``roboco/services/task.py`` are:
+Service signatures in ``robofleet/services/task.py`` are:
 
     async def claim(self, task_id: UUID, agent_id: UUID, ...) -> TaskTable | None
     async def start(self, task_id: UUID, agent_id: UUID | None = None, ...) -> ...
@@ -23,7 +23,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 # #172: a developer fresh claim must carry a substantive step checklist.
 # Inert on re-entry/error/non-dev paths, so safe to pass everywhere.

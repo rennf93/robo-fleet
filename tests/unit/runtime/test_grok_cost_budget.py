@@ -13,8 +13,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.models.runtime import AgentInstance
-from roboco.runtime.orchestrator import (
+from robofleet.models.runtime import AgentInstance
+from robofleet.runtime.orchestrator import (
     INTAKE_AGENT_ID,
     AgentOrchestrator,
     AgentState,
@@ -137,7 +137,7 @@ async def test_interactive_kill_closes_the_relay(
         (agent_id, error)
     )
     monkeypatch.setattr(
-        "roboco.services.prompter_live.get_live_registry", lambda: registry
+        "robofleet.services.prompter_live.get_live_registry", lambda: registry
     )
 
     await orch._enforce_grok_cost_budget()

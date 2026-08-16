@@ -12,16 +12,16 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.models.base import TaskStatus
-from roboco.services import telegram_inbound as ti
-from roboco.services.pest_control_service import PestHuntItemResult
-from roboco.services.roadmap_service import RoadmapItemResult
-from roboco.services.telegram_credentials import TelegramCredentialsData
-from roboco.services.video_post_service import VideoPostExecuteResult
-from roboco.services.x_post_service import XPostExecuteResult
+from robofleet.models.base import TaskStatus
+from robofleet.services import telegram_inbound as ti
+from robofleet.services.pest_control_service import PestHuntItemResult
+from robofleet.services.roadmap_service import RoadmapItemResult
+from robofleet.services.telegram_credentials import TelegramCredentialsData
+from robofleet.services.video_post_service import VideoPostExecuteResult
+from robofleet.services.x_post_service import XPostExecuteResult
 
 if TYPE_CHECKING:
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
 
 CEO_UUID = ti._CEO_UUID
 

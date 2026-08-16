@@ -12,11 +12,11 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from roboco.agents_config import AGENT_UUIDS, verify_agent_token
-from roboco.config import settings
-from roboco.mcp import utils as mcp_utils
-from roboco.models.runtime import OrchestratorAgentConfig as AgentConfig
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.agents_config import AGENT_UUIDS, verify_agent_token
+from robofleet.config import settings
+from robofleet.mcp import utils as mcp_utils
+from robofleet.models.runtime import OrchestratorAgentConfig as AgentConfig
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 if TYPE_CHECKING:
     import pytest

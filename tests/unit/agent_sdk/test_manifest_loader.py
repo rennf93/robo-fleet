@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-import roboco.agent_sdk.server as srv
+import robofleet.agent_sdk.server as srv
 
 if TYPE_CHECKING:
     from pathlib import Path

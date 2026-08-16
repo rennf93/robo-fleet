@@ -12,13 +12,13 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, TaskStatus, Team
-from roboco.services.ci_watch_engine import get_ci_watch_engine
-from roboco.services.task import CI_WATCH_SOURCE, get_task_service
-from roboco.services.telemetry.source import TelemetrySample
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, TaskStatus, Team
+from robofleet.services.ci_watch_engine import get_ci_watch_engine
+from robofleet.services.task import CI_WATCH_SOURCE, get_task_service
+from robofleet.services.telemetry.source import TelemetrySample
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

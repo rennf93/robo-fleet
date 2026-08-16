@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -30,7 +30,7 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.services.task import TaskCreateRequest, TaskService
+from robofleet.services.task import TaskCreateRequest, TaskService
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

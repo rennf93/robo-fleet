@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 
-from roboco.conventions.placement import Definition, check_placement
-from roboco.foundation.policy.conventions.models import (
+from robofleet.conventions.placement import Definition, check_placement
+from robofleet.foundation.policy.conventions.models import (
     ConventionsStandard,
     Module,
     Rule,

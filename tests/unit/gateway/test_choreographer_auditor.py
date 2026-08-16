@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 def _make_deps(**overrides: Any) -> ChoreographerDeps:
@@ -79,7 +79,7 @@ async def test_auditor_triage_returns_idle_when_no_anomalies() -> None:
     playbook_svc = AsyncMock()
     playbook_svc.list_drafts.return_value = []
     with patch(
-        "roboco.services.playbook.get_playbook_service", return_value=playbook_svc
+        "robofleet.services.playbook.get_playbook_service", return_value=playbook_svc
     ):
         env = await c.auditor_triage(auditor_id)
     body = env.as_dict()
@@ -103,7 +103,7 @@ async def test_auditor_triage_surfaces_playbook_draft_when_no_anomalies() -> Non
     playbook_svc = AsyncMock()
     playbook_svc.list_drafts.return_value = [draft]
     with patch(
-        "roboco.services.playbook.get_playbook_service", return_value=playbook_svc
+        "robofleet.services.playbook.get_playbook_service", return_value=playbook_svc
     ):
         env = await c.auditor_triage(auditor_id)
     body = env.as_dict()

@@ -15,14 +15,14 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.identity import Role
-from roboco.foundation.policy.lifecycle import (
+from robofleet.foundation.identity import Role
+from robofleet.foundation.policy.lifecycle import (
     Context,
     Decision,
     can_invoke_intent,
     intents_for_role,
 )
-from roboco.services.gateway.role_config import _DEV_FLOW
+from robofleet.services.gateway.role_config import _DEV_FLOW
 
 
 def test_sync_branch_is_a_dev_flow_verb() -> None:

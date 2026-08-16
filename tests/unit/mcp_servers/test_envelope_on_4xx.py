@@ -66,7 +66,7 @@ def _fake_client_with(status: int, body: Any) -> MagicMock:
 @pytest.fixture
 def flow_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     _seed_env(monkeypatch)
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     return srv
@@ -75,7 +75,7 @@ def flow_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
 @pytest.fixture
 def do_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     _seed_env(monkeypatch)
-    import roboco.mcp.do_server as srv
+    import robofleet.mcp.do_server as srv
 
     importlib.reload(srv)
     return srv

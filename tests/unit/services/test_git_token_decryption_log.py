@@ -11,8 +11,8 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services.git import GitService
-from roboco.utils.crypto import EncryptionError
+from robofleet.services.git import GitService
+from robofleet.utils.crypto import EncryptionError
 from structlog.testing import capture_logs
 
 _PROJECT_SLUG = "acme-backend"
@@ -25,7 +25,9 @@ def _svc() -> GitService:
 def _patch_project_service_raising(exc: Exception) -> Any:
     fake_service = MagicMock()
     fake_service.get_decrypted_token_by_slug = AsyncMock(side_effect=exc)
-    return patch("roboco.services.git.get_project_service", return_value=fake_service)
+    return patch(
+        "robofleet.services.git.get_project_service", return_value=fake_service
+    )
 
 
 @pytest.mark.asyncio
@@ -61,7 +63,7 @@ async def test_missing_token_returns_none_silently() -> None:
     fake_service = MagicMock()
     fake_service.get_decrypted_token_by_slug = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.git.get_project_service", return_value=fake_service),
+        patch("robofleet.services.git.get_project_service", return_value=fake_service),
         capture_logs() as logs,
     ):
         result = await svc._token_for_project(_PROJECT_SLUG)

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.models.optimal import IndexType
+from robofleet.models.optimal import IndexType
 
 if TYPE_CHECKING:
     from types import ModuleType

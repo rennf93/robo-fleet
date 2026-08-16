@@ -14,8 +14,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models import NotificationType
-from roboco.services.notification_dedup import (
+from robofleet.models import NotificationType
+from robofleet.services.notification_dedup import (
     all_recipients_recently_notified,
     clear_dedup_key,
 )
@@ -38,8 +38,8 @@ async def test_first_fire_not_suppressed() -> None:
     # First fire for a single recipient: SET NX acquires (True) → not a re-fire.
     conn = _conn([True])
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = conn
@@ -62,8 +62,8 @@ async def test_all_recipients_dup_suppresses() -> None:
     # Two recipients, both already held (SET NX returns None for each) → re-fire.
     conn = _conn([None, None])
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = conn
@@ -84,8 +84,8 @@ async def test_mixed_recipients_not_suppressed() -> None:
     # acquired (marked) so the next fire converges toward full suppression.
     conn = _conn([True, None])
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = conn
@@ -112,8 +112,8 @@ async def test_excluded_types_never_suppressed(ntype: NotificationType) -> None:
     # One-shot types bypass the guard entirely — even if Redis would say dup.
     conn = _conn([None])
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = conn
@@ -133,8 +133,8 @@ async def test_redis_unavailable_fail_open() -> None:
     # Redis down / from_url raising → never suppress (a notification is never
     # dropped because of the dedup infra).
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.side_effect = RuntimeError("redis down")
@@ -152,8 +152,8 @@ async def test_redis_unavailable_fail_open() -> None:
 async def test_empty_recipients_or_no_sender_short_circuits() -> None:
     # Nothing to dedup against → not suppressed, no Redis call.
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = _conn([])
@@ -192,8 +192,8 @@ async def test_key_carries_type_sender_recipient_task_and_subject() -> None:
     task = uuid4()
     subject = "Task unblocked"
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = conn
@@ -211,8 +211,8 @@ async def test_key_carries_type_sender_recipient_task_and_subject() -> None:
 
     conn2 = _conn([True])
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = conn2
@@ -240,8 +240,8 @@ async def test_different_subject_same_type_both_survive() -> None:
     recip = uuid4()
     task = uuid4()
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = conn1
@@ -256,8 +256,8 @@ async def test_different_subject_same_type_both_survive() -> None:
     # distinct key → SET NX acquires → NOT a re-fire.
     conn2 = _conn([True])
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = conn2
@@ -288,8 +288,8 @@ async def test_ack_clears_dedup_key_for_recipient() -> None:
     conn.delete = AsyncMock(return_value=1)
     conn.aclose = AsyncMock()
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = conn
@@ -310,8 +310,8 @@ async def test_ack_clears_dedup_key_for_recipient() -> None:
     # the ack and SET NX returned None → the re-send was dropped.
     conn2 = _conn([True])
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.return_value = conn2
@@ -329,8 +329,8 @@ async def test_ack_clears_dedup_key_for_recipient() -> None:
 async def test_clear_dedup_key_fail_open_on_redis_error() -> None:
     # Redis down → clear is a no-op (best-effort); the ack path is unaffected.
     with (
-        patch("roboco.services.notification_dedup.settings") as settings,
-        patch("roboco.services.notification_dedup.redis") as redis_mod,
+        patch("robofleet.services.notification_dedup.settings") as settings,
+        patch("robofleet.services.notification_dedup.redis") as redis_mod,
     ):
         settings.redis_url = _FAKE_URL
         redis_mod.from_url.side_effect = RuntimeError("redis down")

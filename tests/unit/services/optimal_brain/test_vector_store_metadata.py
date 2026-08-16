@@ -8,7 +8,7 @@ row-mapping step once the schema (migration 030) let the query reach rows.
 
 from __future__ import annotations
 
-from roboco.services.optimal_brain.vector_store import _as_dict
+from robofleet.services.optimal_brain.vector_store import _as_dict
 
 
 def test_decodes_jsonb_string() -> None:

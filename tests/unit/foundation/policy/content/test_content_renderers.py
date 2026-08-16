@@ -6,7 +6,7 @@ bytes, so the renderers stay refactorable.
 
 from __future__ import annotations
 
-from roboco.foundation.policy.content import (
+from robofleet.foundation.policy.content import (
     PrReviewContent,
     QaNote,
     ResumptionNote,
@@ -20,7 +20,7 @@ def test_pr_review_renders_sections_and_findings_table() -> None:
             "summary": "The guard is missing on the 422 path.",
             "findings": [
                 {
-                    "file": "roboco/services/git.py",
+                    "file": "robofleet/services/git.py",
                     "line": 42,
                     "severity": "blocker",
                     "expected": "retry as COMMENT",
@@ -33,7 +33,7 @@ def test_pr_review_renders_sections_and_findings_table() -> None:
     assert "## Summary" in md
     assert "## Findings" in md
     assert "| File | Line | Severity | Expected → Actual |" in md
-    assert "`roboco/services/git.py`" in md
+    assert "`robofleet/services/git.py`" in md
     assert "blocker" in md
     assert "## Verdict" in md
     assert "changes requested" in md

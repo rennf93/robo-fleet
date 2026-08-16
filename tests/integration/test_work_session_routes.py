@@ -10,19 +10,19 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.work_session import router as ws_router
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.work_session import router as ws_router
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.permissions import AgentContext
-from roboco.models.work_session import WorkSessionStatus
-from roboco.services.base import ValidationError
-from roboco.services.work_session import get_work_session_service
+from robofleet.models.permissions import AgentContext
+from robofleet.models.work_session import WorkSessionStatus
+from robofleet.services.base import ValidationError
+from robofleet.services.work_session import get_work_session_service
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

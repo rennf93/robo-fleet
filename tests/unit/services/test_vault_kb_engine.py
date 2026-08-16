@@ -13,11 +13,11 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.foundation.policy.vault_notes import content_hash as _content_hash
-from roboco.services import vault_kb_engine as vke_module
-from roboco.services.optimal_brain.indexes.base import IngestResult
-from roboco.services.vault_kb_engine import _MAX_NOTE_BYTES, VaultKBEngine
+from robofleet.config import settings as cfg
+from robofleet.foundation.policy.vault_notes import content_hash as _content_hash
+from robofleet.services import vault_kb_engine as vke_module
+from robofleet.services.optimal_brain.indexes.base import IngestResult
+from robofleet.services.vault_kb_engine import _MAX_NOTE_BYTES, VaultKBEngine
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -48,7 +48,7 @@ def _mock_optimal(
     )
     optimal.unindex_vault_note = AsyncMock(return_value=None)
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
     return optimal

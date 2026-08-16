@@ -6,7 +6,7 @@ Two audit-row defects, both producing ``audit_log.agent_id = NULL``:
 
 1. ``task.awaiting_qa`` is fired from inside ``_validate_and_set_status``
    AFTER ``submit_for_qa`` has already cleared ``task.claimed_by = None``
-   (see ``roboco/services/task.py``). The audit writer reads
+   (see ``robofleet/services/task.py``). The audit writer reads
    ``task.claimed_by`` at fire time and gets ``None`` — even though a real
    developer just submitted the work. The Auditor agent then has no way
    to ask "who submitted this for QA?" from the audit table alone.
@@ -43,9 +43,9 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db import base as roboco_db_base
-from roboco.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
-from roboco.models.base import (
+from robofleet.db import base as roboco_db_base
+from robofleet.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -54,8 +54,8 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.services.audit import AuditService
-from roboco.services.task import TaskService
+from robofleet.services.audit import AuditService
+from robofleet.services.task import TaskService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -99,7 +99,7 @@ async def patched_session_factory(
     """Point ``get_session_factory`` at the test-DB engine for the run.
 
     ``AuditService._persist`` and ``log_agent_event`` open their own
-    sessions via ``roboco.db.base.get_session_factory()`` — without this
+    sessions via ``robofleet.db.base.get_session_factory()`` — without this
     they bind to the production DB URL.
     """
     test_engine = db_session.bind

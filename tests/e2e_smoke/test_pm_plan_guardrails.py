@@ -61,8 +61,8 @@ def _seed_planning_root(
     stack: E2EStack, company: Company
 ) -> tuple[ScriptedAgent, UUID]:
     """Seed a PENDING MAIN_PM planning root + its origin branch."""
-    from roboco.models import Team
-    from roboco.models.base import TaskStatus, TaskType
+    from robofleet.models import Team
+    from robofleet.models.base import TaskStatus, TaskType
 
     project_id, _project_slug = seed_project(stack, company)
     main_pm = ScriptedAgent(stack, company.main_pm_id, "main-pm", "main_pm")
@@ -120,7 +120,7 @@ def test_pm_plan_overlong_subtask_description_truncated(
     -good plan exactly like the approach incident this guardrail file also
     covers). The call succeeds and the persisted plan carries the clamped
     description."""
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     stack = e2e_stack

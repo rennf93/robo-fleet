@@ -12,8 +12,8 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-import roboco.db.base as db_base
-from roboco.runtime.orchestrator import AgentOrchestrator
+import robofleet.db.base as db_base
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 # select(orphans) then update(orphans) — two executes when work is done.
 _SELECT_THEN_UPDATE_CALLS = 2

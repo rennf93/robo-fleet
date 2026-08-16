@@ -12,10 +12,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.exceptions import GitError
-from roboco.services.base import NotFoundError
-from roboco.services.forge import RepoRef
-from roboco.services.git import GitService
+from robofleet.exceptions import GitError
+from robofleet.services.base import NotFoundError
+from robofleet.services.forge import RepoRef
+from robofleet.services.git import GitService
 
 if TYPE_CHECKING:
     from contextlib import AbstractContextManager
@@ -41,7 +41,9 @@ def _patch_project_service(project: object | None) -> AbstractContextManager[obj
     fake_service = MagicMock()
     fake_service.get = AsyncMock(return_value=project)
     fake_service.get_by_slug = AsyncMock(return_value=project)
-    return patch("roboco.services.git.get_project_service", return_value=fake_service)
+    return patch(
+        "robofleet.services.git.get_project_service", return_value=fake_service
+    )
 
 
 def _bind(svc: GitService, name: str, value: object) -> None:
@@ -123,9 +125,11 @@ async def test_update_pr_title_only_calls_patch_with_title() -> None:
     fake_client = _make_async_client(patch_resp=patch_resp)
 
     with (
-        patch("roboco.services.git.get_task_service", return_value=fake_task_service),
+        patch(
+            "robofleet.services.git.get_task_service", return_value=fake_task_service
+        ),
         _patch_project_service(fake_project),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=fake_client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=fake_client),
     ):
         out = await svc.update_pr_for_task(
             UUID(str(task.id)), title="new title", body=None, reviewers=None
@@ -155,9 +159,11 @@ async def test_update_pr_title_and_body_calls_patch_with_both() -> None:
     fake_client = _make_async_client(patch_resp=patch_resp)
 
     with (
-        patch("roboco.services.git.get_task_service", return_value=fake_task_service),
+        patch(
+            "robofleet.services.git.get_task_service", return_value=fake_task_service
+        ),
         _patch_project_service(fake_project),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=fake_client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=fake_client),
     ):
         out = await svc.update_pr_for_task(
             UUID(str(task.id)), title="t", body="b", reviewers=None
@@ -184,9 +190,11 @@ async def test_update_pr_reviewers_only_calls_post_reviewers() -> None:
     fake_client = _make_async_client(post_resp=post_resp)
 
     with (
-        patch("roboco.services.git.get_task_service", return_value=fake_task_service),
+        patch(
+            "robofleet.services.git.get_task_service", return_value=fake_task_service
+        ),
         _patch_project_service(fake_project),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=fake_client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=fake_client),
     ):
         out = await svc.update_pr_for_task(
             UUID(str(task.id)),
@@ -220,9 +228,11 @@ async def test_update_pr_all_three_fields_forwarded() -> None:
     fake_client = _make_async_client(patch_resp=patch_resp, post_resp=post_resp)
 
     with (
-        patch("roboco.services.git.get_task_service", return_value=fake_task_service),
+        patch(
+            "robofleet.services.git.get_task_service", return_value=fake_task_service
+        ),
         _patch_project_service(fake_project),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=fake_client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=fake_client),
     ):
         out = await svc.update_pr_for_task(
             UUID(str(task.id)), title="t", body="b", reviewers=["be-dev-2"]
@@ -245,9 +255,11 @@ async def test_update_pr_404_raises_pr_not_found() -> None:
     fake_client = _make_async_client(patch_resp=patch_resp)
 
     with (
-        patch("roboco.services.git.get_task_service", return_value=fake_task_service),
+        patch(
+            "robofleet.services.git.get_task_service", return_value=fake_task_service
+        ),
         _patch_project_service(fake_project),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=fake_client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=fake_client),
         pytest.raises(GitError, match="PR not found"),
     ):
         await svc.update_pr_for_task(
@@ -269,9 +281,11 @@ async def test_update_pr_422_raises_with_validation_message() -> None:
     fake_client = _make_async_client(patch_resp=patch_resp)
 
     with (
-        patch("roboco.services.git.get_task_service", return_value=fake_task_service),
+        patch(
+            "robofleet.services.git.get_task_service", return_value=fake_task_service
+        ),
         _patch_project_service(fake_project),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=fake_client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=fake_client),
         pytest.raises(GitError, match="Validation Failed"),
     ):
         await svc.update_pr_for_task(
@@ -287,7 +301,9 @@ async def test_update_pr_task_missing_raises_not_found() -> None:
     fake_task_service.get = AsyncMock(return_value=None)
 
     with (
-        patch("roboco.services.git.get_task_service", return_value=fake_task_service),
+        patch(
+            "robofleet.services.git.get_task_service", return_value=fake_task_service
+        ),
         pytest.raises(NotFoundError),
     ):
         await svc.update_pr_for_task(uuid4(), title="t", body=None, reviewers=None)
@@ -302,7 +318,9 @@ async def test_update_pr_no_pr_number_raises_git_error() -> None:
     fake_task_service.get = AsyncMock(return_value=task)
 
     with (
-        patch("roboco.services.git.get_task_service", return_value=fake_task_service),
+        patch(
+            "robofleet.services.git.get_task_service", return_value=fake_task_service
+        ),
         pytest.raises(GitError, match="no PR"),
     ):
         await svc.update_pr_for_task(

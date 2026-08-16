@@ -15,9 +15,9 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.services.settings import FEATURE_FLAGS
+from robofleet.config import settings
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.services.settings import FEATURE_FLAGS
 
 
 class _FakeProc:

@@ -10,7 +10,7 @@ import subprocess
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.services.release_readiness import (
+from robofleet.services.release_readiness import (
     CommitInfo,
     _commits_since,
     _draft_changelog,
@@ -131,7 +131,7 @@ def test_commits_since_preserves_field_sep_in_body(
         assert args[0] == "log"
         return raw
 
-    monkeypatch.setattr("roboco.services.release_readiness._run_git", _fake_run_git)
+    monkeypatch.setattr("robofleet.services.release_readiness._run_git", _fake_run_git)
     commits = _commits_since(tmp_path, tag=None)
     assert len(commits) == 1
     [commit] = commits

@@ -13,7 +13,10 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 def _make_deps(**overrides: AsyncMock) -> ContentActionsDeps:

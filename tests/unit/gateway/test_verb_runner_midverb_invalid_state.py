@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer._verb_runner import VerbRunner
+from robofleet.services.gateway.choreographer._verb_runner import VerbRunner
 
 
 def _runner(task_service: MagicMock) -> VerbRunner:

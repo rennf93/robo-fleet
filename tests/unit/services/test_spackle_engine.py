@@ -5,7 +5,7 @@ Mirrors test_pest_control_engine.py, minus the evidence_context tests (spec
 §4: Spackle carries NO heavy server-side inventory engine — the inventory
 diffing is the PO's own read-tool work, ordered by the spawn prompt, not
 server-assembled). Also exercises the shared rotation helper
-(``roboco.services.board_programs.pick_rotation_target``) through this
+(``robofleet.services.board_programs.pick_rotation_target``) through this
 engine, proving both project-scoped programs rotate identically.
 """
 
@@ -15,20 +15,20 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, Complexity, Team
-from roboco.models.base import TaskNature as TN
-from roboco.models.base import TaskStatus as TS
-from roboco.models.base import TaskType as TT
-from roboco.services.spackle_engine import SpackleEngine
-from roboco.services.task import (
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, Complexity, Team
+from robofleet.models.base import TaskNature as TN
+from robofleet.models.base import TaskStatus as TS
+from robofleet.models.base import TaskType as TT
+from robofleet.services.spackle_engine import SpackleEngine
+from robofleet.services.task import (
     PEST_CONTROL_SOURCE,
     ROADMAP_SOURCE,
     SPACKLE_SOURCE,

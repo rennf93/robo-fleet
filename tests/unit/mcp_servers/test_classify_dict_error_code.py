@@ -52,7 +52,7 @@ def _seed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
 @pytest.fixture
 def flow_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> types.ModuleType:
     _seed(monkeypatch, tmp_path)
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     return srv
@@ -61,7 +61,7 @@ def flow_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> types.Module
 @pytest.fixture
 def do_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> types.ModuleType:
     _seed(monkeypatch, tmp_path)
-    import roboco.mcp.do_server as srv
+    import robofleet.mcp.do_server as srv
 
     importlib.reload(srv)
     return srv

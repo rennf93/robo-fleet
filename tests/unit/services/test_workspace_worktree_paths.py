@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.models.base import Team
-from roboco.services.workspace import WorkspaceError, WorkspaceService
+from robofleet.models.base import Team
+from robofleet.services.workspace import WorkspaceError, WorkspaceService
 
 if TYPE_CHECKING:
     from pathlib import Path

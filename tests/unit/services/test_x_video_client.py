@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
-from roboco.services.video_post_service import NullXVideoPoster
-from roboco.services.x_credentials import XCredentialsData
-from roboco.services.x_video_client import (
+from robofleet.services.video_post_service import NullXVideoPoster
+from robofleet.services.x_credentials import XCredentialsData
+from robofleet.services.x_video_client import (
     LiveXVideoPoster,
     build_x_video_poster,
 )
@@ -63,7 +63,7 @@ async def test_post_video_full_sequence_with_processing_poll(
     async def _no_sleep(_seconds: float) -> None:
         return None
 
-    monkeypatch.setattr("roboco.services.x_video_client.asyncio.sleep", _no_sleep)
+    monkeypatch.setattr("robofleet.services.x_video_client.asyncio.sleep", _no_sleep)
 
     def handler(request: httpx.Request) -> httpx.Response:
         calls.append((request.method, request.url.path))
@@ -149,7 +149,7 @@ async def test_post_video_appends_in_multiple_chunks(
 ) -> None:
     """A file bigger than the chunk size is appended across several calls
     (shrink the module chunk size rather than allocating real megabytes)."""
-    monkeypatch.setattr("roboco.services.x_video_client._CHUNK_SIZE_BYTES", 4)
+    monkeypatch.setattr("robofleet.services.x_video_client._CHUNK_SIZE_BYTES", 4)
     append_calls: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -200,7 +200,7 @@ async def test_post_video_processing_failed_state_is_graceful(
     async def _no_sleep(_seconds: float) -> None:
         return None
 
-    monkeypatch.setattr("roboco.services.x_video_client.asyncio.sleep", _no_sleep)
+    monkeypatch.setattr("robofleet.services.x_video_client.asyncio.sleep", _no_sleep)
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path

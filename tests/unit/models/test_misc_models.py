@@ -1,6 +1,6 @@
 """Coverage for misc model methods, factories, and helper functions.
 
-Targets the long-tail of small-percent gaps in roboco.models.* — convenience
+Targets the long-tail of small-percent gaps in robofleet.models.* — convenience
 properties, factory functions, lookup helpers, and __post_init__ branches.
 """
 
@@ -11,34 +11,34 @@ from typing import Any, cast
 from unittest.mock import patch
 from uuid import uuid4
 
-from roboco.models import AgentRole, Team
-from roboco.models.a2a import (
+from robofleet.models import AgentRole, Team
+from robofleet.models.a2a import (
     A2AConversation,
     A2AConversationStatus,
     A2ATaskState,
     a2a_state_to_task_status,
     task_status_to_a2a_state,
 )
-from roboco.models.agents import AgentConfig
-from roboco.models.base import ModelProvider
-from roboco.models.llm_catalog import (
+from robofleet.models.agents import AgentConfig
+from robofleet.models.base import ModelProvider
+from robofleet.models.llm_catalog import (
     MODEL_CATALOG,
     _build_anthropic_entries,
     provider_type_for_model,
 )
-from roboco.models.permissions import (
+from robofleet.models.permissions import (
     AgentContext,
     PermissionLevel,
     _build_role_levels,
 )
-from roboco.models.runtime import (
+from robofleet.models.runtime import (
     AgentInstance,
     OrchestratorAgentConfig,
     OrchestratorAgentState,
 )
 
 # ---------------------------------------------------------------------------
-# AgentConfig convenience properties (roboco/models/agents.py 63, 68, 73, 78)
+# AgentConfig convenience properties (robofleet/models/agents.py 63, 68, 73, 78)
 # ---------------------------------------------------------------------------
 
 
@@ -104,7 +104,7 @@ def test_orchestrator_agent_config_defaults() -> None:
 def test_build_anthropic_entries_skips_missing_models() -> None:
     # Patch MODEL_MAP to be missing one entry → loop hits the `continue` branch.
     with patch(
-        "roboco.models.llm_catalog.MODEL_MAP",
+        "robofleet.models.llm_catalog.MODEL_MAP",
         {"opus": "claude-opus-5"},  # sonnet+haiku missing
     ):
         entries = _build_anthropic_entries()
@@ -131,7 +131,7 @@ def test_provider_type_for_model_unknown_returns_none() -> None:
 def test_build_role_levels_skips_invalid_role() -> None:
     """Bad role string should be silently swallowed in the except branch."""
     with patch(
-        "roboco.models.permissions.ROLE_PERMISSION_LEVELS",
+        "robofleet.models.permissions.ROLE_PERMISSION_LEVELS",
         {"not_a_role": "CEO", "ceo": "CEO"},
     ):
         result = _build_role_levels()
@@ -142,7 +142,7 @@ def test_build_role_levels_skips_invalid_role() -> None:
 
 def test_build_role_levels_skips_invalid_level() -> None:
     with patch(
-        "roboco.models.permissions.ROLE_PERMISSION_LEVELS",
+        "robofleet.models.permissions.ROLE_PERMISSION_LEVELS",
         {"ceo": "NOT_A_LEVEL"},
     ):
         result = _build_role_levels()

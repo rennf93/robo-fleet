@@ -3,7 +3,7 @@
 Why this test exists
 --------------------
 Task 13 (commit 887d073) added the PM-respawn rule-following retry
-detection. The query at ``roboco/services/audit.py:489`` filters
+detection. The query at ``robofleet/services/audit.py:489`` filters
 ``details->>'reason' == 'tracing_gap'`` via SQLAlchemy's ``.astext``
 accessor — but ``.astext`` only exists on ``JSONB.Comparator``, NOT on
 the generic ``JSON.Comparator``. The ORM declared the column as ``JSON``,
@@ -31,12 +31,12 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db import base as db_base
-from roboco.db import base as roboco_db_base
-from roboco.db.tables import AgentTable, AuditLogTable
-from roboco.models.base import AgentRole, AgentStatus
-from roboco.seeds import initial_data as seeds
-from roboco.services.audit import AuditService
+from robofleet.db import base as db_base
+from robofleet.db import base as roboco_db_base
+from robofleet.db.tables import AgentTable, AuditLogTable
+from robofleet.models.base import AgentRole, AgentStatus
+from robofleet.seeds import initial_data as seeds
+from robofleet.services.audit import AuditService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -78,7 +78,7 @@ async def patched_session_factory(
     """Point ``get_session_factory`` at the test-DB engine for the run.
 
     ``AuditService.log_event`` and ``has_recent_tracing_gap`` both open
-    their own sessions via ``roboco.db.base.get_session_factory()`` —
+    their own sessions via ``robofleet.db.base.get_session_factory()`` —
     which without intervention binds to the production database URL
     from ``settings``. We hijack the factory to bind to the same engine
     the test fixture is using so the inserts and SELECT see the same
@@ -447,7 +447,7 @@ async def test_resolve_actor_role_returns_none_when_agent_not_found(
     """DB session works but no row matches the agent_id -> returns None.
 
     `patched_session_factory` is required for its side effect: it
-    monkeypatches `roboco.db.base.get_session_factory` to bind to the
+    monkeypatches `robofleet.db.base.get_session_factory` to bind to the
     test DB. Without it, the helper would hit the no-DB path instead
     of the no-row path we want to cover.
     """

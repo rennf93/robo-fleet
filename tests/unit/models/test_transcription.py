@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from roboco.models.transcription import StreamBuffer, TranscriptionConfig
+from robofleet.models.transcription import StreamBuffer, TranscriptionConfig
 
 
 def _buffer() -> StreamBuffer:

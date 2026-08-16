@@ -13,9 +13,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.models.base import NotificationPriority, NotificationType
-from roboco.services.notification_delivery import NotificationDeliveryService
+from robofleet.config import settings as cfg
+from robofleet.models.base import NotificationPriority, NotificationType
+from robofleet.services.notification_delivery import NotificationDeliveryService
 
 
 @pytest.mark.asyncio

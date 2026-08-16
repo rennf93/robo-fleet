@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_quality_report —
+"""robofleet.services.gateway.content_actions.propose_quality_report —
 Auditor-gated Sentinel quality-report authoring. Mirrors
 test_content_actions_periscope.py for the validation truth table and the
 complete-at-propose asymmetry (a report has no per-item CEO queue); adds the
@@ -11,9 +11,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.models.base import TaskStatus
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import TaskStatus
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 class _FakeTask:
@@ -268,7 +271,7 @@ async def test_propose_quality_report_accepts_every_valid_area(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_sentinel_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("auditor").propose_quality_report(
         agent_id=uuid4(), **_valid_kwargs(items=[_valid_item(0, area=area)])
     )
@@ -319,7 +322,7 @@ async def test_propose_quality_report_no_open_cycle_is_invalid_state(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_sentinel_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("auditor").propose_quality_report(
         agent_id=uuid4(), **_valid_kwargs()
     )
@@ -334,7 +337,7 @@ async def test_propose_quality_report_ignores_cycle_assigned_to_another_agent(
     cycle_task = _FakeTask(assigned_to=other_agent)
     task_svc = MagicMock()
     task_svc.list_open_sentinel_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("auditor").propose_quality_report(
         agent_id=uuid4(), **_valid_kwargs()
     )
@@ -352,7 +355,7 @@ async def test_propose_quality_report_ignores_already_authored_cycle(
     )
     task_svc = MagicMock()
     task_svc.list_open_sentinel_cycles = AsyncMock(return_value=[authored])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("auditor").propose_quality_report(
         agent_id=agent_id, **_valid_kwargs()
     )
@@ -372,7 +375,7 @@ async def test_propose_quality_report_persists_and_completes_the_exploration_tas
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_sentinel_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("auditor")
     actions.task.session.flush = AsyncMock()
 
@@ -419,7 +422,7 @@ async def test_propose_quality_report_sends_telegram_push_once(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_sentinel_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     notify = AsyncMock()
     actions = _actions("auditor", notification_delivery=notify)
     actions.task.session.flush = AsyncMock()
@@ -442,7 +445,7 @@ async def test_propose_quality_report_survives_telegram_push_failure(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_sentinel_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     notify = MagicMock()
     notify.notify_ceo_of_sentinel_report = AsyncMock(side_effect=RuntimeError("boom"))
     actions = _actions("auditor", notification_delivery=notify)
@@ -462,7 +465,7 @@ async def test_propose_quality_report_no_notification_delivery_is_a_no_op(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_sentinel_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("auditor", notification_delivery=None)
     actions.task.session.flush = AsyncMock()
 

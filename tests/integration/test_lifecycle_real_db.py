@@ -25,9 +25,9 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation.policy.lifecycle import Status
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation.policy.lifecycle import Status
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     TaskNature,
@@ -35,10 +35,10 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.seeds.initial_data import AGENT_UUIDS
-from roboco.services.base import UnauthorizedError
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.task import TaskService
+from robofleet.seeds.initial_data import AGENT_UUIDS
+from robofleet.services.base import UnauthorizedError
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.task import TaskService
 
 # A developer fresh claim must carry a substantive step checklist.
 _STEPS = [
@@ -243,7 +243,7 @@ def _mock_journal_with_reflect() -> Any:
 def _mock_work_session() -> Any:
     """WorkSession stub: stable file list, no unpushed commits."""
     ws = AsyncMock()
-    ws.files_changed.return_value = ["roboco/api/routes/health.py"]
+    ws.files_changed.return_value = ["robofleet/api/routes/health.py"]
     ws.has_unpushed_commits.return_value = False
     return ws
 
@@ -810,10 +810,12 @@ async def test_inherit_upstream_base_survives_flush_failure_real_session(
 
     with (
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             MagicMock(return_value=proj_svc),
         ),
-        patch("roboco.services.git.get_git_service", MagicMock(return_value=git_svc)),
+        patch(
+            "robofleet.services.git.get_git_service", MagicMock(return_value=git_svc)
+        ),
         patch.object(db_session, "flush", _flush_once_boom),
     ):
         await task_service._inherit_upstream_base(task, uuid4())  # must not raise

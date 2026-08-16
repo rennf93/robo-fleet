@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 # A developer fresh claim must carry a substantive step checklist + rich plan
 # (parity with a PM) so the tracing-gate passes and the flow reaches claim.

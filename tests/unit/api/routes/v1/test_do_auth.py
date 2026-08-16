@@ -16,10 +16,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from roboco.agents_config import issue_agent_token
-from roboco.api.deps import get_content_actions
-from roboco.api.routes.v1.do import router
-from roboco.services.gateway.content_actions import ContentActions
+from robofleet.agents_config import issue_agent_token
+from robofleet.api.deps import get_content_actions
+from robofleet.api.routes.v1.do import router
+from robofleet.services.gateway.content_actions import ContentActions
 
 if TYPE_CHECKING:
     import pytest

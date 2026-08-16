@@ -5,7 +5,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from roboco.services.audit import (
+from robofleet.services.audit import (
     AuditService,
     _AuditEvent,
     _coerce_uuid,

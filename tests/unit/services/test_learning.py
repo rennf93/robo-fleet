@@ -14,11 +14,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.foundation.policy.communications import ACK_REQUIRED_BY_TYPE
-from roboco.models import NotificationPriority, NotificationType
-from roboco.models.base import AgentRole
-from roboco.models.optimal import IndexType, SearchResult
-from roboco.services.learning import (
+from robofleet.foundation.policy.communications import ACK_REQUIRED_BY_TYPE
+from robofleet.models import NotificationPriority, NotificationType
+from robofleet.models.base import AgentRole
+from robofleet.models.optimal import IndexType, SearchResult
+from robofleet.services.learning import (
     Learning,
     LearningNotification,
     LearningPropagationService,
@@ -536,11 +536,11 @@ async def test_create_notifications_uses_one_bulk_insert_not_n(
 
     with (
         patch(
-            "roboco.db.base.get_db_context",
+            "robofleet.db.base.get_db_context",
             lambda: _fake_db_ctx(db),
         ),
         patch(
-            "roboco.services.notification_delivery.get_notification_delivery_service",
+            "robofleet.services.notification_delivery.get_notification_delivery_service",
             lambda _db: delivery_mock,
         ),
     ):

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from unittest import mock
 
-from roboco.config import Settings
+from robofleet.config import Settings
 
 
 def test_conventions_disabled_by_default() -> None:

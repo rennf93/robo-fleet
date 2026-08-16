@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import ModelAssignmentTable, ProviderConfigTable
-from roboco.models.base import AssignmentScope, ModelProvider
+from robofleet.db.tables import ModelAssignmentTable, ProviderConfigTable
+from robofleet.models.base import AssignmentScope, ModelProvider
 from sqlalchemy import text
 
 if TYPE_CHECKING:

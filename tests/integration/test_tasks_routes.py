@@ -13,38 +13,38 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.tasks import (
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.tasks import (
     get_awaiting_ceo_approval_tasks,
     get_awaiting_pm_review_tasks,
 )
-from roboco.api.routes.tasks import (
+from robofleet.api.routes.tasks import (
     router as tasks_router,
 )
-from roboco.api.utils.tasks import _translate_error
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
-from roboco.exceptions import GitError, TaskLifecycleError
-from roboco.foundation.policy.lifecycle import STATUS_GRAPH
-from roboco.foundation.policy.lifecycle import Status as LifecycleStatus
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.api.utils.tasks import _translate_error
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
+from robofleet.exceptions import GitError, TaskLifecycleError
+from robofleet.foundation.policy.lifecycle import STATUS_GRAPH
+from robofleet.foundation.policy.lifecycle import Status as LifecycleStatus
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.permissions import AgentContext
-from roboco.services.base import (
+from robofleet.models.permissions import AgentContext
+from robofleet.services.base import (
     NotFoundError,
     ServiceError,
     UnauthorizedError,
     ValidationError,
 )
-from roboco.services.base import ServiceError as SvcError
-from roboco.services.git import GitService
-from roboco.services.notification_delivery import EscalationError
-from roboco.services.permissions import PermissionService
-from roboco.services.task import TaskService
+from robofleet.services.base import ServiceError as SvcError
+from robofleet.services.git import GitService
+from robofleet.services.notification_delivery import EscalationError
+from robofleet.services.permissions import PermissionService
+from robofleet.services.task import TaskService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -654,7 +654,7 @@ async def test_lifecycle_transitions_parity(task_client: dict) -> None:
     """GET /lifecycle-transitions returns the exact STATUS_GRAPH as strings.
 
     Parity check: response keys and values must match
-    roboco.foundation.policy.lifecycle.STATUS_GRAPH.
+    robofleet.foundation.policy.lifecycle.STATUS_GRAPH.
     """
     client = task_client["client"]
     response = await client.get("/api/tasks/lifecycle-transitions", headers=_HDR)
@@ -1966,7 +1966,7 @@ async def test_update_task_service_returns_none_yields_500(
     task = _seed_task(task_client)
     await task_client["db"].flush()
 
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.update = AsyncMock(return_value=None)
@@ -1991,7 +1991,7 @@ async def test_claim_task_service_error_translated(task_client: dict) -> None:
     task = _seed_task(task_client)
     await task_client["db"].flush()
 
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.claim_task_for_agent = AsyncMock(
             side_effect=ValidationError("Cannot claim — already claimed")
@@ -2011,7 +2011,7 @@ async def test_claim_task_success(task_client: dict) -> None:
     task = _seed_task(task_client)
     await task_client["db"].flush()
 
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.claim_task_for_agent = AsyncMock(return_value=task)
         mock_factory.return_value = instance
@@ -2099,7 +2099,7 @@ async def test_block_task_service_returns_none_500(task_client: dict) -> None:
     )
     blocker = _seed_task(task_client)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.block = AsyncMock(return_value=None)
@@ -2125,7 +2125,7 @@ async def test_soft_block_task_success(task_client: dict) -> None:
         assigned_to=task_client["agent"].id,
     )
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.soft_block_task_for_agent = AsyncMock(return_value=task)
         mock_factory.return_value = instance
@@ -2153,7 +2153,7 @@ async def test_unblock_task_success(
     """Unblock a blocked task assigned to a different agent → 200, leaves BLOCKED.
 
     The unblock notification (ALERT) is sent from TaskService.unblock() itself
-    (roboco/services/notification.py send_unblock_notification) — the route no
+    (robofleet/services/notification.py send_unblock_notification) — the route no
     longer sends a second, duplicate notification, so there is nothing to mock
     here.
     """
@@ -2309,7 +2309,7 @@ async def test_submit_qa_service_returns_none_returns_400(
         ],
     )
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.submit_for_qa = AsyncMock(return_value=None)
@@ -2482,7 +2482,7 @@ async def test_pass_qa_service_returns_none(qa_client: dict) -> None:
     """If service.pass_qa returns None → route 400s."""
     task = _seed_task_qa(qa_client, pr_number=42)
     await qa_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.pass_qa = AsyncMock(return_value=None)
@@ -2537,7 +2537,7 @@ async def test_fail_qa_service_returns_none(qa_client: dict) -> None:
     """If service.fail_qa returns None → 400."""
     task = _seed_task_qa(qa_client)
     await qa_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.fail_qa = AsyncMock(return_value=None)
@@ -2560,7 +2560,7 @@ async def test_docs_complete_success(task_client: dict) -> None:
     """Mock service.docs_complete_for_task to return a task, route serializes it."""
     task = _seed_task(task_client)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.docs_complete_for_task = AsyncMock(return_value=task)
         mock_factory.return_value = instance
@@ -2590,7 +2590,7 @@ async def test_submit_pm_review_success(task_client: dict) -> None:
     )
     await task_client["db"].flush()
     with patch(
-        "roboco.api.routes.tasks.get_notification_delivery_service"
+        "robofleet.api.routes.tasks.get_notification_delivery_service"
     ) as mock_delivery:
         delivery_instance = AsyncMock()
         delivery_instance.notify_pm_of_review_submission = AsyncMock(return_value=None)
@@ -2613,7 +2613,7 @@ async def test_submit_pm_review_service_returns_none(task_client: dict) -> None:
         assigned_to=task_client["agent"].id,
     )
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.submit_for_pm_review = AsyncMock(return_value=None)
@@ -2636,7 +2636,7 @@ async def test_submit_pm_review_service_returns_none(task_client: dict) -> None:
 async def test_complete_task_success(task_client: dict) -> None:
     task = _seed_task(task_client)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.complete_task_for_agent = AsyncMock(return_value=task)
         mock_factory.return_value = instance
@@ -2674,7 +2674,7 @@ async def test_complete_without_justification_rejected(task_client: dict) -> Non
 async def test_cancel_task_service_returns_none(task_client: dict) -> None:
     task = _seed_task(task_client)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.cancel = AsyncMock(return_value=None)
@@ -2836,7 +2836,7 @@ async def test_escalate_to_ceo_returns_task(task_client: dict) -> None:
     """Mock service.escalate_to_ceo_for_agent → route returns serialized task."""
     task = _seed_task(task_client)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.escalate_to_ceo_for_agent = AsyncMock(return_value=task)
         mock_factory.return_value = instance
@@ -2876,7 +2876,7 @@ async def test_ceo_approve_service_returns_none(ceo_client: dict) -> None:
 async def test_ceo_approve_success(ceo_client: dict) -> None:
     task = _seed_task_ceo(ceo_client)
     await ceo_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.ceo_approve = AsyncMock(return_value=task)
@@ -2912,7 +2912,7 @@ async def test_ceo_approve_without_notes_rejected(ceo_client: dict) -> None:
 async def test_approve_and_start_success(ceo_client: dict) -> None:
     task = _seed_task_ceo(ceo_client, status=TaskStatus.PENDING)
     await ceo_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.approve_and_start = AsyncMock(return_value=task)
@@ -2941,7 +2941,7 @@ async def test_approve_and_start_requires_ceo(task_client: dict) -> None:
 async def test_approve_and_start_short_notes(ceo_client: dict) -> None:
     task = _seed_task_ceo(ceo_client, status=TaskStatus.PENDING)
     await ceo_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         mock_factory.return_value = instance
@@ -2959,7 +2959,7 @@ async def test_approve_and_start_missing_task_404_before_notes_gate(
 ) -> None:
     # Missing task -> 404 even with valid notes: the not-found guard runs
     # before the notes gate, so service.approve_and_start is never reached.
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=None)
         mock_factory.return_value = instance
@@ -3018,9 +3018,9 @@ async def test_ceo_reject_success_notifies_assignee(ceo_client: dict) -> None:
     await ceo_client["db"].flush()
 
     with (
-        patch("roboco.api.routes.tasks.get_task_service") as mock_factory,
+        patch("robofleet.api.routes.tasks.get_task_service") as mock_factory,
         patch(
-            "roboco.api.routes.tasks.get_notification_delivery_service"
+            "robofleet.api.routes.tasks.get_notification_delivery_service"
         ) as mock_delivery,
     ):
         instance = AsyncMock()
@@ -3058,9 +3058,9 @@ async def test_escalate_task_success(task_client: dict) -> None:
     )
     with (
         patch(
-            "roboco.api.routes.tasks.get_notification_delivery_service"
+            "robofleet.api.routes.tasks.get_notification_delivery_service"
         ) as mock_delivery,
-        patch("roboco.api.routes.tasks.get_task_service") as mock_factory,
+        patch("robofleet.api.routes.tasks.get_task_service") as mock_factory,
     ):
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
@@ -3086,7 +3086,7 @@ async def test_escalate_task_escalation_error_404(task_client: dict) -> None:
     task = _seed_task(task_client)
     await task_client["db"].flush()
     with patch(
-        "roboco.api.routes.tasks.get_notification_delivery_service"
+        "robofleet.api.routes.tasks.get_notification_delivery_service"
     ) as mock_delivery:
         delivery_instance = AsyncMock()
         delivery_instance.escalate_and_notify = AsyncMock(
@@ -3107,7 +3107,7 @@ async def test_escalate_task_escalation_error_403(task_client: dict) -> None:
     task = _seed_task(task_client)
     await task_client["db"].flush()
     with patch(
-        "roboco.api.routes.tasks.get_notification_delivery_service"
+        "robofleet.api.routes.tasks.get_notification_delivery_service"
     ) as mock_delivery:
         delivery_instance = AsyncMock()
         delivery_instance.escalate_and_notify = AsyncMock(
@@ -3128,7 +3128,7 @@ async def test_escalate_task_escalation_error_400(task_client: dict) -> None:
     task = _seed_task(task_client)
     await task_client["db"].flush()
     with patch(
-        "roboco.api.routes.tasks.get_notification_delivery_service"
+        "robofleet.api.routes.tasks.get_notification_delivery_service"
     ) as mock_delivery:
         delivery_instance = AsyncMock()
         delivery_instance.escalate_and_notify = AsyncMock(
@@ -3152,7 +3152,7 @@ async def test_escalate_task_escalation_error_400(task_client: dict) -> None:
 async def test_substitute_task_success(task_client: dict) -> None:
     task = _seed_task(task_client, assigned_to=task_client["agent"].id)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.substitute_task_for_agent = AsyncMock(return_value=task)
         mock_factory.return_value = instance
@@ -3185,7 +3185,7 @@ async def test_add_progress_success(task_client: dict) -> None:
 async def test_add_progress_service_returns_none_500(task_client: dict) -> None:
     task = _seed_task(task_client, assigned_to=task_client["agent"].id)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.add_progress = AsyncMock(return_value=None)
@@ -3214,7 +3214,7 @@ async def test_add_checkpoint_success(task_client: dict) -> None:
 async def test_add_checkpoint_service_returns_none_500(task_client: dict) -> None:
     task = _seed_task(task_client, assigned_to=task_client["agent"].id)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.add_checkpoint = AsyncMock(return_value=None)
@@ -3243,7 +3243,7 @@ async def test_add_commit_success(task_client: dict) -> None:
 async def test_add_commit_service_returns_none_500(task_client: dict) -> None:
     task = _seed_task(task_client, assigned_to=task_client["agent"].id)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=task)
         instance.add_commit = AsyncMock(return_value=None)
@@ -3265,7 +3265,7 @@ async def test_add_commit_service_returns_none_500(task_client: dict) -> None:
 async def test_activate_success(task_client: dict) -> None:
     task = _seed_task(task_client, status=TaskStatus.BACKLOG)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.activate = AsyncMock(return_value=task)
         mock_factory.return_value = instance
@@ -3279,7 +3279,7 @@ async def test_activate_success(task_client: dict) -> None:
 async def test_activate_value_error_returns_400(task_client: dict) -> None:
     task = _seed_task(task_client, status=TaskStatus.BACKLOG)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.activate = AsyncMock(
             side_effect=ValueError("no project or product set")
@@ -3296,7 +3296,7 @@ async def test_activate_value_error_returns_400(task_client: dict) -> None:
 async def test_activate_task_lifecycle_error_returns_403(task_client: dict) -> None:
     task = _seed_task(task_client, status=TaskStatus.BACKLOG)
     await task_client["db"].flush()
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.activate = AsyncMock(
             side_effect=TaskLifecycleError(
@@ -3544,7 +3544,7 @@ async def test_approve_and_merge_not_ceo_returns_403(task_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_approve_and_merge_task_not_found(ceo_client: dict) -> None:
     """POST /approve-and-merge for unknown task → 404."""
-    with patch("roboco.api.routes.tasks.get_task_service") as mock_factory:
+    with patch("robofleet.api.routes.tasks.get_task_service") as mock_factory:
         instance = AsyncMock()
         instance.get = AsyncMock(return_value=None)
         mock_factory.return_value = instance
@@ -3564,9 +3564,9 @@ async def test_approve_and_merge_success(ceo_client: dict) -> None:
     # The handler does lazy imports of get_project_service and get_git_service.
     # Patch them at their source modules so the lazy import picks up the mock.
     with (
-        patch("roboco.api.routes.tasks.get_task_service") as mock_task_factory,
-        patch("roboco.services.project.get_project_service") as mock_proj_factory,
-        patch("roboco.services.git.get_git_service") as mock_git_factory,
+        patch("robofleet.api.routes.tasks.get_task_service") as mock_task_factory,
+        patch("robofleet.services.project.get_project_service") as mock_proj_factory,
+        patch("robofleet.services.git.get_git_service") as mock_git_factory,
     ):
         task_instance = AsyncMock()
         # service.get is called twice: once for the initial check, once to re-fetch.
@@ -3605,9 +3605,9 @@ async def test_approve_and_merge_merge_failure_returns_structured_error(
     await ceo_client["db"].flush()
 
     with (
-        patch("roboco.api.routes.tasks.get_task_service") as mock_task_factory,
-        patch("roboco.services.project.get_project_service") as mock_proj_factory,
-        patch("roboco.services.git.get_git_service") as mock_git_factory,
+        patch("robofleet.api.routes.tasks.get_task_service") as mock_task_factory,
+        patch("robofleet.services.project.get_project_service") as mock_proj_factory,
+        patch("robofleet.services.git.get_git_service") as mock_git_factory,
     ):
         task_instance = AsyncMock()
         task_instance.get = AsyncMock(return_value=task)
@@ -3646,9 +3646,9 @@ async def test_approve_and_merge_git_error_returns_structured_error(
     await ceo_client["db"].flush()
 
     with (
-        patch("roboco.api.routes.tasks.get_task_service") as mock_task_factory,
-        patch("roboco.services.project.get_project_service") as mock_proj_factory,
-        patch("roboco.services.git.get_git_service") as mock_git_factory,
+        patch("robofleet.api.routes.tasks.get_task_service") as mock_task_factory,
+        patch("robofleet.services.project.get_project_service") as mock_proj_factory,
+        patch("robofleet.services.git.get_git_service") as mock_git_factory,
     ):
         task_instance = AsyncMock()
         task_instance.get = AsyncMock(return_value=task)
@@ -3697,9 +3697,9 @@ async def test_cell_pm_complete_merges_then_completes(task_client: dict) -> None
     await task_client["db"].flush()
 
     with (
-        patch("roboco.api.routes.tasks.get_task_service") as mock_task_factory,
-        patch("roboco.services.project.get_project_service") as mock_proj_factory,
-        patch("roboco.services.git.get_git_service") as mock_git_factory,
+        patch("robofleet.api.routes.tasks.get_task_service") as mock_task_factory,
+        patch("robofleet.services.project.get_project_service") as mock_proj_factory,
+        patch("robofleet.services.git.get_git_service") as mock_git_factory,
     ):
         # Task service: get() returns the seeded task; complete_task_for_agent
         # simulates the service marking it completed and returning it.

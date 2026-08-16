@@ -14,11 +14,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
-from roboco.exceptions import TaskLifecycleError
-from roboco.foundation.policy.content import markers
-from roboco.models.base import (
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
+from robofleet.exceptions import TaskLifecycleError
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     BlockerResolverType,
@@ -28,9 +28,9 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.models.task import TaskCreateRequest
-from roboco.services.learning import LearningType
-from roboco.services.task import (
+from robofleet.models.task import TaskCreateRequest
+from robofleet.services.learning import LearningType
+from robofleet.services.task import (
     VIDEO_SOURCE,
     GatewayAgentView,
     TaskService,
@@ -195,10 +195,10 @@ async def test_agent_for_returns_view_with_role_team_skills(
     svc = _service_with(result)
 
     monkeypatch.setattr(
-        "roboco.agents_config.get_escalation_target", lambda _slug: "main_pm"
+        "robofleet.agents_config.get_escalation_target", lambda _slug: "main_pm"
     )
     monkeypatch.setattr(
-        "roboco.agents_config.get_agent_skills",
+        "robofleet.agents_config.get_agent_skills",
         lambda _slug: [{"id": "task_management"}],
     )
     view = await svc.agent_for(uuid4())
@@ -504,7 +504,7 @@ async def test_reassign_notifies_once_not_twice_for_same_target() -> None:
     mock_ns = MagicMock()
     mock_ns.send_reassignment_notification = AsyncMock()
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         await svc.reassign(task.id, new_assignee)
         await svc.reassign(task.id, new_assignee)
@@ -530,7 +530,7 @@ async def test_unblock_notifies_once_not_twice_on_repeated_call() -> None:
     mock_ns = MagicMock()
     mock_ns.send_unblock_notification = AsyncMock()
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         first = await svc.unblock(task.id)
         second = await svc.unblock(task.id)
@@ -559,7 +559,7 @@ async def test_unblock_clears_tripped_oscillation_marker() -> None:
     mock_ns = MagicMock()
     mock_ns.send_unblock_notification = AsyncMock()
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         out = await svc.unblock(task.id)
 
@@ -584,7 +584,7 @@ async def test_unblock_leaves_untripped_marker_alone() -> None:
     mock_ns = MagicMock()
     mock_ns.send_unblock_notification = AsyncMock()
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         await svc.unblock(task.id)
 
@@ -613,11 +613,11 @@ async def test_wire_sibling_collision_dag_notifies_only_for_new_edges() -> None:
     wiring_passes = 2
     with (
         patch(
-            "roboco.services.sequencing.dev_task_collision_edges",
+            "robofleet.services.sequencing.dev_task_collision_edges",
             return_value=[(blocking_id, held_back_id)],
         ),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             return_value=mock_ns,
         ),
     ):
@@ -637,7 +637,7 @@ async def test_collision_sequencing_notify_rides_task_service_session() -> None:
     mock_ns = MagicMock()
     mock_ns.send_collision_sequencing_notification = AsyncMock()
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         await svc._notify_collision_sequencing(uuid4(), uuid4(), None)
     kwargs = mock_ns.send_collision_sequencing_notification.await_args.kwargs
@@ -2092,7 +2092,7 @@ async def test_escalate_returns_none_when_no_target_configured(
     svc = TaskService(session)
     _bind(svc, "get", AsyncMock(return_value=task))
     monkeypatch.setattr(
-        "roboco.agents_config.get_escalation_target", lambda _slug: None
+        "robofleet.agents_config.get_escalation_target", lambda _slug: None
     )
     out = await svc.escalate(uuid4(), task.id, "stuck")
     assert out is None
@@ -2138,8 +2138,12 @@ async def test_ensure_branch_coordination_root_cuts_integration_branch() -> None
     product_svc = MagicMock(distinct_project_ids=AsyncMock(return_value=[uuid4()]))
     project_svc = MagicMock(get=AsyncMock(return_value=MagicMock()))
     with (
-        patch("roboco.services.product.get_product_service", return_value=product_svc),
-        patch("roboco.services.project.get_project_service", return_value=project_svc),
+        patch(
+            "robofleet.services.product.get_product_service", return_value=product_svc
+        ),
+        patch(
+            "robofleet.services.project.get_project_service", return_value=project_svc
+        ),
     ):
         result = await svc._ensure_branch_for_task(task, uuid4())
     assert result == "feature/main_pm/root1234"
@@ -2152,7 +2156,9 @@ async def test_ensure_branch_coordination_root_no_cell_map_stays_branchless() ->
     svc = TaskService(MagicMock())
     task = MagicMock(branch_name=None, project_id=None, product_id=uuid4())
     product_svc = MagicMock(distinct_project_ids=AsyncMock(return_value=[]))
-    with patch("roboco.services.product.get_product_service", return_value=product_svc):
+    with patch(
+        "robofleet.services.product.get_product_service", return_value=product_svc
+    ):
         result = await svc._ensure_branch_for_task(task, uuid4())
     assert result == ""
 
@@ -2181,7 +2187,9 @@ async def test_ensure_branch_cell_map_root_cuts_integration_branch_per_project()
     create_in_project = AsyncMock(return_value="feature/main_pm/root1234")
     _bind(svc, "_create_branch_in_project", create_in_project)
     project_svc = MagicMock(get=AsyncMock(return_value=MagicMock()))
-    with patch("roboco.services.project.get_project_service", return_value=project_svc):
+    with patch(
+        "robofleet.services.project.get_project_service", return_value=project_svc
+    ):
         result = await svc._ensure_branch_for_task(task, uuid4())
     assert result == "feature/main_pm/root1234"
     # one integration branch per distinct project in the map (here 2 cells, 2 projects)
@@ -2700,11 +2708,11 @@ async def test_extract_completion_learnings_dead_letters_on_failure() -> None:
 
     with (
         patch(
-            "roboco.services.learning.get_learning_service",
+            "robofleet.services.learning.get_learning_service",
             AsyncMock(return_value=learning_svc),
         ),
         patch(
-            "roboco.services.rag_index_failures.persist_failure",
+            "robofleet.services.rag_index_failures.persist_failure",
             new=AsyncMock(),
         ) as mock_persist,
     ):

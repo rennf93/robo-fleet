@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from roboco.api.middleware_docs import (
+from robofleet.api.middleware_docs import (
     DOCS_PERMISSIONS,
     READ_ALL_ROLES,
     _agent_matches_permission,
@@ -17,7 +17,7 @@ from roboco.api.middleware_docs import (
     get_allowed_docs_paths,
     require_docs_access,
 )
-from roboco.exceptions import PermissionDeniedError
+from robofleet.exceptions import PermissionDeniedError
 
 # ---------------------------------------------------------------------------
 # _strip_path_prefixes

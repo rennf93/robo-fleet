@@ -6,12 +6,12 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskNature, TaskStatus, TaskType
-from roboco.seeds.initial_data import AGENT_UUIDS
-from roboco.services.base import NotFoundError
-from roboco.services.prompter import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskNature, TaskStatus, TaskType
+from robofleet.seeds.initial_data import AGENT_UUIDS
+from robofleet.services.base import NotFoundError
+from robofleet.services.prompter import (
     PrompterService,
     compose_batch_redraft_message,
     compose_redraft_message,

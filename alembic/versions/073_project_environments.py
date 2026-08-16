@@ -10,7 +10,7 @@ head→…→prod before bumping.
 
 Additive and nullable: an unset (null) ``environments`` falls back to a
 degenerate single-branch ladder synthesized from ``default_branch`` at read
-time (``roboco/services/env_branches.py``), so every existing project keeps
+time (``robofleet/services/env_branches.py``), so every existing project keeps
 behaving byte-for-byte as before until the operator declares a real ladder
 in the panel. ``default_branch`` is retained as the legacy/shim source.
 

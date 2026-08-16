@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator, AgentState
+from robofleet.runtime.orchestrator import AgentOrchestrator, AgentState
 
 
 def _make_orchestrator() -> AgentOrchestrator:

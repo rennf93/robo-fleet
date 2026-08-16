@@ -16,14 +16,14 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from roboco.api.deps import get_choreographer, get_content_actions
-from roboco.api.routes.v1 import do as do_module
-from roboco.api.routes.v1 import flow_cell_pm as flow_cell_pm_module
-from roboco.api.routes.v1 import flow_dev as flow_dev_module
-from roboco.api.routes.v1 import flow_doc as flow_doc_module
-from roboco.api.routes.v1 import flow_main_pm as flow_main_pm_module
-from roboco.api.routes.v1 import flow_qa as flow_qa_module
-from roboco.services.gateway.envelope import Envelope
+from robofleet.api.deps import get_choreographer, get_content_actions
+from robofleet.api.routes.v1 import do as do_module
+from robofleet.api.routes.v1 import flow_cell_pm as flow_cell_pm_module
+from robofleet.api.routes.v1 import flow_dev as flow_dev_module
+from robofleet.api.routes.v1 import flow_doc as flow_doc_module
+from robofleet.api.routes.v1 import flow_main_pm as flow_main_pm_module
+from robofleet.api.routes.v1 import flow_qa as flow_qa_module
+from robofleet.services.gateway.envelope import Envelope
 
 _HTTP_200 = 200
 _PR_NUMBER = 8

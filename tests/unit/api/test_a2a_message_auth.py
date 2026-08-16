@@ -11,11 +11,11 @@ from uuid import UUID
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.agents_config import issue_agent_token
-from roboco.api.deps import get_agent_context
-from roboco.api.routes.a2a import router as a2a_router
-from roboco.models import AgentRole, Team
-from roboco.models.permissions import AgentContext
+from robofleet.agents_config import issue_agent_token
+from robofleet.api.deps import get_agent_context
+from robofleet.api.routes.a2a import router as a2a_router
+from robofleet.models import AgentRole, Team
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

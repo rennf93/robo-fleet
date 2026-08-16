@@ -2,7 +2,7 @@
 
 The real ``StageSpawner`` (``OrchestratorStageSpawner``) drives a REAL agent
 container via ``AgentOrchestrator.spawn_agent`` and needs a Docker daemon +
-built agent images — it cannot run here (see ``roboco/eval/runner.py``'s
+built agent images — it cannot run here (see ``robofleet/eval/runner.py``'s
 module docstring). This test substitutes a scripted stand-in that drives the
 SAME real MCP flow/do tool functions ``tests.e2e_smoke.harness.ScriptedAgent``
 uses (via the existing ``dev_arc`` / ``qa_arc`` / ``doc_arc`` helpers, plus a
@@ -17,7 +17,7 @@ Gating: like every other module here, this is skipped unless
 ``ROBOCO_E2E_SMOKE=1`` (see ``tests/e2e_smoke/conftest.py``'s
 ``pytest_collection_modifyitems``) — it needs the real test Postgres, which
 ``EvalRunner`` provisions its own throwaway copy of (see
-``roboco/eval/runner.py``'s ``_scratch_database``), independent of this
+``robofleet/eval/runner.py``'s ``_scratch_database``), independent of this
 package's shared session-scoped ``e2e_stack`` fixture.
 """
 
@@ -27,15 +27,20 @@ import asyncio
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from roboco.config import settings
-from roboco.eval.fixtures import FIXTURES
-from roboco.eval.runner import BenchJudge, EvalRunner, JudgeVerdict, _bench_environment
+from robofleet.config import settings
+from robofleet.eval.fixtures import FIXTURES
+from robofleet.eval.runner import (
+    BenchJudge,
+    EvalRunner,
+    JudgeVerdict,
+    _bench_environment,
+)
 from tests.e2e_smoke.arcs import Company, dev_arc, doc_arc, qa_arc
 from tests.e2e_smoke.harness import ScriptedAgent
 
 if TYPE_CHECKING:
     import pytest
-    from roboco.eval.fixtures import BenchTaskSpec
+    from robofleet.eval.fixtures import BenchTaskSpec
     from tests.e2e_smoke.harness import E2EStack
 
 _FIXTURE_KEY = "bugfix-off-by-one"
@@ -59,7 +64,7 @@ def _stub_company() -> Company:
     seeding uses (not fresh random ones, unlike ``arcs.seed_company``) — the
     "be-*" slugs are hardcoded inside ``dev_arc`` / ``qa_arc`` / ``doc_arc``
     themselves, so this only needs to supply the matching ids."""
-    from roboco.foundation import identity as _foundation
+    from robofleet.foundation import identity as _foundation
 
     company = Company()
     company.dev_id = _foundation.AGENTS["be-dev-1"].uuid
@@ -90,7 +95,7 @@ class _ScriptedBenchSpawner:
         await asyncio.to_thread(self._run_stage_sync, task, agent_slug)
 
     def _run_stage_sync(self, task: dict[str, Any], agent_slug: str) -> None:
-        from roboco.agents_config import get_agent_role
+        from robofleet.agents_config import get_agent_role
 
         role = get_agent_role(agent_slug)
         task_id = UUID(task["id"])

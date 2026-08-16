@@ -1,6 +1,6 @@
 """Gate Set E: submit-qa field-level gates in Choreographer.i_am_done.
 
-Pre-gateway location: roboco/api/routes/tasks.py:903-940 (route layer).
+Pre-gateway location: robofleet/api/routes/tasks.py:903-940 (route layer).
 The four field-level gates returned 400 errors when the dev tried to
 submit for QA without:
 
@@ -26,7 +26,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 def _make_deps(**overrides: Any) -> ChoreographerDeps:

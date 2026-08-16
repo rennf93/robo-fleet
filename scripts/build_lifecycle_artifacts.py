@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate lifecycle artifacts from roboco/foundation/policy/lifecycle.py.
+"""Regenerate lifecycle artifacts from robofleet/foundation/policy/lifecycle.py.
 
 Outputs (deterministic):
   - docs/rag/lifecycle/intent-verbs.md
@@ -15,8 +15,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from roboco.foundation import _generators
-from roboco.foundation.policy.lifecycle import Role
+from robofleet.foundation import _generators
+from robofleet.foundation.policy.lifecycle import Role
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 

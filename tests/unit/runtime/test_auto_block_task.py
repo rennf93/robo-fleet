@@ -19,7 +19,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _make_orch() -> AgentOrchestrator:
@@ -91,7 +91,7 @@ async def test_auto_block_logs_nonempty_error_for_blank_exception() -> None:
     client.get.return_value = _resp(True, {"status": "pending"})
     client.patch.side_effect = TimeoutError()
 
-    with patch("roboco.runtime.orchestrator.logger") as mock_logger:
+    with patch("robofleet.runtime.orchestrator.logger") as mock_logger:
         await orch._auto_block_task(client, "tid-5", "some reason")
 
     mock_logger.error.assert_called_once()

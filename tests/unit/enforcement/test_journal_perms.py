@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from roboco.enforcement.journal_perms import (
+from robofleet.enforcement.journal_perms import (
     JournalAccessDeniedError,
     can_read_journal,
     get_readable_journals,

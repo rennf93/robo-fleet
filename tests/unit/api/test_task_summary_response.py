@@ -18,17 +18,17 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.api.routes import tasks as routes_mod
-from roboco.api.routes.tasks import router
-from roboco.api.schemas.tasks import (
+from robofleet.api.routes import tasks as routes_mod
+from robofleet.api.routes.tasks import router
+from robofleet.api.schemas.tasks import (
     _SUMMARY_SNIPPET_LEN,
     task_list_to_summary_response,
     task_to_summary_response,
 )
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType, Team
 
 if TYPE_CHECKING:
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
 
 _LIMIT = 2
 

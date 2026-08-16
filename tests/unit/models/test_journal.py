@@ -1,4 +1,4 @@
-"""roboco.models.journal coverage — entry factory functions.
+"""robofleet.models.journal coverage — entry factory functions.
 
 Covers all create_*_entry helpers: happy paths, journal_id required guard,
 and optional-field branches (how_applied, source, resolution, help_needed).
@@ -9,8 +9,8 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import JournalEntryType
-from roboco.models.journal import (
+from robofleet.models.base import JournalEntryType
+from robofleet.models.journal import (
     DecisionLogParams,
     GeneralEntryParams,
     LearningEntryParams,

@@ -6,8 +6,11 @@ from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
-from roboco.foundation.policy.content import ContentValidationError, PrReviewContent
-from roboco.services.content_notes import apply_structured_note, content_type_for_role
+from robofleet.foundation.policy.content import ContentValidationError, PrReviewContent
+from robofleet.services.content_notes import (
+    apply_structured_note,
+    content_type_for_role,
+)
 
 
 def _task() -> SimpleNamespace:

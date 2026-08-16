@@ -1,4 +1,4 @@
-"""roboco.services.github_provisioning — repo creation against MockTransport.
+"""robofleet.services.github_provisioning — repo creation against MockTransport.
 
 Provider-aware since Phase 4: the same service now also targets GitLab/Gitea
 (``provider_name=``/``host=``), so this file covers github (unchanged default)
@@ -13,9 +13,9 @@ from collections.abc import Callable
 
 import httpx
 import pytest
-from roboco.config import settings
-from roboco.services.forge.github import GitHubProvider
-from roboco.services.github_provisioning import (
+from robofleet.config import settings
+from robofleet.services.forge.github import GitHubProvider
+from robofleet.services.github_provisioning import (
     GitHubProvisioningService,
     ProvisioningDisabledError,
     ProvisioningError,

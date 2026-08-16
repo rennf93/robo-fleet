@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.services.workspace import WorkspaceService
+from robofleet.services.workspace import WorkspaceService
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -88,8 +88,8 @@ async def test_ensure_workspace_fetches_origin_on_healthy_short_circuit(
         )
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         result = await svc.ensure_workspace(
             project_slug="roboco",
@@ -154,8 +154,8 @@ async def test_refresh_fetch_is_scoped_to_current_and_default_branch(
         )
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.ensure_workspace(project_slug="roboco", agent_id=agent.id)
 
@@ -201,9 +201,9 @@ async def test_ensure_workspace_rechowns_after_refresh_fetch(
         call_log.append("chown")
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
         patch(
-            "roboco.services.workspace._ensure_agent_owned",
+            "robofleet.services.workspace._ensure_agent_owned",
             side_effect=_fake_chown,
         ),
     ):
@@ -245,8 +245,8 @@ async def test_ensure_workspace_fetch_failure_does_not_abort(
         )
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         result = await svc.ensure_workspace(
             project_slug="roboco",

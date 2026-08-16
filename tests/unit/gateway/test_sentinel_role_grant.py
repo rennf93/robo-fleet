@@ -3,7 +3,7 @@ propose_market_brief."""
 
 from __future__ import annotations
 
-from roboco.services.gateway.role_config import get_role_config
+from robofleet.services.gateway.role_config import get_role_config
 
 
 def test_auditor_gets_propose_quality_report() -> None:

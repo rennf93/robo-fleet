@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from roboco.services.optimal_brain.indexes.docs import DocsIndexPlugin
+from robofleet.services.optimal_brain.indexes.docs import DocsIndexPlugin
 
 if TYPE_CHECKING:
     from pathlib import Path

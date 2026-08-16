@@ -1,5 +1,5 @@
 [project]
-name = "roboco"
+name = "robofleet"
 version = "0.28.0"
 description = "AI Agents Company - A virtual organization of AI agents functioning as a software development workforce"
 authors = [
@@ -98,8 +98,8 @@ dev = [
 ]
 
 [project.scripts]
-roboco = "roboco.cli:cli"
-roboco-bootstrap = "roboco.bootstrap:cli"
+robofleet = "robofleet.cli:cli"
+robofleet-bootstrap = "robofleet.bootstrap:cli"
 
 [project.urls]
 Homepage = "https://github.com/rennf93/roboco"
@@ -111,7 +111,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["roboco"]
+packages = ["robofleet"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -156,10 +156,10 @@ select = [
 # docstring block) must use setattr, not a direct method assignment - mypy's
 # method-assign check rejects `BehavioralProcessor.process_usage_rules = ...`
 # outright, and a `# type: ignore` is not allowed in this codebase.
-"roboco/security.py" = ["B010"]
+"robofleet/security.py" = ["B010"]
 # roboco/infra/* adapters lazy-import google clients inside methods so a bare
 # `from roboco.infra import ...` never requires GCP credentials at load time.
-"roboco/infra/*.py" = ["PLC0415"]
+"robofleet/infra/*.py" = ["PLC0415"]
 # tests/unit/infra/* - pytest fixtures (tmp_path/monkeypatch) and lambdas are
 # standard test shape; pytest is imported for type hints only; lazy imports
 # control mock ordering (the wiring tests patch the module before importing).
@@ -172,47 +172,47 @@ select = [
 # top-level + typed so the SDK exposes it as a discrete schema field with
 # enum constraints. Bundling into a dataclass would hide enum hints from
 # the LLM and bring back invented values like nature='standard'.
-"roboco/mcp/**/*.py" = ["PLC0415", "PLR0913"]
-"roboco/services/*.py" = ["PLC0415"]
+"robofleet/mcp/**/*.py" = ["PLC0415", "PLR0913"]
+"robofleet/services/*.py" = ["PLC0415"]
 # confirm_live_batch carries the MegaTask confirm contract (title, drafts,
 # agent_id, project_ids, route, session_id) — same >5-kwarg rationale as the
 # gateway verb surfaces below.
-"roboco/services/prompter.py" = ["PLR0913"]
+"robofleet/services/prompter.py" = ["PLR0913"]
 # send_dependency_revival_notification carries the coordination-event contract
 # (task_id, assignee, completed_dependency_id, from_agent, to_ceo, db_session) —
 # db_session is the caller's session for event-loop-safe notification creation.
-"roboco/services/notification.py" = ["PLR0913"]
+"robofleet/services/notification.py" = ["PLR0913"]
 # record_decision carries the LEARN-write contract (program_key, item_ref,
 # verdict, reason, exploration_task_id, item_payload) shared by every one of
 # its ~10 per-program callers; bundling would just relocate the same named
 # fields behind one hop, same rationale as prompter.py above.
-"roboco/services/board_programs.py" = ["PLR0913"]
+"robofleet/services/board_programs.py" = ["PLR0913"]
 # open_video_task's kwargs (occasion, script, platforms, brief,
 # suggested_input_props, project_id) are the authoring-task contract shared
 # by the release/spotlight/on-demand callers — same "bundling would just
 # relocate the same named fields behind one hop" rationale as prompter.py.
-"roboco/services/video_engine.py" = ["PLR0913"]
+"robofleet/services/video_engine.py" = ["PLR0913"]
 # GitHubProvisioningService.__init__ is a provider-selection constructor
 # (token/org/base_url/timeout/client plus Phase-4's provider_name/host) —
 # every kwarg is independently override-able by callers/tests, same
 # bundling-adds-no-clarity rationale as prompter.py above.
-"roboco/services/github_provisioning.py" = ["PLR0913"]
+"robofleet/services/github_provisioning.py" = ["PLR0913"]
 # ensure_workspace carries the workspace-resolution contract (project_slug,
 # agent_id, git_url, default_branch, force, skip_refresh) - skip_refresh is
 # the supersede branch-cut path's skip of the 60s origin refresh-fetch;
 # bundling would just relocate the same named fields behind one hop.
-"roboco/services/workspace.py" = ["PLR0913"]
+"robofleet/services/workspace.py" = ["PLR0913"]
 # Gateway methods are typed verb surfaces — agent-facing kwargs reflect the
 # verb contract (task title, description, acceptance criteria, assignee, etc.). Bundling
 # into a dataclass hides the field-by-field schema the LLM needs at the
 # tool layer; we accept the >5 kwarg signatures here for the same reason
 # they're accepted in `roboco/mcp/**`.
-"roboco/services/gateway/**/*.py" = ["PLC0415", "PLR0913"]
+"robofleet/services/gateway/**/*.py" = ["PLC0415", "PLR0913"]
 # The forge provider ABC/transport mirror REST endpoint parameter contracts
 # (e.g. list_pulls' head/base/state/per_page, create_release's tag/name/body/
 # target_commitish) — a bundle dataclass would just relocate the same named
 # fields behind one hop, same rationale as roboco/mcp/** and gateway/** above.
-"roboco/services/forge/*.py" = ["PLR0913"]
+"robofleet/services/forge/*.py" = ["PLR0913"]
 # Route signatures ARE the HTTP contract — each FastAPI query/path/body
 # param must be a discrete typed argument for OpenAPI + validation, so the
 # >5-arg rule doesn't fit them (same rationale as roboco/mcp/**). TC001/TC003:
@@ -221,28 +221,28 @@ select = [
 # stdlib OR first-party type used only in a route param (e.g. `task_id: UUID`,
 # `agent: CurrentAgentContext`) can't be deferred into TYPE_CHECKING without
 # breaking route registration.
-"roboco/api/routes/*.py" = ["PLC0415", "PLR0913", "TC001", "TC003"]
+"robofleet/api/routes/*.py" = ["PLC0415", "PLR0913", "TC001", "TC003"]
 # deps.py is the DI wiring hub; it defers a few service imports to call time
 # to avoid import cycles with the modules it wires (same rationale as above).
 # get_agent_context's dual-path helpers carry the same header/cookie contract
 # as the routes above (X-Agent-* + the session cookie), hence PLR0913 too.
-"roboco/api/deps.py" = ["PLC0415", "PLR0913"]
+"robofleet/api/deps.py" = ["PLC0415", "PLR0913"]
 # tasks.py/telegram.py hold route-layer helpers extracted verbatim from
 # roboco/api/routes/*.py (no_helpers_in_routes cleanup) — they keep the same
 # lazy, call-time service imports the originals used to dodge import cycles
 # with the modules they wire (same rationale as roboco/api/deps.py above).
-"roboco/api/utils/tasks.py" = ["PLC0415"]
-"roboco/api/utils/telegram.py" = ["PLC0415"]
+"robofleet/api/utils/tasks.py" = ["PLC0415"]
+"robofleet/api/utils/telegram.py" = ["PLC0415"]
 # v1_role_dep.py holds the role-guard/envelope helpers extracted verbatim from
 # roboco/api/routes/v1/_role_dep.py (no_helpers_in_routes cleanup) — same
 # lazy, call-time roboco.api.deps import the original used to dodge the
 # import cycle with deps.py, same rationale as roboco/api/deps.py above.
-"roboco/api/utils/v1_role_dep.py" = ["PLC0415"]
+"robofleet/api/utils/v1_role_dep.py" = ["PLC0415"]
 # board_programs.py's to_response() defers importing BoardProgramResponse
 # from its route module — a genuine circular import (the route module
 # imports this module for its extracted helpers), not dodgeable by hoisting.
-"roboco/api/utils/board_programs.py" = ["PLC0415"]
-"roboco/runtime/*.py" = ["PLC0415"]
+"robofleet/api/utils/board_programs.py" = ["PLC0415"]
+"robofleet/runtime/*.py" = ["PLC0415"]
 # The e2e smoke harness defers every roboco import until the stack fixture
 # runs, so the default (skipped) suite never pays the app-surface import
 # cost; ARG001 covers FastAPI path params the fake-GitHub handlers must
@@ -254,34 +254,34 @@ select = [
 # tests/e2e_smoke and roboco/services do; PLR0913 covers the stage-driving
 # and scoring call surfaces (task/spawner/role/timeout tuples), same
 # rationale as roboco/services/gateway/**.
-"roboco/eval/*.py" = ["PLC0415", "PLR0913"]
+"robofleet/eval/*.py" = ["PLC0415", "PLR0913"]
 # PTH119: _grok_usage_json sanitizes the agent id with os.path.basename — the
 # path-injection sanitizer CodeQL's query models; the pathlib equivalent
 # (Path(...).name) is not recognized by that query, so we keep os.path here.
 # PLR0913: spawn_agent / _launch_spawn carry the spawn contract (task, model,
 # git context, spawner attribution) — a bundle dataclass would just relocate
 # the same six fields behind one hop at the fleet's hottest call surface.
-"roboco/runtime/orchestrator.py" = ["PTH119", "PLR0913"]
+"robofleet/runtime/orchestrator.py" = ["PTH119", "PLR0913"]
 # The intake driver/entrypoint lazily import the heavy `claude-agent-sdk` (and
 # uvicorn) so the modules import without those installed and don't pay the cost
 # until a live container runs them — same rationale as the dirs above.
-"roboco/agent_sdk/*.py" = ["PLC0415"]
+"robofleet/agent_sdk/*.py" = ["PLC0415"]
 # Lifecycle validators: foundation/_validate_lifecycle is imported from the
 # bottom of policy/lifecycle.py at module-load time, so the validators must
 # defer their inverse imports until call time to avoid a cycle.
-"roboco/foundation/_validate_lifecycle.py" = ["PLC0415"]
+"robofleet/foundation/_validate_lifecycle.py" = ["PLC0415"]
 # The conventions validator loads tree-sitter grammars lazily, per language, so
 # the package imports without tree-sitter present and a missing grammar fails
 # loud at call time (GrammarUnavailable) instead of crashing the import.
-"roboco/conventions/grammars.py" = ["PLC0415"]
+"robofleet/conventions/grammars.py" = ["PLC0415"]
 # The conventions ambient-layer resolver defers its config + ConventionsService
 # imports so the prompt-composition utility stays decoupled from the heavy
 # service graph (it loads at every agent spawn).
-"roboco/agents/factories/_base.py" = ["PLC0415"]
+"robofleet/agents/factories/_base.py" = ["PLC0415"]
 # roboco/vault.py's cheap ensure_vault_assets() is imported at orchestrator
 # startup; _rebuild()'s full service graph (Task/Journal/A2A/Agent services)
 # stays deferred so that startup path never pays for it.
-"roboco/vault.py" = ["PLC0415"]
+"robofleet/vault.py" = ["PLC0415"]
 # Test fixtures that reload modules to test env-var-at-import-time behavior.
 # ARG002: ApiClient-subclassing fakes must keep the superclass parameter names
 # for mypy's override check, so unused override-stub args can't be renamed.
@@ -303,15 +303,15 @@ select = [
 # behind a config/bucket guard, so environments without GCS configured never
 # pay the import cost, the same intentional-lazy-import sanction applied to
 # roboco/services/*.py.
-"roboco/llm/providers/cloudrun_jobs.py" = ["ARG002", "PLC0415"]
+"robofleet/llm/providers/cloudrun_jobs.py" = ["ARG002", "PLC0415"]
 # AgentProvider.execution_outcome default returns None without reading its
 # instance_id arg (only the Cloud Run Jobs override uses it); renaming to
 # _instance_id would break the override naming convention, so sanction it
 # the same way cloudrun_jobs.py's own stub bodies are sanctioned.
-"roboco/llm/providers/base.py" = ["ARG002"]
+"robofleet/llm/providers/base.py" = ["ARG002"]
 # ADK gateway shim: lazy `google.cloud.storage` import is Cloud-Run-only, kept
 # out of the local-dev import path the same way cloudrun_jobs.py sanctions it.
-"roboco/agent/gateway_shim.py" = ["PLC0415"]
+"robofleet/agent/gateway_shim.py" = ["PLC0415"]
 # Collision-builder test helpers mirror the builder's many keyword inputs
 # (parent/project/intends/migration/shared/sequence) — bundling them would
 # hurt readability more than the arg count hurts.
@@ -372,7 +372,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 asyncio_default_fixture_loop_scope = "function"
-addopts = "--cov=roboco --cov-report=term-missing"
+addopts = "--cov=robofleet --cov-report=term-missing"
 markers = [
     "asyncio: mark tests as async",
     "slow: marks tests as slow",
@@ -393,38 +393,38 @@ core = "sysmon"
 # on the NAS) rather than the unit-coverage threshold.
 omit = [
     # RAG / proactive context — needs Ollama + real embedding model.
-    "roboco/services/proactive.py",
-    "roboco/services/optimal.py",
-    "roboco/services/optimal_brain/*",
+    "robofleet/services/proactive.py",
+    "robofleet/services/optimal.py",
+    "robofleet/services/optimal_brain/*",
     # Audio transcription — needs Whisper-class model.
-    "roboco/services/transcription.py",
+    "robofleet/services/transcription.py",
     # Agent classes — instantiated by the orchestrator when spawning
     # Docker containers running the Claude CLI. No usable unit-test
     # surface; integration coverage is the smoke run.
-    "roboco/agents/*",
-    "roboco/agent_sdk/*",
+    "robofleet/agents/*",
+    "robofleet/agent_sdk/*",
     # Container orchestration — drives Docker daemon, agent spawning,
     # health/dispatch loops. Covered by smoke runs.
-    "roboco/runtime/orchestrator.py",
+    "robofleet/runtime/orchestrator.py",
     # MCP server entry points — modeled around the Claude CLI's STDIO
     # MCP transport and only meaningful when running inside an agent
     # container with the orchestrator reachable. Their _post() bridges
     # ARE unit-tested separately (test_envelope_on_4xx, test_flow_server,
     # test_do_server) — just not via direct module import here.
-    "roboco/mcp/*",
+    "robofleet/mcp/*",
     # WebSocket route — needs a running ASGI app + WS client.
-    "roboco/api/websocket.py",
+    "robofleet/api/websocket.py",
     # Event stream bus — wraps Redis Streams; tested via integration only.
-    "roboco/events/stream_bus.py",
+    "robofleet/events/stream_bus.py",
     # GitService — runs `git` subprocesses against per-agent workspaces.
     # Unit-testable surface is < 5% of the module; covered via the
     # _StubGit-based real-DB integration test + live smoke runs.
-    "roboco/services/git.py",
-    "roboco/services/workspace.py",
+    "robofleet/services/git.py",
+    "robofleet/services/workspace.py",
     # Notification delivery — Redis Streams + push to MCP transport.
-    "roboco/services/notification_delivery.py",
+    "robofleet/services/notification_delivery.py",
     # CLI entry point.
-    "roboco/cli.py",
+    "robofleet/cli.py",
     # Auto-generated migrations.
     "alembic/*",
 ]
@@ -433,7 +433,7 @@ omit = [
 # Vulture Configuration
 # =============================================================================
 [tool.vulture]
-paths = ["roboco", "tests", "vulture_whitelist.py"]
+paths = ["robofleet", "tests", "vulture_whitelist.py"]
 exclude = ["**/conftest.py", ".venv", "alembic"]
 min_confidence = 100
 ignore_decorators = [
@@ -498,7 +498,7 @@ ignore = []
 [tool.deptry]
 exclude = ["tests", ".venv", ".uv-cache", ".claude", "vulture_whitelist.py", "alembic"]
 extend_exclude = ["conftest.py", "setup.py"]
-known_first_party = ["roboco"]
+known_first_party = ["robofleet"]
 
 [tool.deptry.per_rule_ignores]
 # DEP002: Dependencies not directly imported but used at runtime or via CLI
@@ -562,24 +562,24 @@ dev = [
 # Import Linter (architectural boundaries)
 # =============================================================================
 [tool.importlinter]
-root_package = "roboco"
+root_package = "robofleet"
 
 [[tool.importlinter.contracts]]
 name = "Gateway layer must not import from API routes or MCP servers"
 type = "forbidden"
-source_modules = ["roboco.services.gateway"]
-forbidden_modules = ["roboco.api.routes", "roboco.mcp"]
+source_modules = ["robofleet.services.gateway"]
+forbidden_modules = ["robofleet.api.routes", "robofleet.mcp"]
 
 [[tool.importlinter.contracts]]
 name = "Services must not import from API routes"
 type = "forbidden"
-source_modules = ["roboco.services"]
-forbidden_modules = ["roboco.api.routes"]
+source_modules = ["robofleet.services"]
+forbidden_modules = ["robofleet.api.routes"]
 
 # =============================================================================
 # Roboco Commit Validator
 # =============================================================================
-[tool.roboco.commits]
+[tool.robofleet.commits]
 subject_min_chars = 20
 banned_words = ["wip", "tmp", "asdf", "oops", "fix", "update", "change", "stuff", "things"]
 prefer_conventional = true

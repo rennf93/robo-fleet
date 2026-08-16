@@ -9,7 +9,7 @@ breaker), or None when the text is substantive.
 from __future__ import annotations
 
 import pytest
-from roboco.services.gateway.content_actions import ContentActions
+from robofleet.services.gateway.content_actions import ContentActions
 
 _guard = ContentActions._reject_soup
 

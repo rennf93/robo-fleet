@@ -15,9 +15,9 @@ from typing import Any
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
-from roboco.foundation.policy.content import Finding, Severity
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.choreographer.pr_gate import PRGateMixin
+from robofleet.foundation.policy.content import Finding, Severity
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer.pr_gate import PRGateMixin
 
 
 def _make_choreographer() -> Choreographer:
@@ -172,7 +172,7 @@ def test_pr_fail_embeds_findings_and_summary_does_not_duplicate() -> None:
     t = _TaskWithNoNotes()
     findings = [
         Finding(
-            file="roboco/api/routes/health.py",
+            file="robofleet/api/routes/health.py",
             line=12,
             severity=Severity.MAJOR,
             expected="returns 200",
@@ -182,7 +182,7 @@ def test_pr_fail_embeds_findings_and_summary_does_not_duplicate() -> None:
     c._record_gate_verdict(
         t,
         "pr_fail",
-        "[F-abc12345] roboco/api/routes/health.py:12 (major) — returns 200 → "
+        "[F-abc12345] robofleet/api/routes/health.py:12 (major) — returns 200 → "
         "returns 500 on the timestamp branch",
         findings=findings,
     )

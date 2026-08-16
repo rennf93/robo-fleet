@@ -3,7 +3,7 @@ the dev spawn prompt + SessionStart briefing. Pure static helper, no fixtures.""
 
 from __future__ import annotations
 
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _PLACEHOLDER = "(none — ask the PM before proceeding)"
 

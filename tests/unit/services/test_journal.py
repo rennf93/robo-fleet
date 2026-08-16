@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.models.base import JournalEntryType
-from roboco.models.optimal import IndexJournalEntryParams
-from roboco.services.journal import JournalService, drain_rag_index_tasks
+from robofleet.models.base import JournalEntryType
+from robofleet.models.optimal import IndexJournalEntryParams
+from robofleet.services.journal import JournalService, drain_rag_index_tasks
 
 
 def _service_with_count(count: int) -> JournalService:
@@ -255,7 +255,7 @@ async def test_delete_entry_deindexes_after_commit() -> None:
     optimal.unindex_journal_entry = AsyncMock(return_value=None)
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
     ):
@@ -296,11 +296,11 @@ async def test_schedule_rag_index_dead_letters_on_failure() -> None:
 
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
         patch(
-            "roboco.services.rag_index_failures.persist_failure",
+            "robofleet.services.rag_index_failures.persist_failure",
             new=AsyncMock(),
         ) as mock_persist,
     ):
@@ -338,11 +338,11 @@ async def test_schedule_rag_index_no_dead_letter_on_success() -> None:
 
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
         patch(
-            "roboco.services.rag_index_failures.persist_failure",
+            "robofleet.services.rag_index_failures.persist_failure",
             new=AsyncMock(),
         ) as mock_persist,
     ):
@@ -367,7 +367,7 @@ async def test_delete_entry_swallows_deindex_failure() -> None:
     optimal.unindex_journal_entry = AsyncMock(side_effect=RuntimeError("rag blew up"))
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
     ):

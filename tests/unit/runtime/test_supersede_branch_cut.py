@@ -16,13 +16,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.models.base import TaskStatus
-from roboco.runtime.orchestrator import (
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import TaskStatus
+from robofleet.runtime.orchestrator import (
     AgentOrchestrator,
     _is_branch_pending,
 )
-from roboco.services.git import GitService
+from robofleet.services.git import GitService
 
 _PR_NUM = 99
 _PR_42 = 42
@@ -174,9 +174,11 @@ async def test_sweep_skips_in_flight_umbrella(monkeypatch: pytest.MonkeyPatch) -
     )
 
     with (
-        patch("roboco.services.task.get_task_service", return_value=mock_task_service),
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.task.get_task_service", return_value=mock_task_service
+        ),
+        patch(
+            "robofleet.services.project.get_project_service",
             return_value=mock_project_service,
         ),
     ):
@@ -232,9 +234,11 @@ async def test_collect_reconciliations_isolates_one_failing_umbrella() -> None:
     )
 
     with (
-        patch("roboco.services.task.get_task_service", return_value=mock_task_service),
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.task.get_task_service", return_value=mock_task_service
+        ),
+        patch(
+            "robofleet.services.project.get_project_service",
             return_value=mock_project_service,
         ),
     ):
@@ -277,7 +281,7 @@ class _FakeSupersedeDb:
 
 
 def _fake_get_db_context(fake_db: _FakeSupersedeDb) -> Any:
-    """Mirrors `roboco.db.base.get_db_context`'s real commit/rollback shape:
+    """Mirrors `robofleet.db.base.get_db_context`'s real commit/rollback shape:
     commit on clean exit, rollback + re-raise on any exception."""
 
     @asynccontextmanager
@@ -323,9 +327,11 @@ async def test_branch_cut_retry_does_not_repost_comment_after_step_failure() -> 
     orch._fail_supersede_branch_cut = AsyncMock()
 
     with (
-        patch("roboco.db.get_db_context", _fake_get_db_context(fake_db)),
-        patch("roboco.services.task.get_task_service", return_value=mock_task_service),
-        patch("roboco.services.git.GitService", return_value=mock_git),
+        patch("robofleet.db.get_db_context", _fake_get_db_context(fake_db)),
+        patch(
+            "robofleet.services.task.get_task_service", return_value=mock_task_service
+        ),
+        patch("robofleet.services.git.GitService", return_value=mock_git),
     ):
         await AgentOrchestrator._cut_supersede_branch(
             cast("AgentOrchestrator", orch),
@@ -350,9 +356,11 @@ async def test_branch_cut_retry_does_not_repost_comment_after_step_failure() -> 
     mock_git.get_workspace = AsyncMock(return_value=MagicMock())
     mock_git.create_branch_from_pr_head = AsyncMock()
     with (
-        patch("roboco.db.get_db_context", _fake_get_db_context(fake_db)),
-        patch("roboco.services.task.get_task_service", return_value=mock_task_service),
-        patch("roboco.services.git.GitService", return_value=mock_git),
+        patch("robofleet.db.get_db_context", _fake_get_db_context(fake_db)),
+        patch(
+            "robofleet.services.task.get_task_service", return_value=mock_task_service
+        ),
+        patch("robofleet.services.git.GitService", return_value=mock_git),
     ):
         await AgentOrchestrator._cut_supersede_branch(
             cast("AgentOrchestrator", orch),
@@ -418,9 +426,11 @@ async def test_ceo_unblock_reset_survives_later_branch_cut_failure() -> None:
     orch._fail_supersede_branch_cut = real_fail.__get__(orch, AgentOrchestrator)
 
     with (
-        patch("roboco.db.get_db_context", _fake_get_db_context(fake_db)),
-        patch("roboco.services.task.get_task_service", return_value=mock_task_service),
-        patch("roboco.services.git.GitService", return_value=mock_git),
+        patch("robofleet.db.get_db_context", _fake_get_db_context(fake_db)),
+        patch(
+            "robofleet.services.task.get_task_service", return_value=mock_task_service
+        ),
+        patch("robofleet.services.git.GitService", return_value=mock_git),
     ):
         await AgentOrchestrator._cut_supersede_branch(
             cast("AgentOrchestrator", orch),
@@ -478,8 +488,10 @@ async def test_fail_keeps_branch_pending_and_sets_backoff_below_max() -> None:
     db_mock.flush = AsyncMock()
 
     with (
-        patch("roboco.db.get_db_context") as ctx_mock,
-        patch("roboco.services.task.get_task_service", return_value=mock_task_service),
+        patch("robofleet.db.get_db_context") as ctx_mock,
+        patch(
+            "robofleet.services.task.get_task_service", return_value=mock_task_service
+        ),
     ):
         ctx_mock.return_value.__aenter__ = AsyncMock(return_value=db_mock)
         ctx_mock.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -537,10 +549,12 @@ async def test_fail_escalates_to_blocked_at_max_attempts() -> None:
             pass
 
     with (
-        patch("roboco.db.get_db_context", return_value=_Ctx()),
-        patch("roboco.services.task.get_task_service", return_value=mock_task_service),
+        patch("robofleet.db.get_db_context", return_value=_Ctx()),
         patch(
-            "roboco.services.notification_delivery.get_notification_delivery_service",
+            "robofleet.services.task.get_task_service", return_value=mock_task_service
+        ),
+        patch(
+            "robofleet.services.notification_delivery.get_notification_delivery_service",
             return_value=mock_notify_service,
         ),
     ):

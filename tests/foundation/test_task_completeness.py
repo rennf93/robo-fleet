@@ -5,7 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from roboco.foundation.policy import task_completeness as tc
+from robofleet.foundation.policy import task_completeness as tc
 
 MIN_HINT_LEN = 20
 PARENT_PRIORITY_HIGH = 4  # parent task priority used for inheritance assertions

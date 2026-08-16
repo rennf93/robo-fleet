@@ -17,7 +17,7 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 TWO_TICKS = 2
 ONE_HOUR_SECONDS = 3600

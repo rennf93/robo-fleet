@@ -16,8 +16,8 @@ from whole-file shell redirection.
 
 from __future__ import annotations
 
-from roboco.agents.factories._base import compose_prompt
-from roboco.models import AgentRole, Team
+from robofleet.agents.factories._base import compose_prompt
+from robofleet.models import AgentRole, Team
 
 
 def _composed_prompt_for(role: AgentRole, team: Team | None = None) -> str:

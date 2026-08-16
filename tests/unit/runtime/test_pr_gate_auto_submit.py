@@ -18,7 +18,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.runtime.orchestrator import AGENT_UUIDS, AgentOrchestrator
+from robofleet.runtime.orchestrator import AGENT_UUIDS, AgentOrchestrator
 
 # The commit/notes validator's minimum substantive length.
 _MIN_NOTES = 20

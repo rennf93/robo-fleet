@@ -67,7 +67,7 @@ def flow_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> types.Module
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
 
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     return srv
@@ -105,7 +105,7 @@ def _reload_for_role(
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
 
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     return srv
@@ -150,7 +150,7 @@ def test_build_headers_carries_auth_token_and_team(
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
 
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     headers = srv._build_headers()
@@ -180,7 +180,7 @@ def test_build_headers_omits_unsigned_token(
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
 
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     headers = srv._build_headers()
@@ -526,7 +526,7 @@ def test_escalate_up_passes_reason(monkeypatch: pytest.MonkeyPatch) -> None:
 # ---------------------------------------------------------------------------
 # Client-side timeout selection — must always outlast the matching server
 # wall (FlowVerbTimeoutMiddleware) so the agent sees the clean 504 envelope
-# instead of a raw httpx timeout. See roboco.foundation.policy.flow_timeouts.
+# instead of a raw httpx timeout. See robofleet.foundation.policy.flow_timeouts.
 # ---------------------------------------------------------------------------
 
 
@@ -563,7 +563,7 @@ def test_client_timeout_env_override_respected(
     monkeypatch.setenv("ROBOCO_FLOW_VERB_TIMEOUT_SECONDS", "45")
     monkeypatch.setenv("ROBOCO_FLOW_VERB_SLOW_TIMEOUT_SECONDS", "600")
 
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     try:

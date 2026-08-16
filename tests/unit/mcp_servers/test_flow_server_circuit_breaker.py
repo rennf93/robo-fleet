@@ -77,7 +77,7 @@ def flow_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> types.Module
     monkeypatch.setenv("ROBOCO_SDK_URL", "http://test-sdk:9000")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
 
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     return srv

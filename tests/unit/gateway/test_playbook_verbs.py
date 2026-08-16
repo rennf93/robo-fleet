@@ -12,9 +12,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.base import ConflictError
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
-from roboco.services.gateway.role_config import get_role_config
+from robofleet.services.base import ConflictError
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
+from robofleet.services.gateway.role_config import get_role_config
 from sqlalchemy.exc import PendingRollbackError
 
 _DRAFT_ROLES = ("developer", "qa", "documenter", "cell_pm", "main_pm")
@@ -85,7 +88,9 @@ async def test_draft_playbook_creates_for_developer(
     created.id = uuid4()
     svc = MagicMock()
     svc.draft = AsyncMock(return_value=created)
-    monkeypatch.setattr("roboco.services.playbook.get_playbook_service", lambda _s: svc)
+    monkeypatch.setattr(
+        "robofleet.services.playbook.get_playbook_service", lambda _s: svc
+    )
     env = await _actions("developer").draft_playbook(
         agent_id=uuid4(),
         title="Retry flaky pg",
@@ -113,7 +118,9 @@ async def test_approve_playbook_for_auditor(monkeypatch: pytest.MonkeyPatch) -> 
     svc = MagicMock()
     svc.approve = AsyncMock(return_value=approved)
     svc.index_approved = AsyncMock()
-    monkeypatch.setattr("roboco.services.playbook.get_playbook_service", lambda _s: svc)
+    monkeypatch.setattr(
+        "robofleet.services.playbook.get_playbook_service", lambda _s: svc
+    )
     actions = _actions("auditor")
     env = await actions.approve_playbook(agent_id=uuid4(), playbook_id=uuid4())
     assert env.error is None
@@ -135,7 +142,9 @@ async def test_reject_playbook_archives_for_auditor(
     svc = MagicMock()
     svc.reject = AsyncMock(return_value=archived)
     svc.unindex_playbook = AsyncMock()
-    monkeypatch.setattr("roboco.services.playbook.get_playbook_service", lambda _s: svc)
+    monkeypatch.setattr(
+        "robofleet.services.playbook.get_playbook_service", lambda _s: svc
+    )
     actions = _actions("auditor")
     env = await actions.reject_playbook(
         agent_id=uuid4(), playbook_id=uuid4(), reason="duplicate"
@@ -160,7 +169,9 @@ async def test_archive_playbook_retires_approved_for_auditor(
     svc.archive = AsyncMock(return_value=archived)
     svc.reject = AsyncMock()
     svc.unindex_playbook = AsyncMock()
-    monkeypatch.setattr("roboco.services.playbook.get_playbook_service", lambda _s: svc)
+    monkeypatch.setattr(
+        "robofleet.services.playbook.get_playbook_service", lambda _s: svc
+    )
     actions = _actions("auditor")
     env = await actions.archive_playbook(agent_id=uuid4(), playbook_id=uuid4())
     assert env.status == "playbook_archived"
@@ -181,7 +192,9 @@ async def test_approve_playbook_invalid_state_envelope(
     svc.approve = AsyncMock(
         side_effect=ConflictError("not draft", resource_type="playbook")
     )
-    monkeypatch.setattr("roboco.services.playbook.get_playbook_service", lambda _s: svc)
+    monkeypatch.setattr(
+        "robofleet.services.playbook.get_playbook_service", lambda _s: svc
+    )
     env = await _actions("auditor").approve_playbook(
         agent_id=uuid4(), playbook_id=uuid4()
     )
@@ -204,7 +217,9 @@ async def test_curate_poisoned_session_returns_envelope_not_500(
     svc = MagicMock()
     svc.approve = AsyncMock(return_value=approved)
     svc.index_approved = AsyncMock()
-    monkeypatch.setattr("roboco.services.playbook.get_playbook_service", lambda _s: svc)
+    monkeypatch.setattr(
+        "robofleet.services.playbook.get_playbook_service", lambda _s: svc
+    )
     actions = _actions("auditor")
     actions.task.session.commit = AsyncMock(
         side_effect=PendingRollbackError("session was rolled back")
@@ -229,7 +244,9 @@ async def test_curate_clean_session_commits_once_then_indexes(
     svc = MagicMock()
     svc.approve = AsyncMock(return_value=approved)
     svc.index_approved = AsyncMock()
-    monkeypatch.setattr("roboco.services.playbook.get_playbook_service", lambda _s: svc)
+    monkeypatch.setattr(
+        "robofleet.services.playbook.get_playbook_service", lambda _s: svc
+    )
     actions = _actions("auditor")
     actions.task.session.commit = AsyncMock()
     env = await actions.approve_playbook(agent_id=uuid4(), playbook_id=uuid4())

@@ -24,24 +24,24 @@ import pytest_asyncio  # noqa: F401 - registers asyncio mode
 # ---------------------------------------------------------------------------
 # Module imports
 # ---------------------------------------------------------------------------
-from roboco.models.extraction import ExtractionContext
-from roboco.models.optimal import IndexType
-from roboco.services.exceptions import (
+from robofleet.models.extraction import ExtractionContext
+from robofleet.models.optimal import IndexType
+from robofleet.services.exceptions import (
     MAX_RATE_LIMIT_RETRIES,
     RateLimitError,
     parse_retry_after_header,
 )
-from roboco.services.extraction import ExtractionService
-from roboco.services.optimal_brain.indexes.journals import (
+from robofleet.services.extraction import ExtractionService
+from robofleet.services.optimal_brain.indexes.journals import (
     JournalsIndexPlugin,
 )
-from roboco.services.optimal_brain.mentor import MentorService
-from roboco.services.optimal_brain.ollama_embedder import (
+from robofleet.services.optimal_brain.mentor import MentorService
+from robofleet.services.optimal_brain.ollama_embedder import (
     MAX_RETRIES,
     OllamaConnectionError,
     OllamaEmbedder,
 )
-from roboco.services.optimal_brain.validator import ValidatorService
+from robofleet.services.optimal_brain.validator import ValidatorService
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -57,7 +57,8 @@ _EMBED_DIM = 4  # zero-vector dimension in test responses
 _CALLS_2RL_1_SUCCESS = 3  # 2 rate-limit errors then 1 success
 
 _EMBED_PATH = (
-    "roboco.services.optimal_brain.ollama_embedder.OllamaEmbedder._create_async_client"
+    "robofleet.services.optimal_brain.ollama_embedder."
+    "OllamaEmbedder._create_async_client"
 )
 
 # ---------------------------------------------------------------------------
@@ -435,7 +436,7 @@ class TestExtractionAnthropicRetry:
 
         with (
             patch("anthropic.AsyncAnthropic") as mock_cls,
-            patch("roboco.config.settings") as mock_settings,
+            patch("robofleet.config.settings") as mock_settings,
             patch("asyncio.sleep", new_callable=AsyncMock),
             pytest.raises(RateLimitError) as exc_info,
         ):
@@ -460,7 +461,7 @@ class TestExtractionAnthropicRetry:
 
         with (
             patch("anthropic.AsyncAnthropic") as mock_cls,
-            patch("roboco.config.settings") as mock_settings,
+            patch("robofleet.config.settings") as mock_settings,
             patch("asyncio.sleep", side_effect=_fake_sleep),
             pytest.raises(RateLimitError),
         ):
@@ -489,7 +490,7 @@ class TestExtractionAnthropicRetry:
         raised = False
         with (
             patch("anthropic.AsyncAnthropic") as mock_cls,
-            patch("roboco.config.settings") as mock_settings,
+            patch("robofleet.config.settings") as mock_settings,
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
             mock_cls.return_value = mock_client

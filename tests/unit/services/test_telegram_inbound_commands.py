@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.services import telegram_inbound as ti
+from robofleet.services import telegram_inbound as ti
 
 COMMAND_COUNT = len(ti.BOT_COMMANDS)
 

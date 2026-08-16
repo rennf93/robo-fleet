@@ -15,16 +15,16 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-from roboco.models.base import ModelProvider
-from roboco.runtime.orchestrator import (
+from robofleet.models.base import ModelProvider
+from robofleet.runtime.orchestrator import (
     _INTERACTIVE_UNSUPPORTED_PROVIDERS,
     INTAKE_AGENT_ID,
     SECRETARY_AGENT_ID,
     AgentOrchestrator,
     _reject_interactive_unsupported_provider,
 )
-from roboco.services import prompter_live
-from roboco.services.llm import (
+from robofleet.services import prompter_live
+from robofleet.services.llm import (
     INTERACTIVE_AGENT_SLUGS,
     INTERACTIVE_UNSUPPORTED_PROVIDERS,
 )

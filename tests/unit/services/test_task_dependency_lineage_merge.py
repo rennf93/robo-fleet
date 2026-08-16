@@ -21,10 +21,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.services.task import TaskService, _LineageCutContext
+from robofleet.foundation.policy.content import markers
+from robofleet.services.task import TaskService, _LineageCutContext
 
-_MERGE_CHAIN_RESOLVE = "roboco.services.gateway.merge_chain.resolve_parent_branch"
+_MERGE_CHAIN_RESOLVE = "robofleet.services.gateway.merge_chain.resolve_parent_branch"
 _WORKSPACE = Path("/tmp/ws")
 _BRANCH = "feature/frontend/root--fe-cell"
 
@@ -264,7 +264,7 @@ async def test_create_branch_in_project_wires_apply_dependency_lineage() -> None
     object.__setattr__(svc, "_apply_dependency_lineage", _fake_apply)
 
     with patch(
-        "roboco.services.git.get_git_service", MagicMock(return_value=git_service)
+        "robofleet.services.git.get_git_service", MagicMock(return_value=git_service)
     ):
         out = await svc._create_branch_in_project(task, uuid4(), project)
 

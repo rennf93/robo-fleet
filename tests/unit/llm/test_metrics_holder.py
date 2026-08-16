@@ -1,8 +1,8 @@
-"""Coverage for roboco.llm.metrics — singleton ToonMetrics holder."""
+"""Coverage for robofleet.llm.metrics — singleton ToonMetrics holder."""
 
 from __future__ import annotations
 
-from roboco.llm.metrics import _MetricsHolder, get_toon_metrics
+from robofleet.llm.metrics import _MetricsHolder, get_toon_metrics
 
 
 def test_get_toon_metrics_returns_singleton() -> None:

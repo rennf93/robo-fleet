@@ -16,10 +16,10 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.foundation.policy.content import markers
-from roboco.models.base import TaskType
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.config import settings
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import TaskType
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 def _make_deps(task_svc: AsyncMock) -> ChoreographerDeps:

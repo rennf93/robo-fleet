@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
-import roboco.services.git as git_module
-from roboco.services.git import GitService
+import robofleet.services.git as git_module
+from robofleet.services.git import GitService
 
 _PR_NUMBER = 42
 

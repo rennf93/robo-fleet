@@ -19,8 +19,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.services.base import NotFoundError
-from roboco.services.git import GitService
+from robofleet.services.base import NotFoundError
+from robofleet.services.git import GitService
 
 _PR_NUMBER = 159
 
@@ -46,7 +46,9 @@ def _patch_project_service(project: object | None) -> Any:
     fake_service = MagicMock()
     fake_service.get = AsyncMock(return_value=project)
     fake_service.get_by_slug = AsyncMock(return_value=project)
-    return patch("roboco.services.git.get_project_service", return_value=fake_service)
+    return patch(
+        "robofleet.services.git.get_project_service", return_value=fake_service
+    )
 
 
 def _compiled_sql(stmt: Any) -> str:

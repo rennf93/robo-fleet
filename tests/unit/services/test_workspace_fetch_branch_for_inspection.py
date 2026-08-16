@@ -21,9 +21,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.exceptions import GitTimeoutError
-from roboco.services.workspace import WorkspaceService
+from robofleet.config import settings
+from robofleet.exceptions import GitTimeoutError
+from robofleet.services.workspace import WorkspaceService
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -53,7 +53,7 @@ def _wire_resolution(svc: WorkspaceService, workspace: Path) -> None:
 def _no_project_service_patch() -> Any:
     """No git token (project=None skips the decrypt path entirely)."""
     return patch(
-        "roboco.services.project.get_project_service",
+        "robofleet.services.project.get_project_service",
         return_value=MagicMock(get_by_slug=AsyncMock(return_value=None)),
     )
 
@@ -73,8 +73,8 @@ async def test_default_subprocess_timeout_is_workspace_clone_timeout(
         return subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
         _no_project_service_patch(),
     ):
         await svc.fetch_branch_for_inspection(agent_id=uuid4(), branch_name="feature/x")
@@ -93,8 +93,8 @@ async def test_subprocess_timeout_override_reaches_the_fetch(tmp_path: Path) -> 
         return subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
         _no_project_service_patch(),
     ):
         await svc.fetch_branch_for_inspection(
@@ -121,8 +121,8 @@ async def test_timeout_expired_becomes_git_timeout_error(tmp_path: Path) -> None
         )
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
         _no_project_service_patch(),
         pytest.raises(GitTimeoutError) as exc_info,
     ):

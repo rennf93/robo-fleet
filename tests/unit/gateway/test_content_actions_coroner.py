@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_postmortem — Auditor-gated
+"""robofleet.services.gateway.content_actions.propose_postmortem — Auditor-gated
 Coroner postmortem authoring. Mirrors test_content_actions_pest_control.py."""
 
 from __future__ import annotations
@@ -8,10 +8,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.models.base import TaskStatus
-from roboco.services.base import ConflictError
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import TaskStatus
+from robofleet.services.base import ConflictError
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 class _FakeTask:
@@ -104,7 +107,7 @@ async def test_propose_postmortem_rejects_unknown_failed_stage() -> None:
 
 @pytest.mark.asyncio
 async def test_propose_postmortem_accepts_every_real_status_as_failed_stage() -> None:
-    with patch("roboco.services.task.get_task_service") as get_task_service:
+    with patch("robofleet.services.task.get_task_service") as get_task_service:
         task_svc = MagicMock()
         task_svc.list_open_coroner_cycles = AsyncMock(return_value=[])
         get_task_service.return_value = task_svc
@@ -161,7 +164,7 @@ async def test_propose_postmortem_rejects_thin_playbook_body() -> None:
 @pytest.mark.asyncio
 async def test_propose_postmortem_no_open_autopsy_assigned() -> None:
     actions = _actions("auditor")
-    with patch("roboco.services.task.get_task_service") as get_task_service:
+    with patch("robofleet.services.task.get_task_service") as get_task_service:
         task_svc = MagicMock()
         task_svc.list_open_coroner_cycles = AsyncMock(return_value=[])
         get_task_service.return_value = task_svc
@@ -177,8 +180,8 @@ async def test_propose_postmortem_completes_the_task_and_stamps_marker() -> None
     actions = _actions("auditor")
 
     with (
-        patch("roboco.services.task.get_task_service") as get_task_service,
-        patch("roboco.services.coroner_engine.get_coroner_engine") as get_engine,
+        patch("robofleet.services.task.get_task_service") as get_task_service,
+        patch("robofleet.services.coroner_engine.get_coroner_engine") as get_engine,
     ):
         task_svc = MagicMock()
         task_svc.list_open_coroner_cycles = AsyncMock(return_value=[task])
@@ -217,9 +220,9 @@ async def test_propose_postmortem_drafts_playbook_when_kind_is_playbook() -> Non
     drafted.id = uuid4()
 
     with (
-        patch("roboco.services.task.get_task_service") as get_task_service,
-        patch("roboco.services.coroner_engine.get_coroner_engine") as get_engine,
-        patch("roboco.services.playbook.get_playbook_service") as get_playbook_svc,
+        patch("robofleet.services.task.get_task_service") as get_task_service,
+        patch("robofleet.services.coroner_engine.get_coroner_engine") as get_engine,
+        patch("robofleet.services.playbook.get_playbook_service") as get_playbook_svc,
     ):
         task_svc = MagicMock()
         task_svc.list_open_coroner_cycles = AsyncMock(return_value=[task])
@@ -264,9 +267,9 @@ async def test_propose_postmortem_playbook_title_conflict_is_clean_rejection() -
     actions = _actions("auditor")
 
     with (
-        patch("roboco.services.task.get_task_service") as get_task_service,
-        patch("roboco.services.coroner_engine.get_coroner_engine") as get_engine,
-        patch("roboco.services.playbook.get_playbook_service") as get_playbook_svc,
+        patch("robofleet.services.task.get_task_service") as get_task_service,
+        patch("robofleet.services.coroner_engine.get_coroner_engine") as get_engine,
+        patch("robofleet.services.playbook.get_playbook_service") as get_playbook_svc,
     ):
         task_svc = MagicMock()
         task_svc.list_open_coroner_cycles = AsyncMock(return_value=[task])

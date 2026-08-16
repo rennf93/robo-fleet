@@ -7,7 +7,7 @@ one call, instead of re-picking every per-agent Select. ``payload`` mirrors
 exactly what ``GET /providers`` + ``GET /providers/complexity-overrides``
 already serve, so a preset is "what the card currently shows" — see
 ``ModelRoutingService.save_routing_preset`` / ``apply_routing_preset``
-(roboco/services/llm.py). Pure additive new table; no backfill, no data
+(robofleet/services/llm.py). Pure additive new table; no backfill, no data
 migration — applying a preset is the only thing that ever mutates
 ``model_assignments`` as a side effect, and only on an explicit call.
 

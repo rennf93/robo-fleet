@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_roadmap — PO-gated themed
+"""robofleet.services.gateway.content_actions.propose_roadmap — PO-gated themed
 roadmap cycle authoring."""
 
 from __future__ import annotations
@@ -8,9 +8,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.foundation.policy.content import markers
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.config import settings as cfg
+from robofleet.foundation.policy.content import markers
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 class _FakeTask:
@@ -73,7 +76,9 @@ def _default_project_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
     exclusion check override this target explicitly."""
     stub = MagicMock()
     stub.get_by_slug = AsyncMock(return_value=None)
-    monkeypatch.setattr("roboco.services.project.get_project_service", lambda _s: stub)
+    monkeypatch.setattr(
+        "robofleet.services.project.get_project_service", lambda _s: stub
+    )
 
 
 @pytest.mark.asyncio
@@ -105,7 +110,7 @@ async def test_propose_roadmap_traces_payload_before_rejecting(
         async def log_event(self, **kwargs: Any) -> None:
             traced.append(kwargs)
 
-    monkeypatch.setattr("roboco.services.audit.get_audit_service", _FakeAuditService)
+    monkeypatch.setattr("robofleet.services.audit.get_audit_service", _FakeAuditService)
     items = _valid_items(3)
 
     env = await _actions("head_marketing").propose_roadmap(
@@ -182,7 +187,7 @@ async def test_propose_roadmap_no_open_cycle_is_invalid_state(
     monkeypatch.setattr(cfg, "roadmap_max_items_per_cycle", 7)
     task_svc = MagicMock()
     task_svc.list_open_roadmap_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("product_owner").propose_roadmap(
         agent_id=uuid4(), cycle_goal="Close onboarding friction", items=_valid_items(3)
     )
@@ -199,7 +204,7 @@ async def test_propose_roadmap_persists_cycle_onto_open_task(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_roadmap_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("product_owner")
     actions.task.session.flush = AsyncMock()
 
@@ -233,7 +238,7 @@ async def test_propose_roadmap_sends_telegram_push_per_item(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_roadmap_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     notify = AsyncMock()
     actions = _actions("product_owner", notification_delivery=notify)
     actions.task.session.flush = AsyncMock()
@@ -267,7 +272,7 @@ async def test_propose_roadmap_survives_telegram_push_failure(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_roadmap_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     notify = MagicMock()
     notify.notify_ceo_of_queue_item = AsyncMock(side_effect=RuntimeError("boom"))
     actions = _actions("product_owner", notification_delivery=notify)
@@ -291,7 +296,7 @@ async def test_propose_roadmap_ignores_cycle_assigned_to_another_agent(
     cycle_task = _FakeTask(assigned_to=other_agent)
     task_svc = MagicMock()
     task_svc.list_open_roadmap_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("product_owner").propose_roadmap(
         agent_id=uuid4(), cycle_goal="Close onboarding friction", items=_valid_items(3)
     )
@@ -311,13 +316,13 @@ async def test_propose_roadmap_rejects_item_targeting_excluded_project(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_roadmap_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     excluded_project = MagicMock(board_programs=["!roadmap"])
     project_svc = MagicMock()
     project_svc.get_by_slug = AsyncMock(return_value=excluded_project)
     monkeypatch.setattr(
-        "roboco.services.project.get_project_service", lambda _s: project_svc
+        "robofleet.services.project.get_project_service", lambda _s: project_svc
     )
 
     bad = _valid_item(0)
@@ -341,12 +346,12 @@ async def test_propose_roadmap_allows_unresolvable_project_slug_through(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_roadmap_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     project_svc = MagicMock()
     project_svc.get_by_slug = AsyncMock(return_value=None)
     monkeypatch.setattr(
-        "roboco.services.project.get_project_service", lambda _s: project_svc
+        "robofleet.services.project.get_project_service", lambda _s: project_svc
     )
 
     actions = _actions("product_owner")
@@ -372,7 +377,7 @@ async def test_propose_roadmap_ignores_already_authored_cycle(
     )
     task_svc = MagicMock()
     task_svc.list_open_roadmap_cycles = AsyncMock(return_value=[authored_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("product_owner").propose_roadmap(
         agent_id=agent_id, cycle_goal="A second cycle", items=_valid_items(3)
     )

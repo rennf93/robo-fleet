@@ -1,11 +1,11 @@
-"""Guard: no pre-gateway tool names may appear in live ``roboco/`` sources.
+"""Guard: no pre-gateway tool names may appear in live ``robofleet/`` sources.
 
 The Gateway/full cutover deleted the v1 per-domain MCP tools. Any surviving
 reference in a spawn prompt, seed, onboarding string, or comment hands agents
 (or future readers) a tool that no longer exists. This test fails if any
 reappear.
 
-The orphaned ``roboco/agents/`` subtree is excluded — it is pre-gateway dead
+The orphaned ``robofleet/agents/`` subtree is excluded — it is pre-gateway dead
 code removed wholesale in a later phase, so there is no value in scrubbing its
 strings first.
 """
@@ -57,7 +57,7 @@ FORBIDDEN: tuple[str, ...] = (
 )
 
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-_PKG = _ROOT / "roboco"
+_PKG = _ROOT / "robofleet"
 # Pre-gateway agent subtree, removed wholesale in a later phase.
 _EXCLUDED_DIR = _PKG / "agents"
 

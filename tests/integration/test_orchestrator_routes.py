@@ -13,9 +13,9 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import _ServiceHolder, set_orchestrator
-from roboco.api.routes.orchestrator import _validated_agent_id
-from roboco.api.routes.orchestrator import router as orch_router
+from robofleet.api.deps import _ServiceHolder, set_orchestrator
+from robofleet.api.routes.orchestrator import _validated_agent_id
+from robofleet.api.routes.orchestrator import router as orch_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

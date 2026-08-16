@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from roboco.services.gateway.envelope import Envelope
+from robofleet.services.gateway.envelope import Envelope
 
 
 def test_envelope_ok_carries_introspection_when_task_supplied() -> None:

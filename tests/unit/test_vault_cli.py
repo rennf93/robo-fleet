@@ -1,4 +1,4 @@
-"""``python -m roboco.vault`` — rebuild / relocate, on a tmp vault.
+"""``python -m robofleet.vault`` — rebuild / relocate, on a tmp vault.
 
 Flag-gated: both subcommands refuse when ROBOCO_OBSIDIAN_VAULT_ENABLED is off.
 """
@@ -12,9 +12,9 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from roboco.config import settings
-from roboco.services.vault_writer import TaskNoteData
-from roboco.vault import ensure_vault_assets, main
+from robofleet.config import settings
+from robofleet.services.vault_writer import TaskNoteData
+from robofleet.vault import ensure_vault_assets, main
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -181,14 +181,18 @@ def test_rebuild_writes_agent_task_journal_and_a2a(
     )
 
     with (
-        patch("roboco.db.base.get_db_context", _db_ctx(db)),
-        patch("roboco.services.agent.AgentService", return_value=agent_service),
-        patch("roboco.services.task.TaskService", return_value=task_service),
-        patch("roboco.services.journal.JournalService", return_value=journal_service),
-        patch("roboco.services.project.get_project_service", return_value=MagicMock()),
-        patch("roboco.services.a2a.A2AService", return_value=a2a_service),
+        patch("robofleet.db.base.get_db_context", _db_ctx(db)),
+        patch("robofleet.services.agent.AgentService", return_value=agent_service),
+        patch("robofleet.services.task.TaskService", return_value=task_service),
         patch(
-            "roboco.services.vault_assembly.assemble_task_note_data",
+            "robofleet.services.journal.JournalService", return_value=journal_service
+        ),
+        patch(
+            "robofleet.services.project.get_project_service", return_value=MagicMock()
+        ),
+        patch("robofleet.services.a2a.A2AService", return_value=a2a_service),
+        patch(
+            "robofleet.services.vault_assembly.assemble_task_note_data",
             AsyncMock(return_value=task_note_data),
         ),
     ):

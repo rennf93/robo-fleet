@@ -14,20 +14,20 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings as cfg
-from roboco.db.tables import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskStatus as TS
-from roboco.services.periscope_engine import PeriscopeEngine
-from roboco.services.task import (
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskStatus as TS
+from robofleet.services.periscope_engine import PeriscopeEngine
+from robofleet.services.task import (
     PERISCOPE_SOURCE,
     PEST_CONTROL_SOURCE,
     ROADMAP_SOURCE,

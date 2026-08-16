@@ -13,9 +13,9 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.models.playbook import PlaybookCreate
-from roboco.services.base import ConflictError
-from roboco.services.playbook import PlaybookService
+from robofleet.models.playbook import PlaybookCreate
+from robofleet.services.base import ConflictError
+from robofleet.services.playbook import PlaybookService
 from sqlalchemy.exc import IntegrityError
 
 

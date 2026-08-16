@@ -5,10 +5,10 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskNature, TaskStatus, TaskType
-from roboco.services.task import TaskService
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskNature, TaskStatus, TaskType
+from robofleet.services.task import TaskService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

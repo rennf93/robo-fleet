@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 _GOOD_STEP_DESC = (
     "be-dev-1 prepends the smoke-test HTML comment above the README H1, "

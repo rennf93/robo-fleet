@@ -11,7 +11,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.services.optimal_brain.indexes.standards import StandardsIndexPlugin
+from robofleet.services.optimal_brain.indexes.standards import StandardsIndexPlugin
 
 
 @pytest.mark.asyncio

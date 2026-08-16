@@ -13,8 +13,8 @@ import re
 from pathlib import Path
 from unittest.mock import patch
 
-from roboco.models.runtime import OrchestratorAgentConfig, SpawnGitContext
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.models.runtime import OrchestratorAgentConfig, SpawnGitContext
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _make_dev_config(*, project_slug: str = "roboco-api") -> OrchestratorAgentConfig:
@@ -115,10 +115,10 @@ def _build_cmd(container_name: str, config: OrchestratorAgentConfig) -> list[str
     hosts = _minimal_hosts()
     attrs = _mock_settings()
     with (
-        patch("roboco.runtime.orchestrator.settings") as mock_settings,
-        patch("roboco.runtime.orchestrator.Path.exists", return_value=False),
+        patch("robofleet.runtime.orchestrator.settings") as mock_settings,
+        patch("robofleet.runtime.orchestrator.Path.exists", return_value=False),
         patch(
-            "roboco.runtime.orchestrator._build_manifest_for_agent",
+            "robofleet.runtime.orchestrator._build_manifest_for_agent",
             return_value=None,
         ),
     ):

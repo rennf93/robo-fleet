@@ -14,8 +14,8 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.services.task import SELF_HEAL_SOURCE
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.services.task import SELF_HEAL_SOURCE
 
 
 def _task(

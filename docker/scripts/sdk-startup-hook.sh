@@ -29,7 +29,7 @@ export UV_PROJECT_ENVIRONMENT=/app/.venv
 # --- SDK bring-up ---------------------------------------------------------
 if ! curl -sf "http://localhost:${SDK_PORT}/health" >/dev/null 2>&1; then
     echo "[SDK] Starting for agent ${AGENT_ID} on port ${SDK_PORT}..."
-    nohup uv run --no-sync python -m roboco.agent_sdk.server > "$LOG_FILE" 2>&1 &
+    nohup uv run --no-sync python -m robofleet.agent_sdk.server > "$LOG_FILE" 2>&1 &
     SDK_PID=$!
     sleep 2
     if curl -sf "http://localhost:${SDK_PORT}/health" >/dev/null 2>&1; then

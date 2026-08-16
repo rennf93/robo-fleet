@@ -26,7 +26,7 @@ where the combo can be created or re-handed:
   while leaving the ``awaiting_pm_review`` review-claim path untouched (C8).
 
 The single predicate every layer consults is
-``roboco.foundation.policy.batch.main_pm_cannot_own_code`` (accepts ORM enums
+``robofleet.foundation.policy.batch.main_pm_cannot_own_code`` (accepts ORM enums
 or their ``.value`` strings); these tests exercise the service-layer sites
 that call it.
 """
@@ -37,8 +37,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.identity import AGENTS
-from roboco.models.base import (
+from robofleet.foundation.identity import AGENTS
+from robofleet.models.base import (
     AgentRole,
     Complexity,
     TaskNature,
@@ -46,9 +46,9 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.models.task import TaskCreateRequest
-from roboco.services.base import UnauthorizedError, ValidationError
-from roboco.services.task import TaskService
+from robofleet.models.task import TaskCreateRequest
+from robofleet.services.base import UnauthorizedError, ValidationError
+from robofleet.services.task import TaskService
 
 
 def _bind(svc: TaskService, name: str, value: object) -> None:
@@ -227,7 +227,7 @@ async def test_approve_and_start_retypes_code_to_planning_for_main_pm(
     agent_svc = MagicMock()
     agent_svc.get_by_slug = AsyncMock(return_value=main_pm_agent)
     monkeypatch.setattr(
-        "roboco.services.agent.get_agent_service", lambda _session: agent_svc
+        "robofleet.services.agent.get_agent_service", lambda _session: agent_svc
     )
     task = _task(
         team=Team.BOARD,
@@ -255,7 +255,7 @@ async def test_approve_and_start_leaves_planning_untouched(
     agent_svc = MagicMock()
     agent_svc.get_by_slug = AsyncMock(return_value=main_pm_agent)
     monkeypatch.setattr(
-        "roboco.services.agent.get_agent_service", lambda _session: agent_svc
+        "robofleet.services.agent.get_agent_service", lambda _session: agent_svc
     )
     task = _task(
         team=Team.BOARD,

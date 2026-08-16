@@ -5,17 +5,17 @@ resolution off RepoRef.host, and URL parsing that stamps the host.
 from __future__ import annotations
 
 import pytest
-from roboco.exceptions import GitError
-from roboco.services.forge import registry
-from roboco.services.forge.base import RepoRef
-from roboco.services.forge.gitea import GiteaProvider
-from roboco.services.forge.github import GitHubProvider
-from roboco.services.forge.gitlab import GitLabProvider
-from roboco.services.forge.registry import (
+from robofleet.exceptions import GitError
+from robofleet.services.forge import registry
+from robofleet.services.forge.base import RepoRef
+from robofleet.services.forge.gitea import GiteaProvider
+from robofleet.services.forge.github import GitHubProvider
+from robofleet.services.forge.gitlab import GitLabProvider
+from robofleet.services.forge.registry import (
     provider_for,
     register_project_forge,
 )
-from roboco.services.forge.router import ForgeRouter
+from robofleet.services.forge.router import ForgeRouter
 
 
 @pytest.fixture(autouse=True)

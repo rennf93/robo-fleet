@@ -13,8 +13,8 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.services.task import X_POST_SOURCE, X_REPLY_SOURCE
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.services.task import X_POST_SOURCE, X_REPLY_SOURCE
 
 
 def _task(tid: str, source: str, *, assigned_to: str | None = None) -> dict[str, Any]:

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from roboco.foundation import identity as _foundation
+from robofleet.foundation import identity as _foundation
 from tests.e2e_smoke.arcs import seed_company, seed_project
 
 if TYPE_CHECKING:
@@ -28,8 +28,8 @@ def _seed_system_and_auditor(stack: E2EStack) -> None:
     """Seed ``system`` + ``auditor`` at their FIXED foundation UUIDs —
     CoronerEngine._originate assigns the autopsy task to
     _foundation.AGENTS["auditor"].uuid, so the seeded row must exist there."""
-    from roboco.db.tables import AgentTable
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     async def _run(session: AsyncSession) -> None:
         for agent_uuid, slug, role, team in (
@@ -63,7 +63,7 @@ def _seed_system_and_auditor(stack: E2EStack) -> None:
 
 
 def _arm_coroner(stack: E2EStack) -> None:
-    from roboco.db.tables import SystemSettingTable
+    from robofleet.db.tables import SystemSettingTable
 
     async def _run(session: AsyncSession) -> None:
         session.add(
@@ -74,14 +74,14 @@ def _arm_coroner(stack: E2EStack) -> None:
 
 
 def _seed_incident_task(stack: E2EStack, project_id: Any, company: Any) -> Any:
-    from roboco.models.base import (
+    from robofleet.models.base import (
         Complexity,
         TaskNature,
         TaskStatus,
         TaskType,
         Team,
     )
-    from roboco.services.task import TaskCreateRequest, get_task_service
+    from robofleet.services.task import TaskCreateRequest, get_task_service
 
     async def _run(session: AsyncSession) -> Any:
         task = await get_task_service(session).create(
@@ -113,12 +113,12 @@ def _force_third_bounce(stack: E2EStack, task_id: Any) -> None:
     abandoned when that loop closes)."""
     import asyncio
 
-    from roboco.models.base import TaskStatus
-    from roboco.services.task import TaskService
+    from robofleet.models.base import TaskStatus
+    from robofleet.services.task import TaskService
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> None:
-        from roboco.db.tables import TaskTable
+        from robofleet.db.tables import TaskTable
 
         scheduled: list[Any] = []
         real_create_task = asyncio.create_task
@@ -130,7 +130,7 @@ def _force_third_bounce(stack: E2EStack, task_id: Any) -> None:
         async def _noop() -> None:
             return None
 
-        import roboco.services.task as task_module
+        import robofleet.services.task as task_module
 
         original = task_module.asyncio.create_task
         task_module.asyncio.create_task = _capture
@@ -153,8 +153,8 @@ def _force_third_bounce(stack: E2EStack, task_id: Any) -> None:
 
 
 def _find_coroner_task(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
-    from roboco.services.task import CORONER_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.services.task import CORONER_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -185,23 +185,23 @@ def _find_coroner_task(stack: E2EStack) -> dict[str, Any]:
 
 
 def _propose_postmortem_for_real(stack: E2EStack, coroner_task_id: Any) -> Any:
-    """Mirrors ``roboco.api.deps.get_content_actions``'s wiring exactly, minus
+    """Mirrors ``robofleet.api.deps.get_content_actions``'s wiring exactly, minus
     the orchestrator handle (unused by propose_postmortem)."""
 
     async def _run(session: AsyncSession) -> Any:
-        from roboco.services.a2a import A2AService
-        from roboco.services.gateway.content_actions import (
+        from robofleet.services.a2a import A2AService
+        from robofleet.services.gateway.content_actions import (
             ContentActions,
             ContentActionsDeps,
         )
-        from roboco.services.git import GitService
-        from roboco.services.journal import JournalService
-        from roboco.services.notification import NotificationService
-        from roboco.services.notification_delivery import (
+        from robofleet.services.git import GitService
+        from robofleet.services.journal import JournalService
+        from robofleet.services.notification import NotificationService
+        from robofleet.services.notification_delivery import (
             NotificationDeliveryService,
         )
-        from roboco.services.task import TaskService
-        from roboco.services.workspace import WorkspaceService
+        from robofleet.services.task import TaskService
+        from robofleet.services.workspace import WorkspaceService
 
         deps = ContentActionsDeps(
             task=TaskService(session),
@@ -235,7 +235,7 @@ def _propose_postmortem_for_real(stack: E2EStack, coroner_task_id: Any) -> Any:
 def _find_playbook_draft(
     stack: E2EStack, title_substring: str
 ) -> dict[str, Any] | None:
-    from roboco.db.tables import PlaybookTable
+    from robofleet.db.tables import PlaybookTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any] | None:
@@ -278,7 +278,7 @@ def test_coroner_loop_bounce_opens_autopsy_and_completes_with_playbook(
     assert row["confirmed_by_human"] is False
 
     # The dispatcher's own dev-work skip recognizes this exact task shape.
-    from roboco.runtime.orchestrator import _is_non_dev_dispatch_source
+    from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
 
     assert _is_non_dev_dispatch_source({"source": "board_coroner"}) is True
 

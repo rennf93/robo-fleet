@@ -13,10 +13,10 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.agents_config import issue_agent_token
-from roboco.api.routes import a2a as a2a_module
-from roboco.api.routes.a2a import router as a2a_router
-from roboco.db.base import get_db
+from robofleet.agents_config import issue_agent_token
+from robofleet.api.routes import a2a as a2a_module
+from robofleet.api.routes.a2a import router as a2a_router
+from robofleet.db.base import get_db
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

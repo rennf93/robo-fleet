@@ -20,8 +20,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings as cfg
-from roboco.db.tables import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
@@ -29,8 +29,8 @@ from roboco.db.tables import (
     TaskTable,
     XCredentialsTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.models.base import (
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -38,9 +38,9 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.models.base import TaskStatus as TS
-from roboco.services.megaphone_engine import MegaphoneEngine
-from roboco.services.task import (
+from robofleet.models.base import TaskStatus as TS
+from robofleet.services.megaphone_engine import MegaphoneEngine
+from robofleet.services.task import (
     MEGAPHONE_SOURCE,
     PERISCOPE_SOURCE,
     PEST_CONTROL_SOURCE,
@@ -49,8 +49,8 @@ from roboco.services.task import (
     TaskCreateRequest,
     get_task_service,
 )
-from roboco.services.workspace import WorkspaceService
-from roboco.services.x_credentials import get_x_credentials_service
+from robofleet.services.workspace import WorkspaceService
+from robofleet.services.x_credentials import get_x_credentials_service
 from sqlalchemy import delete, select, update
 
 if TYPE_CHECKING:

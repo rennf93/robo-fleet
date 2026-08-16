@@ -14,9 +14,9 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.config import settings
-from roboco.runtime import orchestrator as orch_module
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.runtime import orchestrator as orch_module
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 # Test interval constants (kept symbolic so ruff PLR2004 stays quiet and the
 # intent reads at the call site).

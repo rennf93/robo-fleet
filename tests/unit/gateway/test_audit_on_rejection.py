@@ -25,8 +25,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.envelope import Envelope
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.envelope import Envelope
 
 
 def _make_deps(**overrides: Any) -> ChoreographerDeps:

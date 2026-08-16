@@ -1,7 +1,7 @@
 """``_institutional_memory``'s RAG search is bounded by
 ``institutional_memory_timeout_seconds`` — a saturated Ollama embedder must
 never eat the whole verb timeout budget and 504 a claim. See
-``roboco.services.gateway.choreographer._impl.Choreographer._institutional_memory``.
+``robofleet.services.gateway.choreographer._impl.Choreographer._institutional_memory``.
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import Settings
-from roboco.services.gateway.choreographer import Choreographer
+from robofleet.config import Settings
+from robofleet.services.gateway.choreographer import Choreographer
 
 _DEFAULT_TIMEOUT = 8.0
 _OVERRIDE_TIMEOUT = 3.5
@@ -39,9 +39,9 @@ class TestInstitutionalMemoryTimeout:
     async def test_slow_search_times_out_without_raising(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("roboco.config.settings.org_memory_enabled", True)
+        monkeypatch.setattr("robofleet.config.settings.org_memory_enabled", True)
         monkeypatch.setattr(
-            "roboco.config.settings.institutional_memory_timeout_seconds", 0.01
+            "robofleet.config.settings.institutional_memory_timeout_seconds", 0.01
         )
 
         async def _slow(**_kwargs: object) -> dict[str, object]:
@@ -56,9 +56,9 @@ class TestInstitutionalMemoryTimeout:
     async def test_fast_search_flows_through_unchanged(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("roboco.config.settings.org_memory_enabled", True)
+        monkeypatch.setattr("robofleet.config.settings.org_memory_enabled", True)
         monkeypatch.setattr(
-            "roboco.config.settings.institutional_memory_timeout_seconds", 8.0
+            "robofleet.config.settings.institutional_memory_timeout_seconds", 8.0
         )
         lesson = {"kind": "learning", "summary": "s", "source": "src", "score": 0.9}
         similar_memory = AsyncMock(return_value={"items": [lesson], "status": "ok"})

@@ -14,9 +14,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.workspace import WorkspaceService
+from robofleet.config import settings
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.workspace import WorkspaceService
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -77,12 +77,12 @@ async def test_broken_env_provisions_then_blocks_the_gate(
     captured: list[list[str]] = []
 
     with (
-        patch("roboco.services.workspace.settings.toolchain_match_enabled", True),
+        patch("robofleet.services.workspace.settings.toolchain_match_enabled", True),
         patch(
-            "roboco.services.workspace.subprocess.run",
+            "robofleet.services.workspace.subprocess.run",
             side_effect=_fake_run(captured, collect_rc=2),  # collection/import error
         ),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.install_dev_deps(ws)
 
@@ -108,12 +108,12 @@ async def test_ok_env_provisions_and_gate_proceeds(
     captured: list[list[str]] = []
 
     with (
-        patch("roboco.services.workspace.settings.toolchain_match_enabled", True),
+        patch("robofleet.services.workspace.settings.toolchain_match_enabled", True),
         patch(
-            "roboco.services.workspace.subprocess.run",
+            "robofleet.services.workspace.subprocess.run",
             side_effect=_fake_run(captured, collect_rc=0),
         ),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.install_dev_deps(ws)
 
@@ -132,12 +132,12 @@ async def test_flag_off_provisions_today_and_never_blocks(
     captured: list[list[str]] = []
 
     with (
-        patch("roboco.services.workspace.settings.toolchain_match_enabled", False),
+        patch("robofleet.services.workspace.settings.toolchain_match_enabled", False),
         patch(
-            "roboco.services.workspace.subprocess.run",
+            "robofleet.services.workspace.subprocess.run",
             side_effect=_fake_run(captured, collect_rc=2),
         ),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.install_dev_deps(ws)
 

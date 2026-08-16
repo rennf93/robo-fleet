@@ -11,18 +11,18 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.provider import router as provider_router
-from roboco.billing.pricing import input_price_per_million
-from roboco.db.tables import (
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.provider import router as provider_router
+from robofleet.billing.pricing import input_price_per_million
+from robofleet.db.tables import (
     ModelAssignmentTable,
     ProviderConfigTable,
     RoutingPresetTable,
 )
-from roboco.models import AgentRole, Team
-from roboco.models.base import AssignmentScope, ModelProvider
-from roboco.models.llm_catalog import MODEL_CATALOG
-from roboco.models.permissions import AgentContext
+from robofleet.models import AgentRole, Team
+from robofleet.models.base import AssignmentScope, ModelProvider
+from robofleet.models.llm_catalog import MODEL_CATALOG
+from robofleet.models.permissions import AgentContext
 from sqlalchemy import delete, select
 
 if TYPE_CHECKING:
@@ -590,7 +590,7 @@ async def test_post_test_self_hosted_when_reachable(
         headers=_HDR_PM,
     )
     with patch(
-        "roboco.api.routes.provider.probe_ollama_tags",
+        "robofleet.api.routes.provider.probe_ollama_tags",
         new_callable=AsyncMock,
         return_value=(["llama3.1:8b", "gemma2:9b"], None),
     ):
@@ -621,7 +621,7 @@ async def test_post_test_self_hosted_when_unreachable(
         headers=_HDR_PM,
     )
     with patch(
-        "roboco.api.routes.provider.probe_ollama_tags",
+        "robofleet.api.routes.provider.probe_ollama_tags",
         new_callable=AsyncMock,
         return_value=([], "Could not connect to http://192.168.1.10:11434"),
     ):
@@ -706,7 +706,7 @@ async def test_get_self_hosted_models_returns_list(
         headers=_HDR_PM,
     )
     with patch(
-        "roboco.api.routes.provider.probe_ollama_tags",
+        "robofleet.api.routes.provider.probe_ollama_tags",
         new_callable=AsyncMock,
         return_value=(["llama3.1:8b", "gemma2:9b", "qwen2.5:14b"], None),
     ):
@@ -753,7 +753,7 @@ async def test_get_self_hosted_models_unreachable_returns_503(
         headers=_HDR_PM,
     )
     with patch(
-        "roboco.api.routes.provider.probe_ollama_tags",
+        "robofleet.api.routes.provider.probe_ollama_tags",
         new_callable=AsyncMock,
         return_value=([], "Could not connect"),
     ):

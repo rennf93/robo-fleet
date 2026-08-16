@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.models import AgentRole, AgentStatus, Team
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.models import AgentRole, AgentStatus, Team
 from sqlalchemy import select
 
 if TYPE_CHECKING:

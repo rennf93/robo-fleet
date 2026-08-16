@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.services.workspace import WorkspaceService, _ensure_lock_for
+from robofleet.services.workspace import WorkspaceService, _ensure_lock_for
 
 if TYPE_CHECKING:
     from pathlib import Path

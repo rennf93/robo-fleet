@@ -16,9 +16,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AuditLogTable
-from roboco.models.base import AgentRole, TaskStatus, TaskType, Team
-from roboco.services.task import (
+from robofleet.db.tables import AuditLogTable
+from robofleet.models.base import AgentRole, TaskStatus, TaskType, Team
+from robofleet.services.task import (
     TaskService,
     _board_cannot_own,
     _is_cell_team_task,

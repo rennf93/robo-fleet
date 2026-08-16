@@ -9,12 +9,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-from roboco.models.work_session import WorkSessionCreate, WorkSessionStatus
-from roboco.services.base import ConflictError
-from roboco.services.work_session import WorkSessionService, get_work_session_service
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+from robofleet.models.work_session import WorkSessionCreate, WorkSessionStatus
+from robofleet.services.base import ConflictError
+from robofleet.services.work_session import WorkSessionService, get_work_session_service
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 
@@ -32,10 +32,10 @@ def _bind(svc: WorkSessionService, name: str, value: object) -> None:
 @pytest.mark.asyncio
 async def test_files_changed_returns_files_modified_list() -> None:
     svc = _service()
-    fake_session = MagicMock(files_modified=["roboco/api/app.py", "README.md"])
+    fake_session = MagicMock(files_modified=["robofleet/api/app.py", "README.md"])
     _bind(svc, "get", AsyncMock(return_value=fake_session))
     out = await svc.files_changed(uuid4())
-    assert out == ["roboco/api/app.py", "README.md"]
+    assert out == ["robofleet/api/app.py", "README.md"]
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-"""roboco.api.deps coverage — agent identity / context / role gate helpers.
+"""robofleet.api.deps coverage — agent identity / context / role gate helpers.
 
 Covers the slug→UUID resolution, header-based agent ID/context dependencies,
 HMAC token enforcement, role coercion fallbacks, notification/task
@@ -13,8 +13,8 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from roboco.api import deps as _deps
-from roboco.api.deps import (
+from robofleet.api import deps as _deps
+from robofleet.api.deps import (
     _auth_required,
     _check_agent_auth_token,
     _coerce_agent_role,
@@ -35,8 +35,8 @@ from roboco.api.deps import (
     resolve_agent_id,
     set_orchestrator,
 )
-from roboco.models import AgentRole, Team
-from roboco.models.permissions import AgentContext
+from robofleet.models import AgentRole, Team
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -61,7 +61,7 @@ async def test_resolve_agent_id_returns_uuid_when_found() -> None:
     expected = uuid4()
     fake_db = MagicMock()
     with patch(
-        "roboco.api.deps.resolve_agent_uuid",
+        "robofleet.api.deps.resolve_agent_uuid",
         new=AsyncMock(return_value=expected),
     ):
         out = await resolve_agent_id("be-dev-1", fake_db)
@@ -71,7 +71,9 @@ async def test_resolve_agent_id_returns_uuid_when_found() -> None:
 @pytest.mark.asyncio
 async def test_resolve_agent_id_raises_when_missing() -> None:
     with (
-        patch("roboco.api.deps.resolve_agent_uuid", new=AsyncMock(return_value=None)),
+        patch(
+            "robofleet.api.deps.resolve_agent_uuid", new=AsyncMock(return_value=None)
+        ),
         pytest.raises(HTTPException) as exc,
     ):
         await resolve_agent_id("ghost", MagicMock())
@@ -123,7 +125,7 @@ async def test_get_current_agent_id_raises_when_header_missing() -> None:
 async def test_get_current_agent_id_returns_uuid() -> None:
     expected = uuid4()
     with patch(
-        "roboco.api.deps.resolve_agent_uuid",
+        "robofleet.api.deps.resolve_agent_uuid",
         new=AsyncMock(return_value=expected),
     ):
         out = await get_current_agent_id(
@@ -164,7 +166,7 @@ async def test_get_optional_agent_id_returns_none_when_absent() -> None:
 async def test_get_optional_agent_id_returns_uuid_when_present() -> None:
     expected = uuid4()
     with patch(
-        "roboco.api.deps.resolve_agent_uuid",
+        "robofleet.api.deps.resolve_agent_uuid",
         new=AsyncMock(return_value=expected),
     ):
         out = await get_optional_agent_id(MagicMock(), x_agent_id="be-dev-1")
@@ -174,7 +176,9 @@ async def test_get_optional_agent_id_returns_uuid_when_present() -> None:
 @pytest.mark.asyncio
 async def test_get_optional_agent_id_returns_none_on_lookup_failure() -> None:
     """When resolve_agent_id raises HTTPException, return None instead."""
-    with patch("roboco.api.deps.resolve_agent_uuid", new=AsyncMock(return_value=None)):
+    with patch(
+        "robofleet.api.deps.resolve_agent_uuid", new=AsyncMock(return_value=None)
+    ):
         out = await get_optional_agent_id(MagicMock(), x_agent_id="ghost")
     assert out is None
 
@@ -234,7 +238,7 @@ def test_check_agent_auth_token_missing_when_required_raises(
 def test_check_agent_auth_token_invalid_token_raises() -> None:
     """Even in dev, an INVALID token is still rejected."""
     with (
-        patch("roboco.api.deps.verify_agent_token", return_value=False),
+        patch("robofleet.api.deps.verify_agent_token", return_value=False),
         pytest.raises(HTTPException) as exc,
     ):
         _check_agent_auth_token("a", "developer", "backend", x_agent_token="bad")
@@ -242,7 +246,7 @@ def test_check_agent_auth_token_invalid_token_raises() -> None:
 
 
 def test_check_agent_auth_token_valid_passes() -> None:
-    with patch("roboco.api.deps.verify_agent_token", return_value=True):
+    with patch("robofleet.api.deps.verify_agent_token", return_value=True):
         _check_agent_auth_token("a", "developer", "backend", x_agent_token="good")
 
 
@@ -261,7 +265,7 @@ def test_check_agent_auth_token_valid_under_cloud_auth_passes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
-    with patch("roboco.api.deps.verify_agent_token", return_value=True):
+    with patch("robofleet.api.deps.verify_agent_token", return_value=True):
         _check_agent_auth_token("a", "developer", "backend", x_agent_token="good")
 
 
@@ -306,7 +310,7 @@ async def test_require_panel_token_cloud_auth_valid_token_passes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
-    with patch("roboco.api.deps.verify_agent_token", return_value=True):
+    with patch("robofleet.api.deps.verify_agent_token", return_value=True):
         await _deps.require_panel_token(x_agent_token="good", session_cookie=None)
 
 
@@ -316,7 +320,7 @@ async def test_require_panel_token_cloud_auth_forged_token_rejects(
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
     with (
-        patch("roboco.api.deps.verify_agent_token", return_value=False),
+        patch("robofleet.api.deps.verify_agent_token", return_value=False),
         pytest.raises(HTTPException) as exc,
     ):
         await _deps.require_panel_token(x_agent_token="bad", session_cookie=None)
@@ -333,9 +337,9 @@ async def test_require_panel_token_cloud_auth_valid_cookie_passes(
         yield MagicMock()
 
     with (
-        patch("roboco.api.deps.get_db", new=_fake_db),
+        patch("robofleet.api.deps.get_db", new=_fake_db),
         patch(
-            "roboco.api.deps.resolve_session_user",
+            "robofleet.api.deps.resolve_session_user",
             new=AsyncMock(return_value=MagicMock()),
         ),
     ):
@@ -352,9 +356,9 @@ async def test_require_panel_token_cloud_auth_invalid_cookie_rejects(
         yield MagicMock()
 
     with (
-        patch("roboco.api.deps.get_db", new=_fake_db),
+        patch("robofleet.api.deps.get_db", new=_fake_db),
         patch(
-            "roboco.api.deps.resolve_session_user",
+            "robofleet.api.deps.resolve_session_user",
             new=AsyncMock(return_value=None),
         ),
         pytest.raises(HTTPException) as exc,
@@ -380,7 +384,7 @@ async def test_require_panel_token_dev_mode_forged_token_rejects(
     """cloud_auth off + agent_auth_required off: forged token still rejected."""
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", False)
     with (
-        patch("roboco.api.deps.verify_agent_token", return_value=False),
+        patch("robofleet.api.deps.verify_agent_token", return_value=False),
         pytest.raises(HTTPException) as exc,
     ):
         await _deps.require_panel_token(x_agent_token="bad", session_cookie=None)
@@ -411,7 +415,7 @@ async def test_resolve_agent_identity_system_invalid_uuid_raises() -> None:
 async def test_resolve_agent_identity_normal_path() -> None:
     expected = (uuid4(), "be-dev-1")
     with patch(
-        "roboco.api.deps.resolve_agent_identity",
+        "robofleet.api.deps.resolve_agent_identity",
         new=AsyncMock(return_value=expected),
     ):
         out = await _resolve_agent_identity(MagicMock(), "be-dev-1", "developer")
@@ -422,7 +426,7 @@ async def test_resolve_agent_identity_normal_path() -> None:
 async def test_resolve_agent_identity_normal_path_not_found_raises() -> None:
     with (
         patch(
-            "roboco.api.deps.resolve_agent_identity",
+            "robofleet.api.deps.resolve_agent_identity",
             new=AsyncMock(return_value=None),
         ),
         pytest.raises(HTTPException) as exc,
@@ -525,7 +529,7 @@ async def test_get_agent_context_happy_path(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "false")
     aid = uuid4()
     with patch(
-        "roboco.api.deps.resolve_agent_identity",
+        "robofleet.api.deps.resolve_agent_identity",
         new=AsyncMock(return_value=(aid, "be-dev-1")),
     ):
         ctx = await get_agent_context(

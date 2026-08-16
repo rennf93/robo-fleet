@@ -21,8 +21,8 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
-from roboco.exceptions import GitCommandError
-from roboco.services.git import GitService
+from robofleet.exceptions import GitCommandError
+from robofleet.services.git import GitService
 
 if TYPE_CHECKING:
     from pathlib import Path

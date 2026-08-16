@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from roboco.api.schemas.tasks import TaskResponse
-from roboco.api.schemas.tasks import TaskUpdate as ApiTaskUpdate
-from roboco.models.task import TaskUpdate as DomainTaskUpdate
+from robofleet.api.schemas.tasks import TaskResponse
+from robofleet.api.schemas.tasks import TaskUpdate as ApiTaskUpdate
+from robofleet.models.task import TaskUpdate as DomainTaskUpdate
 
 
 def test_api_task_update_accepts_auditor_and_pr_reviewer_notes() -> None:

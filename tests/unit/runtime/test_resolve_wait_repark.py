@@ -18,8 +18,8 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from roboco.models.runtime import AgentInstance, WaitingRecord
-from roboco.runtime.orchestrator import (
+from robofleet.models.runtime import AgentInstance, WaitingRecord
+from robofleet.runtime.orchestrator import (
     AgentOrchestrator,
     AgentReadinessError,
     AgentState,

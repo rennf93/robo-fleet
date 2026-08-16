@@ -16,8 +16,8 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from roboco.services import workspace as workspace_module
-from roboco.services.workspace import (
+from robofleet.services import workspace as workspace_module
+from robofleet.services.workspace import (
     _AGENT_GID,
     _AGENT_UID,
     _ensure_agent_owned,

@@ -12,9 +12,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services import telegram_bridge as bridge
-from roboco.services import telegram_inbound as ti
-from roboco.services.telegram_credentials import TelegramCredentialsData
+from robofleet.services import telegram_bridge as bridge
+from robofleet.services import telegram_inbound as ti
+from robofleet.services.telegram_credentials import TelegramCredentialsData
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -81,7 +81,7 @@ async def test_deliver_text_routes_only_bridged_chats(
 ) -> None:
     registry = FakeRegistry()
     monkeypatch.setattr(
-        "roboco.services.prompter_live.get_live_registry", lambda: registry
+        "robofleet.services.prompter_live.get_live_registry", lambda: registry
     )
 
     assert await bridge.deliver_text("777", "hello") is None
@@ -101,7 +101,7 @@ async def test_deliver_text_persists_intake_human_turns(
     send_message (prompter_live.py)."""
     registry = FakeRegistry()
     monkeypatch.setattr(
-        "roboco.services.prompter_live.get_live_registry", lambda: registry
+        "robofleet.services.prompter_live.get_live_registry", lambda: registry
     )
     fake_db = object()
 
@@ -109,10 +109,10 @@ async def test_deliver_text_persists_intake_human_turns(
     async def _fake_ctx() -> Any:
         yield fake_db
 
-    monkeypatch.setattr("roboco.db.base.get_db_context", _fake_ctx)
+    monkeypatch.setattr("robofleet.db.base.get_db_context", _fake_ctx)
     prompter = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.prompter.get_prompter_service", lambda _db: prompter
+        "robofleet.services.prompter.get_prompter_service", lambda _db: prompter
     )
 
     sess = _bridge_session("intake")
@@ -133,11 +133,11 @@ async def test_deliver_text_does_not_persist_secretary_turns(
     not call PrompterService for a secretary-kind session."""
     registry = FakeRegistry()
     monkeypatch.setattr(
-        "roboco.services.prompter_live.get_live_registry", lambda: registry
+        "robofleet.services.prompter_live.get_live_registry", lambda: registry
     )
     prompter = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.prompter.get_prompter_service", lambda _s: prompter
+        "robofleet.services.prompter.get_prompter_service", lambda _s: prompter
     )
 
     sess = _bridge_session("secretary")
@@ -156,19 +156,19 @@ async def test_deliver_text_persist_failure_does_not_break_delivery(
     the message was already delivered to the live agent."""
     registry = FakeRegistry()
     monkeypatch.setattr(
-        "roboco.services.prompter_live.get_live_registry", lambda: registry
+        "robofleet.services.prompter_live.get_live_registry", lambda: registry
     )
 
     @asynccontextmanager
     async def _fake_ctx() -> Any:
         yield object()
 
-    monkeypatch.setattr("roboco.db.base.get_db_context", _fake_ctx)
+    monkeypatch.setattr("robofleet.db.base.get_db_context", _fake_ctx)
 
     def _boom(_db: Any) -> Any:
         raise RuntimeError("db unreachable")
 
-    monkeypatch.setattr("roboco.services.prompter.get_prompter_service", _boom)
+    monkeypatch.setattr("robofleet.services.prompter.get_prompter_service", _boom)
 
     sess = _bridge_session("intake")
     bridge._SESSIONS["777"] = sess
@@ -232,7 +232,7 @@ async def test_consumer_accumulates_turns_and_surfaces_drafts(
         ]
     )
     monkeypatch.setattr(
-        "roboco.services.prompter_live.get_live_registry", lambda: registry
+        "robofleet.services.prompter_live.get_live_registry", lambda: registry
     )
 
     sess = _bridge_session("intake")
@@ -351,11 +351,11 @@ async def test_intake_confirm_routes_board_and_parks(
         mark_live_drafts_consumed=AsyncMock(),
     )
     monkeypatch.setattr(
-        "roboco.services.prompter.get_prompter_service", lambda _s: prompter
+        "robofleet.services.prompter.get_prompter_service", lambda _s: prompter
     )
     registry = FakeRegistry()
     monkeypatch.setattr(
-        "roboco.services.prompter_live.get_live_registry", lambda: registry
+        "robofleet.services.prompter_live.get_live_registry", lambda: registry
     )
 
     project_id = uuid4()

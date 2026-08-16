@@ -2,7 +2,7 @@
 
 ``task_display``/``agent_display`` are the producer-side fix so a human
 reading a notification (panel, bell, Telegram) sees a task title / agent
-slug instead of a raw UUID — see ``roboco/services/notification_text.py``.
+slug instead of a raw UUID — see ``robofleet/services/notification_text.py``.
 """
 
 from __future__ import annotations
@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.identity import AGENTS
-from roboco.services.notification_text import agent_display, task_display
+from robofleet.foundation.identity import AGENTS
+from robofleet.services.notification_text import agent_display, task_display
 
 
 class _Task:

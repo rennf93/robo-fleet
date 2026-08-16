@@ -95,8 +95,8 @@ def _seed_planning_root(
     stack: E2EStack, company: Company
 ) -> tuple[ScriptedAgent, UUID]:
     """Seed a PENDING MAIN_PM planning root + its origin branch for the test."""
-    from roboco.models import Team
-    from roboco.models.base import TaskStatus, TaskType
+    from robofleet.models import Team
+    from robofleet.models.base import TaskStatus, TaskType
 
     project_id, _project_slug = seed_project(stack, company)
     main_pm = ScriptedAgent(stack, company.main_pm_id, "main-pm", "main_pm")
@@ -129,7 +129,7 @@ def _patch_hang_in_set_plan(
     call sleeps — a retry i_will_plan short-circuits as re-entry and never
     re-runs set_plan, so a per-call counter would never reach a second hang.
     """
-    from roboco.services.task import TaskService
+    from robofleet.services.task import TaskService
 
     real_set_plan = TaskService.set_plan
     hung = {"done": False}
@@ -149,7 +149,7 @@ def test_flow_verb_timeout_releases_row_lock(
     e2e_stack: E2EStack, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Fix ARMED: a hung verb is cancelled, its lock released, retry proceeds."""
-    from roboco.config import settings
+    from robofleet.config import settings
 
     stack = e2e_stack
     company = seed_company(stack)
@@ -202,8 +202,8 @@ def test_flow_verb_holds_lock_when_timeout_disarmed(
     lock past the client's HTTP timeout — the empirical reproduction of the
     2026-07-07 wedge on the same branch, by turning the fix off.
     """
-    from roboco.config import settings
-    from roboco.mcp import flow_server
+    from robofleet.config import settings
+    from robofleet.mcp import flow_server
 
     stack = e2e_stack
     company = seed_company(stack)

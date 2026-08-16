@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 import pytest
-from roboco.foundation.policy.task_completeness import TASK_AT_DELEGATE
+from robofleet.foundation.policy.task_completeness import TASK_AT_DELEGATE
 
 if TYPE_CHECKING:
     import types
@@ -56,7 +56,7 @@ def flow_module_pm(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> types.Mod
     monkeypatch.setenv("ROBOCO_SDK_URL", "http://test-sdk:9000")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
 
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     return srv

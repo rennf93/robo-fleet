@@ -17,8 +17,8 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
-from roboco.services.base import ValidationError
-from roboco.services.docs import DocsService, _resolve_contained_path
+from robofleet.services.base import ValidationError
+from robofleet.services.docs import DocsService, _resolve_contained_path
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -99,7 +99,7 @@ async def test_read_doc_rejects_absolute_path(
     outside.write_text("secret", encoding="utf-8")
     svc = DocsService(MagicMock())
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         pytest.raises(ValidationError),
     ):
         await svc.read_doc(agent_id="be-doc", path=str(outside))
@@ -116,7 +116,7 @@ async def test_delete_doc_rejects_absolute_path(
     outside.write_text("marker", encoding="utf-8")
     svc = DocsService(MagicMock())
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         pytest.raises(ValidationError),
     ):
         await svc.delete_doc(agent_id="be-doc", path=str(outside))
@@ -128,7 +128,7 @@ async def test_delete_doc_rejects_absolute_path(
 async def test_read_doc_rejects_traversal(tmp_path: Path) -> None:
     svc = DocsService(MagicMock())
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         pytest.raises(ValidationError),
     ):
         await svc.read_doc(agent_id="be-doc", path="backend/../../etc/passwd")
@@ -140,7 +140,7 @@ async def test_read_doc_rejects_dot_segment_cleanly(tmp_path: Path) -> None:
     # and 500 on a directory. Proves the guard fails graceful, not loud.
     svc = DocsService(MagicMock())
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         pytest.raises(ValidationError),
     ):
         await svc.read_doc(agent_id="be-doc", path=".")
@@ -153,7 +153,7 @@ async def test_read_doc_normal_relative_still_works(tmp_path: Path) -> None:
     doc.parent.mkdir(parents=True, exist_ok=True)
     doc.write_text("# Endpoints", encoding="utf-8")
     svc = DocsService(MagicMock())
-    with patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path):
+    with patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path):
         content, size = await svc.read_doc(
             agent_id="be-doc", path="backend/api/endpoints.md"
         )

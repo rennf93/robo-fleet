@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.services.memory_distiller import LessonInput, MemoryDistiller
+from robofleet.services.memory_distiller import LessonInput, MemoryDistiller
 
 
 def _input() -> LessonInput:
@@ -21,7 +21,7 @@ def _input() -> LessonInput:
 @pytest.mark.asyncio
 async def test_distill_returns_lesson(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "roboco.services.memory_distiller._chat",
+        "robofleet.services.memory_distiller._chat",
         AsyncMock(
             return_value="Problem: flaky pg. Approach: retry+backoff. Gotcha: reset."
         ),
@@ -34,7 +34,7 @@ async def test_distill_returns_lesson(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.asyncio
 async def test_distill_none_on_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "roboco.services.memory_distiller._chat", AsyncMock(side_effect=RuntimeError)
+        "robofleet.services.memory_distiller._chat", AsyncMock(side_effect=RuntimeError)
     )
     assert await MemoryDistiller().distill(_input()) is None
 
@@ -42,7 +42,7 @@ async def test_distill_none_on_error(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.asyncio
 async def test_distill_none_on_empty_response(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "roboco.services.memory_distiller._chat", AsyncMock(return_value="   ")
+        "robofleet.services.memory_distiller._chat", AsyncMock(return_value="   ")
     )
     assert await MemoryDistiller().distill(_input()) is None
 
@@ -51,7 +51,7 @@ async def test_distill_none_on_empty_response(monkeypatch: pytest.MonkeyPatch) -
 async def test_distill_caps_at_120_words(monkeypatch: pytest.MonkeyPatch) -> None:
     long_lesson = " ".join(f"word{i}" for i in range(300))
     monkeypatch.setattr(
-        "roboco.services.memory_distiller._chat",
+        "robofleet.services.memory_distiller._chat",
         AsyncMock(return_value=long_lesson),
     )
     out = await MemoryDistiller().distill(_input())

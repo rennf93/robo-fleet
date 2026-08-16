@@ -20,7 +20,10 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import _CREATOR_ROUTE_GRACE_SECONDS, AgentOrchestrator
+from robofleet.runtime.orchestrator import (
+    _CREATOR_ROUTE_GRACE_SECONDS,
+    AgentOrchestrator,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -226,8 +229,8 @@ def _patch_task_service_db(task_svc: AsyncMock) -> tuple[Any, Any]:
         yield AsyncMock()
 
     return (
-        patch("roboco.db.base.get_db_context", _fake_ctx),
-        patch("roboco.services.task.TaskService", return_value=task_svc),
+        patch("robofleet.db.base.get_db_context", _fake_ctx),
+        patch("robofleet.services.task.TaskService", return_value=task_svc),
     )
 
 
@@ -249,7 +252,7 @@ async def test_pending_claim_blocked_delegates_to_task_service() -> None:
 async def test_pending_claim_blocked_false_without_task_id() -> None:
     """No task id — nothing to probe; never touches the DB."""
     orch = _orch()
-    with patch("roboco.db.base.get_db_context") as ctx:
+    with patch("robofleet.db.base.get_db_context") as ctx:
         assert await orch._pending_claim_blocked(None) is False
     ctx.assert_not_called()
 
@@ -269,7 +272,7 @@ async def test_pending_claim_blocked_fails_open_on_error() -> None:
     """A DB/lookup error never blocks dispatch — the claim attempt is the
     real safety net and will surface its own error."""
     orch = _orch()
-    with patch("roboco.db.base.get_db_context", return_value=_BoomCtx()):
+    with patch("robofleet.db.base.get_db_context", return_value=_BoomCtx()):
         assert await orch._pending_claim_blocked(str(uuid4())) is False
 
 

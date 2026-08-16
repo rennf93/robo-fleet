@@ -59,16 +59,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-from roboco.services import release_proposal as rp
-from roboco.services.release_executor import _GitReleaseOps, _ReleaseContext
-from roboco.services.task import VIDEO_POST_SOURCE, VIDEO_SOURCE
-from roboco.services.tiktok_client import LiveTikTokPoster
-from roboco.services.tiktok_credentials import get_tiktok_credentials_service
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+from robofleet.services import release_proposal as rp
+from robofleet.services.release_executor import _GitReleaseOps, _ReleaseContext
+from robofleet.services.task import VIDEO_POST_SOURCE, VIDEO_SOURCE
+from robofleet.services.tiktok_client import LiveTikTokPoster
+from robofleet.services.tiktok_credentials import get_tiktok_credentials_service
 from sqlalchemy import select
 
 if TYPE_CHECKING:
@@ -95,7 +95,7 @@ async def test_h24_wait_for_ci_polls_through_non_success(
     still publishes. Drives the real ``_GitReleaseOps.wait_for_ci`` with a
     stubbed CI-conclusion source; ``_CI_POLL_INTERVAL_SECONDS`` is patched
     to 0 so the poll is instant."""
-    from roboco.services import release_executor
+    from robofleet.services import release_executor
 
     monkeypatch.setattr(release_executor, "_CI_POLL_INTERVAL_SECONDS", 0.0)
 
@@ -118,7 +118,7 @@ async def test_h24_wait_for_ci_polls_through_non_success(
     fake_git = MagicMock()
     fake_git.get_latest_ci_conclusion = AsyncMock(side_effect=ci_results)
 
-    with patch("roboco.services.git.get_git_service", return_value=fake_git):
+    with patch("robofleet.services.git.get_git_service", return_value=fake_git):
         published = await ops.wait_for_ci(sha)
 
     assert published is True
@@ -154,7 +154,7 @@ async def test_h25_sweep_deletes_orphan_release_locks(
     registry is deleted; an in-flight one is preserved. Drives the real
     ``sweep_orphan_release_locks`` against the real e2e Redis (db 15,
     test-isolated). Skips when no local Redis is reachable."""
-    from roboco.config import settings
+    from robofleet.config import settings
 
     host, port = "127.0.0.1", 6379
     if not await _redis_alive(host, port):
@@ -223,7 +223,7 @@ async def test_m1_refresh_rotated_tokens_survive_caller_rollback(
     loop — without the reset, prior API requests in the uvicorn thread bind
     the lazy engine to a different loop and asyncpg raises
     "Future attached to a different loop"."""
-    from roboco.db import base as db_base
+    from robofleet.db import base as db_base
 
     db_base._DbHolder.engine = None
     db_base._DbHolder.session_factory = None
@@ -379,9 +379,9 @@ async def test_m21_render_cycle_commits_per_task(
     (real ``get_db_context`` + real DB, real ``_render_video_task`` /
     ``_materialize_video_post``) with only the render sidecar + workspace
     read-clone mocked: IntroA renders, IntroB's renderer raises."""
-    from roboco.config import settings
-    from roboco.db import base as db_base
-    from roboco.runtime.orchestrator import AgentOrchestrator
+    from robofleet.config import settings
+    from robofleet.db import base as db_base
+    from robofleet.runtime.orchestrator import AgentOrchestrator
 
     monkeypatch.setattr(settings, "video_engine_enabled", True)
 
@@ -407,11 +407,11 @@ async def test_m21_render_cycle_commits_per_task(
         orch: Any = AgentOrchestrator.__new__(AgentOrchestrator)
         with (
             patch(
-                "roboco.services.video_renderer_client.get_video_renderer",
+                "robofleet.services.video_renderer_client.get_video_renderer",
                 lambda: renderer,
             ),
             patch(
-                "roboco.services.workspace.get_workspace_service",
+                "robofleet.services.workspace.get_workspace_service",
                 lambda _db: workspace,
             ),
         ):

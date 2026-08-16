@@ -1,6 +1,6 @@
 """Regression guard for the 2026-07-08 ``mongo:8-alpine`` ghost-tag bug.
 
-``roboco/models/sandbox.py`` pinned ``_MongoEngine.image = "mongo:8-alpine"``,
+``robofleet/models/sandbox.py`` pinned ``_MongoEngine.image = "mongo:8-alpine"``,
 a tag that has never existed on Docker Hub (MongoDB ships no Alpine variant).
 Every unit test mocks the docker CLI, so none of them ever touch a real
 registry and none caught it — the bug only surfaces the moment a real
@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
-from roboco.models.sandbox import SANDBOX_ENGINES
+from robofleet.models.sandbox import SANDBOX_ENGINES
 
 # Docker Hub registry endpoints — library images live under ``library/``;
 # namespaced images (e.g. ``redis/redis-stack-server``) live under their ns.

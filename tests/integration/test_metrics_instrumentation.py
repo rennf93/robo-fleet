@@ -12,8 +12,8 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -22,7 +22,7 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.services.task import TaskService
+from robofleet.services.task import TaskService
 from sqlalchemy import select
 
 if TYPE_CHECKING:

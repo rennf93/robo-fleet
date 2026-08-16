@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from roboco.db.tables import TaskTable
-from roboco.services.gateway.remediation import (
+from robofleet.db.tables import TaskTable
+from robofleet.services.gateway.remediation import (
     hint_for_missing_ac_coverage,
     hint_for_missing_progress,
     hint_for_missing_reflect,
     hint_for_unaddressed_acceptance_criteria,
 )
-from roboco.services.task import TaskService
+from robofleet.services.task import TaskService
 
 
 def test_missing_progress_hint() -> None:

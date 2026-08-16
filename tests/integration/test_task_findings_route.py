@@ -16,12 +16,17 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.tasks import router as tasks_router
-from roboco.db.tables import AgentTable, ProjectTable, TaskReviewFindingTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskNature, TaskStatus, TaskType
-from roboco.models.permissions import AgentContext
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.tasks import router as tasks_router
+from robofleet.db.tables import (
+    AgentTable,
+    ProjectTable,
+    TaskReviewFindingTable,
+    TaskTable,
+)
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskNature, TaskStatus, TaskType
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -104,7 +109,7 @@ def _seed_finding(
         origin=origin,
         round=round,
         author_slug="be-qa",
-        file="roboco/services/task.py",
+        file="robofleet/services/task.py",
         line=42,
         severity="major",
         criterion=None,

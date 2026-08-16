@@ -13,12 +13,15 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.api.routes.playbooks import approve_playbook, reject_playbook
-from roboco.config import settings
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
-from roboco.services.playbook import PlaybookService
+from robofleet.api.routes.playbooks import approve_playbook, reject_playbook
+from robofleet.config import settings
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
+from robofleet.services.playbook import PlaybookService
 
 _PID = uuid4()
 _APPROVER = uuid4()
@@ -61,7 +64,7 @@ async def test_approve_does_not_index_before_commit(
     optimal = MagicMock()
     optimal.index_playbook = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
 
@@ -81,7 +84,7 @@ async def test_index_approved_is_a_separate_post_commit_step(
     optimal = MagicMock()
     optimal.index_playbook = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
 
@@ -108,7 +111,7 @@ async def test_reject_does_not_unindex_before_commit(
     optimal.unindex_playbook = AsyncMock()
     optimal.deindex_playbook = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
 
@@ -129,7 +132,7 @@ async def test_unindex_playbook_is_a_separate_post_commit_step(
     optimal = MagicMock()
     optimal.unindex_playbook = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
 
@@ -176,10 +179,10 @@ async def test_approve_route_commits_before_indexing(
     order: list[str] = []
     svc, db = _route_service_mock(order)
     monkeypatch.setattr(
-        "roboco.api.routes.playbooks.get_playbook_service", lambda _db: svc
+        "robofleet.api.routes.playbooks.get_playbook_service", lambda _db: svc
     )
     monkeypatch.setattr(
-        "roboco.api.routes.playbooks.Playbook.model_validate", lambda obj: obj
+        "robofleet.api.routes.playbooks.Playbook.model_validate", lambda obj: obj
     )
     agent = AgentContext(agent_id=_APPROVER, role=AgentRole.AUDITOR)
 
@@ -195,7 +198,7 @@ async def test_approve_route_skips_index_when_commit_fails(
     order: list[str] = []
     svc, db = _route_service_mock(order, commit_fails=True)
     monkeypatch.setattr(
-        "roboco.api.routes.playbooks.get_playbook_service", lambda _db: svc
+        "robofleet.api.routes.playbooks.get_playbook_service", lambda _db: svc
     )
     agent = AgentContext(agent_id=_APPROVER, role=AgentRole.AUDITOR)
 
@@ -213,10 +216,10 @@ async def test_reject_route_commits_before_unindexing(
     order: list[str] = []
     svc, db = _route_service_mock(order)
     monkeypatch.setattr(
-        "roboco.api.routes.playbooks.get_playbook_service", lambda _db: svc
+        "robofleet.api.routes.playbooks.get_playbook_service", lambda _db: svc
     )
     monkeypatch.setattr(
-        "roboco.api.routes.playbooks.Playbook.model_validate", lambda obj: obj
+        "robofleet.api.routes.playbooks.Playbook.model_validate", lambda obj: obj
     )
     agent = AgentContext(agent_id=_APPROVER, role=AgentRole.AUDITOR)
 
@@ -278,7 +281,7 @@ async def test_gateway_approve_commits_before_indexing(
     actions, _task = _gateway_actions(order)
     svc = _gateway_svc_mock(order)
     monkeypatch.setattr(
-        "roboco.services.playbook.get_playbook_service",
+        "robofleet.services.playbook.get_playbook_service",
         lambda _session: svc,
     )
 
@@ -296,7 +299,7 @@ async def test_gateway_approve_skips_index_when_commit_fails(
     actions, _task = _gateway_actions(order, commit_fails=True)
     svc = _gateway_svc_mock(order)
     monkeypatch.setattr(
-        "roboco.services.playbook.get_playbook_service",
+        "robofleet.services.playbook.get_playbook_service",
         lambda _session: svc,
     )
 
@@ -315,7 +318,7 @@ async def test_gateway_reject_commits_before_unindexing(
     actions, _task = _gateway_actions(order)
     svc = _gateway_svc_mock(order)
     monkeypatch.setattr(
-        "roboco.services.playbook.get_playbook_service",
+        "robofleet.services.playbook.get_playbook_service",
         lambda _session: svc,
     )
 

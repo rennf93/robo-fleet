@@ -5,12 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.models import AgentRole, AgentStatus, Complexity, Team
-from roboco.models.base import TaskNature
-from roboco.models.task import TaskCreateRequest, TaskType
-from roboco.services.task import TaskService
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.models import AgentRole, AgentStatus, Complexity, Team
+from robofleet.models.base import TaskNature
+from robofleet.models.task import TaskCreateRequest, TaskType
+from robofleet.services.task import TaskService
 
 if TYPE_CHECKING:
     import pytest

@@ -16,9 +16,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.models.base import TaskStatus
-from roboco.services.task import TaskService
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import TaskStatus
+from robofleet.services.task import TaskService
 
 
 def _service() -> TaskService:
@@ -194,10 +194,12 @@ async def test_inherit_merges_parent_branch() -> None:
 
     with (
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             MagicMock(return_value=proj_svc),
         ),
-        patch("roboco.services.git.get_git_service", MagicMock(return_value=git_svc)),
+        patch(
+            "robofleet.services.git.get_git_service", MagicMock(return_value=git_svc)
+        ),
     ):
         await svc._inherit_upstream_base(task, uuid4())
 
@@ -219,10 +221,12 @@ async def test_inherit_conflict_notes_the_task() -> None:
 
     with (
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             MagicMock(return_value=proj_svc),
         ),
-        patch("roboco.services.git.get_git_service", MagicMock(return_value=git_svc)),
+        patch(
+            "robofleet.services.git.get_git_service", MagicMock(return_value=git_svc)
+        ),
     ):
         await svc._inherit_upstream_base(task, uuid4())
 
@@ -245,10 +249,12 @@ async def test_inherit_merged_push_failed_notes_the_dev() -> None:
 
     with (
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             MagicMock(return_value=proj_svc),
         ),
-        patch("roboco.services.git.get_git_service", MagicMock(return_value=git_svc)),
+        patch(
+            "robofleet.services.git.get_git_service", MagicMock(return_value=git_svc)
+        ),
     ):
         await svc._inherit_upstream_base(task, uuid4())
 
@@ -266,10 +272,12 @@ async def test_inherit_skips_when_base_equals_branch() -> None:
 
     with (
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             MagicMock(return_value=proj_svc),
         ),
-        patch("roboco.services.git.get_git_service", MagicMock(return_value=git_svc)),
+        patch(
+            "robofleet.services.git.get_git_service", MagicMock(return_value=git_svc)
+        ),
     ):
         await svc._inherit_upstream_base(task, uuid4())
 
@@ -284,10 +292,12 @@ async def test_inherit_never_fails_the_claim() -> None:
 
     with (
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             MagicMock(return_value=proj_svc),
         ),
-        patch("roboco.services.git.get_git_service", MagicMock(return_value=git_svc)),
+        patch(
+            "robofleet.services.git.get_git_service", MagicMock(return_value=git_svc)
+        ),
     ):
         await svc._inherit_upstream_base(task, uuid4())  # must not raise
 

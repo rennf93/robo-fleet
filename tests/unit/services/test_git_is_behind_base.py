@@ -14,8 +14,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.base import NotFoundError
-from roboco.services.git import GitService
+from robofleet.services.base import NotFoundError
+from robofleet.services.git import GitService
 
 _WORKSPACE = Path("/tmp/fake-ws")
 _TOKEN = "ghp_fake"

@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     AuditLogTable,
     JournalEntryTable,
@@ -22,10 +22,10 @@ from roboco.db.tables import (
     TaskTable,
     WorkSessionTable,
 )
-from roboco.events import EventType
-from roboco.foundation.policy.content import markers
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.events import EventType
+from robofleet.foundation.policy.content import markers
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     BlockerResolverType,
     Complexity,
     JournalEntryType,
@@ -33,11 +33,11 @@ from roboco.models.base import (
     TaskStatus,
     TaskType,
 )
-from roboco.models.task import TaskCreateRequest
-from roboco.models.work_session import WorkSessionStatus
-from roboco.seeds.initial_data import AGENT_UUIDS
-from roboco.services.base import NotFoundError
-from roboco.services.task import SoftBlockInfo, TaskService, get_task_service
+from robofleet.models.task import TaskCreateRequest
+from robofleet.models.work_session import WorkSessionStatus
+from robofleet.seeds.initial_data import AGENT_UUIDS
+from robofleet.services.base import NotFoundError
+from robofleet.services.task import SoftBlockInfo, TaskService, get_task_service
 from sqlalchemy import Table, select
 from sqlalchemy.exc import IntegrityError
 
@@ -773,12 +773,12 @@ async def test_create_subtask_round_trips_collision_surfaces_and_deps(
             estimated_complexity=Complexity.MEDIUM,
             sequence=3,
             dependency_ids=[dep_id],
-            intends_to_touch=["roboco/services/foo.py"],
+            intends_to_touch=["robofleet/services/foo.py"],
             adds_migration=True,
             touches_shared=True,
         )
     )
-    assert sub.intends_to_touch == ["roboco/services/foo.py"]
+    assert sub.intends_to_touch == ["robofleet/services/foo.py"]
     assert sub.adds_migration is True
     assert sub.touches_shared is True
     expected_sequence = 3
@@ -821,9 +821,9 @@ async def test_wire_sibling_collision_dag_serializes_overlapping_dev_tasks(
         await svc.set_sequence(t.id, seq)
         return t
 
-    t1 = await _dev(0, ["roboco/api/a.py"])
-    t2 = await _dev(1, ["roboco/api/b.py"])
-    t3 = await _dev(2, ["roboco/api/a.py"])
+    t1 = await _dev(0, ["robofleet/api/a.py"])
+    t2 = await _dev(1, ["robofleet/api/b.py"])
+    t3 = await _dev(2, ["robofleet/api/a.py"])
 
     await svc.wire_sibling_collision_dag(parent.id)
 
@@ -2705,7 +2705,7 @@ async def test_escalate_returns_none_when_target_slug_not_in_db(
     task = await svc.create(_req(task_setup))
     # Force a target slug that won't match any AgentTable row
     monkeypatch.setattr(
-        "roboco.agents_config.get_escalation_target",
+        "robofleet.agents_config.get_escalation_target",
         lambda _slug: "nonexistent-target",
     )
     out = await svc.escalate(task_setup["agent_id"], task.id, reason="x")
@@ -2739,7 +2739,7 @@ async def test_escalate_succeeds_when_target_resolves(
     task.status = TaskStatus.IN_PROGRESS
     await db_session.flush()
     monkeypatch.setattr(
-        "roboco.agents_config.get_escalation_target",
+        "robofleet.agents_config.get_escalation_target",
         lambda _slug: target.slug,
     )
     out = await svc.escalate(task_setup["agent_id"], task.id, reason="bug")
@@ -3325,7 +3325,7 @@ async def test_emit_task_event_swallows_exception(
 ) -> None:
     """If event bus raises, _emit_task_event must log + return without raising."""
     svc = task_setup["svc"]
-    monkeypatch.setattr("roboco.services.task.get_event_bus", _bad_bus_factory)
+    monkeypatch.setattr("robofleet.services.task.get_event_bus", _bad_bus_factory)
     # No raise:
     await svc._emit_task_event(EventType.TASK_AWAITING_CEO_APPROVAL, uuid4())
 
@@ -3347,7 +3347,7 @@ async def test_emit_task_event_publishes_when_connected(
     def _bus_factory() -> _Bus:
         return _Bus()
 
-    monkeypatch.setattr("roboco.services.task.get_event_bus", _bus_factory)
+    monkeypatch.setattr("robofleet.services.task.get_event_bus", _bus_factory)
     await svc._emit_task_event(
         EventType.TASK_AWAITING_CEO_APPROVAL, uuid4(), {"key": "value"}
     )

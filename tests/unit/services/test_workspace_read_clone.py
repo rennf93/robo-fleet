@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services import workspace as ws_mod
-from roboco.services.workspace import WorkspaceService
+from robofleet.services import workspace as ws_mod
+from robofleet.services.workspace import WorkspaceService
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -112,7 +112,7 @@ def test_sync_read_clone_with_token_uses_extraheader_not_url(tmp_path: Path) -> 
         captured.append(list(argv))
         return subprocess.CompletedProcess(argv, 0, "", "")
 
-    with patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run):
+    with patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run):
         WorkspaceService._sync_read_clone(clone, git_url, "master", token)
 
     fetch_argv = next(a for a in captured if "fetch" in a)
@@ -170,7 +170,7 @@ async def test_ensure_read_clone_force_bypasses_ttl(tmp_path: Path) -> None:
     try:
         with (
             patch(
-                "roboco.services.project.get_project_service",
+                "robofleet.services.project.get_project_service",
                 return_value=project_service,
             ),
             patch.object(WorkspaceService, "_is_workspace_healthy", return_value=True),
@@ -209,7 +209,7 @@ async def test_ensure_read_clone_default_respects_ttl(tmp_path: Path) -> None:
     try:
         with (
             patch(
-                "roboco.services.project.get_project_service",
+                "robofleet.services.project.get_project_service",
                 return_value=project_service,
             ),
             patch.object(WorkspaceService, "_is_workspace_healthy", return_value=True),

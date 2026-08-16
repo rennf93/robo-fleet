@@ -14,7 +14,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from roboco.services.prompter import get_prompter_service
+from robofleet.services.prompter import get_prompter_service
 from tests.unit.services.test_prompter import (
     _FakeRedis,
     _seed_project_and_ceo,
@@ -42,7 +42,7 @@ async def test_confirm_live_batch_panel_the_work_shape(db_session: Any) -> None:
                     "project_id": str(project1),
                 }
             ],
-            "intends_to_touch": ["roboco/services/foo.py"],
+            "intends_to_touch": ["robofleet/services/foo.py"],
         },
         {
             "title": "B: frontend work",
@@ -59,7 +59,7 @@ async def test_confirm_live_batch_panel_the_work_shape(db_session: Any) -> None:
             "intends_to_touch": ["panel/src/widget.tsx"],
         },
     ]
-    with patch("roboco.services.prompter.redis.from_url", return_value=_FakeRedis()):
+    with patch("robofleet.services.prompter.redis.from_url", return_value=_FakeRedis()):
         result = await service.confirm_live_batch(
             "Panel shape batch",
             drafts,
@@ -114,7 +114,7 @@ async def test_confirm_live_batch_ignores_vestigial_top_level_slug(
             ],
         },
     ]
-    with patch("roboco.services.prompter.redis.from_url", return_value=_FakeRedis()):
+    with patch("robofleet.services.prompter.redis.from_url", return_value=_FakeRedis()):
         result = await service.confirm_live_batch(
             "Slug batch",
             drafts,
@@ -168,7 +168,7 @@ async def test_confirm_live_batch_panel_multicell_root_subtask(db_session: Any) 
             ],
         },
     ]
-    with patch("roboco.services.prompter.redis.from_url", return_value=_FakeRedis()):
+    with patch("robofleet.services.prompter.redis.from_url", return_value=_FakeRedis()):
         result = await service.confirm_live_batch(
             "Cross-cell batch",
             drafts,
@@ -230,7 +230,7 @@ async def test_confirm_live_batch_dense_same_repo_collisions(
             "intends_to_touch": ["src/other.ts"],
         }
     )
-    with patch("roboco.services.prompter.redis.from_url", return_value=_FakeRedis()):
+    with patch("robofleet.services.prompter.redis.from_url", return_value=_FakeRedis()):
         result = await service.confirm_live_batch(
             "Panel MegaTask",
             drafts,
@@ -284,7 +284,7 @@ async def test_confirm_live_batch_releases_guard_on_build_failure(
     async def _boom(*_a: Any, **_kw: Any) -> Any:
         raise RuntimeError("build blew up")
 
-    with patch("roboco.services.prompter.redis.from_url", return_value=fake):
+    with patch("robofleet.services.prompter.redis.from_url", return_value=fake):
         with (
             patch.object(service, "_build_confirm_batch", _boom),
             pytest.raises(RuntimeError, match="build blew up"),

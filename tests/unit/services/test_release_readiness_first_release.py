@@ -9,7 +9,7 @@ import subprocess
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.services.release_readiness import (
+from robofleet.services.release_readiness import (
     _canonical_bump_files,
     assess,
     gather_snapshot,

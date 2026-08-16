@@ -16,12 +16,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-import roboco.services.self_heal_engine as sh_module
-from roboco.config import settings as cfg
-from roboco.foundation.policy.maintenance_pause import PauseScope
-from roboco.services.ci_watch_engine import CiWatchEngine
-from roboco.services.maintenance_pause import get_maintenance_pause_service
-from roboco.services.self_heal_engine import RegressionObservation, SelfHealEngine
+import robofleet.services.self_heal_engine as sh_module
+from robofleet.config import settings as cfg
+from robofleet.foundation.policy.maintenance_pause import PauseScope
+from robofleet.services.ci_watch_engine import CiWatchEngine
+from robofleet.services.maintenance_pause import get_maintenance_pause_service
+from robofleet.services.self_heal_engine import RegressionObservation, SelfHealEngine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 if TYPE_CHECKING:

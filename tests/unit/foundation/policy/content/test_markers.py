@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from roboco.foundation.policy.content import markers as m
+from robofleet.foundation.policy.content import markers as m
 
 # Named constant — ruff PLR2004 forbids magic-value comparisons.
 _TWO = 2

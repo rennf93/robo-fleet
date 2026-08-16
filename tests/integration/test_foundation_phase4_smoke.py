@@ -8,27 +8,27 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from roboco.api import deps as api_deps
-from roboco.api.routes.v1 import _role_dep as v1_role_dep
+from robofleet.api import deps as api_deps
+from robofleet.api.routes.v1 import _role_dep as v1_role_dep
 
 
 def test_lifecycle_module_lives_in_foundation() -> None:
     """Canonical import path is foundation.policy.lifecycle."""
-    lifecycle = importlib.import_module("roboco.foundation.policy.lifecycle")
+    lifecycle = importlib.import_module("robofleet.foundation.policy.lifecycle")
     assert hasattr(lifecycle, "Role")
     assert hasattr(lifecycle, "Status")
     assert hasattr(lifecycle, "_INTENT_VERBS")
 
 
 def test_legacy_lifecycle_package_removed() -> None:
-    """Legacy roboco.lifecycle package is gone."""
+    """Legacy robofleet.lifecycle package is gone."""
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("roboco.lifecycle")
+        importlib.import_module("robofleet.lifecycle")
 
 
 def test_legacy_lifecycle_spec_module_removed() -> None:
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("roboco.lifecycle.spec")
+        importlib.import_module("robofleet.lifecycle.spec")
 
 
 def test_foundation_policy_complete() -> None:
@@ -41,17 +41,17 @@ def test_foundation_policy_complete() -> None:
         "communications",
         "agent_loop",
     ):
-        importlib.import_module(f"roboco.foundation.policy.{mod}")
+        importlib.import_module(f"robofleet.foundation.policy.{mod}")
 
 
 def test_no_lifecycle_imports_in_production() -> None:
-    """Production code (roboco/) imports from foundation directly, no legacy paths."""
+    """Production code (robofleet/) imports from foundation directly."""
     proc = subprocess.run(
         [
             "grep",
             "-rn",
-            "from roboco.lifecycle\\|import roboco.lifecycle",
-            "roboco/",
+            "from robofleet.lifecycle\\|import robofleet.lifecycle",
+            "robofleet/",
             "--include=*.py",
         ],
         capture_output=True,
@@ -73,8 +73,8 @@ def test_route_guard_role_sets_derive_from_foundation() -> None:
     deps_src = inspect.getsource(api_deps)
     role_dep_src = inspect.getsource(v1_role_dep)
     assert (
-        "from roboco.foundation.identity" in deps_src
-        or "from roboco.foundation import" in deps_src
+        "from robofleet.foundation.identity" in deps_src
+        or "from robofleet.foundation import" in deps_src
     )
     assert "Role." in role_dep_src  # uses Role enum members, not raw strings
 

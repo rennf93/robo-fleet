@@ -14,7 +14,7 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
-import roboco.agent_sdk.server as srv
+import robofleet.agent_sdk.server as srv
 from fastapi.testclient import TestClient
 
 if TYPE_CHECKING:

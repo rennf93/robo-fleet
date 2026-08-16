@@ -9,7 +9,7 @@ on:
     # ABSENT on a fleet-authored PR revision.
     branches: [master, slave, 'feature/**', 'bug/**', 'chore/**', 'docs/**', 'hotfix/**']
     paths:
-      - 'roboco/**'
+      - 'robofleet/**'
       - 'agents/**'
       - 'alembic/**'
       - 'scripts/**'
@@ -19,7 +19,7 @@ on:
     # Fleet PRs target the dev branch — see ci.yml's pull_request note.
     branches: [master, slave]
     paths:
-      - 'roboco/**'
+      - 'robofleet/**'
       - 'agents/**'
       - 'alembic/**'
       - 'scripts/**'

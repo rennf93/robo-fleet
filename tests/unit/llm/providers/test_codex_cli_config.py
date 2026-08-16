@@ -6,7 +6,7 @@ from __future__ import annotations
 import tomllib
 from typing import TYPE_CHECKING
 
-from roboco.llm.providers import codex_cli_config as cc
+from robofleet.llm.providers import codex_cli_config as cc
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -15,7 +15,7 @@ _SAMPLE_MCP = {
     "mcpServers": {
         "roboco-flow": {
             "command": "uv",
-            "args": ["run", "--no-sync", "python", "-m", "roboco.mcp.flow_server"],
+            "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
             "env": {"ROBOCO_AGENT_ID": "be-dev-1", "ROBOCO_AGENT_TOKEN": "tok-123"},
         },
         "roboco-do": {"command": "uv", "args": ["run", "x"]},

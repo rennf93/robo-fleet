@@ -6,7 +6,7 @@ import json
 import tomllib
 from typing import TYPE_CHECKING
 
-from roboco.llm.providers import gemini_cli_config as gc
+from robofleet.llm.providers import gemini_cli_config as gc
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -17,7 +17,7 @@ _SAMPLE_MCP = {
     "mcpServers": {
         "roboco-flow": {
             "command": "uv",
-            "args": ["run", "--no-sync", "python", "-m", "roboco.mcp.flow_server"],
+            "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
             "env": {"ROBOCO_AGENT_ID": "be-dev-1", "ROBOCO_AGENT_TOKEN": "tok-123"},
         },
         "roboco-do": {"command": "uv", "args": ["run", "x"]},
@@ -121,7 +121,7 @@ def test_unknown_role_gets_every_deny_category() -> None:
 def test_write_policy_toml_writes_file(tmp_path: Path) -> None:
     policies_dir = tmp_path / "policies"
     assert gc.write_policy_toml("developer", policies_dir=policies_dir) is True
-    written = (policies_dir / "roboco.toml").read_text(encoding="utf-8")
+    written = (policies_dir / "robofleet.toml").read_text(encoding="utf-8")
     assert "run_shell_command" in written
 
 
@@ -161,7 +161,7 @@ def test_main_writes_settings_and_args(
         "tok-123"
     )
     assert memory_path.read_text(encoding="utf-8") == "blueprint"
-    assert (policies_dir / "roboco.toml").exists()
+    assert (policies_dir / "robofleet.toml").exists()
     # One flag token per line — the entrypoint reads it via bash `mapfile -t`.
     assert args_path.read_text(encoding="utf-8").splitlines() == [
         "--approval-mode",

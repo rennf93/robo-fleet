@@ -15,11 +15,11 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, TaskTable
-from roboco.foundation.policy.content import Finding, Severity
-from roboco.models.base import AgentRole, AgentStatus, TaskStatus, TaskType, Team
-from roboco.services.gateway.choreographer import findings as findings_lib
-from roboco.services.repositories.review_findings import (
+from robofleet.db.tables import AgentTable, TaskTable
+from robofleet.foundation.policy.content import Finding, Severity
+from robofleet.models.base import AgentRole, AgentStatus, TaskStatus, TaskType, Team
+from robofleet.services.gateway.choreographer import findings as findings_lib
+from robofleet.services.repositories.review_findings import (
     STATUS_ADDRESSED,
     STATUS_OPEN,
     STATUS_VERIFIED,
@@ -71,7 +71,7 @@ async def _seed_task(session: AsyncSession, created_by: UUID) -> UUID:
 
 def _finding(**overrides: object) -> Finding:
     base: dict[str, object] = {
-        "file": "roboco/services/task.py",
+        "file": "robofleet/services/task.py",
         "line": 10,
         "severity": Severity.MAJOR,
         "expected": "raises on bad input",

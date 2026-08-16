@@ -1,4 +1,4 @@
-"""Live integration tests for the fastapi-guard middleware (roboco/security.py).
+"""Live integration tests for the fastapi-guard middleware (robofleet/security.py).
 
 Unlike test_security.py (which unit-tests the validators + gated wiring), these
 mount the REAL SecurityMiddleware with the REAL build_security_config(), drive
@@ -39,7 +39,7 @@ from guard_core.exceptions import GuardRedisError
 from guard_core.handlers.behavior_handler import BehaviorRule
 from guard_core.handlers.ipban_handler import ip_ban_manager
 from guard_core.utils import extract_client_ip, is_ip_allowed
-from roboco import security
+from robofleet import security
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -281,10 +281,10 @@ class TestBehavioralUsageRuleRedisFailOpen:
     """usage_monitor()/behavior_analysis() rules run OUTSIDE SecurityCheckPipeline
     (guard/middleware.py dispatch calls BehavioralProcessor.process_usage_rules
     directly), so a redis blip there bypasses guard-core's own redis_fail_open
-    handling (guard_core/core/checks/pipeline.py) unless roboco.security patches
+    handling (guard_core/core/checks/pipeline.py) unless robofleet.security patches
     it. Without the patch, `process_usage_rules` propagates the raw
     GuardRedisError -- these tests call the REAL (patched) method installed on
-    BehavioralProcessor by roboco.security's import-time setattr.
+    BehavioralProcessor by robofleet.security's import-time setattr.
     """
 
     @staticmethod

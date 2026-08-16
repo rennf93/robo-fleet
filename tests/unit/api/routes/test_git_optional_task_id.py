@@ -18,16 +18,16 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.git import router as git_router
-from roboco.api.schemas.git import (
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.git import router as git_router
+from robofleet.api.schemas.git import (
     GitCommitRequest,
     GitCreatePRRequest,
     GitMergePRRequest,
     GitPushRequest,
 )
-from roboco.models.base import AgentRole, Team
-from roboco.models.permissions import AgentContext
+from robofleet.models.base import AgentRole, Team
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator
@@ -143,7 +143,7 @@ async def test_commit_without_task_id_returns_200_not_422(
     client: AsyncClient,
 ) -> None:
     """POST /commit without task_id must not return 422 (schema error)."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_svc:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_svc:
         svc = AsyncMock()
         svc.commit_for_task = AsyncMock(
             return_value=("deadbeef", "feat: add something", 1, 5, 2)
@@ -171,7 +171,7 @@ async def test_push_without_task_id_returns_200_not_422(
     client: AsyncClient,
 ) -> None:
     """POST /push without task_id must not return 422 (schema error)."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_svc:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_svc:
         svc = AsyncMock()
         svc.push_for_task = AsyncMock(return_value=("feature/x", 3))
         mock_svc.return_value = svc
@@ -194,7 +194,7 @@ async def test_create_pr_without_task_id_returns_200_not_422(
     client: AsyncClient,
 ) -> None:
     """POST /pr/create without task_id must not return 422 (schema error)."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_svc:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_svc:
         svc = AsyncMock()
         svc.create_pr_for_task = AsyncMock(
             return_value=(
@@ -225,7 +225,7 @@ async def test_merge_pr_without_task_id_returns_200_not_422(
     client: AsyncClient,
 ) -> None:
     """POST /pr/merge without task_id must not return 422 (schema error)."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_svc:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_svc:
         svc = AsyncMock()
         svc.merge_pr_for_task = AsyncMock(return_value=("main", "deadbeef"))
         mock_svc.return_value = svc
@@ -252,7 +252,7 @@ async def test_merge_pr_without_task_id_returns_200_not_422(
 @pytest.mark.asyncio
 async def test_commit_with_task_id_still_works(client: AsyncClient) -> None:
     """POST /commit with task_id (regression) must still return 200."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_svc:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_svc:
         svc = AsyncMock()
         svc.commit_for_task = AsyncMock(
             return_value=("abc123", "fix(auth): correct thing", 2, 10, 3)
@@ -275,7 +275,7 @@ async def test_commit_with_task_id_still_works(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_push_with_task_id_still_works(client: AsyncClient) -> None:
     """POST /push with task_id (regression) must still return 200."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_svc:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_svc:
         svc = AsyncMock()
         svc.push_for_task = AsyncMock(return_value=("feature/x", 2))
         mock_svc.return_value = svc
@@ -293,7 +293,7 @@ async def test_push_with_task_id_still_works(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_create_pr_with_task_id_still_works(client: AsyncClient) -> None:
     """POST /pr/create with task_id (regression) must still return 200."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_svc:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_svc:
         svc = AsyncMock()
         svc.create_pr_for_task = AsyncMock(
             return_value=(5, "https://github.com/x/y/pull/5", "T", "feat", "main")
@@ -313,7 +313,7 @@ async def test_create_pr_with_task_id_still_works(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_merge_pr_with_task_id_still_works(client: AsyncClient) -> None:
     """POST /pr/merge with task_id (regression) must still return 200."""
-    with patch("roboco.api.routes.git.get_git_service") as mock_svc:
+    with patch("robofleet.api.routes.git.get_git_service") as mock_svc:
         svc = AsyncMock()
         svc.merge_pr_for_task = AsyncMock(return_value=("main", "cafebabe"))
         mock_svc.return_value = svc

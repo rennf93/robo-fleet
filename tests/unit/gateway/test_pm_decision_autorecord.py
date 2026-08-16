@@ -23,8 +23,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings as _roboco_settings
-from roboco.services.gateway.choreographer import (
+from robofleet.config import settings as _roboco_settings
+from robofleet.services.gateway.choreographer import (
     Choreographer,
     ChoreographerDeps,
 )

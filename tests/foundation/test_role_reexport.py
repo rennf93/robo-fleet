@@ -5,15 +5,15 @@ the SAME Python object as the canonical ``foundation.identity.Role`` /
 ``foundation.identity.Team``. Object identity (`is`) is the assertion —
 anything weaker allows silent re-forking.
 
-The previous ``roboco.lifecycle.spec`` re-export shim was deleted in
+The previous ``robofleet.lifecycle.spec`` re-export shim was deleted in
 Phase 4 Task 8; the two tests that asserted ``spec.Role is identity.Role``
 went away with it.
 """
 
 from __future__ import annotations
 
-from roboco.foundation import identity
-from roboco.models.base import AgentRole, Team
+from robofleet.foundation import identity
+from robofleet.models.base import AgentRole, Team
 
 
 def test_models_base_agentrole_is_foundation_role() -> None:

@@ -14,8 +14,8 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from roboco.models.runtime import AgentInstance
-from roboco.runtime.orchestrator import (
+from robofleet.models.runtime import AgentInstance
+from robofleet.runtime.orchestrator import (
     _SHUTDOWN_DRAIN_TIMEOUT_SECONDS,
     AgentOrchestrator,
 )
@@ -91,7 +91,7 @@ async def test_stop_does_not_hang_on_stuck_bg_task(
     Deterministic: the drain deadline is patched tiny so a bounded fail-close is
     asserted in well under a second, never relying on the real 5s default."""
     monkeypatch.setattr(
-        "roboco.runtime.orchestrator._SHUTDOWN_DRAIN_TIMEOUT_SECONDS", 0.05
+        "robofleet.runtime.orchestrator._SHUTDOWN_DRAIN_TIMEOUT_SECONDS", 0.05
     )
     orch = _make_orchestrator()
 

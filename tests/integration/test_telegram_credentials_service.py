@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import TelegramCredentialsTable
-from roboco.services.telegram_credentials import (
+from robofleet.db.tables import TelegramCredentialsTable
+from robofleet.services.telegram_credentials import (
     TelegramCredentialsService,
     TelegramCredentialsValidationError,
     get_telegram_credentials_service,

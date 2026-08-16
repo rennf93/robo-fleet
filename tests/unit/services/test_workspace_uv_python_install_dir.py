@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services.workspace import (
+from robofleet.services.workspace import (
     _PRUNE_DIRS,
     WorkspaceService,
     _uv_subprocess_env,
@@ -113,7 +113,7 @@ async def test_run_dep_install_sets_uv_python_install_dir(tmp_path: Path) -> Non
             captured_env.update(env)
         return subprocess.CompletedProcess(argv, returncode=0, stdout="", stderr="")
 
-    with patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run):
+    with patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run):
         await svc._run_dep_install(
             ws, "uv sync --extra dev", ["uv", "sync", "--extra", "dev"]
         )
@@ -139,7 +139,7 @@ async def test_toolchain_smoke_sets_uv_python_install_dir(tmp_path: Path) -> Non
             captured_env.update(env)
         return subprocess.CompletedProcess(argv, returncode=0, stdout="", stderr="")
 
-    with patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run):
+    with patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run):
         await svc._run_toolchain_smoke(ws, "3.14")
 
     assert captured_env.get("UV_PYTHON_INSTALL_DIR") == str(ws / ".uv-python")
@@ -164,8 +164,8 @@ async def test_install_dev_deps_uv_python_dir_inside_workspace(tmp_path: Path) -
         return subprocess.CompletedProcess(argv, returncode=0, stdout="", stderr="")
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.install_dev_deps(ws)
 
@@ -188,7 +188,7 @@ async def test_install_env_inherits_parent_environ(tmp_path: Path) -> None:
         return subprocess.CompletedProcess(argv, returncode=0, stdout="", stderr="")
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
         patch.dict(
             "os.environ",
             {"PATH": "/usr/bin:/bin", "ROBOCO_TEST_MARKER": "1"},

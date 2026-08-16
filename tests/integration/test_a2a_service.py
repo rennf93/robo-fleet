@@ -12,8 +12,8 @@ from uuid import uuid4 as _u
 
 import pytest
 import pytest_asyncio
-from roboco.agents_config import A2A_ALLOWED_PAIRS
-from roboco.db.tables import (
+from robofleet.agents_config import A2A_ALLOWED_PAIRS
+from robofleet.db.tables import (
     A2AConversationTable,
     A2AMessageTable,
     AgentTable,
@@ -21,28 +21,28 @@ from roboco.db.tables import (
     ProjectTable,
     TaskTable,
 )
-from roboco.enforcement.a2a_access import A2AAccessDeniedError
-from roboco.models import (
+from robofleet.enforcement.a2a_access import A2AAccessDeniedError
+from robofleet.models import (
     AgentRole,
     AgentStatus,
     NotificationPriority,
     NotificationType,
     Team,
 )
-from roboco.models.a2a import (
+from robofleet.models.a2a import (
     A2AConversationStatus,
     A2AMessage,
     SendMessageRequest,
     TextPart,
 )
-from roboco.models.base import (
+from robofleet.models.base import (
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.events import EventType
-from roboco.services.a2a import _LIVE_VIEW_EXCERPT_CHARS, A2AService
-from roboco.services.gateway.evidence_repo import EvidenceRepo
+from robofleet.models.events import EventType
+from robofleet.services.a2a import _LIVE_VIEW_EXCERPT_CHARS, A2AService
+from robofleet.services.gateway.evidence_repo import EvidenceRepo
 from sqlalchemy import select, text
 from sqlalchemy import select as _sel
 from sqlalchemy.sql.dml import Update
@@ -465,7 +465,7 @@ async def test_send_publishes_a2a_message_sent_event_when_bus_connected(
     mock_bus = AsyncMock()
     mock_bus.is_connected = lambda: True
     mock_bus.publish = AsyncMock(return_value=None)
-    with patch("roboco.services.a2a.get_event_bus", return_value=mock_bus):
+    with patch("robofleet.services.a2a.get_event_bus", return_value=mock_bus):
         sent = await svc.send(
             from_agent=dev.id,
             to_agent="be-qa",
@@ -499,7 +499,7 @@ async def test_send_excerpts_long_body_in_event(a2a_setup: dict) -> None:
     mock_bus = AsyncMock()
     mock_bus.is_connected = lambda: True
     mock_bus.publish = AsyncMock(return_value=None)
-    with patch("roboco.services.a2a.get_event_bus", return_value=mock_bus):
+    with patch("robofleet.services.a2a.get_event_bus", return_value=mock_bus):
         sent = await svc.send(
             from_agent=dev.id,
             to_agent="be-qa",
@@ -525,7 +525,7 @@ async def test_send_bus_failure_does_not_break_send(a2a_setup: dict) -> None:
     dev = a2a_setup["dev"]
     task_id = a2a_setup["task_id"]
     with patch(
-        "roboco.services.a2a.get_event_bus",
+        "robofleet.services.a2a.get_event_bus",
         side_effect=RuntimeError("bus down"),
     ):
         sent = await svc.send(
@@ -552,7 +552,7 @@ async def test_send_chat_message_directly_publishes_event(
     mock_bus = AsyncMock()
     mock_bus.is_connected = lambda: True
     mock_bus.publish = AsyncMock(return_value=None)
-    with patch("roboco.services.a2a.get_event_bus", return_value=mock_bus):
+    with patch("robofleet.services.a2a.get_event_bus", return_value=mock_bus):
         sent = await svc.send_chat_message(
             UUID(conv.id),
             "be-dev-1",
@@ -579,7 +579,7 @@ async def test_suppressed_duplicate_does_not_republish(
     mock_bus = AsyncMock()
     mock_bus.is_connected = lambda: True
     mock_bus.publish = AsyncMock(return_value=None)
-    with patch("roboco.services.a2a.get_event_bus", return_value=mock_bus):
+    with patch("robofleet.services.a2a.get_event_bus", return_value=mock_bus):
         await svc.send_chat_message(UUID(conv.id), "be-dev-1", "same text")
         await svc.send_chat_message(UUID(conv.id), "be-dev-1", "same text")
     mock_bus.publish.assert_awaited_once()
@@ -844,7 +844,7 @@ async def test_interject_as_ceo_publishes_a2a_message_sent_event(
     mock_bus = AsyncMock()
     mock_bus.is_connected = lambda: True
     mock_bus.publish = AsyncMock(return_value=None)
-    with patch("roboco.services.a2a.get_event_bus", return_value=mock_bus):
+    with patch("robofleet.services.a2a.get_event_bus", return_value=mock_bus):
         sent = await svc.interject_as_ceo(UUID(conv.id), "be-qa", "ship it")
 
     mock_bus.publish.assert_awaited_once()
@@ -1084,7 +1084,7 @@ async def test_send_publishes_only_after_persist_not_on_reply_denial(
     mock_bus.is_connected = lambda: True
     mock_bus.publish = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.a2a.get_event_bus", return_value=mock_bus),
+        patch("robofleet.services.a2a.get_event_bus", return_value=mock_bus),
         pytest.raises(A2AAccessDeniedError),
     ):
         await svc.send(from_agent=dev.id, to_agent="ceo", task_id=task_id, body="hi")
@@ -1293,7 +1293,7 @@ async def test_resolve_creator_agent_with_none_falls_back_to_main_pm(
 
 def test_get_service_endpoint_unspecified_host() -> None:
     """0.0.0.0 host triggers loopback fallback."""
-    with patch("roboco.services.a2a.settings") as mock_settings:
+    with patch("robofleet.services.a2a.settings") as mock_settings:
         mock_settings.host = "0.0.0.0"
         mock_settings.port = 8000
         url = A2AService.get_service_endpoint()
@@ -1302,7 +1302,7 @@ def test_get_service_endpoint_unspecified_host() -> None:
 
 def test_get_service_endpoint_invalid_host_falls_through() -> None:
     """Non-IP host string falls through ValueError → uses host directly."""
-    with patch("roboco.services.a2a.settings") as mock_settings:
+    with patch("robofleet.services.a2a.settings") as mock_settings:
         mock_settings.host = "myhost"
         mock_settings.port = 8080
         url = A2AService.get_service_endpoint()
@@ -1507,7 +1507,7 @@ async def test_cancel_task_status_no_value_attr(a2a_setup: dict) -> None:
         return await real_execute(stmt, *args, **kwargs)
 
     # Patch TaskService.cancel to return the same task object.
-    with patch("roboco.services.task.TaskService") as mock_ts:
+    with patch("robofleet.services.task.TaskService") as mock_ts:
         instance = AsyncMock()
         instance.cancel = AsyncMock(return_value=task)
         mock_ts.return_value = instance
@@ -1539,7 +1539,7 @@ async def test_cancel_task_failed_returns_value_error(
     )
     db.add(task)
     await db.flush()
-    with patch("roboco.services.task.TaskService") as mock_ts:
+    with patch("robofleet.services.task.TaskService") as mock_ts:
         instance = AsyncMock()
         instance.cancel = AsyncMock(return_value=None)
         mock_ts.return_value = instance
@@ -1555,7 +1555,7 @@ async def test_cancel_task_failed_returns_value_error(
 def test_resolve_target_agent_by_skill_match() -> None:
     """metadata.skill matches an agent skill id → returns slug."""
     with patch(
-        "roboco.services.a2a.get_agent_skills",
+        "robofleet.services.a2a.get_agent_skills",
         return_value=[{"id": "general", "name": "g"}],
     ):
         result = A2AService.resolve_target_agent({"skill": "general"})
@@ -1565,7 +1565,7 @@ def test_resolve_target_agent_by_skill_match() -> None:
 
 def test_resolve_target_agent_skill_no_match() -> None:
     """Unknown skill returns None."""
-    with patch("roboco.services.a2a.get_agent_skills", return_value=[]):
+    with patch("robofleet.services.a2a.get_agent_skills", return_value=[]):
         result = A2AService.resolve_target_agent({"skill": "ghost-skill"})
     assert result is None
 
@@ -1615,7 +1615,7 @@ async def test_resolve_creator_agent_known_slug_with_uuid_hit(
     dev = a2a_setup["dev"]
     # be-dev-1 is in ALL_AGENTS (a list) by default; just inject a UUID.
     with patch.dict(
-        "roboco.services.a2a.AGENT_UUIDS",
+        "robofleet.services.a2a.AGENT_UUIDS",
         {"be-dev-1": str(dev.id)},
     ):
         out = await svc.resolve_creator_agent("be-dev-1")
@@ -1655,7 +1655,7 @@ async def test_create_a2a_notification_with_target_calls_notification_service(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService",
+        "robofleet.services.notification.NotificationService",
         return_value=mock_ns,
     ):
         result = await svc.create_a2a_notification(req)
@@ -1679,11 +1679,11 @@ async def test_create_a2a_notification_permission_denied(
     )
     with (
         patch(
-            "roboco.enforcement.a2a_access.can_a2a_direct",
+            "robofleet.enforcement.a2a_access.can_a2a_direct",
             return_value=(False, "denied"),
         ),
         patch(
-            "roboco.enforcement.a2a_access.get_a2a_route_hint",
+            "robofleet.enforcement.a2a_access.get_a2a_route_hint",
             return_value="use channel",
         ),
         pytest.raises(A2AAccessDeniedError) as exc,
@@ -1710,7 +1710,9 @@ async def test_create_a2a_notification_self_a2a_raises_typed_error(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.notification.NotificationService", return_value=mock_ns),
+        patch(
+            "robofleet.services.notification.NotificationService", return_value=mock_ns
+        ),
         pytest.raises(A2AAccessDeniedError),
     ):
         await svc.create_a2a_notification(req)
@@ -1732,7 +1734,9 @@ async def test_create_a2a_notification_missing_from_agent_raises_not_silent(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.notification.NotificationService", return_value=mock_ns),
+        patch(
+            "robofleet.services.notification.NotificationService", return_value=mock_ns
+        ),
         pytest.raises(ValueError, match="from_agent"),
     ):
         await svc.create_a2a_notification(req)
@@ -1825,7 +1829,7 @@ async def test_notify_original_requester_responder_is_requester(
         created_by="be-dev-1-uuid",
     )
     with patch(
-        "roboco.services.a2a.A2AService._lookup_requester_slug",
+        "robofleet.services.a2a.A2AService._lookup_requester_slug",
         return_value="be-dev-1",
     ):
         # responder == requester → return without publish.
@@ -1848,10 +1852,10 @@ async def test_notify_original_requester_publishes_event(
     mock_bus.publish = AsyncMock(return_value=None)
     with (
         patch(
-            "roboco.services.a2a.A2AService._lookup_requester_slug",
+            "robofleet.services.a2a.A2AService._lookup_requester_slug",
             return_value="be-dev-1",
         ),
-        patch("roboco.services.a2a.get_event_bus", return_value=mock_bus),
+        patch("robofleet.services.a2a.get_event_bus", return_value=mock_bus),
     ):
         await svc._notify_original_requester(fake_task, "be-dev-2")
     mock_bus.publish.assert_awaited()
@@ -1862,7 +1866,7 @@ async def test_publish_a2a_response_event_no_bus() -> None:
     """Bus not connected → silent no-op."""
     fake_task = SimpleNamespace(id="00000000-0000-0000-0000-000000000001")
     mock_bus = type("B", (), {"is_connected": lambda _self: False})()
-    with patch("roboco.services.a2a.get_event_bus", return_value=mock_bus):
+    with patch("robofleet.services.a2a.get_event_bus", return_value=mock_bus):
         await A2AService._publish_a2a_response_event(
             cast("TaskTable", fake_task), "creator", "requester", "responder"
         )
@@ -1872,7 +1876,7 @@ async def test_publish_a2a_response_event_no_bus() -> None:
 async def test_publish_a2a_response_event_bus_exception_swallowed() -> None:
     fake_task = SimpleNamespace(id="00000000-0000-0000-0000-000000000001")
     with patch(
-        "roboco.services.a2a.get_event_bus",
+        "robofleet.services.a2a.get_event_bus",
         side_effect=RuntimeError("bus down"),
     ):
         # Exception swallowed.
@@ -2095,7 +2099,7 @@ async def test_send_gateway_adapter_with_string_recipient(
 def test_lookup_requester_slug_found() -> None:
     target_uuid = "00000000-0000-0000-0000-000000000042"
     with patch(
-        "roboco.seeds.initial_data.AGENT_UUIDS",
+        "robofleet.seeds.initial_data.AGENT_UUIDS",
         {"slug-x": target_uuid},
     ):
         result = A2AService._lookup_requester_slug(target_uuid)
@@ -2410,7 +2414,7 @@ async def test_ceo_dm_wakes_offline_recipient(a2a_setup: dict) -> None:
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         await svc.send_chat_message(conv_id, "ceo", "status update please")
 
@@ -2446,7 +2450,7 @@ async def test_ceo_dm_wake_dedups_while_pending(a2a_setup: dict) -> None:
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         await svc.send_chat_message(conv_id, "ceo", "second message")
 
@@ -2466,7 +2470,7 @@ async def test_agent_to_agent_dm_creates_no_wake(a2a_setup: dict) -> None:
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         await svc.send_chat_message(conv_id, "be-dev-1", "sync?")
 
@@ -2486,7 +2490,7 @@ async def test_agent_reply_to_ceo_creates_no_wake(a2a_setup: dict) -> None:
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         await svc.send_chat_message(conv_id, "be-dev-1", "on it")
 
@@ -2535,7 +2539,7 @@ async def test_maybe_wake_ceo_recipient_still_noops_for_no_comms_role(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         await svc._maybe_wake_ceo_recipient("ceo", "secretary-1", None)
 
@@ -2570,7 +2574,7 @@ async def test_maybe_wake_ceo_recipient_wakes_auditor_now_that_it_has_read_a2a(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         await svc._maybe_wake_ceo_recipient("ceo", "auditor", None)
 
@@ -2591,7 +2595,7 @@ async def test_interject_as_ceo_wakes_only_addressed_participant(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService", return_value=mock_ns
+        "robofleet.services.notification.NotificationService", return_value=mock_ns
     ):
         await svc.interject_as_ceo(conv_id, to_agent="be-qa", content="ping")
 
@@ -2671,7 +2675,7 @@ async def test_ack_pending_wake_notifications_savepoint_isolates_db_failure(
         await db.execute(text("SELECT 1/0"))
 
     with patch(
-        "roboco.services.notification_delivery.NotificationDeliveryService."
+        "robofleet.services.notification_delivery.NotificationDeliveryService."
         "bulk_acknowledge",
         _boom,
     ):

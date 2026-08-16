@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import NotificationType
-from roboco.services.notification_delivery import NotificationDeliveryService
-from roboco.services.telegram_inbound import (
+from robofleet.models.base import NotificationType
+from robofleet.services.notification_delivery import NotificationDeliveryService
+from robofleet.services.telegram_inbound import (
     _DEEP_LINK_PATH,
     _KIND_DISPLAY,
     _VALID_KINDS,

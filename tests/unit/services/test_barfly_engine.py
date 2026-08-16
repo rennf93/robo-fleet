@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings as cfg
-from roboco.db.tables import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
@@ -18,18 +18,18 @@ from roboco.db.tables import (
     TaskTable,
     XSeenMentionTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskStatus as TS
-from roboco.services.barfly_engine import BarflyEngine
-from roboco.services.task import (
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskStatus as TS
+from robofleet.services.barfly_engine import BarflyEngine
+from robofleet.services.task import (
     BARFLY_SOURCE,
     PERISCOPE_SOURCE,
     get_task_service,
 )
-from roboco.services.x_client import XClient, XMention, XPostResult
-from roboco.services.x_credentials import XCredentialsData, get_x_credentials_service
+from robofleet.services.x_client import XClient, XMention, XPostResult
+from robofleet.services.x_credentials import XCredentialsData, get_x_credentials_service
 from sqlalchemy import delete, update
 
 if TYPE_CHECKING:
@@ -199,7 +199,7 @@ async def test_enabled_with_creds_and_results_originates_held_exploration_task(
     await _arm_with_creds(db_session, monkeypatch)
     monkeypatch.setattr(cfg, "barfly_queries", ["AI agent orchestration"])
     monkeypatch.setattr(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         lambda *_a, **_k: _FakeSearchClient([_mention("1")]),
     )
     engine = BarflyEngine(db_session)
@@ -228,7 +228,7 @@ async def test_no_candidates_survive_creates_no_cycle(
     await _arm_with_creds(db_session, monkeypatch)
     monkeypatch.setattr(cfg, "barfly_queries", ["AI agent orchestration"])
     monkeypatch.setattr(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         lambda *_a, **_k: _FakeSearchClient([]),
     )
     engine = BarflyEngine(db_session)
@@ -244,7 +244,7 @@ async def test_dedupe_one_open_cycle(
     await _arm_with_creds(db_session, monkeypatch)
     monkeypatch.setattr(cfg, "barfly_queries", ["AI agent orchestration"])
     monkeypatch.setattr(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         lambda *_a, **_k: _FakeSearchClient([_mention("1"), _mention("2")]),
     )
     await BarflyEngine(db_session).run_cycle()
@@ -261,7 +261,7 @@ async def test_a_completed_cycle_unblocks_the_next_one(
     await _arm_with_creds(db_session, monkeypatch)
     monkeypatch.setattr(cfg, "barfly_queries", ["AI agent orchestration"])
     monkeypatch.setattr(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         lambda *_a, **_k: _FakeSearchClient([_mention("1")]),
     )
     first = await BarflyEngine(db_session).run_cycle()
@@ -270,7 +270,7 @@ async def test_a_completed_cycle_unblocks_the_next_one(
     await db_session.flush()
 
     monkeypatch.setattr(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         lambda *_a, **_k: _FakeSearchClient([_mention("2")]),
     )
     second = await BarflyEngine(db_session).run_cycle()
@@ -290,7 +290,7 @@ async def test_already_seen_candidate_is_excluded(
     await db_session.flush()
     monkeypatch.setattr(cfg, "barfly_queries", ["AI agent orchestration"])
     monkeypatch.setattr(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         lambda *_a, **_k: _FakeSearchClient([_mention("1"), _mention("2")]),
     )
     engine = BarflyEngine(db_session)
@@ -309,7 +309,7 @@ async def test_candidates_capped_at_max_candidates(
     monkeypatch.setattr(cfg, "barfly_queries", ["q1"])
     monkeypatch.setattr(cfg, "barfly_max_candidates", 2)
     monkeypatch.setattr(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         lambda *_a, **_k: _FakeSearchClient(
             [_mention("1"), _mention("2"), _mention("3")]
         ),
@@ -332,7 +332,7 @@ async def test_injection_pattern_flagged_but_still_carried(
     await _arm_with_creds(db_session, monkeypatch)
     monkeypatch.setattr(cfg, "barfly_queries", ["q1"])
     monkeypatch.setattr(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         lambda *_a, **_k: _FakeSearchClient(
             [
                 _mention(
@@ -357,7 +357,7 @@ async def test_short_candidate_text_is_skipped(
     await _arm_with_creds(db_session, monkeypatch)
     monkeypatch.setattr(cfg, "barfly_queries", ["q1"])
     monkeypatch.setattr(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         lambda *_a, **_k: _FakeSearchClient([_mention("1", text="ok")]),
     )
     engine = BarflyEngine(db_session)
@@ -372,7 +372,7 @@ async def test_engagement_note_reflects_public_metrics(
     await _arm_with_creds(db_session, monkeypatch)
     monkeypatch.setattr(cfg, "barfly_queries", ["q1"])
     monkeypatch.setattr(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         lambda *_a, **_k: _FakeSearchClient([_mention("1", likes=5)]),
     )
     engine = BarflyEngine(db_session)

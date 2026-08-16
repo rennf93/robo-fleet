@@ -13,8 +13,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.services.task import TaskService
+from robofleet.foundation.policy.content import markers
+from robofleet.services.task import TaskService
 
 
 def _service(scalar_rows: list[object]) -> TaskService:

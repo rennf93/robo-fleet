@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from roboco.llm.providers import grok_cli_usage as gu
+from robofleet.llm.providers import grok_cli_usage as gu
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -206,6 +206,6 @@ def test_main_warns_when_run_log_yields_no_session_id(
     monkeypatch.setenv("ROBOCO_GROK_RUN_LOG", str(bad_log))
     monkeypatch.setenv("ROBOCO_AGENT_SESSION_ID", "fallback-sid")
     monkeypatch.setenv("ROBOCO_AGENT_MODEL", "grok-build")
-    with caplog.at_level("WARNING", logger="roboco.llm.providers.grok_cli_usage"):
+    with caplog.at_level("WARNING", logger="robofleet.llm.providers.grok_cli_usage"):
         assert gu.main() == 0
     assert any("run log" in r.message.lower() for r in caplog.records)

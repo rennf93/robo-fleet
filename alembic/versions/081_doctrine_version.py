@@ -1,6 +1,6 @@
 """Doctrine-version stamp on agent_spawn_sessions, for the eval harness.
 
-The eval harness (roboco/eval/) scores a (role, model/provider config) cohort
+The eval harness (robofleet/eval/) scores a (role, model/provider config) cohort
 by replaying golden tasks through a real agent spawn. To attribute a quality
 delta to a prompt/doctrine change (fable-mode, ponytail, a team-prompt edit,
 ...) the resulting spawn session needs to carry a fingerprint of exactly what
@@ -9,7 +9,7 @@ the operator remembers to keep everything else byte-for-byte identical.
 
 ``doctrine_version`` is a short hash of the composed system prompt (base +
 role + team + identity + doctrine layers) for that spawn, stamped at
-``_finalize_spawn_session`` in roboco/runtime/orchestrator.py — NOT at
+``_finalize_spawn_session`` in robofleet/runtime/orchestrator.py — NOT at
 ``_record_spawn_session`` (spawn creation). The composed prompt string itself
 is not passed through the AgentConfig the finalize call site holds, but the
 file it was written to (``config.blueprint_path``, from

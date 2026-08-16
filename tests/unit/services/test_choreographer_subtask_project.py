@@ -21,9 +21,9 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.foundation.policy.task_completeness import TaskCompletenessError
-from roboco.models.base import Team
-from roboco.services.gateway.choreographer._impl import (
+from robofleet.foundation.policy.task_completeness import TaskCompletenessError
+from robofleet.models.base import Team
+from robofleet.services.gateway.choreographer._impl import (
     Choreographer,
     DelegateInputs,
 )

@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.conventions.grammars import GrammarUnavailable
-from roboco.conventions.runner import ValidatorCouldNotRun, run
-from roboco.foundation.policy.conventions.models import (
+from robofleet.conventions.grammars import GrammarUnavailable
+from robofleet.conventions.runner import ValidatorCouldNotRun, run
+from robofleet.foundation.policy.conventions.models import (
     ConventionsStandard,
     Module,
     Waiver,
@@ -73,6 +73,8 @@ def test_runner_is_fail_loud_on_grammar_failure(
     def boom(_source: bytes) -> list:
         raise GrammarUnavailable("python")
 
-    monkeypatch.setattr("roboco.conventions.classify_python.classify_definitions", boom)
+    monkeypatch.setattr(
+        "robofleet.conventions.classify_python.classify_definitions", boom
+    )
     with pytest.raises(ValidatorCouldNotRun):
         run(tmp_path, ["x.py"], ConventionsStandard())

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from roboco.services.optimal import IndexingReport, OptimalService
+from robofleet.services.optimal import IndexingReport, OptimalService
 
 if TYPE_CHECKING:
     from pathlib import Path

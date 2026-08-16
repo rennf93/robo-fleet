@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import WebSocketDisconnect
-from roboco.api.websocket import (
+from robofleet.api.websocket import (
     IDLE_TIMEOUT_SECONDS,
     ConnectionManager,
     agent_stream,
@@ -77,8 +77,8 @@ async def test_system_stream_reaps_silent_socket_after_idle_timeout() -> None:
     await mgr.connect_system(ws)
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("roboco.api.websocket.manager", mgr)
-        mp.setattr("roboco.api.websocket.IDLE_TIMEOUT_SECONDS", 0.05)
+        mp.setattr("robofleet.api.websocket.manager", mgr)
+        mp.setattr("robofleet.api.websocket.IDLE_TIMEOUT_SECONDS", 0.05)
         # Must return promptly (well under 2s), not block for the real default.
         await asyncio.wait_for(system_stream(ws), timeout=2.0)
 
@@ -94,10 +94,10 @@ async def test_notification_stream_reaps_silent_socket_after_idle_timeout(
     hang_future: asyncio.Future[str] = asyncio.Future()
     ws = _mock_ws_for_receive(hang_future)
     monkeypatch.setattr(
-        "roboco.api.websocket.validate_agent_exists", AsyncMock(return_value=True)
+        "robofleet.api.websocket.validate_agent_exists", AsyncMock(return_value=True)
     )
-    monkeypatch.setattr("roboco.api.websocket.manager", mgr)
-    monkeypatch.setattr("roboco.api.websocket.IDLE_TIMEOUT_SECONDS", 0.05)
+    monkeypatch.setattr("robofleet.api.websocket.manager", mgr)
+    monkeypatch.setattr("robofleet.api.websocket.IDLE_TIMEOUT_SECONDS", 0.05)
 
     await asyncio.wait_for(notification_stream(ws, agent_id), timeout=2.0)
 
@@ -115,10 +115,10 @@ async def test_agent_stream_reaps_silent_socket_after_idle_timeout(
     ws = _mock_ws_for_receive(hang_future)
     ws.query_params = {"viewer_id": str(viewer_id)}
     monkeypatch.setattr(
-        "roboco.api.websocket.validate_agent_exists", AsyncMock(return_value=True)
+        "robofleet.api.websocket.validate_agent_exists", AsyncMock(return_value=True)
     )
-    monkeypatch.setattr("roboco.api.websocket.manager", mgr)
-    monkeypatch.setattr("roboco.api.websocket.IDLE_TIMEOUT_SECONDS", 0.05)
+    monkeypatch.setattr("robofleet.api.websocket.manager", mgr)
+    monkeypatch.setattr("robofleet.api.websocket.IDLE_TIMEOUT_SECONDS", 0.05)
 
     await asyncio.wait_for(agent_stream(ws, target_id), timeout=2.0)
 
@@ -139,8 +139,8 @@ async def test_ping_within_idle_window_does_not_disconnect() -> None:
     await mgr.connect_system(ws)
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("roboco.api.websocket.manager", mgr)
-        mp.setattr("roboco.api.websocket.IDLE_TIMEOUT_SECONDS", 30)
+        mp.setattr("robofleet.api.websocket.manager", mgr)
+        mp.setattr("robofleet.api.websocket.IDLE_TIMEOUT_SECONDS", 30)
         await system_stream(ws)
 
     # Disconnected only because of the WebSocketDisconnect, not the timeout.

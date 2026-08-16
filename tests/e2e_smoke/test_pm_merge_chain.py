@@ -139,8 +139,8 @@ def test_auto_submit_cuts_the_pm_turn(
     orchestrator's ``_try_auto_submit`` drives the REAL submit verb through
     the REAL API as the owning PM, unconditionally, and the gate chain
     continues unchanged."""
-    from roboco.config import settings
-    from roboco.runtime.orchestrator import AgentOrchestrator
+    from robofleet.config import settings
+    from robofleet.runtime.orchestrator import AgentOrchestrator
 
     stack = e2e_stack
     company = seed_company(stack)

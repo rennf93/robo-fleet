@@ -1,4 +1,4 @@
-"""roboco.services.strategy_engine — assessment + notify (dormant by default)."""
+"""robofleet.services.strategy_engine — assessment + notify (dormant by default)."""
 
 from __future__ import annotations
 
@@ -7,19 +7,19 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskStatus as TS
-from roboco.services import strategy_engine as se_module
-from roboco.services.strategy_engine import StrategyEngine
-from roboco.services.task import (
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskStatus as TS
+from robofleet.services import strategy_engine as se_module
+from robofleet.services.strategy_engine import StrategyEngine
+from robofleet.services.task import (
     ROADMAP_SOURCE,
     X_FEATURE_EXPLORATION_SOURCE,
     get_task_service,

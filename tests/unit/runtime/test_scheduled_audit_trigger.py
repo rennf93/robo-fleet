@@ -11,8 +11,8 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.config import Settings, settings
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import Settings, settings
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 @pytest.fixture
@@ -49,7 +49,7 @@ async def test_spawns_when_overdue_and_delivery_activity(
     now = datetime.now(UTC)
     with (
         patch.object(settings, "audit_interval_seconds", 21600),
-        patch("roboco.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
+        patch("robofleet.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
     ):
         dt_mock.now.return_value = now
         orch._last_audit_spawn_at = now - timedelta(seconds=21601)
@@ -75,7 +75,7 @@ async def test_skips_when_interval_not_elapsed(orch: AgentOrchestrator) -> None:
     now = datetime.now(UTC)
     with (
         patch.object(settings, "audit_interval_seconds", 21600),
-        patch("roboco.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
+        patch("robofleet.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
     ):
         dt_mock.now.return_value = now
         orch._last_audit_spawn_at = now - timedelta(seconds=1800)
@@ -98,7 +98,7 @@ async def test_skips_when_no_delivery_activity(orch: AgentOrchestrator) -> None:
     now = datetime.now(UTC)
     with (
         patch.object(settings, "audit_interval_seconds", 21600),
-        patch("roboco.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
+        patch("robofleet.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
     ):
         dt_mock.now.return_value = now
         orch._last_audit_spawn_at = now - timedelta(seconds=21601)
@@ -113,7 +113,7 @@ async def test_breaker_skips_when_auditor_active(orch: AgentOrchestrator) -> Non
     now = datetime.now(UTC)
     with (
         patch.object(settings, "audit_interval_seconds", 21600),
-        patch("roboco.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
+        patch("robofleet.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
         patch.object(
             orch, "_next_unobserved_audit_alert", new=AsyncMock(return_value=None)
         ),
@@ -142,7 +142,7 @@ async def test_reactive_alert_stamps_last_spawn_and_blocks_scheduled(
     now = datetime.now(UTC)
     with (
         patch.object(settings, "audit_interval_seconds", 21600),
-        patch("roboco.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
+        patch("robofleet.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
         patch.object(
             orch, "_next_unobserved_audit_alert", new=AsyncMock(return_value=alert)
         ),
@@ -178,7 +178,7 @@ async def test_reactive_alert_acks_so_it_cannot_rotate(
     fetch_mock = AsyncMock(side_effect=[alert, None])
     with (
         patch.object(settings, "audit_interval_seconds", 21600),
-        patch("roboco.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
+        patch("robofleet.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
         patch.object(orch, "_next_unobserved_audit_alert", new=fetch_mock),
         patch.object(orch, "_ack_alert_as_auditor", new=ack_mock),
         patch.object(orch, "_fetch_tasks", new=AsyncMock(return_value=[])),
@@ -202,7 +202,7 @@ async def test_cooldown_zero_disables_scheduled_sweeps(orch: AgentOrchestrator) 
     now = datetime.now(UTC)
     with (
         patch.object(settings, "audit_interval_seconds", 0),
-        patch("roboco.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
+        patch("robofleet.runtime.orchestrator.datetime", wraps=datetime) as dt_mock,
     ):
         dt_mock.now.return_value = now
         orch._last_audit_spawn_at = None

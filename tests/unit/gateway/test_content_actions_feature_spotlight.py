@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_feature_spotlight — HoM-gated
+"""robofleet.services.gateway.content_actions.propose_feature_spotlight — HoM-gated
 feature-spotlight draft authoring."""
 
 from __future__ import annotations
@@ -8,9 +8,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.foundation.policy.content import markers
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.config import settings as cfg
+from robofleet.foundation.policy.content import markers
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 class _FakeTask:
@@ -104,7 +107,7 @@ async def test_propose_feature_spotlight_no_open_exploration_is_invalid_state(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_feature_explorations = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_feature_spotlight(
         agent_id=uuid4(), **_valid_kwargs()
     )
@@ -119,7 +122,7 @@ async def test_propose_feature_spotlight_ignores_exploration_assigned_to_another
     exploration = _FakeTask(assigned_to=other_agent)
     task_svc = MagicMock()
     task_svc.list_open_feature_explorations = AsyncMock(return_value=[exploration])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_feature_spotlight(
         agent_id=uuid4(), **_valid_kwargs()
     )
@@ -134,11 +137,11 @@ async def test_propose_feature_spotlight_rejects_already_seen_feature(
     exploration = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_feature_explorations = AsyncMock(return_value=[exploration])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     engine = MagicMock()
     engine.is_feature_seen = AsyncMock(return_value=True)
-    monkeypatch.setattr("roboco.services.x_engine.get_x_engine", lambda _s: engine)
+    monkeypatch.setattr("robofleet.services.x_engine.get_x_engine", lambda _s: engine)
 
     env = await _actions("head_marketing").propose_feature_spotlight(
         agent_id=agent_id, **_valid_kwargs()
@@ -157,14 +160,14 @@ async def test_propose_feature_spotlight_materializes_new_draft_task(
     exploration = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_feature_explorations = AsyncMock(return_value=[exploration])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     materialized = _FakeTask(assigned_to=agent_id)
     assert materialized.id != exploration.id
     engine = MagicMock()
     engine.is_feature_seen = AsyncMock(return_value=False)
     engine.materialize_feature_spotlight = AsyncMock(return_value=materialized)
-    monkeypatch.setattr("roboco.services.x_engine.get_x_engine", lambda _s: engine)
+    monkeypatch.setattr("robofleet.services.x_engine.get_x_engine", lambda _s: engine)
 
     env = await _actions("head_marketing").propose_feature_spotlight(
         agent_id=agent_id, **_valid_kwargs()
@@ -200,13 +203,13 @@ def _mock_spotlight_materialization(
     exploration = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_feature_explorations = AsyncMock(return_value=[exploration])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     materialized = _FakeTask(assigned_to=agent_id)
     x_engine = MagicMock()
     x_engine.is_feature_seen = AsyncMock(return_value=False)
     x_engine.materialize_feature_spotlight = AsyncMock(return_value=materialized)
-    monkeypatch.setattr("roboco.services.x_engine.get_x_engine", lambda _s: x_engine)
+    monkeypatch.setattr("robofleet.services.x_engine.get_x_engine", lambda _s: x_engine)
     return agent_id, materialized
 
 
@@ -232,7 +235,7 @@ async def test_propose_feature_spotlight_never_opens_video_task(
     video_engine = MagicMock()
     video_engine.open_video_task = AsyncMock(return_value=MagicMock())
     monkeypatch.setattr(
-        "roboco.services.video_engine.get_video_engine", lambda _s: video_engine
+        "robofleet.services.video_engine.get_video_engine", lambda _s: video_engine
     )
 
     env = await _actions_with_flushable_session(
@@ -337,7 +340,7 @@ async def test_propose_feature_spotlight_skip_no_open_exploration_is_invalid_sta
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_feature_explorations = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_feature_spotlight(
         agent_id=uuid4(), skip=True, skip_reason="nothing shipped worth spotlighting"
     )
@@ -352,11 +355,11 @@ async def test_propose_feature_spotlight_skip_completes_exploration_without_draf
     exploration = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_feature_explorations = AsyncMock(return_value=[exploration])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     engine = MagicMock()
     engine.skip_feature_spotlight = AsyncMock(return_value=exploration)
-    monkeypatch.setattr("roboco.services.x_engine.get_x_engine", lambda _s: engine)
+    monkeypatch.setattr("robofleet.services.x_engine.get_x_engine", lambda _s: engine)
 
     reason = "nothing shipped worth spotlighting this cycle"
     env = await _actions("head_marketing").propose_feature_spotlight(

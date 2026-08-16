@@ -12,14 +12,14 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings
-from roboco.db.tables import AgentTable
-from roboco.exceptions import ValidationError
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.project import ProjectCreate, ProjectUpdate
-from roboco.services.base import ConflictError, NotFoundError
-from roboco.services.project import ProjectService, get_project_service
-from roboco.utils.crypto import EncryptionError
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable
+from robofleet.exceptions import ValidationError
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.project import ProjectCreate, ProjectUpdate
+from robofleet.services.base import ConflictError, NotFoundError
+from robofleet.services.project import ProjectService, get_project_service
+from robofleet.utils.crypto import EncryptionError
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -465,7 +465,7 @@ async def test_create_project_encryption_error(project_setup: dict) -> None:
     pd["git_token"] = "ghp_test"
     with (
         patch(
-            "roboco.services.project.encrypt_token",
+            "robofleet.services.project.encrypt_token",
             side_effect=EncryptionError("bad key"),
         ),
         pytest.raises(EncryptionError),
@@ -505,7 +505,7 @@ async def test_update_project_token_encryption_error(
     )
     with (
         patch(
-            "roboco.services.project.encrypt_token",
+            "robofleet.services.project.encrypt_token",
             side_effect=EncryptionError("bad"),
         ),
         pytest.raises(EncryptionError),
@@ -568,7 +568,7 @@ async def test_delete_project_with_active_work_session(
 
     with (
         patch(
-            "roboco.services.work_session.get_work_session_service",
+            "robofleet.services.work_session.get_work_session_service",
             return_value=mock_ws_svc,
         ),
         patch.object(svc.session, "execute", side_effect=_intercepting_execute),
@@ -594,7 +594,7 @@ async def test_delete_project_with_workspace_cleanup(
     mock_ws_svc = AsyncMock()
     mock_ws_svc.list_workspaces = AsyncMock(return_value=[{"path": str(fake_path)}])
     with patch(
-        "roboco.services.workspace.get_workspace_service",
+        "robofleet.services.workspace.get_workspace_service",
         return_value=mock_ws_svc,
     ):
         result = await svc.delete(project.id, delete_workspaces=True)
@@ -616,7 +616,7 @@ async def test_delete_project_workspace_cleanup_failure_logged(
     mock_ws = AsyncMock()
     mock_ws.list_workspaces = AsyncMock(side_effect=RuntimeError("boom"))
     with patch(
-        "roboco.services.workspace.get_workspace_service",
+        "robofleet.services.workspace.get_workspace_service",
         return_value=mock_ws,
     ):
         # delete_workspaces=True; exception swallowed inside the try.
@@ -677,7 +677,7 @@ async def test_get_decrypted_token_decryption_error(
     project = await svc.create(ProjectCreate(**pd), project_setup["creator_id"])
     with (
         patch(
-            "roboco.services.project.decrypt_token",
+            "robofleet.services.project.decrypt_token",
             side_effect=EncryptionError("corrupt"),
         ),
         pytest.raises(EncryptionError),
@@ -704,7 +704,7 @@ async def test_get_decrypted_token_by_slug_decryption_error(
     await svc.create(ProjectCreate(**pd), project_setup["creator_id"])
     with (
         patch(
-            "roboco.services.project.decrypt_token",
+            "robofleet.services.project.decrypt_token",
             side_effect=EncryptionError("corrupt"),
         ),
         pytest.raises(EncryptionError),

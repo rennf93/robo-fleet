@@ -29,8 +29,8 @@ from uuid import uuid4
 
 import httpx
 import pytest
-from roboco.services.forge.base import RepoRef
-from roboco.services.forge.gitlab import GitLabProvider
+from robofleet.services.forge.base import RepoRef
+from robofleet.services.forge.gitlab import GitLabProvider
 
 if TYPE_CHECKING:
     from pathlib import Path

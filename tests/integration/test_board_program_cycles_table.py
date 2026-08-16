@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.db.tables import BoardProgramCycleTable
+from robofleet.db.tables import BoardProgramCycleTable
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

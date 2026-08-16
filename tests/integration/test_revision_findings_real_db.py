@@ -16,10 +16,10 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
-from roboco.foundation.policy.content import Finding, Severity
-from roboco.foundation.policy.lifecycle import Status
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
+from robofleet.foundation.policy.content import Finding, Severity
+from robofleet.foundation.policy.lifecycle import Status
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     TaskNature,
@@ -27,16 +27,16 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.seeds.initial_data import AGENT_UUIDS
-from roboco.services.base import ValidationError
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.repositories.review_findings import (
+from robofleet.seeds.initial_data import AGENT_UUIDS
+from robofleet.services.base import ValidationError
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.repositories.review_findings import (
     STATUS_ADDRESSED,
     STATUS_OPEN,
     STATUS_VERIFIED,
     ReviewFindingsRepository,
 )
-from roboco.services.task import TaskService
+from robofleet.services.task import TaskService
 from sqlalchemy import select
 
 if TYPE_CHECKING:
@@ -138,7 +138,7 @@ class _StubGit:
         self, *, branch_name: str, base: Any = None, actor_agent_id: Any = None
     ) -> list[str]:
         del branch_name, base, actor_agent_id
-        return ["roboco/api/routes/health.py"]
+        return ["robofleet/api/routes/health.py"]
 
     async def diff_and_files(
         self,
@@ -214,7 +214,7 @@ def _mock_journal_with_reflect() -> Any:
 
 def _mock_work_session() -> Any:
     ws = AsyncMock()
-    ws.files_changed.return_value = ["roboco/api/routes/health.py"]
+    ws.files_changed.return_value = ["robofleet/api/routes/health.py"]
     ws.has_unpushed_commits.return_value = False
     return ws
 
@@ -411,7 +411,7 @@ async def test_fail_review_persists_findings_round1_and_qa_notes(
         task.id,
         findings=[
             {
-                "file": "roboco/api/routes/health.py",
+                "file": "robofleet/api/routes/health.py",
                 "line": 12,
                 "severity": "major",
                 "expected": "returns 200",
@@ -565,7 +565,7 @@ async def test_pr_fail_persists_findings_and_pr_reviewer_notes(
         task.id,
         findings=[
             {
-                "file": "roboco/api/routes/health.py",
+                "file": "robofleet/api/routes/health.py",
                 "severity": "blocker",
                 "expected": "task_id is a UUID",
                 "actual": "FE sends task_id as a string",
@@ -877,7 +877,7 @@ async def test_fail_review_merges_findings_and_issues_instead_of_dropping_one(
         task.id,
         findings=[
             {
-                "file": "roboco/api/routes/health.py",
+                "file": "robofleet/api/routes/health.py",
                 "severity": "major",
                 "expected": "returns 200",
                 "actual": "returns 500 on the timestamp branch",

@@ -24,7 +24,7 @@ on:
       - 'docs/**'
       - 'hotfix/**'
     paths:
-      - 'roboco/**'
+      - 'robofleet/**'
       - 'agents/**'
       - 'alembic/**'
       - 'tests/**'
@@ -62,7 +62,7 @@ on:
       # of the head's name makes coverage independent of branch naming.
       - slave
     paths:
-      - 'roboco/**'
+      - 'robofleet/**'
       - 'agents/**'
       - 'alembic/**'
       - 'tests/**'

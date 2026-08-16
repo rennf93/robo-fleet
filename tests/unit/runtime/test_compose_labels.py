@@ -1,4 +1,4 @@
-"""roboco.runtime.compose_labels — self-id + cached compose-project discovery.
+"""robofleet.runtime.compose_labels — self-id + cached compose-project discovery.
 
 Every docker-run site splices ``compose_label_args(service)`` in; on a dev
 machine / CI runner / the eval harness (never a compose-managed container)
@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.runtime import compose_labels
+from robofleet.runtime import compose_labels
 
 if TYPE_CHECKING:
     from pathlib import Path

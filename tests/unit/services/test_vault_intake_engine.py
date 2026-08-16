@@ -15,20 +15,20 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings as cfg
-from roboco.db.tables import AgentTable, ProjectTable, VaultSeenNoteTable
-from roboco.foundation import identity as _foundation
-from roboco.models.base import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import AgentTable, ProjectTable, VaultSeenNoteTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     TaskType,
     Team,
 )
-from roboco.models.base import TaskStatus as TS
-from roboco.runtime.orchestrator import AgentOrchestrator, _is_held_ceo_source
-from roboco.services import vault_intake_engine as vie_module
-from roboco.services.task import VAULT_NOTE_SOURCE, get_task_service
-from roboco.services.vault_intake_engine import VaultIntakeEngine
+from robofleet.models.base import TaskStatus as TS
+from robofleet.runtime.orchestrator import AgentOrchestrator, _is_held_ceo_source
+from robofleet.services import vault_intake_engine as vie_module
+from robofleet.services.task import VAULT_NOTE_SOURCE, get_task_service
+from robofleet.services.vault_intake_engine import VaultIntakeEngine
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 

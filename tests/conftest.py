@@ -10,7 +10,7 @@ Why Postgres and not SQLite:
     cannot compile those via `Base.metadata.create_all`, and migration
     006_gateway_columns adds `acceptance_criteria_status` /
     `qa_evidence_inspected` as JSON+Boolean columns that the current ORM
-    model in `roboco/db/tables.py` does NOT yet map (a pre-existing layer
+    model in `robofleet/db/tables.py` does NOT yet map (a pre-existing layer
     drift). The honest path is to spin up a real Postgres test database,
     build the schema via `Base.metadata.create_all` (sidestepping pre-existing
     alembic drift in 001's enum casing and 008's nonexistent `agents.skills`
@@ -48,10 +48,10 @@ import asyncpg
 import pytest
 import pytest_asyncio
 from cryptography.fernet import Fernet
-from roboco.config import settings as _settings
-from roboco.db import tables as roboco_tables
-from roboco.db.base import Base, close_db
-from roboco.db.tables import (
+from robofleet.config import settings as _settings
+from robofleet.db import tables as roboco_tables
+from robofleet.db.base import Base, close_db
+from robofleet.db.tables import (
     AgentTable,
     AuditLogTable,
     JournalEntryTable,
@@ -59,7 +59,7 @@ from roboco.db.tables import (
     ProjectTable,
     TaskTable,
 )
-from roboco.models.base import (
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -185,7 +185,7 @@ _warn_if_pg_unavailable(_PG_AVAILABLE, _TEST_DB_HOST, _TEST_DB_PORT)
 # Sanity-check imported tables registered themselves on Base.metadata. Tied to
 # `roboco_tables` so static analysis treats the import as load-bearing.
 if not hasattr(roboco_tables, "TaskTable"):
-    raise RuntimeError("roboco.db.tables failed to register TaskTable on Base")
+    raise RuntimeError("robofleet.db.tables failed to register TaskTable on Base")
 
 
 def _build_url(database: str) -> str:

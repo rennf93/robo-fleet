@@ -18,15 +18,15 @@ import asyncio
 from typing import Any
 
 import pytest
-from roboco.mcp.optimal_server import normalize_index_types
-from roboco.models.optimal import IndexType
-from roboco.services import optimal as optimal_module
-from roboco.services.optimal import (
+from robofleet.mcp.optimal_server import normalize_index_types
+from robofleet.models.optimal import IndexType
+from robofleet.services import optimal as optimal_module
+from robofleet.services.optimal import (
     OptimalService,
     close_optimal_service,
     get_optimal_service,
 )
-from roboco.services.optimal_brain.indexes.base import BaseIndexPlugin
+from robofleet.services.optimal_brain.indexes.base import BaseIndexPlugin
 
 # ---------------------------------------------------------------------------
 # Sub-issue 2: kb_search must not forward the invalid 'docs' alias

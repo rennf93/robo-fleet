@@ -12,10 +12,10 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
-from roboco.services.product import ProductService
+from robofleet.services.product import ProductService
 
 if TYPE_CHECKING:
-    from roboco.db.tables import ProductTable
+    from robofleet.db.tables import ProductTable
 
 _PRODUCT_A = UUID("11111111-1111-1111-1111-111111111111")
 _PRODUCT_B = UUID("22222222-2222-2222-2222-222222222222")

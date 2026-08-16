@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from roboco.db.seed import bootstrap_database, create_agents
+from robofleet.db.seed import bootstrap_database, create_agents
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -42,10 +42,10 @@ async def test_bootstrap_database_invokes_full_pipeline() -> None:
         yield fake_session
 
     with (
-        patch("roboco.db.seed.init_db", AsyncMock()) as mock_init,
-        patch("roboco.db.seed.get_db_context", _ctx),
+        patch("robofleet.db.seed.init_db", AsyncMock()) as mock_init,
+        patch("robofleet.db.seed.get_db_context", _ctx),
         patch(
-            "roboco.db.seed.create_agents",
+            "robofleet.db.seed.create_agents",
             AsyncMock(return_value={"be-dev-1": "id"}),
         ) as mock_ag,
     ):

@@ -24,7 +24,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.git import GitService
+from robofleet.services.git import GitService
 
 _WORKSPACE = Path("/tmp/fake-ws")
 _TASK_ID = uuid4()

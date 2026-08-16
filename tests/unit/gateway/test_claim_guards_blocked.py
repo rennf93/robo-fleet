@@ -8,7 +8,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-from roboco.services.gateway.claim_guards import already_active_guard
+from robofleet.services.gateway.claim_guards import already_active_guard
 
 
 def _task(*, status: str) -> MagicMock:

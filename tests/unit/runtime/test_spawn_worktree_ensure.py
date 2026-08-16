@@ -21,9 +21,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models.runtime import SpawnGitContext
-from roboco.runtime.orchestrator import AgentOrchestrator, AgentReadinessError
-from roboco.services.workspace import WorkspaceError
+from robofleet.models.runtime import SpawnGitContext
+from robofleet.runtime.orchestrator import AgentOrchestrator, AgentReadinessError
+from robofleet.services.workspace import WorkspaceError
 
 
 def _make_orchestrator() -> AgentOrchestrator:
@@ -55,10 +55,10 @@ async def test_ensures_worktree_when_task_short_id_set() -> None:
     ws.ensure_workspace = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_db_context", return_value=_fake_db_ctx(db)),
-        patch("roboco.services.workspace.WorkspaceService", return_value=ws),
+        patch("robofleet.db.base.get_db_context", return_value=_fake_db_ctx(db)),
+        patch("robofleet.services.workspace.WorkspaceService", return_value=ws),
         patch(
-            "roboco.services.workspace.WorkspaceService._is_workspace_healthy",
+            "robofleet.services.workspace.WorkspaceService._is_workspace_healthy",
             return_value=True,
         ),
     ):
@@ -91,10 +91,12 @@ async def test_reader_role_classified_as_non_author_for_refresh() -> None:
     ws.ensure_workspace = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())),
-        patch("roboco.services.workspace.WorkspaceService", return_value=ws),
         patch(
-            "roboco.services.workspace.WorkspaceService._is_workspace_healthy",
+            "robofleet.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())
+        ),
+        patch("robofleet.services.workspace.WorkspaceService", return_value=ws),
+        patch(
+            "robofleet.services.workspace.WorkspaceService._is_workspace_healthy",
             return_value=True,
         ),
     ):
@@ -117,10 +119,12 @@ async def test_heals_missing_clone_before_self_heal() -> None:
     ws.ensure_workspace = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())),
-        patch("roboco.services.workspace.WorkspaceService", return_value=ws),
         patch(
-            "roboco.services.workspace.WorkspaceService._is_workspace_healthy",
+            "robofleet.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())
+        ),
+        patch("robofleet.services.workspace.WorkspaceService", return_value=ws),
+        patch(
+            "robofleet.services.workspace.WorkspaceService._is_workspace_healthy",
             return_value=False,
         ),
     ):
@@ -143,8 +147,8 @@ async def test_noop_when_no_task_short_id() -> None:
     ws.ensure_worktree_self_heal = AsyncMock()
     ws.ensure_workspace = AsyncMock()
     with (
-        patch("roboco.db.base.get_db_context", return_value=_fake_db_ctx(db)),
-        patch("roboco.services.workspace.WorkspaceService", return_value=ws),
+        patch("robofleet.db.base.get_db_context", return_value=_fake_db_ctx(db)),
+        patch("robofleet.services.workspace.WorkspaceService", return_value=ws),
     ):
         await orch._ensure_worktree_before_spawn(
             ctx, "roboco-api", "backend", "be-dev-1", "task-1"
@@ -171,10 +175,12 @@ async def test_fatal_failure_releases_claim_and_aborts() -> None:
     ws.ensure_workspace = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())),
-        patch("roboco.services.workspace.WorkspaceService", return_value=ws),
         patch(
-            "roboco.services.workspace.WorkspaceService._is_workspace_healthy",
+            "robofleet.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())
+        ),
+        patch("robofleet.services.workspace.WorkspaceService", return_value=ws),
+        patch(
+            "robofleet.services.workspace.WorkspaceService._is_workspace_healthy",
             return_value=True,
         ),
         pytest.raises(AgentReadinessError, match="worktree ensure failed"),
@@ -201,10 +207,12 @@ async def test_transient_failure_aborts_without_release() -> None:
     ws.ensure_workspace = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())),
-        patch("roboco.services.workspace.WorkspaceService", return_value=ws),
         patch(
-            "roboco.services.workspace.WorkspaceService._is_workspace_healthy",
+            "robofleet.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())
+        ),
+        patch("robofleet.services.workspace.WorkspaceService", return_value=ws),
+        patch(
+            "robofleet.services.workspace.WorkspaceService._is_workspace_healthy",
             return_value=True,
         ),
         pytest.raises(AgentReadinessError, match="transient"),
@@ -229,10 +237,12 @@ async def test_recoverable_ensure_no_raise_no_release() -> None:
     ws.ensure_workspace = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())),
-        patch("roboco.services.workspace.WorkspaceService", return_value=ws),
         patch(
-            "roboco.services.workspace.WorkspaceService._is_workspace_healthy",
+            "robofleet.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())
+        ),
+        patch("robofleet.services.workspace.WorkspaceService", return_value=ws),
+        patch(
+            "robofleet.services.workspace.WorkspaceService._is_workspace_healthy",
             return_value=True,
         ),
     ):

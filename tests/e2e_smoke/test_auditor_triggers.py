@@ -23,10 +23,10 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
 import httpx
-from roboco.config import settings
-from roboco.models import NotificationType
-from roboco.models.base import TaskStatus
-from roboco.runtime.orchestrator import _SYSTEM_API_HEADERS, AgentOrchestrator
+from robofleet.config import settings
+from robofleet.models import NotificationType
+from robofleet.models.base import TaskStatus
+from robofleet.runtime.orchestrator import _SYSTEM_API_HEADERS, AgentOrchestrator
 from tests.e2e_smoke.arcs import seed_company, seed_project, seed_task
 
 if TYPE_CHECKING:
@@ -47,9 +47,9 @@ def _seed_auditor_agent(stack: E2EStack) -> UUID:
     ``_resolve_agent_slug`` maps this UUID to ``"auditor"`` so the orchestrator
     recognises auditor-targeted notifications and spawns the right role.
     """
-    from roboco.db.tables import AgentTable
-    from roboco.foundation import identity as _foundation
-    from roboco.models import AgentRole, AgentStatus
+    from robofleet.db.tables import AgentTable
+    from robofleet.foundation import identity as _foundation
+    from robofleet.models import AgentRole, AgentStatus
 
     async def _run(session: AsyncSession) -> UUID:
         auditor_id = _foundation.AGENTS["auditor"].uuid
@@ -78,7 +78,7 @@ def _seed_auditor_agent(stack: E2EStack) -> UUID:
 def _notifications_for_task(
     stack: E2EStack, task_id: Any, notification_type: Any
 ) -> list[dict[str, Any]]:
-    from roboco.db.tables import NotificationTable
+    from robofleet.db.tables import NotificationTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> list[dict[str, Any]]:
@@ -235,7 +235,7 @@ def test_reactive_alert_producer_spawns_auditor(
     # this ack the per-alert cooldown only paced a rotation through every
     # stale not-fully-acked alert — the loop being fixed.
     async def _acked_by_auditor(session: AsyncSession) -> bool:
-        from roboco.db.tables import NotificationTable
+        from robofleet.db.tables import NotificationTable
         from sqlalchemy import select
 
         row = (

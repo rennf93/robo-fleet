@@ -1,4 +1,4 @@
-"""roboco.llm.toon_adapter coverage — encode/decode/format helpers.
+"""robofleet.llm.toon_adapter coverage — encode/decode/format helpers.
 
 The adapter is a thin wrapper around the `toon` library — tests cover
 the wrapper logic: dict/list/Pydantic encoding, JSON fallback on TOON
@@ -13,8 +13,8 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
-from roboco.llm.toon_adapter import ToonAdapter, _AdapterHolder, get_toon_adapter
-from roboco.models.llm import ToonConfig
+from robofleet.llm.toon_adapter import ToonAdapter, _AdapterHolder, get_toon_adapter
+from robofleet.models.llm import ToonConfig
 
 _PERCENT_FLOOR = 0.0
 
@@ -65,7 +65,9 @@ def test_decode_json_fallback_when_toon_fails() -> None:
     """When TOON decode raises, JSON fallback kicks in."""
     adapter = ToonAdapter()
     raw = json.dumps({"a": 1})
-    with patch("roboco.llm.toon_adapter.toon.decode", side_effect=ValueError("nope")):
+    with patch(
+        "robofleet.llm.toon_adapter.toon.decode", side_effect=ValueError("nope")
+    ):
         out = adapter.decode(raw)
     assert out == {"a": 1}
 
@@ -73,7 +75,7 @@ def test_decode_json_fallback_when_toon_fails() -> None:
 def test_decode_raises_when_both_toon_and_json_fail() -> None:
     adapter = ToonAdapter()
     with (
-        patch("roboco.llm.toon_adapter.toon.decode", side_effect=ValueError("nope")),
+        patch("robofleet.llm.toon_adapter.toon.decode", side_effect=ValueError("nope")),
         pytest.raises(ValueError, match="Failed to decode"),
     ):
         adapter.decode("this is neither toon nor json")
@@ -130,7 +132,7 @@ def test_estimate_token_savings_handles_zero_json_chars() -> None:
     """Empty data: JSON is `{}` (2 chars) so the divide-by-zero branch is
     only reachable by mocking. Cover the guard explicitly."""
     adapter = ToonAdapter()
-    with patch("roboco.llm.toon_adapter.json.dumps", return_value=""):
+    with patch("robofleet.llm.toon_adapter.json.dumps", return_value=""):
         json_chars, _toon_chars, savings = adapter.estimate_token_savings({})
     assert json_chars == 0
     assert savings == _PERCENT_FLOOR

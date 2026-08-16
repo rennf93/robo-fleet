@@ -13,11 +13,11 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.config import settings
-from roboco.services import vault_assembly
-from roboco.services.vault_assembly import assemble_task_note_data
-from roboco.services.vault_janitor import VaultJanitor, _iso_week
-from roboco.services.vault_writer import TaskNoteData, VaultWriter
+from robofleet.config import settings
+from robofleet.services import vault_assembly
+from robofleet.services.vault_assembly import assemble_task_note_data
+from robofleet.services.vault_janitor import VaultJanitor, _iso_week
+from robofleet.services.vault_writer import TaskNoteData, VaultWriter
 
 _TASK_ID = "11112222-3333-4444-5555-666677778888"
 _TEST_CAP = 2
@@ -111,10 +111,10 @@ def _janitor(
     monkeypatch.setattr(settings, "obsidian_vault_enabled", True)
     monkeypatch.setattr(settings, "vault_path", str(vault))
     monkeypatch.setattr(
-        "roboco.services.vault_janitor.get_task_service", lambda _s: task_svc
+        "robofleet.services.vault_janitor.get_task_service", lambda _s: task_svc
     )
     monkeypatch.setattr(
-        "roboco.services.vault_janitor.get_project_service", lambda _s: MagicMock()
+        "robofleet.services.vault_janitor.get_project_service", lambda _s: MagicMock()
     )
     return VaultJanitor(MagicMock())
 
@@ -265,7 +265,7 @@ async def test_capped_cycle_resumes_tail_next_cycle(
     the next (immediately due again) tick drains the tail — no misses."""
     monkeypatch.setattr(settings, "vault_report_enabled", False)
     monkeypatch.setattr(
-        "roboco.services.vault_janitor._MAX_REPROJECT_PER_CYCLE", _TEST_CAP
+        "robofleet.services.vault_janitor._MAX_REPROJECT_PER_CYCLE", _TEST_CAP
     )
     old = datetime.now(UTC) - timedelta(days=3)
     tasks = [
@@ -307,7 +307,7 @@ async def test_raising_item_is_skipped_counted_and_state_advances(
             raise OSError("boom")
         return await real(writer, tsvc, psvc, task)
 
-    with patch("roboco.services.vault_assembly.reproject_task", side_effect=flaky):
+    with patch("robofleet.services.vault_assembly.reproject_task", side_effect=flaky):
         result = await janitor.run_cycle()
 
     assert result["repaired"] == 1
@@ -328,7 +328,7 @@ async def test_capped_archive_advances_watermark_to_processed(
     next due sweep with no gap."""
     monkeypatch.setattr(settings, "vault_report_enabled", False)
     monkeypatch.setattr(settings, "vault_archive_days", 30)
-    monkeypatch.setattr("roboco.services.vault_janitor._MAX_ARCHIVE_PER_CYCLE", 1)
+    monkeypatch.setattr("robofleet.services.vault_janitor._MAX_ARCHIVE_PER_CYCLE", 1)
     oldest = datetime.now(UTC) - timedelta(days=100)
     older = datetime.now(UTC) - timedelta(days=90)
     tasks = [
@@ -444,12 +444,12 @@ async def test_weekly_report_written_once_per_week_and_notifies(
     janitor = _janitor(monkeypatch, tmp_path, task_svc)
     with (
         patch(
-            "roboco.services.metrics.get_metrics_service",
+            "robofleet.services.metrics.get_metrics_service",
             return_value=_metrics_stub(),
         ),
-        patch("roboco.services.usage.get_usage_service", return_value=usage_svc),
+        patch("robofleet.services.usage.get_usage_service", return_value=usage_svc),
         patch(
-            "roboco.services.notification.NotificationService", return_value=notifier
+            "robofleet.services.notification.NotificationService", return_value=notifier
         ),
     ):
         await janitor.run_cycle()
@@ -490,12 +490,12 @@ async def test_weekly_report_notification_failure_never_fails_sweep(
     janitor = _janitor(monkeypatch, tmp_path, _TaskSvcStub())
     with (
         patch(
-            "roboco.services.metrics.get_metrics_service",
+            "robofleet.services.metrics.get_metrics_service",
             return_value=_metrics_stub(),
         ),
-        patch("roboco.services.usage.get_usage_service", return_value=usage_svc),
+        patch("robofleet.services.usage.get_usage_service", return_value=usage_svc),
         patch(
-            "roboco.services.notification.NotificationService", return_value=notifier
+            "robofleet.services.notification.NotificationService", return_value=notifier
         ),
     ):
         await janitor.run_cycle()

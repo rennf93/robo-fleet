@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 from unittest import mock
 
-from roboco.config import Settings
-from roboco.services.settings import FEATURE_FLAGS, validate_setting
+from robofleet.config import Settings
+from robofleet.services.settings import FEATURE_FLAGS, validate_setting
 
 _DEFAULT_TOP_K = 3
 _DEFAULT_MIN_SCORE = 0.6

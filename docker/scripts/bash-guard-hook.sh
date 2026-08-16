@@ -239,7 +239,7 @@ fi
 #              headers={"X-Agent-ID": "<self>", "X-Agent-Role": "developer"})
 #   EOF
 # The binary is python3 (slips the CLI check) and it imports httpx, not
-# roboco.* (slips the roboco-internals import check). Close it language-agnostically:
+# robofleet.* (slips the roboco-internals import check). Close it language-agnostically:
 # deny when the command pairs an HTTP-client token with a forbidden
 # internal host. The whole command (heredoc body included) is in $low,
 # consistent with the curl/wget sibling above. Legitimate shell work does
@@ -302,17 +302,17 @@ fi
 # --- gateway-internals import bypass ------------------------------------------
 # An agent must reach the orchestrator ONLY through its manifest-bound MCP
 # verbs. Importing the server package directly
-#   uv run python3 -c "from roboco.mcp.flow_server import open_pr; open_pr(...)"
-#   python3 << 'EOF' ... import roboco.services.gateway ... EOF
-#   python -m roboco.mcp.do_server
+#   uv run python3 -c "from robofleet.mcp.flow_server import open_pr; open_pr(...)"
+#   python3 << 'EOF' ... import robofleet.services.gateway ... EOF
+#   python -m robofleet.mcp.do_server
 # bypasses the per-role tool manifest entirely (role-scoping becomes
 # meaningless if the agent can call any verb in-process) and lets the agent
 # run choreographer/service code outside the gateway's tracing + auth.
 # The whole command string (heredoc body included) is in $low, so a flat
-# substring match on a roboco import is sufficient and robust to quoting.
+# substring match on a robofleet import is sufficient and robust to quoting.
 if echo "$low" | grep -qE '(python3?|uv[[:space:]]+run|poetry[[:space:]]+run|pipenv[[:space:]]+run|pdm[[:space:]]+run|hatch[[:space:]]+run)' && \
-   echo "$low" | grep -qE '(import[[:space:]]+roboco|from[[:space:]]+roboco|-m[[:space:]]+roboco|roboco\.(mcp|services|runtime|foundation|api|enforcement)\b)'; then
-    echo "Denied: importing or running roboco.* internals from the shell bypasses the MCP role manifest, tracing, and auth. Use your role's MCP verbs (roboco-flow / roboco-do / roboco-git-readonly / roboco-optimal / roboco-docs) — they are the only sanctioned path to the orchestrator." >&2
+   echo "$low" | grep -qE '(import[[:space:]]+robofleet|from[[:space:]]+robofleet|-m[[:space:]]+robofleet|robofleet\.(mcp|services|runtime|foundation|api|enforcement)\b)'; then
+    echo "Denied: importing or running robofleet.* internals from the shell bypasses the MCP role manifest, tracing, and auth. Use your role's MCP verbs (roboco-flow / roboco-do / roboco-git-readonly / roboco-optimal / roboco-docs) — they are the only sanctioned path to the orchestrator." >&2
     exit 2
 fi
 

@@ -14,8 +14,8 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.config import settings
-from roboco.services.telemetry.source import MultiProjectCITelemetrySource
+from robofleet.config import settings
+from robofleet.services.telemetry.source import MultiProjectCITelemetrySource
 
 
 def _project(slug: str, workflow: str | None = None) -> MagicMock:
@@ -41,7 +41,7 @@ async def test_fanout_red_green_and_none() -> None:
 
     git = MagicMock()
     git.get_latest_ci_conclusion = AsyncMock(side_effect=conclusion)
-    with patch("roboco.services.telemetry.source.GitService", return_value=git):
+    with patch("robofleet.services.telemetry.source.GitService", return_value=git):
         samples = await MultiProjectCITelemetrySource(MagicMock()).fetch(projects)
 
     by_repo = {s.repo_hint: s for s in samples}
@@ -61,7 +61,7 @@ async def test_per_project_error_isolated() -> None:
 
     git = MagicMock()
     git.get_latest_ci_conclusion = AsyncMock(side_effect=conclusion)
-    with patch("roboco.services.telemetry.source.GitService", return_value=git):
+    with patch("robofleet.services.telemetry.source.GitService", return_value=git):
         samples = await MultiProjectCITelemetrySource(MagicMock()).fetch(projects)
 
     by_repo = {s.repo_hint: s for s in samples}
@@ -80,7 +80,7 @@ async def test_per_project_workflow_passthrough(
     ]
     git = MagicMock()
     git.get_latest_ci_conclusion = AsyncMock(return_value=_ci("success"))
-    with patch("roboco.services.telemetry.source.GitService", return_value=git):
+    with patch("robofleet.services.telemetry.source.GitService", return_value=git):
         await MultiProjectCITelemetrySource(MagicMock()).fetch(projects)
 
     workflows = {

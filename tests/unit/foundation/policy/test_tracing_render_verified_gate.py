@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from roboco.foundation.policy import tracing as tr
-from roboco.foundation.policy.content import markers
+from robofleet.foundation.policy import tracing as tr
+from robofleet.foundation.policy.content import markers
 
 
 def test_render_verified_is_required_by_i_am_done() -> None:

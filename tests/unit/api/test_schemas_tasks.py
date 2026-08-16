@@ -1,4 +1,4 @@
-"""roboco.api.schemas.tasks coverage — pure-Python conversion helpers.
+"""robofleet.api.schemas.tasks coverage — pure-Python conversion helpers.
 
 The route layer is owned by another agent; here we cover the pure
 data-mapping helpers: convert_plan, convert_checkpoints,
@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.api.schemas.docs import DocRefResponse
-from roboco.api.schemas.tasks import (
+from robofleet.api.schemas.docs import DocRefResponse
+from robofleet.api.schemas.tasks import (
     SubstituteRequest,
     TaskUpdate,
     _parse_uuid_list,
@@ -32,8 +32,8 @@ from roboco.api.schemas.tasks import (
     task_to_response,
     transform_update_data,
 )
-from roboco.db.tables import TaskTable
-from roboco.models.base import (
+from robofleet.db.tables import TaskTable
+from robofleet.models.base import (
     BlockerResolverType,
     Complexity,
     TaskNature,
@@ -41,8 +41,8 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.models.product import ProductCellMapping
-from roboco.runtime.orchestrator import AgentOrchestrator, _format_barfly_candidates
+from robofleet.models.product import ProductCellMapping
+from robofleet.runtime.orchestrator import AgentOrchestrator, _format_barfly_candidates
 from structlog.testing import capture_logs
 
 _ORDER_DEFAULT = 0
@@ -375,7 +375,7 @@ def _stub_task(
 def _response_for(stub: Any) -> Any:
     fake_inspector = MagicMock()
     fake_inspector.unloaded = {"project"}
-    with patch("roboco.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
+    with patch("robofleet.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
         return task_to_response(stub)
 
 
@@ -414,7 +414,7 @@ def test_task_to_response_omits_slug_when_project_not_loaded() -> None:
     stub = _stub_task(with_project=False)
     fake_inspector = MagicMock()
     fake_inspector.unloaded = {"project"}
-    with patch("roboco.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
+    with patch("robofleet.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
         resp = task_to_response(stub)
     assert resp.project_slug is None
 
@@ -423,7 +423,7 @@ def test_task_to_response_includes_slug_when_project_loaded() -> None:
     stub = _stub_task(with_project=True)
     fake_inspector = MagicMock()
     fake_inspector.unloaded = set()  # project IS loaded
-    with patch("roboco.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
+    with patch("robofleet.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
         resp = task_to_response(stub)
     assert resp.project_slug == "proj-1"
 
@@ -441,7 +441,7 @@ def test_task_to_response_serializes_cell_projects_when_loaded() -> None:
     ]
     fake_inspector = MagicMock()
     fake_inspector.unloaded = set()  # cell_projects IS loaded
-    with patch("roboco.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
+    with patch("robofleet.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
         resp = task_to_response(stub)
     assert resp.cell_projects == [
         ProductCellMapping(team=Team.BACKEND, project_id=be_proj),
@@ -455,7 +455,7 @@ def test_task_to_response_omits_cell_projects_when_unloaded() -> None:
     stub = _stub_task()
     fake_inspector = MagicMock()
     fake_inspector.unloaded = {"cell_projects"}
-    with patch("roboco.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
+    with patch("robofleet.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
         resp = task_to_response(stub)
     assert resp.cell_projects == []
 
@@ -470,7 +470,7 @@ def test_task_to_response_serializes_all_note_sections() -> None:
     stub.notes_structured = {"pr_review": {"verdict": "passed"}}
     fake_inspector = MagicMock()
     fake_inspector.unloaded = {"project"}
-    with patch("roboco.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
+    with patch("robofleet.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
         resp = task_to_response(stub)
     assert resp.pr_reviewer_notes == "## Findings\n- looks good"
     assert resp.doc_notes == "Updated the README"
@@ -496,7 +496,7 @@ def test_task_to_response_serializes_documents() -> None:
     ]
     fake_inspector = MagicMock()
     fake_inspector.unloaded = {"project"}
-    with patch("roboco.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
+    with patch("robofleet.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
         resp = task_to_response(stub)
     assert resp.documents == [
         DocRefResponse(
@@ -519,7 +519,7 @@ def test_task_to_response_documents_defaults_empty() -> None:
     stub.documents = []
     fake_inspector = MagicMock()
     fake_inspector.unloaded = {"project"}
-    with patch("roboco.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
+    with patch("robofleet.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
         resp = task_to_response(stub)
     assert resp.documents == []
 
@@ -535,7 +535,7 @@ def test_task_list_to_response_returns_list() -> None:
     stubs = [_stub_task(), _stub_task()]
     fake_inspector = MagicMock()
     fake_inspector.unloaded = {"project"}
-    with patch("roboco.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
+    with patch("robofleet.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
         out = task_list_to_response(stubs)
     assert len(out) == len(stubs)
 
@@ -786,7 +786,7 @@ def _stub_response() -> Any:
     """Build a TaskResponse-like object that supports model_dump."""
     fake_inspector = MagicMock()
     fake_inspector.unloaded = {"project"}
-    with patch("roboco.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
+    with patch("robofleet.api.schemas.tasks.sa_inspect", return_value=fake_inspector):
         resp = task_to_response(_stub_task())
     return resp
 

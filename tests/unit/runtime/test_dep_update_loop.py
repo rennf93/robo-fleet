@@ -12,8 +12,8 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.config import settings
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _orch() -> Any:
@@ -38,7 +38,7 @@ async def test_load_set_filters_command_one_per_repo() -> None:
     off = MagicMock(slug="c", git_url="https://x/c.git", dep_update_command=None)
     svc = MagicMock()
     svc.list_all = AsyncMock(return_value=[on_a, on_a2, off])
-    with patch("roboco.services.project.get_project_service", return_value=svc):
+    with patch("robofleet.services.project.get_project_service", return_value=svc):
         eligible = await orch._load_dep_update_set(MagicMock())
     assert len(eligible) == 1  # no-command excluded; same-repo + same-command collapsed
     assert eligible[0].git_url == "https://x/a.git"
@@ -61,7 +61,7 @@ async def test_load_set_keeps_distinct_commands_per_repo() -> None:
     )
     svc = MagicMock()
     svc.list_all = AsyncMock(return_value=[be, fe])
-    with patch("roboco.services.project.get_project_service", return_value=svc):
+    with patch("robofleet.services.project.get_project_service", return_value=svc):
         eligible = await orch._load_dep_update_set(MagicMock())
     # distinct commands both probed, NOT collapsed to one canonical cell —
     # the set-equality assertion proves exactly-two (no magic-value literal).
@@ -83,8 +83,8 @@ async def test_cycle_warns_and_skips_engine_when_empty() -> None:
     orch._load_dep_update_set = AsyncMock(return_value=[])
     get_eng = MagicMock()
     with (
-        patch("roboco.db.get_db_context", _db_ctx(MagicMock())),
-        patch("roboco.services.dep_update_engine.get_dep_update_engine", get_eng),
+        patch("robofleet.db.get_db_context", _db_ctx(MagicMock())),
+        patch("robofleet.services.dep_update_engine.get_dep_update_engine", get_eng),
     ):
         await orch._run_dep_update_cycle()
     get_eng.assert_not_called()
@@ -100,9 +100,9 @@ async def test_cycle_runs_engine_when_eligible_present() -> None:
     engine = MagicMock()
     engine.run_cycle = AsyncMock(return_value=[])
     with (
-        patch("roboco.db.get_db_context", _db_ctx(db)),
+        patch("robofleet.db.get_db_context", _db_ctx(db)),
         patch(
-            "roboco.services.dep_update_engine.get_dep_update_engine",
+            "robofleet.services.dep_update_engine.get_dep_update_engine",
             return_value=engine,
         ) as get_eng,
     ):

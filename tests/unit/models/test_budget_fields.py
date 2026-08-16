@@ -14,9 +14,9 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
-from roboco.models.base import Team
-from roboco.models.project import Project, ProjectCreate, ProjectUpdate
-from roboco.models.task import Task, TaskUpdate
+from robofleet.models.base import Team
+from robofleet.models.project import Project, ProjectCreate, ProjectUpdate
+from robofleet.models.task import Task, TaskUpdate
 
 
 def _task(budget_usd: float | None = None) -> Task:
@@ -66,7 +66,7 @@ def test_task_rejects_negative_budget_usd() -> None:
 
 
 # ---------------------------------------------------------------------------
-# roboco.models.task.TaskUpdate.budget_usd (domain update model)
+# robofleet.models.task.TaskUpdate.budget_usd (domain update model)
 # ---------------------------------------------------------------------------
 
 

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import pytest
-from roboco.agents_config import can_a2a_direct
-from roboco.enforcement.a2a_access import (
+from robofleet.agents_config import can_a2a_direct
+from robofleet.enforcement.a2a_access import (
     A2AAccessDeniedError,
     get_a2a_allowed_targets,
     validate_a2a_access,
 )
-from roboco.foundation.policy.communications import NO_COMMS_ROLES
+from robofleet.foundation.policy.communications import NO_COMMS_ROLES
 
 
 def test_validate_a2a_self_a2a_denied() -> None:

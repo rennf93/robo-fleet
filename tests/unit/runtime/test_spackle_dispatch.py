@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.services.task import SPACKLE_SOURCE
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.services.task import SPACKLE_SOURCE
 
 
 def _make_orch() -> AgentOrchestrator:

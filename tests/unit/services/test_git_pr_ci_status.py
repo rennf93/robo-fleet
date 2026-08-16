@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-from roboco.services.git import GitService
+from robofleet.services.git import GitService
 
 _PR = 42
 _SHA = "deadbeefcafebabe0000111122223333aaaabbbb"
@@ -57,7 +57,7 @@ def _patch_project() -> Any:
     fake.get_by_slug = AsyncMock(
         return_value=MagicMock(git_url="https://github.com/acme/repo.git")
     )
-    return patch("roboco.services.git.get_project_service", return_value=fake)
+    return patch("robofleet.services.git.get_project_service", return_value=fake)
 
 
 def _pr_head_resp() -> MagicMock:
@@ -87,7 +87,7 @@ async def test_all_checks_green_is_success() -> None:
     client = _client(_pr_head_resp(), checks)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "success", "head_sha": _SHA}
@@ -107,7 +107,7 @@ async def test_failing_check_names_it() -> None:
     client = _client(_pr_head_resp(), checks)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out is not None
@@ -143,7 +143,7 @@ async def test_cancelled_duplicate_run_superseded_by_newer_green() -> None:
     client = _client(_pr_head_resp(), checks)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "success", "head_sha": _SHA}
@@ -175,7 +175,7 @@ async def test_newest_same_name_run_failing_still_fails() -> None:
     client = _client(_pr_head_resp(), checks)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out is not None
@@ -197,7 +197,7 @@ async def test_still_running_check_is_pending() -> None:
     client = _client(_pr_head_resp(), checks)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "pending", "head_sha": _SHA}
@@ -209,7 +209,7 @@ async def test_check_runs_api_error_is_error_state() -> None:
     client = _client(_pr_head_resp(), checks)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "error", "head_sha": _SHA}
@@ -222,7 +222,7 @@ async def test_zero_checks_with_no_workflows_is_no_ci_configured() -> None:
     client = _client(_pr_head_resp(), checks, workflows)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "no_ci_configured", "head_sha": _SHA}
@@ -235,7 +235,7 @@ async def test_zero_checks_with_workflows_configured_is_pending_not_scheduled() 
     client = _client(_pr_head_resp(), checks, workflows)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "pending_not_scheduled", "head_sha": _SHA}
@@ -261,7 +261,7 @@ async def test_no_ci_configured_on_missing_token() -> None:
 async def test_no_ci_configured_on_missing_project() -> None:
     fake = MagicMock()
     fake.get_by_slug = AsyncMock(return_value=None)
-    with patch("roboco.services.git.get_project_service", return_value=fake):
+    with patch("robofleet.services.git.get_project_service", return_value=fake):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "no_ci_configured", "head_sha": None}
 
@@ -273,7 +273,7 @@ async def test_no_ci_configured_when_pr_lookup_404s() -> None:
     client = _client(pr_lookup)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "no_ci_configured", "head_sha": None}
@@ -289,7 +289,7 @@ async def test_no_ci_configured_when_pr_lookup_unreachable() -> None:
     client.get = AsyncMock(side_effect=httpx.ConnectError("connection refused"))
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "no_ci_configured", "head_sha": None}
@@ -310,7 +310,7 @@ async def test_error_when_pr_lookup_api_fails_on_real_repo() -> None:
     client = _client(pr_lookup)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "error", "head_sha": None}
@@ -322,7 +322,7 @@ async def test_error_when_pr_lookup_body_unparseable() -> None:
     client = _client(pr_lookup)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "error", "head_sha": None}
@@ -335,7 +335,7 @@ async def test_workflows_api_error_after_zero_checks_is_error_state() -> None:
     client = _client(_pr_head_resp(), checks, workflows)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "error", "head_sha": _SHA}
@@ -355,7 +355,7 @@ async def test_no_ci_configured_when_check_runs_404s() -> None:
     client = _client(_pr_head_resp(), checks)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "no_ci_configured", "head_sha": _SHA}
@@ -371,7 +371,7 @@ async def test_error_when_check_runs_request_times_out() -> None:
     )
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "error", "head_sha": _SHA}
@@ -384,7 +384,7 @@ async def test_no_ci_configured_when_workflows_404s() -> None:
     client = _client(_pr_head_resp(), checks, workflows)
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "no_ci_configured", "head_sha": _SHA}
@@ -401,7 +401,7 @@ async def test_error_when_workflows_request_times_out() -> None:
     )
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await _service().get_pr_ci_status("roboco", _PR)
     assert out == {"state": "error", "head_sha": _SHA}

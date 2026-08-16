@@ -13,19 +13,24 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_current_agent_slug, get_db
-from roboco.api.routes.a2a import router as a2a_router
-from roboco.api.routes.a2a import wellknown_router
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.enforcement import A2AAccessDeniedError
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.a2a import A2AAdminPairSummary, A2ATask, A2ATaskState, A2ATaskStatus
-from roboco.models.base import (
+from robofleet.api.deps import get_agent_context, get_current_agent_slug, get_db
+from robofleet.api.routes.a2a import router as a2a_router
+from robofleet.api.routes.a2a import wellknown_router
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.enforcement import A2AAccessDeniedError
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.a2a import (
+    A2AAdminPairSummary,
+    A2ATask,
+    A2ATaskState,
+    A2ATaskStatus,
+)
+from robofleet.models.base import (
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.permissions import AgentContext
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator
@@ -301,7 +306,7 @@ async def test_send_message_with_task_id_response(a2a_route_client: dict) -> Non
     """is_response=True path."""
 
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.update_task_from_message = AsyncMock(return_value=None)
         mock_service_cls.return_value = instance
@@ -326,7 +331,7 @@ async def test_send_message_response_invalid_task_id(
     a2a_route_client: dict,
 ) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.update_task_from_message = AsyncMock(
             side_effect=ValueError("Invalid task ID format")
@@ -352,7 +357,7 @@ async def test_send_message_response_task_not_found(
     a2a_route_client: dict,
 ) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.update_task_from_message = AsyncMock(
             side_effect=ValueError("Task missing")
@@ -378,7 +383,7 @@ async def test_send_message_create_notification_success(
     a2a_route_client: dict,
 ) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.create_a2a_notification = AsyncMock(
             return_value={"to_agent": "be-qa-1"}
@@ -401,7 +406,7 @@ async def test_send_message_create_notification_success(
 @pytest.mark.asyncio
 async def test_send_message_permission_error(a2a_route_client: dict) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.create_a2a_notification = AsyncMock(
             side_effect=ValueError("Not allowed to send. Hint: Use escalation")
@@ -424,7 +429,7 @@ async def test_send_message_permission_error(a2a_route_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_send_message_value_error(a2a_route_client: dict) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.create_a2a_notification = AsyncMock(side_effect=ValueError("Bad data"))
         mock_service_cls.return_value = instance
@@ -460,7 +465,7 @@ async def test_cancel_task_success(a2a_route_client: dict) -> None:
     )
     client = a2a_route_client["client"]
     _set_pm_context(a2a_route_client["app"], a2a_route_client["dev"])
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.cancel_task = AsyncMock(return_value=a2a_task)
         mock_service_cls.return_value = instance
@@ -480,7 +485,7 @@ async def test_cancel_task_success(a2a_route_client: dict) -> None:
 async def test_cancel_task_already_terminal(a2a_route_client: dict) -> None:
     client = a2a_route_client["client"]
     _set_pm_context(a2a_route_client["app"], a2a_route_client["dev"])
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.cancel_task = AsyncMock(
             side_effect=ValueError("Task already in terminal state")
@@ -497,7 +502,7 @@ async def test_cancel_task_already_terminal(a2a_route_client: dict) -> None:
 async def test_cancel_task_not_found(a2a_route_client: dict) -> None:
     client = a2a_route_client["client"]
     _set_pm_context(a2a_route_client["app"], a2a_route_client["dev"])
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.cancel_task = AsyncMock(side_effect=ValueError("Task missing"))
         mock_service_cls.return_value = instance
@@ -522,7 +527,7 @@ async def test_cancel_task_developer_role_forbidden(a2a_route_client: dict) -> N
     caller could cancel any task tree (#423). Now PM/management-only."""
     client = a2a_route_client["client"]
     # default fixture context = developer
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.cancel_task = AsyncMock()
         mock_service_cls.return_value = instance
@@ -559,7 +564,7 @@ async def test_cancel_task_pm_passes_actor_and_role_to_service(
     cell_pm role, so the audit trail recorded no real caller (#423)."""
     client = a2a_route_client["client"]
     _set_pm_context(a2a_route_client["app"], a2a_route_client["dev"])
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.cancel_task = AsyncMock(
             return_value=A2ATask.model_validate(
@@ -603,7 +608,7 @@ async def test_send_message_uses_authenticated_identity_not_client_from_agent(
     impersonate anyone (e.g. from_agent='ceo') in the task's notes and in the
     spawn/notification routed back to the original requester (#116)."""
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.update_task_from_message = AsyncMock(return_value=None)
         mock_service_cls.return_value = instance
@@ -631,7 +636,7 @@ async def test_chat_create_conversation_access_denied(
     a2a_route_client: dict,
 ) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_or_create_conversation = AsyncMock(
             side_effect=A2AAccessDeniedError(
@@ -660,7 +665,7 @@ async def test_chat_create_conversation_success(
 ) -> None:
     client = a2a_route_client["client"]
     conv_id = uuid4()
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         conv_obj = SimpleNamespace(
             id=conv_id,
@@ -698,7 +703,7 @@ async def test_chat_create_conversation_refresh_failed(
     a2a_route_client: dict,
 ) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         conv_obj = SimpleNamespace(
             id=uuid4(),
@@ -734,7 +739,7 @@ async def test_chat_create_conversation_refresh_failed(
 @pytest.mark.asyncio
 async def test_get_conversation_not_found(a2a_route_client: dict) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_conversation = AsyncMock(return_value=None)
         mock_service_cls.return_value = instance
@@ -748,7 +753,7 @@ async def test_get_conversation_not_found(a2a_route_client: dict) -> None:
 async def test_get_conversation_success(a2a_route_client: dict) -> None:
     client = a2a_route_client["client"]
     conv_id = uuid4()
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         conv_obj = SimpleNamespace(
             id=conv_id,
@@ -778,7 +783,7 @@ async def test_close_conversation_value_error(
     a2a_route_client: dict,
 ) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.close_conversation = AsyncMock(side_effect=ValueError("not found"))
         mock_service_cls.return_value = instance
@@ -793,7 +798,7 @@ async def test_close_conversation_value_error(
 @pytest.mark.asyncio
 async def test_close_conversation_success(a2a_route_client: dict) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.close_conversation = AsyncMock(return_value=None)
         mock_service_cls.return_value = instance
@@ -820,7 +825,7 @@ async def test_list_chat_messages(a2a_route_client: dict) -> None:
         created_at=datetime.now(UTC),
         edited_at=None,
     )
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         # Return one extra to simulate has_more
         instance.get_messages = AsyncMock(return_value=[msg, msg])
@@ -838,7 +843,7 @@ async def test_send_chat_message_value_error(
     a2a_route_client: dict,
 ) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.send_chat_message = AsyncMock(side_effect=ValueError("not found"))
         mock_service_cls.return_value = instance
@@ -865,7 +870,7 @@ async def test_send_chat_message_success(a2a_route_client: dict) -> None:
         created_at=datetime.now(UTC),
         edited_at=None,
     )
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.send_chat_message = AsyncMock(return_value=msg)
         mock_service_cls.return_value = instance
@@ -885,7 +890,7 @@ async def test_send_chat_message_over_budget_returns_403(
     service — the route must surface 403, not crash into a 500 or fall
     through to the ValueError->404 branch."""
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.send_chat_message = AsyncMock(
             side_effect=A2AAccessDeniedError(
@@ -909,7 +914,7 @@ async def test_send_chat_message_over_budget_returns_403(
 @pytest.mark.asyncio
 async def test_mark_read(a2a_route_client: dict) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.mark_read = AsyncMock(return_value=None)
         mock_service_cls.return_value = instance
@@ -923,7 +928,7 @@ async def test_mark_read(a2a_route_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_get_task_conversations(a2a_route_client: dict) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.list_conversations = AsyncMock(return_value=[])
         mock_service_cls.return_value = instance
@@ -937,7 +942,7 @@ async def test_get_task_conversations(a2a_route_client: dict) -> None:
 @pytest.mark.asyncio
 async def test_chat_list_with_status_filter(a2a_route_client: dict) -> None:
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.list_conversations = AsyncMock(return_value=[])
         mock_service_cls.return_value = instance
@@ -1033,7 +1038,7 @@ async def test_admin_list_conversations_as_ceo(a2a_route_client: dict) -> None:
     _set_ceo_context(app, dev)
 
     conv = _admin_conv_obj(conv_id=uuid4())
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.list_conversations_admin = AsyncMock(return_value=[conv])
         mock_service_cls.return_value = instance
@@ -1089,7 +1094,7 @@ async def test_admin_list_pairs_as_ceo(a2a_route_client: dict) -> None:
         last_message_at=None,
         message_count=0,
     )
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.list_admin_pairs = AsyncMock(
             return_value=[pair_with_history, pair_never_talked]
@@ -1137,7 +1142,7 @@ async def test_admin_get_messages_as_ceo_returns_full_transcript(
         created_at=datetime.now(UTC),
         edited_at=None,
     )
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_messages_admin = AsyncMock(return_value=[msg, msg])
         mock_service_cls.return_value = instance
@@ -1159,7 +1164,7 @@ async def test_admin_reply_unknown_conversation_404(a2a_route_client: dict) -> N
     client = a2a_route_client["client"]
     _set_ceo_context(app, dev)
 
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_conversation_admin = AsyncMock(return_value=None)
         mock_service_cls.return_value = instance
@@ -1181,7 +1186,7 @@ async def test_admin_reply_non_participant_target_400(a2a_route_client: dict) ->
     conv_id = uuid4()
     task_id = uuid4()
     conv = _admin_conv_obj(conv_id=conv_id, task_id=task_id)
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_conversation_admin = AsyncMock(return_value=conv)
         mock_service_cls.return_value = instance
@@ -1202,7 +1207,7 @@ async def test_admin_reply_no_task_id_400(a2a_route_client: dict) -> None:
 
     conv_id = uuid4()
     conv = _admin_conv_obj(conv_id=conv_id, task_id=None)
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_conversation_admin = AsyncMock(return_value=conv)
         mock_service_cls.return_value = instance
@@ -1238,7 +1243,7 @@ async def test_admin_reply_success(a2a_route_client: dict) -> None:
         created_at=datetime.now(UTC),
         edited_at=None,
     )
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_conversation_admin = AsyncMock(return_value=conv)
         instance.interject_as_ceo = AsyncMock(return_value=sent_msg)
@@ -1291,7 +1296,7 @@ async def test_send_message_no_task_id_yields_400(a2a_route_client: dict) -> Non
 async def test_message_stream_task_not_found(a2a_route_client: dict) -> None:
     """Stream a message with task_id pointing at unknown task — error event."""
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_task = AsyncMock(return_value=None)
         mock_service_cls.return_value = instance
@@ -1331,7 +1336,7 @@ async def test_message_stream_with_terminal_task(a2a_route_client: dict) -> None
             ),
         }
     )
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_task = AsyncMock(return_value=a2a_task)
         mock_service_cls.return_value = instance
@@ -1363,7 +1368,7 @@ async def test_message_stream_with_terminal_task(a2a_route_client: dict) -> None
 async def test_message_stream_no_task_id(a2a_route_client: dict) -> None:
     """Stream without task_id — emits creating + error events."""
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         mock_service_cls.return_value = instance
         async with client.stream(
@@ -1398,7 +1403,7 @@ async def test_message_stream_no_task_id(a2a_route_client: dict) -> None:
 async def test_subscribe_task_not_found(a2a_route_client: dict) -> None:
     """subscribe_to_task with an unknown task → 404."""
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_task = AsyncMock(return_value=None)
         mock_service_cls.return_value = instance
@@ -1420,7 +1425,7 @@ async def test_subscribe_task_streams_initial_state(a2a_route_client: dict) -> N
             ),
         }
     )
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.get_task = AsyncMock(return_value=a2a_task)
         mock_service_cls.return_value = instance
@@ -1456,7 +1461,7 @@ async def test_subscribe_task_disappears_during_stream(
             "status": A2ATaskStatus(state=A2ATaskState.WORKING).model_dump(mode="json"),
         }
     )
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         # First call (validation): task exists. Second call (loop): None.
         instance.get_task = AsyncMock(side_effect=[a2a_task, None])
@@ -1495,8 +1500,10 @@ async def test_subscribe_task_polls_and_skips_unchanged(
     # path → emits once then sleep), then None (loop exits).
     side_effects = [a2a_task, a2a_task, None]
     with (
-        patch("roboco.api.routes.a2a.A2AService") as mock_service_cls,
-        patch("roboco.api.routes.a2a.asyncio.sleep", new=AsyncMock(return_value=None)),
+        patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls,
+        patch(
+            "robofleet.api.routes.a2a.asyncio.sleep", new=AsyncMock(return_value=None)
+        ),
     ):
         instance = AsyncMock()
         instance.get_task = AsyncMock(side_effect=side_effects)
@@ -1534,8 +1541,8 @@ async def test_subscribe_task_disconnects_immediately(
         return True
 
     with (
-        patch("roboco.api.routes.a2a.A2AService") as mock_service_cls,
-        patch("roboco.api.routes.a2a.Request.is_disconnected", new=_disconnected),
+        patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls,
+        patch("robofleet.api.routes.a2a.Request.is_disconnected", new=_disconnected),
     ):
         instance = AsyncMock()
         instance.get_task = AsyncMock(return_value=a2a_task)
@@ -1575,8 +1582,8 @@ async def test_message_stream_disconnects_in_loop(
         return True
 
     with (
-        patch("roboco.api.routes.a2a.A2AService") as mock_service_cls,
-        patch("roboco.api.routes.a2a.Request.is_disconnected", new=_disconnected),
+        patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls,
+        patch("robofleet.api.routes.a2a.Request.is_disconnected", new=_disconnected),
     ):
         instance = AsyncMock()
         instance.get_task = AsyncMock(return_value=a2a_task)
@@ -1620,8 +1627,10 @@ async def test_message_stream_task_disappears_in_loop(
     # First get_task returns task (initial state). Inside loop: returns None.
     side_effects = [a2a_task, None]
     with (
-        patch("roboco.api.routes.a2a.A2AService") as mock_service_cls,
-        patch("roboco.api.routes.a2a.asyncio.sleep", new=AsyncMock(return_value=None)),
+        patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls,
+        patch(
+            "robofleet.api.routes.a2a.asyncio.sleep", new=AsyncMock(return_value=None)
+        ),
     ):
         instance = AsyncMock()
         instance.get_task = AsyncMock(side_effect=side_effects)
@@ -1656,7 +1665,7 @@ async def test_message_stream_task_disappears_in_loop(
 async def test_list_tasks_with_page_token(a2a_route_client: dict) -> None:
     """list_tasks with pageToken parses int and uses it as offset."""
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.list_tasks = AsyncMock(return_value=([], False))
         mock_service_cls.return_value = instance
@@ -1674,7 +1683,7 @@ async def test_list_tasks_with_page_token(a2a_route_client: dict) -> None:
 async def test_list_tasks_with_invalid_page_token(a2a_route_client: dict) -> None:
     """Invalid pageToken (non-int) is silently suppressed → offset stays 0."""
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.list_tasks = AsyncMock(return_value=([], True))
         mock_service_cls.return_value = instance
@@ -1708,7 +1717,7 @@ async def test_cancel_task_success_no_body(a2a_route_client: dict) -> None:
     )
     client = a2a_route_client["client"]
     _set_pm_context(a2a_route_client["app"], a2a_route_client["dev"])
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.cancel_task = AsyncMock(return_value=a2a_task)
         mock_service_cls.return_value = instance
@@ -1732,7 +1741,7 @@ async def test_get_agent_card_by_id_unknown_returns_404(
 ) -> None:
     """Unknown agent slug on /agents/{id}/card → 404."""
     client = a2a_route_client["client"]
-    with patch("roboco.api.routes.a2a.A2AService") as mock_service_cls:
+    with patch("robofleet.api.routes.a2a.A2AService") as mock_service_cls:
         instance = AsyncMock()
         instance.build_agent_card = AsyncMock(return_value=None)
         mock_service_cls.return_value = instance

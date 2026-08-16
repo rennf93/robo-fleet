@@ -19,9 +19,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.models.events import EventType
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.config import settings as cfg
+from robofleet.models.events import EventType
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 from structlog.testing import capture_logs
 
 
@@ -403,7 +403,7 @@ class TestRateLimitHitEventPublished:
 # RateLimitStateTracker.activate() called on rate_limited path
 # ---------------------------------------------------------------------------
 
-_TRACKER_PATCH = "roboco.services.gateway.rate_limit_tracker.RateLimitStateTracker"
+_TRACKER_PATCH = "robofleet.services.gateway.rate_limit_tracker.RateLimitStateTracker"
 
 
 class TestRateLimitTrackerActivateOnParking:

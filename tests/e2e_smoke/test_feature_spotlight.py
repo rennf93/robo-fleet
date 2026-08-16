@@ -42,9 +42,9 @@ def _seed_system_and_secretary(stack: E2EStack) -> None:
     ``tests/unit/services/test_x_engine.py``'s ``_seed``): safe if ever
     called more than once against the same stack.
     """
-    from roboco.db.tables import AgentTable
-    from roboco.foundation import identity as _foundation
-    from roboco.models import AgentRole, AgentStatus
+    from robofleet.db.tables import AgentTable
+    from robofleet.foundation import identity as _foundation
+    from robofleet.models import AgentRole, AgentStatus
 
     async def _run(session: AsyncSession) -> None:
         for agent_uuid, slug, role in (
@@ -86,9 +86,9 @@ def _seed_feature_exploration(
     the same way ``seed_hierarchy`` stands in for the orchestrator's own
     task creation.
     """
-    from roboco.models import Team
-    from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-    from roboco.services.task import X_FEATURE_EXPLORATION_SOURCE
+    from robofleet.models import Team
+    from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+    from robofleet.services.task import X_FEATURE_EXPLORATION_SOURCE
 
     return seed_task(
         stack,
@@ -118,7 +118,7 @@ def _seed_feature_exploration(
 def _x_draft_state(stack: E2EStack, task_id: UUID) -> dict[str, Any]:
     """``source`` / ``confirmed_by_human`` for the materialized X-queue draft
     — the held-artifact fields ``task_state()`` doesn't carry."""
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -152,7 +152,7 @@ def test_feature_spotlight_proposal_creates_held_draft(e2e_stack: E2EStack) -> N
     # — means a future regression that drops ONLY the _TOOLS entry (keeping
     # the wrapper function) still fails here, even though that narrower
     # variant would not raise AttributeError from the getattr() in .do().
-    do_module = hom._module("roboco.mcp.do_server")
+    do_module = hom._module("robofleet.mcp.do_server")
     assert "propose_feature_spotlight" in do_module._TOOLS, (
         "propose_feature_spotlight missing from do_server._TOOLS — the MCP "
         "server has no way to expose it to any role"

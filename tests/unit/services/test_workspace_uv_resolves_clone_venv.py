@@ -19,7 +19,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from roboco.services.workspace import WorkspaceService, _uv_subprocess_env
+from robofleet.services.workspace import WorkspaceService, _uv_subprocess_env
 
 pytestmark = pytest.mark.skipif(
     shutil.which("uv") is None, reason="uv CLI not installed"
@@ -94,7 +94,7 @@ def test_worktree_venv_symlink_points_at_clone_root(clone: Path) -> None:
 async def test_uv_resolves_clone_root_venv_from_worktree(clone: Path) -> None:
     svc = _service()
     worktree = clone / ".worktrees" / "abc12345"
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, worktree, "feature/x", "main")
 
     # uv invoked from the worktree must use the clone-root venv's python,
@@ -122,7 +122,7 @@ async def test_clone_root_stays_on_default_after_worktree_add(clone: Path) -> No
     svc = _service()
     wt1 = clone / ".worktrees" / "task1"
     wt2 = clone / ".worktrees" / "task2"
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt1, "feature/a", "main")
         await svc.ensure_worktree(clone, wt2, "feature/b", "main")
 

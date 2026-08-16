@@ -18,8 +18,8 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from roboco.services import github_app_auth
-from roboco.services.github_app_auth import (
+from robofleet.services import github_app_auth
+from robofleet.services.github_app_auth import (
     GitHubAppAPIError,
     GitHubAppError,
     GitHubAppNotConfiguredError,
@@ -28,7 +28,7 @@ from roboco.services.github_app_auth import (
     list_installations,
     mint_installation_token,
 )
-from roboco.services.github_app_credentials import GitHubAppCredentialsData
+from robofleet.services.github_app_credentials import GitHubAppCredentialsData
 
 
 def _generate_rsa_keypair() -> str:
@@ -59,7 +59,7 @@ def _patch_creds(*, configured: bool = True) -> Any:
     )
     fake_service.get_decrypted = AsyncMock(return_value=creds)
     return patch(
-        "roboco.services.github_app_auth.get_github_app_credentials_service",
+        "robofleet.services.github_app_auth.get_github_app_credentials_service",
         return_value=fake_service,
     )
 
@@ -103,7 +103,9 @@ async def test_jwt_claims_shape() -> None:
     client = _client(post=[_token_resp("tok-1")])
     with (
         _patch_creds(),
-        patch("roboco.services.github_app_auth.httpx.AsyncClient", return_value=client),
+        patch(
+            "robofleet.services.github_app_auth.httpx.AsyncClient", return_value=client
+        ),
     ):
         before = int(time.time())
         await mint_installation_token(MagicMock(), 1)
@@ -124,7 +126,9 @@ async def test_cache_reuse_skips_a_second_mint() -> None:
     client = _client(post=[_token_resp("tok-cached", expires_in_seconds=3600)])
     with (
         _patch_creds(),
-        patch("roboco.services.github_app_auth.httpx.AsyncClient", return_value=client),
+        patch(
+            "robofleet.services.github_app_auth.httpx.AsyncClient", return_value=client
+        ),
     ):
         first = await mint_installation_token(MagicMock(), 7)
         second = await mint_installation_token(MagicMock(), 7)
@@ -145,7 +149,9 @@ async def test_expiry_re_mints_past_the_refresh_margin() -> None:
     )
     with (
         _patch_creds(),
-        patch("roboco.services.github_app_auth.httpx.AsyncClient", return_value=client),
+        patch(
+            "robofleet.services.github_app_auth.httpx.AsyncClient", return_value=client
+        ),
     ):
         first = await mint_installation_token(MagicMock(), 9)
         second = await mint_installation_token(MagicMock(), 9)
@@ -160,7 +166,9 @@ async def test_mint_failure_raises_api_error() -> None:
     client = _client(post=[_resp(401, text="Bad credentials")])
     with (
         _patch_creds(),
-        patch("roboco.services.github_app_auth.httpx.AsyncClient", return_value=client),
+        patch(
+            "robofleet.services.github_app_auth.httpx.AsyncClient", return_value=client
+        ),
         pytest.raises(GitHubAppAPIError),
     ):
         await mint_installation_token(MagicMock(), 5)
@@ -174,7 +182,9 @@ async def test_mint_network_error_wrapped_as_github_app_error() -> None:
     client = _client(post=[httpx.ConnectError("connection refused")])
     with (
         _patch_creds(),
-        patch("roboco.services.github_app_auth.httpx.AsyncClient", return_value=client),
+        patch(
+            "robofleet.services.github_app_auth.httpx.AsyncClient", return_value=client
+        ),
         pytest.raises(GitHubAppError) as exc_info,
     ):
         await mint_installation_token(MagicMock(), 55)
@@ -192,7 +202,7 @@ async def test_mint_corrupted_pem_wrapped_as_github_app_error() -> None:
     )
     with (
         patch(
-            "roboco.services.github_app_auth.get_github_app_credentials_service",
+            "robofleet.services.github_app_auth.get_github_app_credentials_service",
             return_value=fake_service,
         ),
         pytest.raises(GitHubAppError) as exc_info,
@@ -206,7 +216,9 @@ async def test_clear_token_cache_forces_a_fresh_mint() -> None:
     client = _client(post=[_token_resp("tok-first"), _token_resp("tok-second")])
     with (
         _patch_creds(),
-        patch("roboco.services.github_app_auth.httpx.AsyncClient", return_value=client),
+        patch(
+            "robofleet.services.github_app_auth.httpx.AsyncClient", return_value=client
+        ),
     ):
         first = await mint_installation_token(MagicMock(), 77)
         clear_token_cache()
@@ -226,7 +238,9 @@ async def test_list_installations_maps_account_login() -> None:
     client = _client(get=[_resp(200, payload)])
     with (
         _patch_creds(),
-        patch("roboco.services.github_app_auth.httpx.AsyncClient", return_value=client),
+        patch(
+            "robofleet.services.github_app_auth.httpx.AsyncClient", return_value=client
+        ),
     ):
         installations = await list_installations(MagicMock())
 
@@ -254,7 +268,9 @@ async def test_list_installation_repositories_paginates(
     client = _client(post=[_token_resp("tok")], get=[page1, page2])
     with (
         _patch_creds(),
-        patch("roboco.services.github_app_auth.httpx.AsyncClient", return_value=client),
+        patch(
+            "robofleet.services.github_app_auth.httpx.AsyncClient", return_value=client
+        ),
     ):
         repos = await list_installation_repositories(MagicMock(), 11)
 

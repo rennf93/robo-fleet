@@ -29,8 +29,8 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     TaskNature,
@@ -38,8 +38,8 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.task import TaskService
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.task import TaskService
 
 # #172: a developer fresh claim must carry a substantive step checklist.
 _STEPS = [
@@ -218,7 +218,7 @@ def _mock_journal_with_reflect() -> Any:
 def _mock_work_session() -> Any:
     """WorkSession stub: empty file list, no unpushed commits."""
     ws = AsyncMock()
-    ws.files_changed.return_value = ["roboco/api/routes/health.py"]
+    ws.files_changed.return_value = ["robofleet/api/routes/health.py"]
     ws.has_unpushed_commits.return_value = False
     return ws
 

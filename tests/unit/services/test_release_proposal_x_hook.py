@@ -10,14 +10,20 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, TaskNature, TaskStatus, TaskType
-from roboco.models.base import Team as T
-from roboco.services.release_executor import ReleaseResult
-from roboco.services.release_proposal import ReleaseProposalService
-from roboco.services.release_readiness import ReleaseReadinessReport, report_to_dict
-from roboco.services.task import RELEASE_MANAGER_SOURCE
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import (
+    AgentRole,
+    AgentStatus,
+    TaskNature,
+    TaskStatus,
+    TaskType,
+)
+from robofleet.models.base import Team as T
+from robofleet.services.release_executor import ReleaseResult
+from robofleet.services.release_proposal import ReleaseProposalService
+from robofleet.services.release_readiness import ReleaseReadinessReport, report_to_dict
+from robofleet.services.task import RELEASE_MANAGER_SOURCE
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -116,10 +122,10 @@ async def test_publish_success_calls_x_engine_draft_seam(
 
     with (
         patch(
-            "roboco.services.release_proposal.get_release_executor",
+            "robofleet.services.release_proposal.get_release_executor",
             AsyncMock(return_value=fake_executor),
         ),
-        patch("roboco.services.x_engine.get_x_engine", return_value=fake_engine),
+        patch("robofleet.services.x_engine.get_x_engine", return_value=fake_engine),
         patch.object(
             ReleaseProposalService, "_acquire_release_lock", AsyncMock(return_value="t")
         ),
@@ -164,11 +170,11 @@ async def test_x_draft_failure_never_fails_the_approve(
 
     with (
         patch(
-            "roboco.services.release_proposal.get_release_executor",
+            "robofleet.services.release_proposal.get_release_executor",
             AsyncMock(return_value=fake_executor),
         ),
         patch(
-            "roboco.services.x_engine.get_x_engine",
+            "robofleet.services.x_engine.get_x_engine",
             side_effect=RuntimeError("x-engine boom"),
         ),
         patch.object(

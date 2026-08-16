@@ -17,8 +17,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -27,12 +27,12 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.services.gateway.choreographer import (
+from robofleet.services.gateway.choreographer import (
     Choreographer,
     ChoreographerDeps,
     DelegateInputs,
 )
-from roboco.services.task import get_task_service
+from robofleet.services.task import get_task_service
 from sqlalchemy import select
 
 if TYPE_CHECKING:

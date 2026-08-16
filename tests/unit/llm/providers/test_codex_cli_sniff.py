@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from roboco.llm.providers import codex_cli_sniff as sniff
+from robofleet.llm.providers import codex_cli_sniff as sniff
 
 if TYPE_CHECKING:
     from pathlib import Path

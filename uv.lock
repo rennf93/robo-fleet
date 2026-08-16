@@ -3052,7 +3052,7 @@ wheels = [
 ]
 
 [[package]]
-name = "roboco"
+name = "robofleet"
 version = "0.28.0"
 source = { editable = "." }
 dependencies = [

@@ -4,7 +4,7 @@ Mirrors test_periscope_loop.py's arm -> originate -> dedup shape AND
 test_feature_spotlight.py's do_server wiring-regression check + real-route
 propose call. The genuinely new pieces: (1) origination needs a configured X
 client (search_recent), unlike periscope which needs none — faked here via
-``roboco.services.barfly_engine.build_x_client`` (uvicorn runs in-thread, same
+``robofleet.services.barfly_engine.build_x_client`` (uvicorn runs in-thread, same
 process, so the patch reaches the live route handler too); (2) unlike a
 market brief (one report, completes its own task) a Barfly proposal
 materializes N SEPARATE held x_barfly drafts through the shared
@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 from uuid import UUID, uuid4
 
-from roboco.foundation import identity as _foundation
+from robofleet.foundation import identity as _foundation
 from tests.e2e_smoke.harness import ScriptedAgent, expect_ok
 
 if TYPE_CHECKING:
@@ -57,7 +57,7 @@ class _FakeSearchClient:
         return True
 
     async def search_recent(self, query: str, max_results: int) -> list[Any]:
-        from roboco.services.x_client import XMention
+        from robofleet.services.x_client import XMention
 
         _ = (query, max_results)
         return [
@@ -86,8 +86,8 @@ def _seed_system_and_hom(stack: E2EStack) -> str:
     assigned_to straight from the static identity registry), plus a project
     those own — the exploration task's FK anchor. Returns the project's slug.
     """
-    from roboco.db.tables import AgentTable, ProjectTable
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable, ProjectTable
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     slug = f"e2e-barfly-{uuid4().hex[:8]}"
 
@@ -146,9 +146,9 @@ def _arm(stack: E2EStack, project_slug: str) -> None:
     """Arm via the settings-store key (the ONLY arming path — no legacy env
     flag exists for barfly) + stored X credentials (BarflyEngine's creds
     gate) + point ``self_heal_project_slug`` at the seeded project."""
-    from roboco.config import settings as cfg
-    from roboco.db.tables import SystemSettingTable
-    from roboco.services.x_credentials import get_x_credentials_service
+    from robofleet.config import settings as cfg
+    from robofleet.db.tables import SystemSettingTable
+    from robofleet.services.x_credentials import get_x_credentials_service
 
     cfg.self_heal_project_slug = project_slug
 
@@ -167,7 +167,7 @@ def _arm(stack: E2EStack, project_slug: str) -> None:
 
 
 def _run_due_programs(stack: E2EStack) -> list[str]:
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> list[str]:
         return await get_board_program_engine(session).run_due_programs()
@@ -177,9 +177,9 @@ def _run_due_programs(stack: E2EStack) -> list[str]:
 
 
 def _find_barfly_task(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
-    from roboco.foundation.policy.content import markers
-    from roboco.services.task import BARFLY_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.foundation.policy.content import markers
+    from robofleet.services.task import BARFLY_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -213,8 +213,8 @@ def _find_barfly_task(stack: E2EStack) -> dict[str, Any]:
 
 
 def _x_barfly_drafts(stack: E2EStack) -> list[dict[str, Any]]:
-    from roboco.db.tables import TaskTable
-    from roboco.foundation.policy.content import markers
+    from robofleet.db.tables import TaskTable
+    from robofleet.foundation.policy.content import markers
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> list[dict[str, Any]]:
@@ -250,7 +250,7 @@ def test_barfly_loop_originates_dedups_proposes_and_materializes(
     _arm(stack, project_slug)
 
     with patch(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         return_value=_FakeSearchClient(),
     ):
         opened = _run_due_programs(stack)
@@ -268,7 +268,7 @@ def test_barfly_loop_originates_dedups_proposes_and_materializes(
 
     # board_barfly is board-dispatched (one-shot HoM spawn), never handed to
     # the generic dev dispatch loop's give_me_work/claim path.
-    from roboco.runtime.orchestrator import _is_non_dev_dispatch_source
+    from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
 
     assert _is_non_dev_dispatch_source({"source": row["source"]}) is True
 
@@ -284,7 +284,7 @@ def test_barfly_loop_originates_dedups_proposes_and_materializes(
             )
 
     with patch(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         return_value=_BoomIfSearched(),
     ):
         opened_again = _run_due_programs(stack)
@@ -303,7 +303,7 @@ def test_barfly_loop_originates_dedups_proposes_and_materializes(
         "head-marketing",
         "head_marketing",
     )
-    do_module = hom._module("roboco.mcp.do_server")
+    do_module = hom._module("robofleet.mcp.do_server")
     assert "propose_conversation_replies" in do_module._TOOLS, (
         "propose_conversation_replies missing from do_server._TOOLS — the "
         "MCP server has no way to expose it to any role"
@@ -353,13 +353,13 @@ def test_barfly_loop_originates_dedups_proposes_and_materializes(
 
     # The exploration going terminal auto-closes the LEARN ledger row — a
     # fresh cycle can open off-schedule (enabled + dedup only) proving it.
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _reopen(session: AsyncSession) -> Any:
         return await get_board_program_engine(session).open_program_cycle("barfly")
 
     with patch(
-        "roboco.services.barfly_engine.build_x_client",
+        "robofleet.services.barfly_engine.build_x_client",
         return_value=_FakeSearchClient(_CANDIDATES_ROUND_2),
     ):
         reopened_id = stack.run_db(_reopen)

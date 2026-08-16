@@ -12,7 +12,7 @@ import json
 import time
 from urllib.parse import urlencode
 
-from roboco.utils.telegram_initdata import validate_init_data
+from robofleet.utils.telegram_initdata import validate_init_data
 
 _BOT_TOKEN = "123456:TEST-bot-token-for-unit-tests"
 

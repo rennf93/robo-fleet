@@ -7,13 +7,13 @@ from uuid import uuid4
 
 import anthropic as anthropic_mod
 import pytest
-from roboco.llm import ToonAdapter
-from roboco.models import MessageType
-from roboco.models.extraction import (
+from robofleet.llm import ToonAdapter
+from robofleet.models import MessageType
+from robofleet.models.extraction import (
     ExtractionConfig,
     ExtractionContext,
 )
-from roboco.services.extraction import ExtractionPipeline, ExtractionService
+from robofleet.services.extraction import ExtractionPipeline, ExtractionService
 
 
 def _ctx(content: str) -> ExtractionContext:

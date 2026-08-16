@@ -1,4 +1,4 @@
-"""Targeted coverage for branches in roboco.services.gateway.choreographer._impl.
+"""Targeted coverage for branches in robofleet.services.gateway.choreographer._impl.
 
 Each test pins one rejection-envelope branch so the larger Choreographer
 verb continues to surface remediation hints rather than crash on edge
@@ -14,9 +14,9 @@ from uuid import uuid4
 
 import pytest
 import structlog
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.choreographer._impl import DelegateInputs
-from roboco.services.gateway.envelope import Envelope
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer._impl import DelegateInputs
+from robofleet.services.gateway.envelope import Envelope
 
 # #172: a developer fresh claim must carry a substantive step checklist.
 # Inert on re-entry/error/non-dev paths (the gate is skipped or the call

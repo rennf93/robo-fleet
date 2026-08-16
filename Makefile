@@ -100,19 +100,19 @@ migration:
 .PHONY: api
 api:
 	@echo "Starting RoboCo API (development mode)..."
-	@uv run uvicorn roboco.api.app:app --host 0.0.0.0 --port 8000 --reload
+	@uv run uvicorn robofleet.api.app:app --host 0.0.0.0 --port 8000 --reload
 
 # Start API server (production mode, no reload)
 .PHONY: run
 run:
 	@echo "Starting RoboCo API (production mode)..."
-	@uv run uvicorn roboco.api.app:app --host 0.0.0.0 --port 8000
+	@uv run uvicorn robofleet.api.app:app --host 0.0.0.0 --port 8000
 
 # Start orchestrator only (spawns agents)
 .PHONY: orchestrator
 orchestrator:
 	@echo "Starting orchestrator with agents: $(AGENTS)..."
-	@uv run python -m roboco.cli --spawn $(AGENTS)
+	@uv run python -m robofleet.cli --spawn $(AGENTS)
 
 # Start API + Orchestrator (full development mode)
 .PHONY: dev
@@ -121,16 +121,16 @@ dev:
 	@echo "Agents to spawn: $(AGENTS)"
 	@echo ""
 	@echo "Starting API in background..."
-	@uv run uvicorn roboco.api.app:app --host 0.0.0.0 --port 8000 &
+	@uv run uvicorn robofleet.api.app:app --host 0.0.0.0 --port 8000 &
 	@sleep 2
 	@echo "Starting orchestrator..."
-	@uv run python -m roboco.cli --spawn $(AGENTS)
+	@uv run python -m robofleet.cli --spawn $(AGENTS)
 
 # Initialize database only (seed data)
 .PHONY: db-init
 db-init:
 	@echo "Initializing database..."
-	@uv run python -m roboco.cli --db-only
+	@uv run python -m robofleet.cli --db-only
 
 # =============================================================================
 # MONITORING & STATUS
@@ -186,7 +186,7 @@ restart: stop start-example
 lint:
 	@echo 'Formatting w/ Ruff...' ; echo '' ; uv run ruff format .
 	@echo '' ; echo '' ; echo 'Linting w/ Ruff...' ; echo '' ; uv run ruff check .
-	@echo '' ; echo '' ; echo 'Type checking w/ Mypy...' ; echo '' ; uv run mypy roboco/ tests/
+	@echo '' ; echo '' ; echo 'Type checking w/ Mypy...' ; echo '' ; uv run mypy robofleet/ tests/
 	@echo '' ; echo '' ; echo 'Finding dead code w/ Vulture...' ; echo '' ; uv run vulture vulture_whitelist.py
 
 # Fix code
@@ -222,7 +222,7 @@ vulture:
 bandit:
 	@echo "Running Bandit security scan..."
 	@echo ''
-	@uv run bandit -r roboco -ll
+	@uv run bandit -r robofleet -ll
 	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
 
 # Audit dependencies with pip-audit
@@ -239,13 +239,13 @@ radon:
 	@echo "Analyzing code complexity with Radon..."
 	@echo ''
 	@echo "Cyclomatic Complexity:"
-	@uv run radon cc roboco -nc
+	@uv run radon cc robofleet -nc
 	@echo ''
 	@echo "Maintainability Index:"
-	@uv run radon mi roboco -nc
+	@uv run radon mi robofleet -nc
 	@echo ''
 	@echo "Raw Metrics:"
-	@uv run radon raw roboco
+	@uv run radon raw robofleet
 	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
 
 # Check complexity thresholds with Xenon
@@ -253,7 +253,7 @@ radon:
 xenon:
 	@echo "Checking complexity thresholds with Xenon..."
 	@echo ''
-	@uv run xenon roboco --max-absolute B --max-modules A --max-average A
+	@uv run xenon robofleet --max-absolute B --max-modules A --max-average A
 	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
 
 # Analyze dependencies with Deptry
@@ -293,17 +293,17 @@ quality: sync
 	@echo "==> markdown prose (no hard-wrapping)"
 	@uv run python scripts/reflow_md.py --check
 	@echo "==> mypy"
-	@uv run mypy roboco/ tests/
+	@uv run mypy robofleet/ tests/
 	@echo "==> pytest with coverage"
-	@uv run pytest -q --cov=roboco --cov-report=term-missing --cov-fail-under=80
+	@uv run pytest -q --cov=robofleet --cov-report=term-missing --cov-fail-under=80
 	@echo "==> xenon (cyclomatic complexity)"
-	@uv run xenon --max-absolute B --max-modules A --max-average A roboco/
+	@uv run xenon --max-absolute B --max-modules A --max-average A robofleet/
 	@echo "==> radon mi (maintainability index)"
-	@uv run radon mi roboco/ -nc -s
+	@uv run radon mi robofleet/ -nc -s
 	@echo "==> vulture (dead code)"
-	@uv run vulture roboco/ tests/ vulture_whitelist.py --min-confidence 100
+	@uv run vulture robofleet/ tests/ vulture_whitelist.py --min-confidence 100
 	@echo "==> bandit (security)"
-	@uv run bandit -r roboco/ -ll
+	@uv run bandit -r robofleet/ -ll
 	@echo "==> pip-audit (deps vulnerabilities)"
 	# CVE-2025-3000: memory corruption in torch.jit.script (MEDIUM, local-only,
 	# no fix published). torch is a transitive dep (piragi / sentence-transformers)
@@ -312,7 +312,7 @@ quality: sync
 	# Documented waiver; revisit when a fixed torch ships.
 	@uv run pip-audit --ignore-vuln CVE-2025-3000
 	@echo "==> deptry (dependency hygiene)"
-	@uv run deptry roboco/
+	@uv run deptry robofleet/
 	@echo "==> alembic upgrade --sql (migrations parse)"
 	@uv run alembic upgrade head --sql > /dev/null
 	@echo "==> import-linter (architectural boundaries)"
@@ -335,7 +335,7 @@ e2e-smoke: sync
 quality-fast: sync
 	@uv run ruff format --check .
 	@uv run ruff check .
-	@uv run mypy roboco/ tests/
+	@uv run mypy robofleet/ tests/
 	@uv run pytest -q -x --no-cov
 
 # Fast pre-submit gate: format-check + lint + types + complexity + import boundaries, NO tests.
@@ -346,8 +346,8 @@ quality-fast: sync
 gate: sync
 	@uv run ruff format --check .
 	@uv run ruff check .
-	@uv run mypy roboco/ tests/
-	@uv run xenon --max-absolute B --max-modules A --max-average A roboco/
+	@uv run mypy robofleet/ tests/
+	@uv run xenon --max-absolute B --max-modules A --max-average A robofleet/
 	@uv run lint-imports
 
 # Panel (Next.js) fast gate: lint + type-check + vitest.
@@ -481,7 +481,7 @@ panel-token:
 	@# produced a mismatched token before this).
 	@SECRET="$$(grep -E '^ROBOCO_AGENT_AUTH_SECRET=' .env 2>/dev/null | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$$//' -e "s/^'//" -e "s/'$$//")"; \
 	ROBOCO_AGENT_AUTH_SECRET="$${SECRET:-$$ROBOCO_AGENT_AUTH_SECRET}" \
-	uv run python -c "import sys; from roboco.agents_config import issue_panel_token; tok = issue_panel_token(); print(tok) if tok != 'UNSIGNED' else sys.exit('ERROR: ROBOCO_AGENT_AUTH_SECRET not set (in .env or environment) - the panel token would be unsigned')"
+	uv run python -c "import sys; from robofleet.agents_config import issue_panel_token; tok = issue_panel_token(); print(tok) if tok != 'UNSIGNED' else sys.exit('ERROR: ROBOCO_AGENT_AUTH_SECRET not set (in .env or environment) - the panel token would be unsigned')"
 
 # Help
 .PHONY: help
@@ -545,7 +545,7 @@ show-python-versions:
 # =============================================================================
 
 # Regenerate canonical lifecycle artifacts (markdown / JSON / prompt fragments)
-# from roboco/lifecycle/spec.py. Output is deterministic; CI gates on
+# from robofleet/lifecycle/spec.py. Output is deterministic; CI gates on
 # `make lifecycle && git diff --exit-code`.
 .PHONY: lifecycle
 lifecycle:
@@ -563,7 +563,7 @@ lifecycle:
 .PHONY: foundation-check
 foundation-check:
 	@echo "==> foundation/identity validators"
-	uv run python -c "from roboco.foundation import _validate; _validate.run_all(); print('  identity validators: OK')"
+	uv run python -c "from robofleet.foundation import _validate; _validate.run_all(); print('  identity validators: OK')"
 	@echo "==> foundation/tracing verb parity"
 	uv run pytest tests/foundation/test_tracing_verb_parity.py --no-cov -q
 	@echo "==> foundation/journaling consumers"

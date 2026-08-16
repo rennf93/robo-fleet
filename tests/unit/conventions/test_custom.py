@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from roboco.conventions.custom import check_custom
-from roboco.foundation.policy.conventions.models import ConventionsStandard, CustomRule
+from robofleet.conventions.custom import check_custom
+from robofleet.foundation.policy.conventions.models import (
+    ConventionsStandard,
+    CustomRule,
+)
 
 _NO_PRINT = CustomRule(
     id="no-print",

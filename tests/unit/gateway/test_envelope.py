@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from roboco.services.gateway.envelope import Envelope
+from robofleet.services.gateway.envelope import Envelope
 
 
 class TestEnvelopeOk:

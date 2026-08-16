@@ -11,15 +11,15 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.spackle import router as spackle_router
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-from roboco.models.permissions import AgentContext
-from roboco.services.task import SPACKLE_SOURCE
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.spackle import router as spackle_router
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+from robofleet.models.permissions import AgentContext
+from robofleet.services.task import SPACKLE_SOURCE
 from sqlalchemy import update
 
 _SEED_GIT_URL = "https://example.com/backend-svc-spackle.git"
@@ -151,7 +151,7 @@ async def _seed_cycle(session: AsyncSession) -> tuple[TaskTable, ProjectTable]:
                     "team": "backend",
                     "priority": 2,
                     "evidence": (
-                        "roboco/api/routes/widgets.py:12 defines GET /widgets; "
+                        "robofleet/api/routes/widgets.py:12 defines GET /widgets; "
                         "no panel/src page calls it"
                     ),
                     "status": "proposed",

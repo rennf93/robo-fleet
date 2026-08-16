@@ -11,21 +11,21 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-import roboco.services.release_proposal as rp
+import robofleet.services.release_proposal as rp
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes import release as release_route
-from roboco.api.routes.release import router as release_router
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation.policy.content import markers
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskNature, TaskStatus, TaskType
-from roboco.models.permissions import AgentContext
-from roboco.services.release_executor import ReleaseResult
-from roboco.services.release_proposal import ReleaseProposalService
-from roboco.services.release_readiness import ReleaseReadinessReport, report_to_dict
-from roboco.services.task import RELEASE_MANAGER_SOURCE, TaskService
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes import release as release_route
+from robofleet.api.routes.release import router as release_router
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation.policy.content import markers
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskNature, TaskStatus, TaskType
+from robofleet.models.permissions import AgentContext
+from robofleet.services.release_executor import ReleaseResult
+from robofleet.services.release_proposal import ReleaseProposalService
+from robofleet.services.release_readiness import ReleaseReadinessReport, report_to_dict
+from robofleet.services.task import RELEASE_MANAGER_SOURCE, TaskService
 from sqlalchemy import delete
 
 if TYPE_CHECKING:
@@ -185,11 +185,11 @@ async def test_approve_dispatches_async_and_completes(
 
     with (
         patch(
-            "roboco.services.release_proposal.get_release_executor",
+            "robofleet.services.release_proposal.get_release_executor",
             AsyncMock(return_value=fake_executor),
         ),
         patch(
-            "roboco.api.routes.release.dispatch_approve",
+            "robofleet.api.routes.release.dispatch_approve",
             side_effect=_capturing_dispatch,
         ),
         patch.object(
@@ -245,11 +245,11 @@ async def test_approve_gate_failure_keeps_proposal_open_async(
 
     with (
         patch(
-            "roboco.services.release_proposal.get_release_executor",
+            "robofleet.services.release_proposal.get_release_executor",
             AsyncMock(return_value=fake_executor),
         ),
         patch(
-            "roboco.api.routes.release.dispatch_approve",
+            "robofleet.api.routes.release.dispatch_approve",
             side_effect=_capturing_dispatch,
         ),
         patch.object(
@@ -305,11 +305,11 @@ async def test_approve_exception_records_error_marker(
 
     with (
         patch(
-            "roboco.services.release_proposal.get_release_executor",
+            "robofleet.services.release_proposal.get_release_executor",
             AsyncMock(return_value=fake_executor),
         ),
         patch(
-            "roboco.api.routes.release.dispatch_approve",
+            "robofleet.api.routes.release.dispatch_approve",
             side_effect=_capturing_dispatch,
         ),
         patch.object(

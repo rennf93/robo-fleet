@@ -14,11 +14,11 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import StalledReason
-from roboco.services.task import StalledTaskEntry, TaskService
+from robofleet.models.base import StalledReason
+from robofleet.services.task import StalledTaskEntry, TaskService
 
 if TYPE_CHECKING:
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
 
 
 def _service_with(execute_returns: object) -> TaskService:

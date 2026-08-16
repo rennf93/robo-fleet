@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.foundation import _validate, identity
+from robofleet.foundation import _validate, identity
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 from sqlalchemy.dialects import postgresql
 
 _SEEDED_COUNT = 3  # a persisted strike count, one below the trip threshold
@@ -158,7 +158,7 @@ async def test_loader_populates_dict_with_str_keys() -> None:
     factory, _db = _mock_session_factory(
         [_row(tid, count=3)], [SimpleNamespace(id=tid, status="in_progress")]
     )
-    with patch("roboco.db.base.get_session_factory", return_value=factory):
+    with patch("robofleet.db.base.get_session_factory", return_value=factory):
         restored = await orch.restore_respawn_tracker()
     assert restored == 1
     assert orch._pm_respawn_tracker[("be-pm", str(tid))]["count"] == _SEEDED_COUNT
@@ -171,7 +171,7 @@ async def test_loader_skips_terminal_rows_and_deletes_them() -> None:
     factory, db = _mock_session_factory(
         [_row(done)], [SimpleNamespace(id=done, status="completed")]
     )
-    with patch("roboco.db.base.get_session_factory", return_value=factory):
+    with patch("robofleet.db.base.get_session_factory", return_value=factory):
         restored = await orch.restore_respawn_tracker()
     assert restored == 0
     assert orch._pm_respawn_tracker == {}
@@ -182,7 +182,7 @@ async def test_loader_skips_terminal_rows_and_deletes_them() -> None:
 async def test_loader_empty_on_exception() -> None:
     orch = _new_orchestrator()
     with patch(
-        "roboco.db.base.get_session_factory", side_effect=RuntimeError("db down")
+        "robofleet.db.base.get_session_factory", side_effect=RuntimeError("db down")
     ):
         restored = await orch.restore_respawn_tracker()
     assert restored == 0
@@ -219,9 +219,9 @@ async def test_new_entry_and_strike_schedule_persist() -> None:
     fake_audit = AsyncMock()
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=False)
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=fake_audit),
+        patch("robofleet.services.audit.get_audit_service", return_value=fake_audit),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
     ):
@@ -242,9 +242,9 @@ async def test_notified_flip_schedules_persist_with_notified_true() -> None:
     fake_audit = AsyncMock()
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=False)
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=fake_audit),
+        patch("robofleet.services.audit.get_audit_service", return_value=fake_audit),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
     ):
@@ -263,7 +263,7 @@ async def test_tracing_reset_schedules_persist_with_reset_count() -> None:
     task = {"id": task_id, "status": "blocked"}
     fake_audit = AsyncMock()
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=True)
-    with patch("roboco.services.audit.get_audit_service", return_value=fake_audit):
+    with patch("robofleet.services.audit.get_audit_service", return_value=fake_audit):
         await orch._pm_respawn_should_gate("be-pm", task)  # new entry
         await orch._pm_respawn_should_gate("be-pm", task)  # tracing reset
     assert captured[-1][2]["count"] == 1
@@ -279,7 +279,7 @@ async def test_tracing_reset_schedules_persist_with_reset_count() -> None:
 async def test_persist_record_swallows_db_failure() -> None:
     orch = _new_orchestrator()
     with patch(
-        "roboco.db.base.get_session_factory", side_effect=RuntimeError("db down")
+        "robofleet.db.base.get_session_factory", side_effect=RuntimeError("db down")
     ):
         # Must not raise — a persistence failure can never gate/un-gate a spawn.
         await orch._persist_respawn_record(
@@ -308,7 +308,7 @@ async def test_persist_record_uses_atomic_upsert_no_delete_then_insert() -> None
     ctx.__aenter__ = AsyncMock(return_value=db)
     ctx.__aexit__ = AsyncMock(return_value=False)
     factory = MagicMock(return_value=ctx)
-    with patch("roboco.db.base.get_session_factory", return_value=factory):
+    with patch("robofleet.db.base.get_session_factory", return_value=factory):
         await orch._persist_respawn_record(
             "be-pm",
             str(uuid4()),
@@ -353,9 +353,9 @@ async def test_restored_counter_trips_at_persisted_threshold_not_from_one() -> N
     fake_audit = AsyncMock()
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=False)
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=fake_audit),
+        patch("robofleet.services.audit.get_audit_service", return_value=fake_audit),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
     ):
@@ -383,7 +383,7 @@ async def test_restore_status_mismatch_does_not_reburn_threshold() -> None:
         [_row(task_id, count=3, last_status="blocked")],
         [SimpleNamespace(id=task_id, status="in_progress")],
     )
-    with patch("roboco.db.base.get_session_factory", return_value=factory):
+    with patch("robofleet.db.base.get_session_factory", return_value=factory):
         await orch.restore_respawn_tracker()
     # Restore re-stamped last_status to the live "in_progress".
     assert (
@@ -394,9 +394,9 @@ async def test_restore_status_mismatch_does_not_reburn_threshold() -> None:
     fake_audit = AsyncMock()
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=False)
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=fake_audit),
+        patch("robofleet.services.audit.get_audit_service", return_value=fake_audit),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
     ):
@@ -421,9 +421,11 @@ async def test_restart_midloop_continues_identically_to_no_restart() -> None:
         fake_audit = AsyncMock()
         fake_audit.has_recent_tracing_gap = AsyncMock(return_value=False)
         with (
-            patch("roboco.services.audit.get_audit_service", return_value=fake_audit),
             patch(
-                "roboco.services.notification.NotificationService",
+                "robofleet.services.audit.get_audit_service", return_value=fake_audit
+            ),
+            patch(
+                "robofleet.services.notification.NotificationService",
                 return_value=AsyncMock(),
             ),
         ):
@@ -499,7 +501,7 @@ async def test_persist_commits_in_schedule_order_not_out_of_order() -> None:
         return ctx
 
     factory = MagicMock(side_effect=_make_db)
-    with patch("roboco.db.base.get_session_factory", return_value=factory):
+    with patch("robofleet.db.base.get_session_factory", return_value=factory):
         # Schedule the stale persist (count=2) first.
         orch._pm_respawn_tracker[key] = {
             "count": 2,

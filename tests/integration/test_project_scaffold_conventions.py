@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest_asyncio
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.project import ProjectCreate
-from roboco.services.project import ProjectService
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.project import ProjectCreate
+from robofleet.services.project import ProjectService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -67,7 +67,7 @@ async def test_scaffold_invoked_when_flag_on(
     monkeypatch.setattr(settings, "conventions_enabled", True)
     spy = _SpyConventions()
     monkeypatch.setattr(
-        "roboco.services.conventions.get_conventions_service", lambda _s: spy
+        "robofleet.services.conventions.get_conventions_service", lambda _s: spy
     )
     project = await setup["svc"].create(_payload(), setup["creator_id"])
     assert spy.scaffolded == [project]
@@ -79,7 +79,7 @@ async def test_scaffold_not_invoked_when_flag_off(
     monkeypatch.setattr(settings, "conventions_enabled", False)
     spy = _SpyConventions()
     monkeypatch.setattr(
-        "roboco.services.conventions.get_conventions_service", lambda _s: spy
+        "robofleet.services.conventions.get_conventions_service", lambda _s: spy
     )
     await setup["svc"].create(_payload(), setup["creator_id"])
     assert spy.scaffolded == []
@@ -90,7 +90,7 @@ async def test_scaffold_failure_does_not_fail_registration(
 ) -> None:
     monkeypatch.setattr(settings, "conventions_enabled", True)
     monkeypatch.setattr(
-        "roboco.services.conventions.get_conventions_service",
+        "robofleet.services.conventions.get_conventions_service",
         lambda _s: _BoomConventions(),
     )
     project = await setup["svc"].create(_payload(), setup["creator_id"])

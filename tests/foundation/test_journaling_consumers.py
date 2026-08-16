@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from roboco.enforcement import journal_perms
-from roboco.enforcement.journal_perms import can_read_journal
-from roboco.foundation.policy import journaling
-from roboco.services.gateway import content_actions
-from roboco.services.journal import _SCOPE_TO_TYPE
+from robofleet.enforcement import journal_perms
+from robofleet.enforcement.journal_perms import can_read_journal
+from robofleet.foundation.policy import journaling
+from robofleet.services.gateway import content_actions
+from robofleet.services.journal import _SCOPE_TO_TYPE
 
 
 def test_content_actions_valid_scopes_match_foundation() -> None:

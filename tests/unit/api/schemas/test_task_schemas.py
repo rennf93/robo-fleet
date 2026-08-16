@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
-from roboco.api.schemas.tasks import SoftBlockRequest
-from roboco.models.base import BlockerResolverType
+from robofleet.api.schemas.tasks import SoftBlockRequest
+from robofleet.models.base import BlockerResolverType
 
 
 def test_soft_block_request_defaults_to_agent() -> None:

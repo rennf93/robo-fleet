@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from roboco.agents_config import _BOARD_ROLES, TASK_CREATOR_ROLES
-from roboco.foundation import identity
-from roboco.services import permissions as perms
+from robofleet.agents_config import _BOARD_ROLES, TASK_CREATOR_ROLES
+from robofleet.foundation import identity
+from robofleet.services import permissions as perms
 
 
 def test_agents_config_task_creator_roles_is_5_roles() -> None:

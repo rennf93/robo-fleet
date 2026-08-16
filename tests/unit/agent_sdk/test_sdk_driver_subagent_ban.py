@@ -10,8 +10,8 @@ the intake interviewer and the Secretary cannot fan out subagents.
 
 from __future__ import annotations
 
-from roboco.agent_sdk.intake_driver import build_intake_options
-from roboco.agent_sdk.secretary_driver import build_secretary_options
+from robofleet.agent_sdk.intake_driver import build_intake_options
+from robofleet.agent_sdk.secretary_driver import build_secretary_options
 
 
 def test_intake_options_disallow_task() -> None:

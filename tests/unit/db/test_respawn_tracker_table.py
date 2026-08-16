@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from roboco.db.tables import RespawnTrackerTable
+from robofleet.db.tables import RespawnTrackerTable
 
 if TYPE_CHECKING:
     from sqlalchemy import Table

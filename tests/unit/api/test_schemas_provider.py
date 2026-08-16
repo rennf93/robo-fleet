@@ -1,4 +1,4 @@
-"""Coverage for roboco.api.schemas.provider helpers."""
+"""Coverage for robofleet.api.schemas.provider helpers."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
-from roboco.api.schemas.provider import assignment_to_response
-from roboco.models.base import AssignmentScope, ModelProvider
+from robofleet.api.schemas.provider import assignment_to_response
+from robofleet.models.base import AssignmentScope, ModelProvider
 
 if TYPE_CHECKING:
-    from roboco.db.tables import ModelAssignmentTable
+    from robofleet.db.tables import ModelAssignmentTable
 
 
 def test_assignment_to_response_round_trip() -> None:

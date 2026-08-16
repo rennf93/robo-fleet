@@ -16,9 +16,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import TaskStatus
-from roboco.services.git import GitService
-from roboco.services.task import TaskService
+from robofleet.models.base import TaskStatus
+from robofleet.services.git import GitService
+from robofleet.services.task import TaskService
 
 
 def _service() -> TaskService:
@@ -134,10 +134,12 @@ async def test_named_branch_missing_true_only_when_confirmed_absent() -> None:
     git_svc.branch_exists_on_remote = AsyncMock(side_effect=[False, True, None])
     with (
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.services.project.get_project_service",
             MagicMock(return_value=proj_svc),
         ),
-        patch("roboco.services.git.get_git_service", MagicMock(return_value=git_svc)),
+        patch(
+            "robofleet.services.git.get_git_service", MagicMock(return_value=git_svc)
+        ),
     ):
         assert await svc._named_branch_missing_on_remote(task, uuid4()) is True
         assert await svc._named_branch_missing_on_remote(task, uuid4()) is False
@@ -151,7 +153,7 @@ async def test_named_branch_missing_false_when_project_unresolved() -> None:
     proj_svc = MagicMock()
     proj_svc.get = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.project.get_project_service",
+        "robofleet.services.project.get_project_service",
         MagicMock(return_value=proj_svc),
     ):
         assert await svc._named_branch_missing_on_remote(task, uuid4()) is False

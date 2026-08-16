@@ -17,14 +17,14 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     ProjectTable,
     TaskCellProjectTable,
     TaskTable,
 )
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
 from sqlalchemy.exc import IntegrityError
 
 if TYPE_CHECKING:

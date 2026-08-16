@@ -15,9 +15,9 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from roboco.models.task import DocRef
-from roboco.services.docs import _coerce_doc_ref
-from roboco.services.gateway.choreographer.doc import _doc_refs_for
+from robofleet.models.task import DocRef
+from robofleet.services.docs import _coerce_doc_ref
+from robofleet.services.gateway.choreographer.doc import _doc_refs_for
 
 
 def test_doc_refs_for_builds_valid_docref_dicts() -> None:
@@ -33,7 +33,7 @@ def test_doc_refs_for_builds_valid_docref_dicts() -> None:
         (out[1], "docs/api/endpoints.md", "endpoints.md"),
     ):
         assert isinstance(d, dict), d
-        # Indexer path (roboco/services/task.py:_index_docs_background).
+        # Indexer path (robofleet/services/task.py:_index_docs_background).
         assert d.get("path") == expected_path
         # list_docs / _get_existing_doc_ref path.
         ref = DocRef(**d)

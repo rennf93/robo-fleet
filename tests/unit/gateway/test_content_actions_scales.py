@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_rebalance — PO-gated
+"""robofleet.services.gateway.content_actions.propose_rebalance — PO-gated
 Scales portfolio-rebalance authoring. Mirrors
 test_content_actions_pest_control.py, plus the task_ref resolution +
 action/new_priority validation truth table this verb adds on top."""
@@ -10,8 +10,11 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.foundation.policy.content import markers
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 class _FakeTask:
@@ -82,7 +85,7 @@ def _default_task_ref_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
     stub = MagicMock()
     stub.resolve_scales_task_ref = AsyncMock(side_effect=lambda _ref: _FakeTargetTask())
     stub.list_open_scales_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: stub)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: stub)
 
 
 @pytest.mark.asyncio
@@ -235,7 +238,7 @@ async def test_propose_rebalance_rejects_unresolvable_task_ref(
 ) -> None:
     stub = MagicMock()
     stub.resolve_scales_task_ref = AsyncMock(return_value=None)
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: stub)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: stub)
 
     bad = _valid_item(0)
     bad["task_ref"] = "no-such-task"
@@ -256,7 +259,7 @@ async def test_propose_rebalance_no_open_cycle_is_invalid_state(
         side_effect=lambda _ref: _FakeTargetTask()
     )
     task_svc.list_open_scales_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("product_owner").propose_rebalance(
         agent_id=uuid4(), items=_valid_items(2)
     )
@@ -273,7 +276,7 @@ async def test_propose_rebalance_persists_plan_onto_open_task(
     task_svc = MagicMock()
     task_svc.resolve_scales_task_ref = AsyncMock(return_value=target)
     task_svc.list_open_scales_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("product_owner")
     actions.task.session.flush = AsyncMock()
 
@@ -304,7 +307,7 @@ async def test_propose_rebalance_cancel_item_persists_null_priority(
     task_svc = MagicMock()
     task_svc.resolve_scales_task_ref = AsyncMock(return_value=target)
     task_svc.list_open_scales_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("product_owner")
     actions.task.session.flush = AsyncMock()
 
@@ -333,7 +336,7 @@ async def test_propose_rebalance_sends_telegram_push_per_item(
     task_svc = MagicMock()
     task_svc.resolve_scales_task_ref = AsyncMock(return_value=target)
     task_svc.list_open_scales_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     notify = AsyncMock()
     actions = _actions("product_owner", notification_delivery=notify)
     actions.task.session.flush = AsyncMock()
@@ -364,7 +367,7 @@ async def test_propose_rebalance_survives_telegram_push_failure(
     task_svc = MagicMock()
     task_svc.resolve_scales_task_ref = AsyncMock(return_value=target)
     task_svc.list_open_scales_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     notify = MagicMock()
     notify.notify_ceo_of_queue_item = AsyncMock(side_effect=RuntimeError("boom"))
     actions = _actions("product_owner", notification_delivery=notify)
@@ -387,7 +390,7 @@ async def test_propose_rebalance_ignores_cycle_assigned_to_another_agent(
         side_effect=lambda _ref: _FakeTargetTask()
     )
     task_svc.list_open_scales_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("product_owner").propose_rebalance(
         agent_id=uuid4(), items=_valid_items(2)
     )
@@ -408,7 +411,7 @@ async def test_propose_rebalance_ignores_already_authored_cycle(
         side_effect=lambda _ref: _FakeTargetTask()
     )
     task_svc.list_open_scales_cycles = AsyncMock(return_value=[authored_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("product_owner").propose_rebalance(
         agent_id=agent_id, items=_valid_items(2)
     )

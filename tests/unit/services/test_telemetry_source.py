@@ -11,9 +11,9 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.services.git import GitService
-from roboco.services.telemetry import GitHubCITelemetrySource
+from robofleet.config import settings as cfg
+from robofleet.services.git import GitService
+from robofleet.services.telemetry import GitHubCITelemetrySource
 
 
 def _ci(conclusion: str) -> dict[str, str]:

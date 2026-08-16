@@ -14,7 +14,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from roboco.db import base as db_base
+from robofleet.db import base as db_base
 
 
 @pytest.fixture

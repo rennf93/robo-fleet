@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     import httpx
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _make_orch() -> AgentOrchestrator:
@@ -60,8 +60,8 @@ def _patch_handoff_db(task_svc: AsyncMock) -> tuple[Any, Any]:
         yield AsyncMock()
 
     return (
-        patch("roboco.db.base.get_db_context", _fake_ctx),
-        patch("roboco.services.task.TaskService", return_value=task_svc),
+        patch("robofleet.db.base.get_db_context", _fake_ctx),
+        patch("robofleet.services.task.TaskService", return_value=task_svc),
     )
 
 
@@ -230,7 +230,7 @@ async def test_ceo_handoff_once_when_board_review_complete() -> None:
     db_ctx, task_ctx = _patch_handoff_db(task_svc)
     with (
         patch.object(orch, "_is_agent_active", return_value=False),
-        patch("roboco.services.notification.NotificationService", return_value=svc),
+        patch("robofleet.services.notification.NotificationService", return_value=svc),
         db_ctx,
         task_ctx,
     ):
@@ -258,7 +258,7 @@ async def test_ceo_not_handed_off_while_review_incomplete() -> None:
     db_ctx, task_ctx = _patch_handoff_db(task_svc)
     with (
         patch.object(orch, "_is_agent_active", return_value=False),
-        patch("roboco.services.notification.NotificationService", return_value=svc),
+        patch("robofleet.services.notification.NotificationService", return_value=svc),
         db_ctx,
         task_ctx,
     ):
@@ -283,7 +283,7 @@ async def test_ceo_handoff_failure_allows_retry() -> None:
     db_ctx, task_ctx = _patch_handoff_db(task_svc)
     with (
         patch.object(orch, "_is_agent_active", return_value=False),
-        patch("roboco.services.notification.NotificationService", return_value=svc),
+        patch("robofleet.services.notification.NotificationService", return_value=svc),
         db_ctx,
         task_ctx,
     ):
@@ -350,9 +350,11 @@ def _patch_inject_seams(
     journal_svc = AsyncMock()
     journal_svc.board_review_brief = AsyncMock(return_value=journal_entries)
     return (
-        patch("roboco.db.base.get_db_context", _fake_ctx),
-        patch("roboco.services.task.get_task_service", return_value=task_svc),
-        patch("roboco.services.journal.get_journal_service", return_value=journal_svc),
+        patch("robofleet.db.base.get_db_context", _fake_ctx),
+        patch("robofleet.services.task.get_task_service", return_value=task_svc),
+        patch(
+            "robofleet.services.journal.get_journal_service", return_value=journal_svc
+        ),
     )
 
 
@@ -373,7 +375,9 @@ async def test_inject_board_brief_single_task_uses_single_composer() -> None:
     )
     db_ctx, task_ctx, journal_ctx = _patch_inject_seams(task, [])
     with (
-        patch("roboco.services.prompter_live.get_live_registry", return_value=registry),
+        patch(
+            "robofleet.services.prompter_live.get_live_registry", return_value=registry
+        ),
         db_ctx,
         task_ctx,
         journal_ctx,
@@ -413,7 +417,9 @@ async def test_inject_board_brief_batch_umbrella_uses_batch_composer() -> None:
     ]
     db_ctx, task_ctx, journal_ctx = _patch_inject_seams(umbrella, [], children)
     with (
-        patch("roboco.services.prompter_live.get_live_registry", return_value=registry),
+        patch(
+            "robofleet.services.prompter_live.get_live_registry", return_value=registry
+        ),
         db_ctx,
         task_ctx,
         journal_ctx,
@@ -448,8 +454,12 @@ async def test_inject_board_brief_persists_the_message() -> None:
     db_ctx, task_ctx, journal_ctx = _patch_inject_seams(task, [])
     prompter = AsyncMock()
     with (
-        patch("roboco.services.prompter_live.get_live_registry", return_value=registry),
-        patch("roboco.services.prompter.get_prompter_service", return_value=prompter),
+        patch(
+            "robofleet.services.prompter_live.get_live_registry", return_value=registry
+        ),
+        patch(
+            "robofleet.services.prompter.get_prompter_service", return_value=prompter
+        ),
         db_ctx,
         task_ctx,
         journal_ctx,
@@ -484,7 +494,9 @@ async def test_inject_board_brief_still_delivers_when_persistence_fails() -> Non
     )
     db_ctx, task_ctx, journal_ctx = _patch_inject_seams(task, [])
     with (
-        patch("roboco.services.prompter_live.get_live_registry", return_value=registry),
+        patch(
+            "robofleet.services.prompter_live.get_live_registry", return_value=registry
+        ),
         db_ctx,
         task_ctx,
         journal_ctx,
@@ -500,7 +512,7 @@ async def test_inject_board_brief_no_parked_session_is_noop() -> None:
     orch = _make_orch()
     registry = _FakeLiveRegistry(None)
     with patch(
-        "roboco.services.prompter_live.get_live_registry", return_value=registry
+        "robofleet.services.prompter_live.get_live_registry", return_value=registry
     ):
         await orch._inject_board_brief_into_parked_intake(str(uuid4()))
     assert registry.delivered == []

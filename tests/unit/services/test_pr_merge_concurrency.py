@@ -21,9 +21,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.exceptions import GitError, MergeConflictError
-from roboco.services.forge import RepoRef
-from roboco.services.git import GitService
+from robofleet.exceptions import GitError, MergeConflictError
+from robofleet.services.forge import RepoRef
+from robofleet.services.git import GitService
 
 # Module-level constants kept local so the assertions stay readable and
 # ruff's PLR2004 magic-value rule has nothing to complain about. The
@@ -64,7 +64,9 @@ def _patch_project_service(project: object | None) -> Any:
     fake_service = MagicMock()
     fake_service.get = AsyncMock(return_value=project)
     fake_service.get_by_slug = AsyncMock(return_value=project)
-    return patch("roboco.services.git.get_project_service", return_value=fake_service)
+    return patch(
+        "robofleet.services.git.get_project_service", return_value=fake_service
+    )
 
 
 def _bind(svc: GitService, name: str, value: object) -> None:

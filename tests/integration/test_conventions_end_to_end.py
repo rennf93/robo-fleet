@@ -16,7 +16,7 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING, Any
 
-from roboco.services.gateway.choreographer import Choreographer
+from robofleet.services.gateway.choreographer import Choreographer
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -34,7 +34,7 @@ def _run_validator(root: Path, files: list[str]) -> dict[str, Any]:
         [
             sys.executable,
             "-m",
-            "roboco.conventions",
+            "robofleet.conventions",
             "check",
             "--root",
             str(root),

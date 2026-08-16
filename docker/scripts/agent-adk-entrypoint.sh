@@ -3,4 +3,4 @@
 # ENTRYPOINT calls the python module directly; this wrapper exists only so an
 # operator can `docker run ... /app/scripts/agent-adk-entrypoint.sh` with the
 # same argv without remembering the module path.
-exec python -m roboco.agent.adk_entry "$@"
+exec python -m robofleet.agent.adk_entry "$@"

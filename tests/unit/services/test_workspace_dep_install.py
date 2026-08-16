@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services.workspace import (
+from robofleet.services.workspace import (
     _DEP_INSTALL_MARKER,
     WorkspaceService,
     _detect_dep_commands,
@@ -161,8 +161,8 @@ async def test_install_runs_detected_command(tmp_path: Path) -> None:
         return subprocess.CompletedProcess(argv, returncode=0, stdout="", stderr="")
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         ran = await svc.install_dev_deps(ws)
 
@@ -187,8 +187,8 @@ async def test_install_idempotent_on_unchanged_lockfiles(tmp_path: Path) -> None
         return subprocess.CompletedProcess(argv, returncode=0, stdout="", stderr="")
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         first = await svc.install_dev_deps(ws)
         second = await svc.install_dev_deps(ws)
@@ -215,8 +215,8 @@ async def test_install_reruns_when_lockfile_changes(tmp_path: Path) -> None:
         return subprocess.CompletedProcess(argv, returncode=0, stdout="", stderr="")
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.install_dev_deps(ws)
         lock.write_text("version = 2\n")
@@ -238,8 +238,8 @@ async def test_install_failure_is_best_effort(tmp_path: Path) -> None:
         return subprocess.CompletedProcess(argv, returncode=1, stdout="", stderr="boom")
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         ran = await svc.install_dev_deps(ws)
 
@@ -261,8 +261,8 @@ async def test_install_missing_tool_does_not_raise(tmp_path: Path) -> None:
         raise FileNotFoundError("uv not found")
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_fake_run),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         ran = await svc.install_dev_deps(ws)
 
@@ -280,11 +280,11 @@ async def test_install_skipped_when_disabled(tmp_path: Path) -> None:
 
     with (
         patch(
-            "roboco.services.workspace.settings.workspace_install_dev_deps",
+            "robofleet.services.workspace.settings.workspace_install_dev_deps",
             False,
         ),
-        patch("roboco.services.workspace.subprocess.run") as run_mock,
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run") as run_mock,
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         ran = await svc.install_dev_deps(ws)
 
@@ -299,8 +299,8 @@ async def test_install_noop_when_no_manifest(tmp_path: Path) -> None:
     svc = _service()
 
     with (
-        patch("roboco.services.workspace.subprocess.run") as run_mock,
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace.subprocess.run") as run_mock,
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         ran = await svc.install_dev_deps(ws)
 

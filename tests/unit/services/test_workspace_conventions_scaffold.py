@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
-import roboco.services.workspace as ws_mod
-from roboco.config import settings
-from roboco.services.workspace import WorkspaceService
+import robofleet.services.workspace as ws_mod
+from robofleet.config import settings
+from robofleet.services.workspace import WorkspaceService
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,7 +27,7 @@ def _install_spy(monkeypatch: pytest.MonkeyPatch) -> _SpyConventions:
     ws_mod._SCAFFOLD_ATTEMPTED.clear()
     spy = _SpyConventions()
     monkeypatch.setattr(
-        "roboco.services.conventions.get_conventions_service", lambda _s: spy
+        "robofleet.services.conventions.get_conventions_service", lambda _s: spy
     )
     return spy
 

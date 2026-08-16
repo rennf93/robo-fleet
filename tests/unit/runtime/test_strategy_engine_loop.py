@@ -13,11 +13,11 @@ import types
 from typing import cast
 
 import pytest
-import roboco.db as db_mod
-import roboco.services.strategy_engine as strat_mod
-from roboco.config import settings as cfg
-from roboco.runtime import orchestrator as orch_mod
-from roboco.runtime.orchestrator import AgentOrchestrator
+import robofleet.db as db_mod
+import robofleet.services.strategy_engine as strat_mod
+from robofleet.config import settings as cfg
+from robofleet.runtime import orchestrator as orch_mod
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 class _FakeDbCtx:

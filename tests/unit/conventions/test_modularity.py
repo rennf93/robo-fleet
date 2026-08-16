@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from roboco.conventions import classify_python, classify_ts
-from roboco.conventions.modularity import check_modularity
-from roboco.foundation.policy.conventions.models import ConventionsStandard
+from robofleet.conventions import classify_python, classify_ts
+from robofleet.conventions.modularity import check_modularity
+from robofleet.foundation.policy.conventions.models import ConventionsStandard
 
 
 def _py(src: str) -> set[str]:

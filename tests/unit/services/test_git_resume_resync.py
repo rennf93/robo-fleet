@@ -18,8 +18,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.services.base import ValidationError
-from roboco.services.git import GitService
+from robofleet.services.base import ValidationError
+from robofleet.services.git import GitService
 
 
 def _service() -> GitService:

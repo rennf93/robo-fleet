@@ -5,7 +5,7 @@ Mirrors test_spackle_engine.py, minus the evidence_context tests (spec §4:
 Mirror carries NO heavy server-side inventory engine — the messaging audit
 is the Head of Marketing's own read-tool work, ordered by the spawn prompt,
 not server-assembled). Also exercises the shared rotation helper
-(``roboco.services.board_programs.pick_rotation_target``) through this
+(``robofleet.services.board_programs.pick_rotation_target``) through this
 engine, proving it stays independent of the other project-scoped programs'
 rotations.
 """
@@ -16,20 +16,20 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, Complexity, Team
-from roboco.models.base import TaskNature as TN
-from roboco.models.base import TaskStatus as TS
-from roboco.models.base import TaskType as TT
-from roboco.services.mirror_engine import MirrorEngine
-from roboco.services.task import (
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, Complexity, Team
+from robofleet.models.base import TaskNature as TN
+from robofleet.models.base import TaskStatus as TS
+from robofleet.models.base import TaskType as TT
+from robofleet.services.mirror_engine import MirrorEngine
+from robofleet.services.task import (
     MIRROR_SOURCE,
     PEST_CONTROL_SOURCE,
     ROADMAP_SOURCE,

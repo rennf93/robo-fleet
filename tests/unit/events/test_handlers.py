@@ -11,8 +11,8 @@ if TYPE_CHECKING:
 from uuid import uuid4
 
 import pytest
-from roboco.events.bus import Event, EventType
-from roboco.events.handlers import (
+from robofleet.events.bus import Event, EventType
+from robofleet.events.handlers import (
     _get_doc_id,
     _get_pm_id,
     _get_qa_id,
@@ -466,6 +466,6 @@ def test_register_default_handlers_uses_global_bus_when_none_passed() -> None:
     fake_bus = MagicMock()
     fake_bus.subscribe = MagicMock()
 
-    with patch("roboco.events.handlers.get_event_bus", return_value=fake_bus):
+    with patch("robofleet.events.handlers.get_event_bus", return_value=fake_bus):
         register_default_handlers()
     fake_bus.subscribe.assert_called()

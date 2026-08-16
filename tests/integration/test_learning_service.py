@@ -22,9 +22,9 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.services.learning import (
+from robofleet.db.tables import AgentTable
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.services.learning import (
     LearningPropagationService,
     LearningScope,
     LearningType,
@@ -63,10 +63,10 @@ async def shared_session(
         yield db_session
 
     # learning.py imports `get_db_context` inside the function body (so the
-    # `roboco.db.base` patch picks up at call time), but notification.py
+    # `robofleet.db.base` patch picks up at call time), but notification.py
     # imports it at module load — patch both targets.
-    monkeypatch.setattr("roboco.db.base.get_db_context", _ctx)
-    monkeypatch.setattr("roboco.services.notification.get_db_context", _ctx)
+    monkeypatch.setattr("robofleet.db.base.get_db_context", _ctx)
+    monkeypatch.setattr("robofleet.services.notification.get_db_context", _ctx)
     yield db_session
 
 
@@ -288,7 +288,7 @@ async def test_no_recipients_after_role_filter_hits_empty_branch(
         def __new__(cls, value: str) -> _PermissiveRole:
             return cast("_PermissiveRole", real_role(value.lower()))
 
-    monkeypatch.setattr("roboco.models.base.AgentRole", _PermissiveRole)
+    monkeypatch.setattr("robofleet.models.base.AgentRole", _PermissiveRole)
 
     author = _make_agent(AgentRole.DEVELOPER, slug=f"empty-{uuid4().hex[:8]}")
     shared_session.add(author)
@@ -338,10 +338,10 @@ async def test_team_scope_with_patched_agent_role_hits_filter(
         def __new__(cls, value: str) -> _PermissiveRole:
             return cast("_PermissiveRole", real_role(value.lower()))
 
-    # AgentRole is imported inside the function body (`from roboco.models.base
-    # import AgentRole`), so patching `roboco.models.base.AgentRole` is what
+    # AgentRole is imported inside the function body (`from robofleet.models.base
+    # import AgentRole`), so patching `robofleet.models.base.AgentRole` is what
     # the function will pick up at call time.
-    monkeypatch.setattr("roboco.models.base.AgentRole", _PermissiveRole)
+    monkeypatch.setattr("robofleet.models.base.AgentRole", _PermissiveRole)
 
     author = _make_agent(real_role.DEVELOPER)
     peer_dev = _make_agent(real_role.DEVELOPER)

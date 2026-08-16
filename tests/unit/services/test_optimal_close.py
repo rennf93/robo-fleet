@@ -14,8 +14,8 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.models.optimal import IndexType
-from roboco.services.optimal import OptimalService
+from robofleet.models.optimal import IndexType
+from robofleet.services.optimal import OptimalService
 
 
 def _svc() -> OptimalService:
@@ -45,7 +45,7 @@ async def test_close_cancels_running_indexing_task(
     svc._indexing_task = indexing_task
 
     monkeypatch.setattr(
-        "roboco.services.optimal_brain.shared_embedder.close_shared_embedder",
+        "robofleet.services.optimal_brain.shared_embedder.close_shared_embedder",
         AsyncMock(),
     )
 
@@ -88,7 +88,7 @@ async def test_close_cancels_indexing_task_before_clearing_plugins(
     await asyncio.sleep(0)
 
     monkeypatch.setattr(
-        "roboco.services.optimal_brain.shared_embedder.close_shared_embedder",
+        "robofleet.services.optimal_brain.shared_embedder.close_shared_embedder",
         AsyncMock(),
     )
 

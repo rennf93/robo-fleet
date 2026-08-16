@@ -16,29 +16,29 @@ from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.db.tables import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import (
     AgentTable,
     AuditLogTable,
     BoardProgramCycleTable,
     ProjectTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import (
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
     Team,
 )
-from roboco.models.base import TaskNature as TN
-from roboco.models.base import TaskStatus as TS
-from roboco.models.base import TaskType as TT
-from roboco.services import board_programs as bp_module
-from roboco.services import x_engine as x_engine_module
-from roboco.services.company_goals import get_company_goals_service
-from roboco.services.task import (
+from robofleet.models.base import TaskNature as TN
+from robofleet.models.base import TaskStatus as TS
+from robofleet.models.base import TaskType as TT
+from robofleet.services import board_programs as bp_module
+from robofleet.services import x_engine as x_engine_module
+from robofleet.services.company_goals import get_company_goals_service
+from robofleet.services.task import (
     X_BARFLY_SOURCE,
     X_CAMPAIGN_SOURCE,
     X_EDITORIAL_SOURCE,
@@ -47,8 +47,8 @@ from roboco.services.task import (
     X_REPLY_SOURCE,
     TaskService,
 )
-from roboco.services.x_client import XClient, XMention, XPostResult
-from roboco.services.x_post_service import (
+from robofleet.services.x_client import XClient, XMention, XPostResult
+from robofleet.services.x_post_service import (
     TaskAlreadyCompletedError,
     XPostBodyTooLongError,
     XPostExecuteResult,
@@ -220,7 +220,7 @@ async def test_approve_posts_and_completes(db_session: AsyncSession) -> None:
     task = await _seed_draft(db_session)
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -241,7 +241,7 @@ async def test_approve_is_idempotent_second_call_is_noop(
     task = await _seed_draft(db_session)
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -264,7 +264,7 @@ async def test_approve_with_edited_body_posts_the_edit(
     task = await _seed_draft(db_session, body="Original")
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -311,7 +311,7 @@ async def test_approve_no_credentials_result(db_session: AsyncSession) -> None:
 
     _ = no_creds_client
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=_Null()),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=_Null()),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -327,7 +327,7 @@ async def test_approve_post_failed_keeps_task_open(db_session: AsyncSession) -> 
     task = await _seed_draft(db_session)
     client = _StubClient(posted=False)
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -371,7 +371,7 @@ async def test_approve_rechecks_completed_under_lock_and_never_reposts(
         return "tok"
 
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", _win_the_race),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -395,7 +395,7 @@ async def test_approve_refuses_already_rejected_draft(
         await _svc(db_session).reject(_id(task), "not on-brand")
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -423,7 +423,7 @@ async def test_approve_rechecks_cancelled_under_lock_and_never_posts(
         return "tok"
 
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", _win_the_race),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -502,7 +502,7 @@ async def test_approve_posts_feature_spotlight_draft(
     task = await _seed_draft(db_session, source=X_FEATURE_SOURCE)
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -544,7 +544,7 @@ async def test_approve_posts_barfly_draft_standalone(db_session: AsyncSession) -
     await db_session.flush()
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -567,7 +567,7 @@ async def test_approve_threads_x_reply_draft(db_session: AsyncSession) -> None:
     await db_session.flush()
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -586,7 +586,7 @@ async def test_approve_plain_x_post_never_passes_a_reply_target(
     task = await _seed_draft(db_session, source=X_POST_SOURCE)
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -697,7 +697,7 @@ async def test_list_post_history_newest_acted_first(
     posted_task = await _seed_draft(db_session)
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -714,7 +714,7 @@ async def test_list_post_history_includes_marker_fields(
     posted_task = await _seed_draft(db_session)
     client = _StubClient(tweet_id="777")
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -824,7 +824,7 @@ async def test_approve_feature_spotlight_records_learn_decision(
     await _seed_cycle_ledger_row(db_session, task)
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -872,7 +872,7 @@ async def test_approve_megaphone_records_learn_decision(
     await _seed_cycle_ledger_row(db_session, task, program_key="megaphone")
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -892,7 +892,7 @@ async def test_approve_war_room_records_learn_decision(
     await _seed_cycle_ledger_row(db_session, task, program_key="war_room")
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -912,7 +912,7 @@ async def test_approve_barfly_records_learn_decision(
     await _seed_cycle_ledger_row(db_session, task, program_key="barfly")
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -946,7 +946,7 @@ async def test_approve_plain_x_post_does_not_record_learn(
     task = await _seed_draft(db_session, source=X_POST_SOURCE)
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -980,7 +980,7 @@ async def test_approve_feature_spotlight_survives_learn_recording_failure(
 
     monkeypatch.setattr(bp_module.BoardProgramEngine, "record_decision", _boom)
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
     ):
@@ -1044,7 +1044,7 @@ async def test_approve_concurrent_edit_does_not_clobber_a_committed_post(
 
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(TaskService, "get", _get_then_inject_concurrent_post),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
@@ -1086,11 +1086,11 @@ async def test_approve_feature_spotlight_with_video_opens_video_task(
     video_engine = AsyncMock()
     video_engine.open_video_task = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=video_engine,
         ),
     ):
@@ -1120,11 +1120,11 @@ async def test_approve_feature_spotlight_video_falls_back_to_brief_script(
     video_engine = AsyncMock()
     video_engine.open_video_task = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=video_engine,
         ),
     ):
@@ -1149,11 +1149,11 @@ async def test_approve_feature_spotlight_reapprove_does_not_reopen_video(
     video_engine = AsyncMock()
     video_engine.open_video_task = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=video_engine,
         ),
     ):
@@ -1179,11 +1179,11 @@ async def test_approve_plain_x_post_never_opens_video(
     video_engine = AsyncMock()
     video_engine.open_video_task = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=video_engine,
         ),
     ):
@@ -1205,7 +1205,7 @@ async def test_reject_feature_spotlight_with_wants_video_opens_none(
     video_engine.open_video_task = AsyncMock(return_value=None)
     with (
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=video_engine,
         ),
         _lock_free(),
@@ -1227,11 +1227,11 @@ async def test_approve_feature_spotlight_video_flags_off_skips(
     video_engine = AsyncMock()
     video_engine.open_video_task = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=video_engine,
         ),
     ):
@@ -1254,11 +1254,11 @@ async def test_approve_feature_spotlight_without_wants_video_skips(
     video_engine = AsyncMock()
     video_engine.open_video_task = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=video_engine,
         ),
     ):
@@ -1278,11 +1278,11 @@ async def test_approve_feature_spotlight_video_failure_does_not_break_post(
     task = await _seed_feature_draft(db_session)
     client = _StubClient()
     with (
-        patch("roboco.services.x_post_service.build_x_client", return_value=client),
+        patch("robofleet.services.x_post_service.build_x_client", return_value=client),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
         patch.object(XPostService, "_release_lock", AsyncMock(return_value=None)),
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             side_effect=RuntimeError("video-engine boom"),
         ),
     ):
@@ -1421,7 +1421,7 @@ async def test_reject_redraft_materializes_held_draft_of_same_source_with_new_bo
     task_id = _id(task)
 
     factory, engine = await _redraft_engine_factory(_test_database_url)
-    monkeypatch.setattr("roboco.db.base.get_session_factory", lambda: factory)
+    monkeypatch.setattr("robofleet.db.base.get_session_factory", lambda: factory)
 
     captured_sessions: list[AsyncSession] = []
     real_get_x_engine = x_engine_module.get_x_engine
@@ -1474,7 +1474,7 @@ async def test_reject_redraft_local_model_failure_originates_nothing(
     task_id = _id(task)
 
     factory, engine = await _redraft_engine_factory(_test_database_url)
-    monkeypatch.setattr("roboco.db.base.get_session_factory", lambda: factory)
+    monkeypatch.setattr("robofleet.db.base.get_session_factory", lambda: factory)
     with _redraft_lock_free():
         try:
             with _lock_free():
@@ -1510,7 +1510,7 @@ async def test_reject_redraft_respects_open_post_cap(
     filler = await _seed_draft(db_session, source=X_REPLY_SOURCE, body="Filler reply")
 
     factory, engine = await _redraft_engine_factory(_test_database_url)
-    monkeypatch.setattr("roboco.db.base.get_session_factory", lambda: factory)
+    monkeypatch.setattr("robofleet.db.base.get_session_factory", lambda: factory)
     with _redraft_lock_free():
         try:
             with _lock_free():
@@ -1540,7 +1540,7 @@ async def test_reject_survives_deferred_session_factory_failure(
     def _boom() -> async_sessionmaker[AsyncSession]:
         raise RuntimeError("db down")
 
-    monkeypatch.setattr("roboco.db.base.get_session_factory", _boom)
+    monkeypatch.setattr("robofleet.db.base.get_session_factory", _boom)
     with _lock_free():
         updated = await _svc(db_session).reject(task_id, "Needs work")
     assert updated is not None

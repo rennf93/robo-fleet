@@ -1,4 +1,4 @@
-"""Coverage for roboco.config computed properties."""
+"""Coverage for robofleet.config computed properties."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import importlib
 
 import pytest
 from pydantic import ValidationError
-from roboco.config import Settings, resolve_uvicorn_loop_factory
+from robofleet.config import Settings, resolve_uvicorn_loop_factory
 
 
 def test_internal_api_url_uses_api_url_when_set() -> None:

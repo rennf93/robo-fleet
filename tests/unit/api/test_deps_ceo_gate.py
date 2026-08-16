@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import pytest
 from fastapi import HTTPException
-from roboco.api.deps import require_ceo_role
-from roboco.foundation.identity import Role
-from roboco.models import AgentRole
+from robofleet.api.deps import require_ceo_role
+from robofleet.foundation.identity import Role
+from robofleet.models import AgentRole
 
 _FORBIDDEN = 403  # HTTP 403 Forbidden — the gate's reject status
 

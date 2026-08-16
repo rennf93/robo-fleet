@@ -14,8 +14,8 @@ from http import HTTPStatus
 from typing import Any
 
 import pytest
-from roboco.runtime import orchestrator as orchestrator_module
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime import orchestrator as orchestrator_module
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _TASK_ID = "11111111-1111-1111-1111-111111111111"
 _DEP_ID = "22222222-2222-2222-2222-222222222222"

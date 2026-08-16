@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from roboco.foundation.policy.conventions.models import (
+from robofleet.foundation.policy.conventions.models import (
     BUILTIN_RULES,
     ConventionsParseError,
     ConventionsStandard,

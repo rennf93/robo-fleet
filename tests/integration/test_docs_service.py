@@ -8,21 +8,21 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.task import DocRef
-from roboco.services.base import (
+from robofleet.models.task import DocRef
+from robofleet.services.base import (
     NotFoundError,
     UnauthorizedError,
     ValidationError,
 )
-from roboco.services.docs import (
+from robofleet.services.docs import (
     DocsService,
     WriteDocInput,
     _refused_doc_types,
@@ -260,7 +260,7 @@ async def test_write_doc_creates_new(docs_setup: dict, tmp_path: Path) -> None:
     """Happy path — create new doc, RAG dedup returns None."""
     svc = docs_setup["svc"]
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         patch.object(svc, "_find_similar_doc", AsyncMock(return_value=None)),
         patch.object(svc, "_index_doc_in_rag", AsyncMock(return_value=None)),
     ):
@@ -286,7 +286,7 @@ async def test_write_doc_creates_new_subfolder_empty(
     """doc_type=readme has empty subfolder → no subfolder in path."""
     svc = docs_setup["svc"]
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         patch.object(svc, "_find_similar_doc", AsyncMock(return_value=None)),
         patch.object(svc, "_index_doc_in_rag", AsyncMock(return_value=None)),
     ):
@@ -310,7 +310,7 @@ async def test_write_doc_updates_existing(docs_setup: dict, tmp_path: Path) -> N
     svc = docs_setup["svc"]
     existing_path = "backend/api/existing.md"
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         patch.object(svc, "_find_similar_doc", AsyncMock(return_value=existing_path)),
         patch.object(svc, "_index_doc_in_rag", AsyncMock(return_value=None)),
     ):
@@ -355,7 +355,7 @@ async def test_write_doc_update_preserves_existing_metadata(
     await svc.session.flush()
 
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         patch.object(svc, "_find_similar_doc", AsyncMock(return_value=existing_path)),
         patch.object(svc, "_index_doc_in_rag", AsyncMock(return_value=None)),
     ):
@@ -385,7 +385,7 @@ async def test_write_doc_no_collapse_on_different_filename(
     svc = docs_setup["svc"]
     existing_path = "backend/api/existing.md"
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         patch.object(svc, "_find_similar_doc", AsyncMock(return_value=existing_path)),
         patch.object(svc, "_index_doc_in_rag", AsyncMock(return_value=None)),
     ):
@@ -414,7 +414,7 @@ async def test_write_doc_update_path_containment_checked(
     svc = docs_setup["svc"]
     escaping = "../../etc/evil.md"
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         patch.object(svc, "_find_similar_doc", AsyncMock(return_value=escaping)),
         patch.object(svc, "_index_doc_in_rag", AsyncMock(return_value=None)),
         pytest.raises(ValidationError),
@@ -440,7 +440,7 @@ async def test_write_doc_commit_status_skipped_when_no_branch(
     None) so the agent knows the repo commit did not happen."""
     svc = docs_setup["svc"]
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         patch.object(svc, "_find_similar_doc", AsyncMock(return_value=None)),
         patch.object(svc, "_index_doc_in_rag", AsyncMock(return_value=None)),
     ):
@@ -475,7 +475,7 @@ async def test_commit_doc_to_repo_returns_failed_on_git_error(
 
     fake_git = MagicMock()
     fake_git.get_workspace = AsyncMock(side_effect=RuntimeError("git boom"))
-    with patch("roboco.services.git.get_git_service", return_value=fake_git):
+    with patch("robofleet.services.git.get_git_service", return_value=fake_git):
         status = await svc._commit_doc_to_repo(
             "be-doc",
             WriteDocInput(
@@ -507,7 +507,7 @@ async def test_commit_doc_to_repo_returns_committed_on_success(
     fake_git.get_workspace = AsyncMock(return_value=tmp_path)
     fake_git.commit = AsyncMock(return_value={"oid": "abc"})
     with (
-        patch("roboco.services.git.get_git_service", return_value=fake_git),
+        patch("robofleet.services.git.get_git_service", return_value=fake_git),
         patch.object(svc, "_write_file", AsyncMock(return_value=None)),
     ):
         status = await svc._commit_doc_to_repo(
@@ -536,7 +536,7 @@ async def test_find_similar_doc_no_results(docs_setup: dict) -> None:
     mock_optimal = AsyncMock()
     mock_optimal.search = AsyncMock(return_value=[])
     with patch(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=mock_optimal),
     ):
         result = await svc._find_similar_doc(title="t", content="c", team="backend")
@@ -553,7 +553,7 @@ async def test_find_similar_doc_high_score_match(docs_setup: dict) -> None:
     mock_optimal = AsyncMock()
     mock_optimal.search = AsyncMock(return_value=[mock_result])
     with patch(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=mock_optimal),
     ):
         result = await svc._find_similar_doc(
@@ -572,7 +572,7 @@ async def test_find_similar_doc_low_score_no_match(docs_setup: dict) -> None:
     mock_optimal = AsyncMock()
     mock_optimal.search = AsyncMock(return_value=[mock_result])
     with patch(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=mock_optimal),
     ):
         result = await svc._find_similar_doc(title="t", content="c", team="backend")
@@ -591,7 +591,7 @@ async def test_find_similar_doc_different_team_no_match(
     mock_optimal = AsyncMock()
     mock_optimal.search = AsyncMock(return_value=[mock_result])
     with patch(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=mock_optimal),
     ):
         result = await svc._find_similar_doc(title="t", content="c", team="backend")
@@ -603,7 +603,7 @@ async def test_find_similar_doc_swallows_exceptions(docs_setup: dict) -> None:
     """RAG search failure returns None, doesn't raise."""
     svc = docs_setup["svc"]
     with patch(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(side_effect=RuntimeError("network down")),
     ):
         result = await svc._find_similar_doc(title="t", content="c", team="backend")
@@ -631,7 +631,7 @@ async def test_read_doc_head_marketing_authorized(
     target = tmp_path / "board" / "design" / "brand.md"
     target.parent.mkdir(parents=True)
     target.write_text("# Brand", encoding="utf-8")
-    with patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path):
+    with patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path):
         content, _ = await svc.read_doc(
             agent_id="head-marketing", path="board/design/brand.md"
         )
@@ -652,7 +652,7 @@ async def test_read_doc_success(docs_setup: dict, tmp_path: Path) -> None:
     target = tmp_path / "backend" / "api" / "x.md"
     target.parent.mkdir(parents=True)
     target.write_text("# Hello", encoding="utf-8")
-    with patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path):
+    with patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path):
         content, size = await svc.read_doc(agent_id="be-doc", path="backend/api/x.md")
     assert content == "# Hello"
     assert size == len(b"# Hello")
@@ -663,7 +663,7 @@ async def test_read_doc_not_found(docs_setup: dict, tmp_path: Path) -> None:
     """Read missing file → NotFoundError."""
     svc = docs_setup["svc"]
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         pytest.raises(NotFoundError),
     ):
         await svc.read_doc(agent_id="be-doc", path="ghost.md")
@@ -687,7 +687,7 @@ async def test_list_docs_head_marketing_authorized(
 ) -> None:
     """Head of Marketing can list docs (read-only Board oversight)."""
     svc = docs_setup["svc"]
-    with patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path):
+    with patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path):
         docs = await svc.list_docs(agent_id="head-marketing")
     assert docs == []
 
@@ -729,7 +729,7 @@ async def test_list_docs_unknown_agent_team_returns_empty(
     """Agent with no team but in READ_ROLES returns empty list."""
     svc = docs_setup["svc"]
     # Patch get_agent_team to return None while keeping role permissions.
-    with patch("roboco.services.docs.get_agent_team", return_value=None):
+    with patch("robofleet.services.docs.get_agent_team", return_value=None):
         docs = await svc.list_docs(agent_id="be-doc")
     assert docs == []
 
@@ -742,7 +742,7 @@ async def test_list_docs_filesystem_scan(docs_setup: dict, tmp_path: Path) -> No
     backend_dir.mkdir(parents=True)
     (backend_dir / "endpoint.md").write_text("# x", encoding="utf-8")
     (tmp_path / "backend" / "README.md").write_text("# r", encoding="utf-8")
-    with patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path):
+    with patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path):
         docs = await svc.list_docs(agent_id="be-doc")
     paths = {d.path for d in docs}
     assert "backend/api/endpoint.md" in paths
@@ -755,7 +755,7 @@ async def test_list_docs_filesystem_no_dir_returns_empty(
 ) -> None:
     """No team folder → empty list."""
     svc = docs_setup["svc"]
-    with patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path):
+    with patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path):
         docs = await svc.list_docs(agent_id="be-doc")
     assert docs == []
 
@@ -783,7 +783,7 @@ async def test_delete_doc_path_traversal(docs_setup: dict) -> None:
 async def test_delete_doc_not_found(docs_setup: dict, tmp_path: Path) -> None:
     svc = docs_setup["svc"]
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         pytest.raises(NotFoundError),
     ):
         await svc.delete_doc(agent_id="be-doc", path="missing.md")
@@ -795,7 +795,7 @@ async def test_delete_doc_success(docs_setup: dict, tmp_path: Path) -> None:
     target = tmp_path / "backend" / "api" / "x.md"
     target.parent.mkdir(parents=True)
     target.write_text("# x", encoding="utf-8")
-    with patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path):
+    with patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path):
         result = await svc.delete_doc(agent_id="be-doc", path="backend/api/x.md")
     assert result is True
     assert not target.exists()
@@ -883,7 +883,7 @@ async def test_index_doc_in_rag_swallows_exception(
 ) -> None:
     svc = docs_setup["svc"]
     with patch(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(side_effect=RuntimeError("rag down")),
     ):
         # No exception raised.
@@ -897,7 +897,7 @@ async def test_index_doc_in_rag_success(docs_setup: dict, tmp_path: Path) -> Non
     mock_optimal = AsyncMock()
     mock_optimal.index_documentation = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=mock_optimal),
     ):
         await svc._index_doc_in_rag(tmp_path / "x.md")
@@ -916,7 +916,7 @@ async def test_index_doc_in_rag_marks_live_write_provenance(
     mock_optimal = AsyncMock()
     mock_optimal.index_documentation = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=mock_optimal),
     ):
         await svc._index_doc_in_rag(tmp_path / "x.md", task_id)
@@ -938,7 +938,7 @@ async def test_index_doc_in_rag_no_task_id_still_marks_live_write(
     mock_optimal = AsyncMock()
     mock_optimal.index_documentation = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=mock_optimal),
     ):
         await svc._index_doc_in_rag(tmp_path / "x.md")
@@ -960,10 +960,10 @@ async def test_write_doc_creates_new_indexes_with_task_id(
     mock_optimal = AsyncMock()
     mock_optimal.index_documentation = AsyncMock(return_value=None)
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", tmp_path),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", tmp_path),
         patch.object(svc, "_find_similar_doc", AsyncMock(return_value=None)),
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=mock_optimal),
         ),
     ):
@@ -1077,8 +1077,8 @@ async def test_list_docs_for_team_shallow_path_infers_readme(
     (backend_root / "x.md").write_text("# x", encoding="utf-8")
     # DOCS_BASE_PATH set to backend_root means rel_path = 'x.md' (1 part).
     with (
-        patch("roboco.services.docs.DOCS_BASE_PATH", backend_root),
-        patch("roboco.services.docs.TEAM_PATHS", {"backend": ""}),
+        patch("robofleet.services.docs.DOCS_BASE_PATH", backend_root),
+        patch("robofleet.services.docs.TEAM_PATHS", {"backend": ""}),
     ):
         docs = await svc._list_docs_for_team("backend")
     assert any(d.doc_type == "readme" for d in docs)
@@ -1106,7 +1106,7 @@ async def test_commit_doc_to_repo_writes_into_workspace_and_commits(
     mock_git.get_workspace = AsyncMock(return_value=tmp_path)
     mock_git.commit = AsyncMock(return_value={"sha": "deadbeef"})
     monkeypatch.setattr(
-        "roboco.services.git.get_git_service", lambda _session: mock_git
+        "robofleet.services.git.get_git_service", lambda _session: mock_git
     )
 
     req = WriteDocInput(
@@ -1137,7 +1137,7 @@ async def test_commit_doc_to_repo_skips_without_task_branch(
     mock_git = MagicMock()
     mock_git.commit = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.git.get_git_service", lambda _session: mock_git
+        "robofleet.services.git.get_git_service", lambda _session: mock_git
     )
     req = WriteDocInput(
         task_id=docs_setup["task_id"],

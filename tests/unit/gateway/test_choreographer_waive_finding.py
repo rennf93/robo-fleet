@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 def _make_deps() -> ChoreographerDeps:
@@ -63,7 +63,7 @@ def _patch_repo(monkeypatch: pytest.MonkeyPatch, row: Any | None) -> MagicMock:
     repo_mock.get = AsyncMock(return_value=row)
     repo_mock.mark_waived = AsyncMock(return_value=True)
     monkeypatch.setattr(
-        "roboco.services.gateway.choreographer.board.ReviewFindingsRepository",
+        "robofleet.services.gateway.choreographer.board.ReviewFindingsRepository",
         lambda *_a, **_k: repo_mock,
     )
     return repo_mock

@@ -3,7 +3,7 @@ propose_feature_spotlight."""
 
 from __future__ import annotations
 
-from roboco.services.gateway.role_config import get_role_config
+from robofleet.services.gateway.role_config import get_role_config
 
 
 def test_head_marketing_gets_propose_market_brief() -> None:

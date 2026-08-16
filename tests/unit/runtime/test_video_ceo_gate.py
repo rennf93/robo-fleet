@@ -15,9 +15,9 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.foundation import identity as _foundation
-from roboco.runtime.orchestrator import AgentOrchestrator, _is_held_ceo_source
-from roboco.services.task import VIDEO_POST_SOURCE, VIDEO_SOURCE, TaskService
+from robofleet.foundation import identity as _foundation
+from robofleet.runtime.orchestrator import AgentOrchestrator, _is_held_ceo_source
+from robofleet.services.task import VIDEO_POST_SOURCE, VIDEO_SOURCE, TaskService
 from sqlalchemy.dialects import postgresql
 
 UX_DEV_UUID = _foundation.AGENTS["ux-dev-1"].uuid

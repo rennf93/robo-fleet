@@ -7,7 +7,7 @@ team like ``fullstack`` / ``system``) and any unrecognized routing fall back to
 main-pm, which triages them.
 
 EXCEPT for a code-typed task: main-pm is claim-illegal for ``code``
-(MAIN_PM_NO_CODE, roboco/services/task.py:9506 — a Main PM coordinates, it
+(MAIN_PM_NO_CODE, robofleet/services/task.py:9506 — a Main PM coordinates, it
 never owns code) — routing such a task to main-pm is a guaranteed permanent
 claim-reject loop. The fallback instead redirects to a cell PM: the nearest
 ancestor's cell team, or a deterministic default (backend / be-pm) with no
@@ -21,7 +21,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _orch() -> AgentOrchestrator:
@@ -55,8 +55,8 @@ def _patch_parent_chain(parents: list[MagicMock]) -> Any:
     svc.get = AsyncMock(side_effect=parents)
     factory = MagicMock(return_value=_CM())
     return (
-        patch("roboco.db.base.get_session_factory", return_value=factory),
-        patch("roboco.services.task.get_task_service", return_value=svc),
+        patch("robofleet.db.base.get_session_factory", return_value=factory),
+        patch("robofleet.services.task.get_task_service", return_value=svc),
     )
 
 
@@ -176,7 +176,7 @@ async def test_code_task_walks_multiple_parent_hops() -> None:
 async def test_code_task_parent_lookup_failure_defaults_to_backend() -> None:
     """A DB error walking the parent chain must not strand the task either."""
     with patch(
-        "roboco.db.base.get_session_factory", side_effect=RuntimeError("db down")
+        "robofleet.db.base.get_session_factory", side_effect=RuntimeError("db down")
     ):
         result = await _resolve(
             "dev", None, task_type="code", parent_task_id=str(uuid4())

@@ -15,8 +15,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.models.runtime import AgentInstance, OrchestratorAgentConfig
-from roboco.runtime.orchestrator import AgentOrchestrator, AgentState
+from robofleet.models.runtime import AgentInstance, OrchestratorAgentConfig
+from robofleet.runtime.orchestrator import AgentOrchestrator, AgentState
 
 
 def _make_orchestrator() -> AgentOrchestrator:

@@ -9,9 +9,9 @@ IntentSpec carries no task precondition — ``composes=()`` like ``triage``).
 
 from __future__ import annotations
 
-from roboco.foundation.identity import Role
-from roboco.foundation.policy.lifecycle import intents_for_role
-from roboco.services.gateway.role_config import _AUDITOR_FLOW
+from robofleet.foundation.identity import Role
+from robofleet.foundation.policy.lifecycle import intents_for_role
+from robofleet.services.gateway.role_config import _AUDITOR_FLOW
 
 
 def test_waive_finding_is_an_auditor_flow_verb() -> None:

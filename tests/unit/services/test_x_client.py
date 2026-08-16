@@ -7,14 +7,14 @@ import re
 
 import httpx
 import pytest
-from roboco.services.x_client import (
+from robofleet.services.x_client import (
     MAX_TWEET_CHARS,
     LiveXClient,
     NullXClient,
     build_x_client,
     oauth1_authorization_header,
 )
-from roboco.services.x_credentials import XCredentialsData
+from robofleet.services.x_credentials import XCredentialsData
 
 _CREDS = XCredentialsData(
     api_key="xvz1evFS4wEEPTGEFPHBog",

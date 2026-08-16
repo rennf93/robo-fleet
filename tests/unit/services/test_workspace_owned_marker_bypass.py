@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services.workspace import WorkspaceService, _ensure_agent_owned
+from robofleet.services.workspace import WorkspaceService, _ensure_agent_owned
 from tests.unit.services.test_workspace_ensure_agent_owned_scope import (
     _build_workspace,
 )
@@ -49,10 +49,12 @@ def test_worktree_git_reset_hard_invalidates_marker(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        "roboco.services.workspace.subprocess.run", lambda *_a, **_k: _ok(["reset"])
+        "robofleet.services.workspace.subprocess.run", lambda *_a, **_k: _ok(["reset"])
     )
     invalidate = MagicMock()
-    monkeypatch.setattr("roboco.services.workspace.invalidate_owned_marker", invalidate)
+    monkeypatch.setattr(
+        "robofleet.services.workspace.invalidate_owned_marker", invalidate
+    )
 
     WorkspaceService._worktree_git(tmp_path, ["reset", "--hard", "origin/x"])
 
@@ -63,11 +65,13 @@ def test_worktree_git_rev_parse_does_not_invalidate_marker(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        "roboco.services.workspace.subprocess.run",
+        "robofleet.services.workspace.subprocess.run",
         lambda *_a, **_k: _ok(["rev-parse"]),
     )
     invalidate = MagicMock()
-    monkeypatch.setattr("roboco.services.workspace.invalidate_owned_marker", invalidate)
+    monkeypatch.setattr(
+        "robofleet.services.workspace.invalidate_owned_marker", invalidate
+    )
 
     WorkspaceService._worktree_git(
         tmp_path, ["rev-parse", "--verify", "--quiet", "refs/heads/x"], check=False
@@ -81,10 +85,12 @@ def test_worktree_git_branch_show_current_does_not_invalidate_marker(
 ) -> None:
     """The ambiguous verb's query form: `branch --show-current` only reads."""
     monkeypatch.setattr(
-        "roboco.services.workspace.subprocess.run", lambda *_a, **_k: _ok(["branch"])
+        "robofleet.services.workspace.subprocess.run", lambda *_a, **_k: _ok(["branch"])
     )
     invalidate = MagicMock()
-    monkeypatch.setattr("roboco.services.workspace.invalidate_owned_marker", invalidate)
+    monkeypatch.setattr(
+        "robofleet.services.workspace.invalidate_owned_marker", invalidate
+    )
 
     WorkspaceService._worktree_git(tmp_path, ["branch", "--show-current"], check=False)
 
@@ -96,10 +102,12 @@ def test_worktree_git_branch_delete_invalidates_marker(
 ) -> None:
     """The ambiguous verb's write forms: `branch -d/-D <name>` writes."""
     monkeypatch.setattr(
-        "roboco.services.workspace.subprocess.run", lambda *_a, **_k: _ok(["branch"])
+        "robofleet.services.workspace.subprocess.run", lambda *_a, **_k: _ok(["branch"])
     )
     invalidate = MagicMock()
-    monkeypatch.setattr("roboco.services.workspace.invalidate_owned_marker", invalidate)
+    monkeypatch.setattr(
+        "robofleet.services.workspace.invalidate_owned_marker", invalidate
+    )
 
     WorkspaceService._worktree_git(
         tmp_path, ["branch", "-D", "task-branch"], check=False
@@ -123,16 +131,16 @@ async def test_fetch_branch_ref_invalidates_marker_before_subprocess(
         order.append("subprocess.run")
         return _ok(["fetch"])
 
-    monkeypatch.setattr("roboco.services.workspace.subprocess.run", _run_subprocess)
+    monkeypatch.setattr("robofleet.services.workspace.subprocess.run", _run_subprocess)
     monkeypatch.setattr(
-        "roboco.services.workspace.invalidate_owned_marker",
+        "robofleet.services.workspace.invalidate_owned_marker",
         lambda _ws: order.append("invalidate_owned_marker"),
     )
     mock_project_service = MagicMock()
     mock_project_service.get_by_slug = AsyncMock(return_value=None)
 
     with patch(
-        "roboco.services.project.get_project_service",
+        "robofleet.services.project.get_project_service",
         return_value=mock_project_service,
     ):
         await _svc()._fetch_branch_ref(tmp_path, "task-branch", "roboco-api")
@@ -150,10 +158,12 @@ async def test_fetch_origin_best_effort_invalidates_marker(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        "roboco.services.workspace.subprocess.run", lambda *_a, **_k: _ok(["fetch"])
+        "robofleet.services.workspace.subprocess.run", lambda *_a, **_k: _ok(["fetch"])
     )
     invalidate = MagicMock()
-    monkeypatch.setattr("roboco.services.workspace.invalidate_owned_marker", invalidate)
+    monkeypatch.setattr(
+        "robofleet.services.workspace.invalidate_owned_marker", invalidate
+    )
 
     await WorkspaceService._fetch_origin_best_effort(tmp_path, "roboco-api")
 
@@ -186,8 +196,10 @@ def test_bypass_path_write_forces_next_ensure_agent_owned_to_walk(
 
     # Pass 1: a normal zero-failure ensure_agent_owned — writes the marker.
     fake_chown, fake_rw = make_fakes(touched_pass_1)
-    monkeypatch.setattr("roboco.services.workspace._chown_entry", fake_chown)
-    monkeypatch.setattr("roboco.services.workspace._make_owner_and_group_rw", fake_rw)
+    monkeypatch.setattr("robofleet.services.workspace._chown_entry", fake_chown)
+    monkeypatch.setattr(
+        "robofleet.services.workspace._make_owner_and_group_rw", fake_rw
+    )
     _ensure_agent_owned(tmp_path)
     marker = tmp_path / ".git" / "roboco-owned"
     assert marker.is_file()
@@ -198,7 +210,7 @@ def test_bypass_path_write_forces_next_ensure_agent_owned_to_walk(
     # respawn) — with subprocess mocked so no real git repo is needed, but
     # invalidate_owned_marker running for real.
     monkeypatch.setattr(
-        "roboco.services.workspace.subprocess.run", lambda *_a, **_k: _ok(["reset"])
+        "robofleet.services.workspace.subprocess.run", lambda *_a, **_k: _ok(["reset"])
     )
     WorkspaceService._worktree_git(tmp_path, ["reset", "--hard", "origin/x"])
     assert not marker.exists()  # the fix: the bypass path invalidated it
@@ -206,7 +218,9 @@ def test_bypass_path_write_forces_next_ensure_agent_owned_to_walk(
     # Pass 2: _ensure_agent_owned must walk again (marker gone), not trust
     # the stale "fully owned" state from before the bypass-path write.
     fake_chown_2, fake_rw_2 = make_fakes(touched_pass_2)
-    monkeypatch.setattr("roboco.services.workspace._chown_entry", fake_chown_2)
-    monkeypatch.setattr("roboco.services.workspace._make_owner_and_group_rw", fake_rw_2)
+    monkeypatch.setattr("robofleet.services.workspace._chown_entry", fake_chown_2)
+    monkeypatch.setattr(
+        "robofleet.services.workspace._make_owner_and_group_rw", fake_rw_2
+    )
     _ensure_agent_owned(tmp_path)
     assert touched_pass_2  # the walk ran again — nothing was silently skipped

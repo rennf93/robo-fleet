@@ -11,7 +11,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from roboco.infra import secretmanager
+from robofleet.infra import secretmanager
 
 
 def _fake_client(payload: bytes) -> MagicMock:
@@ -66,7 +66,7 @@ def test_access_secret_uses_explicit_project(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_secretmanager_imports_clean() -> None:
-    from roboco.infra.secretmanager import access_secret  # import-cleanliness check
+    from robofleet.infra.secretmanager import access_secret  # import-cleanliness check
 
     assert callable(access_secret)
 
@@ -77,8 +77,8 @@ def test_secretmanager_imports_clean() -> None:
 def test_auth_secret_uses_secret_manager_when_prefix_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import roboco.agents_config as ac
-    import roboco.infra.secretmanager as sm
+    import robofleet.agents_config as ac
+    import robofleet.infra.secretmanager as sm
 
     monkeypatch.setattr(ac.settings, "gcp_project_id", "my-proj")
     monkeypatch.setattr(ac.settings, "gcp_secret_manager_prefix", "roboco")
@@ -96,7 +96,7 @@ def test_auth_secret_uses_secret_manager_when_prefix_set(
 def test_auth_secret_env_path_when_prefix_empty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import roboco.agents_config as ac
+    import robofleet.agents_config as ac
 
     monkeypatch.setattr(ac.settings, "gcp_project_id", "")
     monkeypatch.setenv("ROBOCO_AGENT_AUTH_SECRET", "env-secret")
@@ -107,9 +107,9 @@ def test_auth_secret_env_path_when_prefix_empty(
 def test_get_fernet_uses_secret_manager_when_prefix_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import roboco.infra.secretmanager as sm
+    import robofleet.infra.secretmanager as sm
     from cryptography.fernet import Fernet
-    from roboco.utils import crypto
+    from robofleet.utils import crypto
 
     real_key = Fernet.generate_key().decode()
     monkeypatch.setattr(crypto.settings, "encryption_key", "")

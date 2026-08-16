@@ -9,7 +9,7 @@ connection fields it actually populates (no ``None`` leaking into an env value).
 
 from __future__ import annotations
 
-from roboco.models.sandbox import (
+from robofleet.models.sandbox import (
     SANDBOX_ENGINES,
     VALID_SANDBOX_SERVICES,
     SandboxInfo,

@@ -11,12 +11,12 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.project import router as project_router
-from roboco.config import settings
-from roboco.db.tables import AgentTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.permissions import AgentContext
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.project import router as project_router
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -514,7 +514,7 @@ async def test_create_project_generic_error_reraises(
 
     with (
         patch(
-            "roboco.services.project.ProjectService.create",
+            "robofleet.services.project.ProjectService.create",
             side_effect=RuntimeError("boom"),
         ),
         pytest.raises(RuntimeError, match="boom"),
@@ -530,7 +530,7 @@ async def test_update_project_returns_500_when_service_returns_none(
 
     create = await project_client.post("/api/projects", json=_payload(), headers=_HDR)
     pid = create.json()["id"]
-    with patch("roboco.services.project.ProjectService.update", return_value=None):
+    with patch("robofleet.services.project.ProjectService.update", return_value=None):
         response = await project_client.patch(
             f"/api/projects/{pid}", json={"name": "x"}, headers=_HDR
         )
@@ -559,7 +559,7 @@ async def test_delete_project_returns_500_when_service_returns_false(
 
     create = await project_client.post("/api/projects", json=_payload(), headers=_HDR)
     pid = create.json()["id"]
-    with patch("roboco.services.project.ProjectService.delete", return_value=False):
+    with patch("robofleet.services.project.ProjectService.delete", return_value=False):
         response = await project_client.delete(f"/api/projects/{pid}", headers=_HDR)
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
 

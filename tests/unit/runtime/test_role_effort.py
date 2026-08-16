@@ -6,12 +6,12 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from roboco.models.runtime import (
+from robofleet.models.runtime import (
     ROLE_EFFORT_MAP,
     OrchestratorAgentConfig,
     SpawnGitContext,
 )
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _config(agent_id: str) -> OrchestratorAgentConfig:
@@ -30,7 +30,7 @@ def _config(agent_id: str) -> OrchestratorAgentConfig:
 def _spawn_args(agent_id: str) -> list[str]:
     cmd: list[str] = []
     with patch(
-        "roboco.runtime.orchestrator._resolve_agent_cli_model",
+        "robofleet.runtime.orchestrator._resolve_agent_cli_model",
         return_value="claude-sonnet-5",
     ):
         AgentOrchestrator._append_image_and_claude_args(cmd, _config(agent_id), None)
@@ -38,14 +38,14 @@ def _spawn_args(agent_id: str) -> list[str]:
 
 
 def test_effort_flag_injected_for_mapped_role() -> None:
-    with patch("roboco.runtime.orchestrator.ROLE_EFFORT_MAP", {"developer": "low"}):
+    with patch("robofleet.runtime.orchestrator.ROLE_EFFORT_MAP", {"developer": "low"}):
         args = _spawn_args("be-dev-1")  # be-dev-1 → developer
     assert "--effort" in args
     assert args[args.index("--effort") + 1] == "low"
 
 
 def test_no_effort_flag_for_unmapped_role() -> None:
-    with patch("roboco.runtime.orchestrator.ROLE_EFFORT_MAP", {"cell_pm": "medium"}):
+    with patch("robofleet.runtime.orchestrator.ROLE_EFFORT_MAP", {"cell_pm": "medium"}):
         args = _spawn_args("be-dev-1")  # developer — not in the patched map
     assert "--effort" not in args
 

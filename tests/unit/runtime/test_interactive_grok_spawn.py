@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from roboco.llm.providers import grok as grok_provider
-from roboco.runtime.orchestrator import (
+from robofleet.llm.providers import grok as grok_provider
+from robofleet.runtime.orchestrator import (
     GROK_PROMPTER_IMAGE,
     GROK_SECRETARY_IMAGE,
     AgentOrchestrator,

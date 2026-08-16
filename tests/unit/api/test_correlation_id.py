@@ -38,11 +38,11 @@ import pytest
 import structlog
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from roboco.api.deps import get_choreographer
-from roboco.api.middleware import CorrelationIdMiddleware
-from roboco.api.routes.v1.flow_dev import router as flow_dev_router
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.envelope import Envelope
+from robofleet.api.deps import get_choreographer
+from robofleet.api.middleware import CorrelationIdMiddleware
+from robofleet.api.routes.v1.flow_dev import router as flow_dev_router
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.envelope import Envelope
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -179,12 +179,12 @@ def _reload_mcp_module(monkeypatch: pytest.MonkeyPatch, dotted: str) -> ModuleTy
 
 @pytest.fixture
 def flow_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
-    return _reload_mcp_module(monkeypatch, "roboco.mcp.flow_server")
+    return _reload_mcp_module(monkeypatch, "robofleet.mcp.flow_server")
 
 
 @pytest.fixture
 def do_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
-    return _reload_mcp_module(monkeypatch, "roboco.mcp.do_server")
+    return _reload_mcp_module(monkeypatch, "robofleet.mcp.do_server")
 
 
 def _fake_client(payload: dict[str, Any]) -> MagicMock:

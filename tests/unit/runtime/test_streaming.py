@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 import pytest
-from roboco.runtime.streaming import (
+from robofleet.runtime.streaming import (
     get_reasoning_stream_callback,
     set_reasoning_stream_callback,
     stream_reasoning,

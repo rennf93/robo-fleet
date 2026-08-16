@@ -12,11 +12,11 @@ system identity; these tests lock that the identity is both *present* and
 import secrets
 
 import pytest
-from roboco.agents_config import verify_agent_token
-from roboco.foundation import identity as _foundation
-from roboco.models import AgentRole
-from roboco.models.permissions import TASK_PERMISSIONS, TaskAction
-from roboco.runtime.orchestrator import (
+from robofleet.agents_config import verify_agent_token
+from robofleet.foundation import identity as _foundation
+from robofleet.models import AgentRole
+from robofleet.models.permissions import TASK_PERMISSIONS, TaskAction
+from robofleet.runtime.orchestrator import (
     _SYSTEM_API_HEADERS,
     _agent_api_headers,
     _system_api_headers,

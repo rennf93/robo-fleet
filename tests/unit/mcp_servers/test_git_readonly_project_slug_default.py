@@ -21,7 +21,7 @@ def git_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
     monkeypatch.delenv("ROBOCO_PROJECT_SLUG", raising=False)
-    import roboco.mcp.git_readonly as srv
+    import robofleet.mcp.git_readonly as srv
 
     importlib.reload(srv)
     return srv

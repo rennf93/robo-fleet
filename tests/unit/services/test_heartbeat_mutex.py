@@ -14,7 +14,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services.heartbeat_mutex import (
+from robofleet.services.heartbeat_mutex import (
     HeartbeatLockUnavailable,
     HeartbeatMutex,
 )
@@ -62,7 +62,7 @@ def _mutex(*, ttl: int = 60, heartbeat: float = 30.0) -> HeartbeatMutex:
 @pytest.mark.asyncio
 async def test_acquire_sets_nx_ex_and_returns_a_fencing_token() -> None:
     fake = _FakeRedis()
-    with patch("roboco.services.heartbeat_mutex.redis.from_url", return_value=fake):
+    with patch("robofleet.services.heartbeat_mutex.redis.from_url", return_value=fake):
         token = await _mutex(ttl=1800).acquire()
     assert token is not None
     assert fake.set_calls == [(_KEY, token, True, 1800)]
@@ -71,7 +71,7 @@ async def test_acquire_sets_nx_ex_and_returns_a_fencing_token() -> None:
 @pytest.mark.asyncio
 async def test_acquire_returns_none_when_already_held() -> None:
     fake = _FakeRedis()
-    with patch("roboco.services.heartbeat_mutex.redis.from_url", return_value=fake):
+    with patch("robofleet.services.heartbeat_mutex.redis.from_url", return_value=fake):
         first = await _mutex().acquire()
         second = await _mutex().acquire()
     assert first is not None
@@ -81,7 +81,7 @@ async def test_acquire_returns_none_when_already_held() -> None:
 @pytest.mark.asyncio
 async def test_release_is_compare_and_del_spares_a_usurper_lock() -> None:
     fake = _FakeRedis()
-    with patch("roboco.services.heartbeat_mutex.redis.from_url", return_value=fake):
+    with patch("robofleet.services.heartbeat_mutex.redis.from_url", return_value=fake):
         mutex = _mutex()
         token = await mutex.acquire()
         assert token is not None
@@ -96,7 +96,7 @@ async def test_release_is_compare_and_del_spares_a_usurper_lock() -> None:
 @pytest.mark.asyncio
 async def test_heartbeat_once_true_when_owned_false_otherwise() -> None:
     fake = _FakeRedis()
-    with patch("roboco.services.heartbeat_mutex.redis.from_url", return_value=fake):
+    with patch("robofleet.services.heartbeat_mutex.redis.from_url", return_value=fake):
         mutex = _mutex()
         token = await mutex.acquire()
         assert token is not None
@@ -110,7 +110,7 @@ async def test_acquire_raises_lock_unavailable_on_redis_error() -> None:
     broken.set = AsyncMock(side_effect=ConnectionError("redis down"))
     broken.aclose = AsyncMock()
     with (
-        patch("roboco.services.heartbeat_mutex.redis.from_url", return_value=broken),
+        patch("robofleet.services.heartbeat_mutex.redis.from_url", return_value=broken),
         pytest.raises(HeartbeatLockUnavailable),
     ):
         await _mutex().acquire()

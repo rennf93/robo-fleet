@@ -21,7 +21,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _make_orch() -> AgentOrchestrator:
@@ -70,7 +70,7 @@ async def test_retries_when_parent_is_mid_claim_and_branch_lands() -> None:
     with (
         patch.object(orch, "_auto_block_task", new=AsyncMock()) as auto_block,
         patch(
-            "roboco.runtime.orchestrator.asyncio.sleep", new=AsyncMock()
+            "robofleet.runtime.orchestrator.asyncio.sleep", new=AsyncMock()
         ) as sleep_mock,
     ):
         result = await orch._check_parent_branch_ready(client, task_id, parent_id)
@@ -104,7 +104,7 @@ async def test_no_retry_when_parent_not_mid_claim() -> None:
     with (
         patch.object(orch, "_auto_block_task", new=AsyncMock()) as auto_block,
         patch(
-            "roboco.runtime.orchestrator.asyncio.sleep", new=AsyncMock()
+            "robofleet.runtime.orchestrator.asyncio.sleep", new=AsyncMock()
         ) as sleep_mock,
     ):
         result = await orch._check_parent_branch_ready(client, task_id, parent_id)
@@ -136,7 +136,7 @@ async def test_blocks_after_max_retries_exhausted() -> None:
     with (
         patch.object(orch, "_auto_block_task", new=AsyncMock()) as auto_block,
         patch(
-            "roboco.runtime.orchestrator.asyncio.sleep", new=AsyncMock()
+            "robofleet.runtime.orchestrator.asyncio.sleep", new=AsyncMock()
         ) as sleep_mock,
     ):
         result = await orch._check_parent_branch_ready(client, task_id, parent_id)

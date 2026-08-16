@@ -32,23 +32,23 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
-from roboco.enforcement import TaskLifecycleError
-from roboco.foundation.policy.content import markers
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-from roboco.models.permissions import AgentContext
-from roboco.models.task import TaskCreateRequest
-from roboco.models.work_session import WorkSessionStatus
-from roboco.services.base import ValidationError
-from roboco.services.task import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
+from robofleet.enforcement import TaskLifecycleError
+from robofleet.foundation.policy.content import markers
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+from robofleet.models.permissions import AgentContext
+from robofleet.models.task import TaskCreateRequest
+from robofleet.models.work_session import WorkSessionStatus
+from robofleet.services.base import ValidationError
+from robofleet.services.task import (
     TaskService,
     _append_capped,
     _default_claim_statuses,
     extract_original_developer,
     get_task_service,
 )
-from roboco.templates.git.constants import MAX_TASK_DEPTH
+from robofleet.templates.git.constants import MAX_TASK_DEPTH
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -367,11 +367,11 @@ async def test_auto_create_branch_no_project_raises(
     fake_project_svc = MagicMock()
     fake_project_svc.get = AsyncMock(return_value=None)
     monkeypatch.setattr(
-        "roboco.services.project.get_project_service",
+        "robofleet.services.project.get_project_service",
         lambda _s: fake_project_svc,
     )
     monkeypatch.setattr(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         lambda _s: MagicMock(),
     )
     with pytest.raises(ValueError, match="not found"):
@@ -402,10 +402,10 @@ async def test_auto_create_branch_succeeds(
     fake_git.create_branch = AsyncMock(return_value=("feature/backend/AAAAAAA", None))
 
     monkeypatch.setattr(
-        "roboco.services.project.get_project_service",
+        "robofleet.services.project.get_project_service",
         lambda _s: fake_project_svc,
     )
-    monkeypatch.setattr("roboco.services.git.get_git_service", lambda _s: fake_git)
+    monkeypatch.setattr("robofleet.services.git.get_git_service", lambda _s: fake_git)
     out = await svc._auto_create_branch(task, task_setup["agent_id"])
     assert out == "feature/backend/AAAAAAA"
     assert task.branch_name == "feature/backend/AAAAAAA"
@@ -766,7 +766,7 @@ async def test_docs_complete_indexes_when_documents_present(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     out = await svc.docs_complete(task.id, doc_notes="docs done")
     assert out is not None
     # Drain the fire-and-forget indexing task; a sleep races the fixture

@@ -14,9 +14,14 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, NotificationTable
-from roboco.models import AgentRole, AgentStatus, NotificationPriority, NotificationType
-from roboco.models.base import Team
+from robofleet.db.tables import AgentTable, NotificationTable
+from robofleet.models import (
+    AgentRole,
+    AgentStatus,
+    NotificationPriority,
+    NotificationType,
+)
+from robofleet.models.base import Team
 from sqlalchemy import select
 
 if TYPE_CHECKING:

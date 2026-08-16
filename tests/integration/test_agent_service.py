@@ -7,10 +7,10 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.services.agent import AgentService
-from roboco.services.base import NotFoundError
+from robofleet.db.tables import AgentTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.services.agent import AgentService
+from robofleet.services.base import NotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

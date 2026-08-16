@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.api.schemas.git import GitCommitRequest
-from roboco.services.git import GitService
+from robofleet.api.schemas.git import GitCommitRequest
+from robofleet.services.git import GitService
 
 
 def _service() -> GitService:
@@ -66,7 +66,7 @@ async def test_commit_for_task_runs_git_in_worktree_not_clone() -> None:
     ws_svc = MagicMock()
     ws_svc.ensure_worktree_for_resume = AsyncMock()
     with patch(
-        "roboco.services.git.get_workspace_service", MagicMock(return_value=ws_svc)
+        "robofleet.services.git.get_workspace_service", MagicMock(return_value=ws_svc)
     ):
         await svc.commit_for_task(uuid4(), _req(task_id))
 
@@ -101,7 +101,7 @@ async def test_commit_for_task_without_task_id_stays_on_clone_root() -> None:
     ws_svc = MagicMock()
     ws_svc.ensure_worktree_for_resume = AsyncMock()
     with patch(
-        "roboco.services.git.get_workspace_service", MagicMock(return_value=ws_svc)
+        "robofleet.services.git.get_workspace_service", MagicMock(return_value=ws_svc)
     ):
         await svc.commit_for_task(uuid4(), _req(None))
 
@@ -135,7 +135,7 @@ async def test_gateway_commit_runs_git_in_worktree_not_clone() -> None:
     ws_svc = MagicMock()
     ws_svc.ensure_worktree_for_resume = AsyncMock()
     with patch(
-        "roboco.services.git.get_workspace_service", MagicMock(return_value=ws_svc)
+        "robofleet.services.git.get_workspace_service", MagicMock(return_value=ws_svc)
     ):
         out = await svc.commit(
             branch_name="feature/backend/abc12345",

@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.db.tables import RoutingPresetTable
+from robofleet.db.tables import RoutingPresetTable
 from sqlalchemy.exc import IntegrityError
 
 if TYPE_CHECKING:

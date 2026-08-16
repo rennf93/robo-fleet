@@ -15,9 +15,9 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
-from roboco.models.runtime import AgentInstance
-from roboco.runtime import orchestrator as orch_mod
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.models.runtime import AgentInstance
+from robofleet.runtime import orchestrator as orch_mod
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 if TYPE_CHECKING:
     from pathlib import Path

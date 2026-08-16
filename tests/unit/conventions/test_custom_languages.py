@@ -11,15 +11,15 @@ dialect relation is intentional and stays (#32 BY-DESIGN): a ``typescript``
 
 from __future__ import annotations
 
-from roboco.conventions import runner
-from roboco.conventions.custom import (
+from robofleet.conventions import runner
+from robofleet.conventions.custom import (
     _DIALECT_OF,
     _KNOWN_LANGUAGES,
     _rule_applies,
     unrecognized_rule_languages,
 )
-from roboco.conventions.runner import run
-from roboco.foundation.policy.conventions.models import (
+from robofleet.conventions.runner import run
+from robofleet.foundation.policy.conventions.models import (
     ConventionsStandard,
     CustomRule,
 )

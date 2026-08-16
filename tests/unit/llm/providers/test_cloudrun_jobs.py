@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from roboco.llm.providers import cloudrun_jobs as mod
+from robofleet.llm.providers import cloudrun_jobs as mod
 
 
 @pytest.mark.asyncio

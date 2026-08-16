@@ -1,4 +1,4 @@
-"""roboco.services.research_quota — per-agent daily quota (mocked Redis)."""
+"""robofleet.services.research_quota — per-agent daily quota (mocked Redis)."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 import pytest
-from roboco.services import research_quota
-from roboco.services.research_quota import ResearchQuotaTracker
+from robofleet.services import research_quota
+from robofleet.services.research_quota import ResearchQuotaTracker
 
 _EXPIRY_SECONDS = 86400
 _OVER_LIMIT_USED = 3

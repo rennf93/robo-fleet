@@ -30,8 +30,8 @@ from uuid import uuid4
 
 import httpx
 import pytest
-from roboco.services.forge.base import RepoRef
-from roboco.services.forge.gitea import GiteaProvider
+from robofleet.services.forge.base import RepoRef
+from robofleet.services.forge.gitea import GiteaProvider
 
 if TYPE_CHECKING:
     from pathlib import Path

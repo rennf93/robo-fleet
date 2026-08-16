@@ -12,10 +12,13 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.models.sandbox import SandboxConnection, SandboxInfo
-from roboco.runtime.sandbox import SandboxProvisionError
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.config import settings
+from robofleet.models.sandbox import SandboxConnection, SandboxInfo
+from robofleet.runtime.sandbox import SandboxProvisionError
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 def _make_actions(
@@ -55,7 +58,7 @@ def _stub_project(
     project_service = MagicMock()
     project_service.get = AsyncMock(return_value=project)
     monkeypatch.setattr(
-        "roboco.services.project.get_project_service", lambda _s: project_service
+        "robofleet.services.project.get_project_service", lambda _s: project_service
     )
 
 

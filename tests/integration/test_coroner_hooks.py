@@ -15,21 +15,21 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, Complexity, Team
-from roboco.models.base import TaskNature as TN
-from roboco.models.base import TaskStatus as TS
-from roboco.models.base import TaskType as TT
-from roboco.services import coroner_engine as coroner_engine_module
-from roboco.services import task as task_module
-from roboco.services.task import (
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, Complexity, Team
+from robofleet.models.base import TaskNature as TN
+from robofleet.models.base import TaskStatus as TS
+from robofleet.models.base import TaskType as TT
+from robofleet.services import coroner_engine as coroner_engine_module
+from robofleet.services import task as task_module
+from robofleet.services.task import (
     CORONER_SOURCE,
     PEST_CONTROL_SOURCE,
     ROADMAP_SOURCE,
@@ -213,7 +213,7 @@ async def test_bounce_hook_opens_its_own_session_and_commits(
     async def _fake_db_context() -> Any:
         yield fake_session
 
-    monkeypatch.setattr("roboco.db.base.get_db_context", _fake_db_context)
+    monkeypatch.setattr("robofleet.db.base.get_db_context", _fake_db_context)
 
     engine = AsyncMock()
     engine.open_for_incident = AsyncMock(return_value=None)
@@ -234,7 +234,7 @@ async def test_bounce_hook_never_fails_the_transition_even_if_it_raises(
 ) -> None:
     """Best-effort: a hook scheduling failure never breaks the real bounce
     transition that triggered it. Swaps out the ``asyncio`` NAME BINDING
-    ``roboco.services.task`` sees (not the shared ``asyncio`` module's own
+    ``robofleet.services.task`` sees (not the shared ``asyncio`` module's own
     ``create_task`` attribute) so this stays scoped to that one module and
     can't break session-teardown machinery elsewhere in the same process."""
 

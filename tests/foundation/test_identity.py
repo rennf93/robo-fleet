@@ -5,8 +5,8 @@ from __future__ import annotations
 from enum import IntEnum
 
 import pytest
-from roboco.foundation import identity
-from roboco.seeds.initial_data import AGENT_UUIDS
+from robofleet.foundation import identity
+from robofleet.seeds.initial_data import AGENT_UUIDS
 
 
 def test_role_enum_has_every_role_inc_system() -> None:

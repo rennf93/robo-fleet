@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-from roboco.api.schemas.project_fields import task_project_fields
+from robofleet.api.schemas.project_fields import task_project_fields
 
 
 def _stub_task(*, with_project: bool = False) -> Any:
@@ -27,7 +27,7 @@ def test_omits_fields_when_project_unloaded() -> None:
     fake_inspector = MagicMock()
     fake_inspector.unloaded = {"project"}
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect", return_value=fake_inspector
+        "robofleet.api.schemas.project_fields.sa_inspect", return_value=fake_inspector
     ):
         assert task_project_fields(stub) == (None, None)
 
@@ -37,7 +37,7 @@ def test_omits_fields_when_project_id_unset() -> None:
     fake_inspector = MagicMock()
     fake_inspector.unloaded = set()  # loaded, but task.project is None
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect", return_value=fake_inspector
+        "robofleet.api.schemas.project_fields.sa_inspect", return_value=fake_inspector
     ):
         assert task_project_fields(stub) == (None, None)
 
@@ -47,6 +47,6 @@ def test_returns_slug_and_name_when_loaded() -> None:
     fake_inspector = MagicMock()
     fake_inspector.unloaded = set()
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect", return_value=fake_inspector
+        "robofleet.api.schemas.project_fields.sa_inspect", return_value=fake_inspector
     ):
         assert task_project_fields(stub) == ("acme-robotics", "Acme Robotics")

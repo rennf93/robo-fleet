@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_conversation_replies —
+"""robofleet.services.gateway.content_actions.propose_conversation_replies —
 HoM-gated Barfly conversation-reply authoring. Mirrors test_content_actions_
 periscope.py's role-gate/validation shape and test_content_actions_scales.py's
 candidate-must-be-real shape (there: task_ref against a live task; here:
@@ -11,9 +11,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.models.base import TaskStatus
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import TaskStatus
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 TWO = 2
 
@@ -224,7 +227,7 @@ async def test_propose_conversation_replies_rejects_unknown_tweet_id(
     cycle_task = _cycle_task(agent_id=agent_id, candidates=[_candidate("111")])
     task_svc = MagicMock()
     task_svc.list_open_barfly_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     env = await _actions("head_marketing").propose_conversation_replies(
         agent_id=agent_id, items=[_valid_item(tweet_id="999-invented")]
@@ -245,7 +248,7 @@ async def test_propose_conversation_replies_no_open_cycle_is_invalid_state(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_barfly_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_conversation_replies(
         agent_id=uuid4(), items=[_valid_item()]
     )
@@ -261,7 +264,7 @@ async def test_propose_conversation_replies_ignores_cycle_assigned_to_another_ag
     cycle_task = _cycle_task(agent_id=other_agent)
     task_svc = MagicMock()
     task_svc.list_open_barfly_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_conversation_replies(
         agent_id=uuid4(), items=[_valid_item()]
     )
@@ -284,7 +287,7 @@ async def test_propose_conversation_replies_materializes_each_item_and_completes
     )
     task_svc = MagicMock()
     task_svc.list_open_barfly_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     materialized_1 = _FakeTask(assigned_to=agent_id)
     materialized_2 = _FakeTask(assigned_to=agent_id)
@@ -292,7 +295,7 @@ async def test_propose_conversation_replies_materializes_each_item_and_completes
     engine.materialize_barfly_reply = AsyncMock(
         side_effect=[materialized_1, materialized_2]
     )
-    monkeypatch.setattr("roboco.services.x_engine.get_x_engine", lambda _s: engine)
+    monkeypatch.setattr("robofleet.services.x_engine.get_x_engine", lambda _s: engine)
 
     actions = _actions("head_marketing")
     actions.task.session.flush = AsyncMock()
@@ -325,13 +328,13 @@ async def test_propose_conversation_replies_passes_correct_candidate_to_engine(
     cycle_task = _cycle_task(agent_id=agent_id, candidates=[candidate])
     task_svc = MagicMock()
     task_svc.list_open_barfly_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     engine = MagicMock()
     engine.materialize_barfly_reply = AsyncMock(
         return_value=_FakeTask(assigned_to=agent_id)
     )
-    monkeypatch.setattr("roboco.services.x_engine.get_x_engine", lambda _s: engine)
+    monkeypatch.setattr("robofleet.services.x_engine.get_x_engine", lambda _s: engine)
 
     actions = _actions("head_marketing")
     actions.task.session.flush = AsyncMock()

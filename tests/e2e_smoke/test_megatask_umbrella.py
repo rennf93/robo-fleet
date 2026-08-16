@@ -78,8 +78,8 @@ _APPROACH = (
 def _seed_umbrella(stack: E2EStack, company: Company) -> tuple[Any, Any]:
     """Branchless MegaTask umbrella: no project/product/cell-map, no branch,
     no PR of its own — ``is_batch_umbrella`` (batch_id set, no parent)."""
-    from roboco.models import Team
-    from roboco.models.base import TaskStatus, TaskType
+    from robofleet.models import Team
+    from robofleet.models.base import TaskStatus, TaskType
 
     batch_id = uuid4()
     umbrella_id = seed_task(
@@ -108,8 +108,8 @@ def _seed_root_subtask_in_progress(
 ) -> dict[str, Any]:
     """RS1: pre-seeded mid-flight exactly like ``seed_hierarchy``'s root,
     plus the ``batch_id``/``parent_task_id`` that make it a root-subtask."""
-    from roboco.models import Team
-    from roboco.models.base import TaskStatus, TaskType
+    from robofleet.models import Team
+    from robofleet.models.base import TaskStatus, TaskType
 
     stack, company = world.stack, world.company
     root_id = uuid4()
@@ -145,8 +145,8 @@ def _seed_root_subtask_pending(
     """RS2: a real Main-PM root-subtask, PENDING (unclaimed, no branch yet —
     it is claimed for real once its dependency clears, exercising the claim
     path scenarios 1-3 skip by pre-seeding roots mid-flight)."""
-    from roboco.models import Team
-    from roboco.models.base import TaskStatus, TaskType
+    from robofleet.models import Team
+    from robofleet.models.base import TaskStatus, TaskType
 
     stack, company = world.stack, world.company
     root_id = uuid4()

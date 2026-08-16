@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, NotificationTable, TaskTable
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, NotificationTable, TaskTable
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -23,7 +23,7 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.services.notification import NotificationService
+from robofleet.services.notification import NotificationService
 from sqlalchemy import select
 
 if TYPE_CHECKING:

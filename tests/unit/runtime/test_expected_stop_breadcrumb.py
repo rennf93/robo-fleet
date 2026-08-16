@@ -16,7 +16,7 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator, AgentState
+from robofleet.runtime.orchestrator import AgentOrchestrator, AgentState
 from structlog.testing import capture_logs
 
 

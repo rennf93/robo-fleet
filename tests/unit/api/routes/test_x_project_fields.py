@@ -1,4 +1,4 @@
-"""``roboco/api/routes/x.py`` response-builder wiring for project_slug/
+"""``robofleet/api/routes/x.py`` response-builder wiring for project_slug/
 project_name. The sa_inspect(task).unloaded guard branches themselves are
 covered once on the shared helper in tests/unit/api/schemas/test_project_fields.py
 — this only asserts _to_response/_to_history_response actually populate
@@ -11,7 +11,7 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-from roboco.api.routes.x import _to_history_response, _to_response
+from robofleet.api.routes.x import _to_history_response, _to_response
 
 
 def _stub_task(
@@ -45,7 +45,7 @@ def _loaded_inspector() -> MagicMock:
 
 def test_to_response_includes_project_fields_when_loaded() -> None:
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect",
+        "robofleet.api.schemas.project_fields.sa_inspect",
         return_value=_loaded_inspector(),
     ):
         resp = _to_response(_stub_task(with_project=True))
@@ -55,7 +55,7 @@ def test_to_response_includes_project_fields_when_loaded() -> None:
 
 def test_to_response_omits_project_fields_when_project_unset() -> None:
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect",
+        "robofleet.api.schemas.project_fields.sa_inspect",
         return_value=_loaded_inspector(),
     ):
         resp = _to_response(_stub_task(with_project=False))
@@ -65,7 +65,7 @@ def test_to_response_omits_project_fields_when_project_unset() -> None:
 
 def test_to_history_response_includes_project_fields_when_loaded() -> None:
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect",
+        "robofleet.api.schemas.project_fields.sa_inspect",
         return_value=_loaded_inspector(),
     ):
         resp = _to_history_response(_stub_task(with_project=True))
@@ -75,7 +75,7 @@ def test_to_history_response_includes_project_fields_when_loaded() -> None:
 
 def test_to_history_response_omits_project_fields_when_project_unset() -> None:
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect",
+        "robofleet.api.schemas.project_fields.sa_inspect",
         return_value=_loaded_inspector(),
     ):
         resp = _to_history_response(_stub_task(with_project=False))
@@ -93,7 +93,7 @@ _EDITORIAL_MARKERS: dict[str, Any] = {
 
 def test_to_response_populates_editorial_when_marker_present() -> None:
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect",
+        "robofleet.api.schemas.project_fields.sa_inspect",
         return_value=_loaded_inspector(),
     ):
         resp = _to_response(_stub_task(markers=_EDITORIAL_MARKERS))
@@ -104,7 +104,7 @@ def test_to_response_populates_editorial_when_marker_present() -> None:
 
 def test_to_response_omits_editorial_when_marker_absent() -> None:
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect",
+        "robofleet.api.schemas.project_fields.sa_inspect",
         return_value=_loaded_inspector(),
     ):
         resp = _to_response(_stub_task(markers=None))
@@ -113,7 +113,7 @@ def test_to_response_omits_editorial_when_marker_absent() -> None:
 
 def test_to_history_response_populates_editorial_when_marker_present() -> None:
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect",
+        "robofleet.api.schemas.project_fields.sa_inspect",
         return_value=_loaded_inspector(),
     ):
         resp = _to_history_response(_stub_task(markers=_EDITORIAL_MARKERS))
@@ -124,7 +124,7 @@ def test_to_history_response_populates_editorial_when_marker_present() -> None:
 
 def test_to_history_response_omits_editorial_when_marker_absent() -> None:
     with patch(
-        "roboco.api.schemas.project_fields.sa_inspect",
+        "robofleet.api.schemas.project_fields.sa_inspect",
         return_value=_loaded_inspector(),
     ):
         resp = _to_history_response(_stub_task(markers=None))

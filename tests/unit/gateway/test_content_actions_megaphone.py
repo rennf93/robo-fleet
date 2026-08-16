@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_editorial_post — HoM-gated
+"""robofleet.services.gateway.content_actions.propose_editorial_post — HoM-gated
 Megaphone editorial-post authoring. Mirrors
 test_content_actions_feature_spotlight.py: same complete-at-propose shape
 (the materialized draft's id is returned, never the exploration task's)."""
@@ -10,7 +10,10 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 class _FakeTask:
@@ -105,7 +108,7 @@ async def test_propose_editorial_post_accepts_every_valid_angle(
     the angle check itself."""
     task_svc = MagicMock()
     task_svc.list_open_megaphone_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_editorial_post(
         agent_id=uuid4(), **_valid_kwargs(angle=angle)
     )
@@ -149,7 +152,7 @@ async def test_propose_editorial_post_accepts_exactly_280_chars(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_megaphone_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     body = "The fleet shipped a lot this week. " * 6
     body = body[:280]
     env = await _actions("head_marketing").propose_editorial_post(
@@ -191,7 +194,7 @@ async def test_propose_editorial_post_no_open_exploration_is_invalid_state(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_megaphone_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_editorial_post(
         agent_id=uuid4(), **_valid_kwargs()
     )
@@ -206,7 +209,7 @@ async def test_propose_editorial_post_ignores_exploration_assigned_to_another_ag
     exploration = _FakeTask(assigned_to=other_agent)
     task_svc = MagicMock()
     task_svc.list_open_megaphone_cycles = AsyncMock(return_value=[exploration])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_editorial_post(
         agent_id=uuid4(), **_valid_kwargs()
     )
@@ -228,13 +231,13 @@ async def test_propose_editorial_post_materializes_new_draft_task(
     exploration = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_megaphone_cycles = AsyncMock(return_value=[exploration])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     materialized = _FakeTask(assigned_to=agent_id)
     assert materialized.id != exploration.id
     engine = MagicMock()
     engine.materialize_editorial_post = AsyncMock(return_value=materialized)
-    monkeypatch.setattr("roboco.services.x_engine.get_x_engine", lambda _s: engine)
+    monkeypatch.setattr("robofleet.services.x_engine.get_x_engine", lambda _s: engine)
 
     env = await _actions("head_marketing").propose_editorial_post(
         agent_id=agent_id, **_valid_kwargs()

@@ -19,8 +19,8 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.choreographer.collision import (
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer.collision import (
     COLLISION_GLOB_CAP,
     COLLISION_SIBLING_CAP,
     build_collision_context,
@@ -91,23 +91,25 @@ def test_no_surfaced_siblings_returns_none() -> None:
 
 
 def test_file_overlap_sibling_shown() -> None:
-    task = _task(intends_to_touch=["roboco/services/git.py"])
-    sib = _sib(intends_to_touch=["roboco/services/git.py", "roboco/services/x.py"])
+    task = _task(intends_to_touch=["robofleet/services/git.py"])
+    sib = _sib(
+        intends_to_touch=["robofleet/services/git.py", "robofleet/services/x.py"]
+    )
     ctx = build_collision_context(task=task, siblings=[sib])
     assert ctx is not None
     assert len(ctx) == 1
-    assert "roboco/services/git.py" in ctx[0]["overlap"]
+    assert "robofleet/services/git.py" in ctx[0]["overlap"]
 
 
 def test_no_overlap_no_migration_not_shown() -> None:
-    task = _task(intends_to_touch=["roboco/a.py"])
-    sib = _sib(intends_to_touch=["roboco/b.py"])
+    task = _task(intends_to_touch=["robofleet/a.py"])
+    sib = _sib(intends_to_touch=["robofleet/b.py"])
     assert build_collision_context(task=task, siblings=[sib]) is None
 
 
 def test_both_migration_shown_without_file_overlap() -> None:
-    task = _task(intends_to_touch=["roboco/a.py"], adds_migration=True)
-    sib = _sib(intends_to_touch=["roboco/b.py"], adds_migration=True)
+    task = _task(intends_to_touch=["robofleet/a.py"], adds_migration=True)
+    sib = _sib(intends_to_touch=["robofleet/b.py"], adds_migration=True)
     ctx = build_collision_context(task=task, siblings=[sib])
     assert ctx is not None
     assert ctx[0]["adds_migration"] is True
@@ -116,21 +118,21 @@ def test_both_migration_shown_without_file_overlap() -> None:
 
 def test_one_migration_only_not_shown() -> None:
     # migration-chain needs BOTH adders; one alone is parallel.
-    task = _task(intends_to_touch=["roboco/a.py"], adds_migration=True)
-    sib = _sib(intends_to_touch=["roboco/b.py"], adds_migration=False)
+    task = _task(intends_to_touch=["robofleet/a.py"], adds_migration=True)
+    sib = _sib(intends_to_touch=["robofleet/b.py"], adds_migration=False)
     assert build_collision_context(task=task, siblings=[sib]) is None
 
 
 def test_shared_only_without_overlap_not_shown() -> None:
     # touches_shared alone is too broad; it rides the file-overlap path.
-    task = _task(intends_to_touch=["roboco/a.py"], touches_shared=True)
-    sib = _sib(intends_to_touch=["roboco/b.py"])
+    task = _task(intends_to_touch=["robofleet/a.py"], touches_shared=True)
+    sib = _sib(intends_to_touch=["robofleet/b.py"])
     assert build_collision_context(task=task, siblings=[sib]) is None
 
 
 def test_shared_with_overlap_shown_and_flagged() -> None:
-    task = _task(intends_to_touch=["roboco/a.py"], touches_shared=True)
-    sib = _sib(intends_to_touch=["roboco/a.py"], touches_shared=True)
+    task = _task(intends_to_touch=["robofleet/a.py"], touches_shared=True)
+    sib = _sib(intends_to_touch=["robofleet/a.py"], touches_shared=True)
     ctx = build_collision_context(task=task, siblings=[sib])
     assert ctx is not None
     assert ctx[0]["touches_shared"] is True
@@ -151,20 +153,20 @@ def test_self_excluded_from_siblings() -> None:
 
 
 def test_drift_undeclared_computed() -> None:
-    task = _task(intends_to_touch=["roboco/a.py"])
-    sib = _sib(intends_to_touch=["roboco/a.py"])
+    task = _task(intends_to_touch=["robofleet/a.py"])
+    sib = _sib(intends_to_touch=["robofleet/a.py"])
     ctx = build_collision_context(
         task=task,
         siblings=[sib],
-        actual_files=["roboco/a.py", "roboco/secret.py"],
+        actual_files=["robofleet/a.py", "robofleet/secret.py"],
     )
     assert ctx is not None
-    assert ctx[0]["undeclared"] == ["roboco/secret.py"]
+    assert ctx[0]["undeclared"] == ["robofleet/secret.py"]
 
 
 def test_drift_omitted_without_actual_files() -> None:
-    task = _task(intends_to_touch=["roboco/a.py"])
-    sib = _sib(intends_to_touch=["roboco/a.py"])
+    task = _task(intends_to_touch=["robofleet/a.py"])
+    sib = _sib(intends_to_touch=["robofleet/a.py"])
     ctx = build_collision_context(task=task, siblings=[sib])
     assert ctx is not None
     assert "undeclared" not in ctx[0]
@@ -226,7 +228,7 @@ class TestGateCollisionEvidenceDegradesOnBuilderFailure:
         task_service.get_subtasks.return_value = [_sib()]
         c = _make_choreographer(task_service=task_service)
         monkeypatch.setattr(
-            "roboco.services.gateway.choreographer.pr_gate.build_collision_context",
+            "robofleet.services.gateway.choreographer.pr_gate.build_collision_context",
             lambda **_kw: (_ for _ in ()).throw(RuntimeError("boom")),
         )
 
@@ -258,7 +260,7 @@ class TestCollisionContextForDegradesOnBuilderFailure:
         task_service.get_subtasks.return_value = [_sib()]
         c = _make_choreographer(task_service=task_service)
         monkeypatch.setattr(
-            "roboco.services.gateway.choreographer._impl.build_collision_context",
+            "robofleet.services.gateway.choreographer._impl.build_collision_context",
             lambda **_kw: (_ for _ in ()).throw(RuntimeError("boom")),
         )
 

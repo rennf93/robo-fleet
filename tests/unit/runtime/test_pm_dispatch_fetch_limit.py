@@ -20,7 +20,7 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.runtime.orchestrator import _PM_DISPATCH_FETCH_LIMIT, AgentOrchestrator
+from robofleet.runtime.orchestrator import _PM_DISPATCH_FETCH_LIMIT, AgentOrchestrator
 
 
 def _orch() -> AgentOrchestrator:

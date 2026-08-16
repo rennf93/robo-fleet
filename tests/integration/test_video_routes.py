@@ -14,24 +14,24 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes import video as video_module
-from roboco.api.routes.video import router as video_router
-from roboco.api.routes.video import tiktok_router
-from roboco.config import settings as cfg
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-from roboco.models.permissions import AgentContext
-from roboco.services import minio_client
-from roboco.services.heartbeat_mutex import HeartbeatMutex
-from roboco.services.task import VIDEO_POST_SOURCE, VIDEO_SOURCE, get_task_service
-from roboco.services.tiktok_credentials import get_tiktok_credentials_service
-from roboco.services.video_post_service import XVideoPostResult
-from roboco.services.x_credentials import get_x_credentials_service
-from roboco.services.x_video_client import LiveXVideoPoster
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes import video as video_module
+from robofleet.api.routes.video import router as video_router
+from robofleet.api.routes.video import tiktok_router
+from robofleet.config import settings as cfg
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+from robofleet.models.permissions import AgentContext
+from robofleet.services import minio_client
+from robofleet.services.heartbeat_mutex import HeartbeatMutex
+from robofleet.services.task import VIDEO_POST_SOURCE, VIDEO_SOURCE, get_task_service
+from robofleet.services.tiktok_credentials import get_tiktok_credentials_service
+from robofleet.services.video_post_service import XVideoPostResult
+from robofleet.services.x_credentials import get_x_credentials_service
+from robofleet.services.x_video_client import LiveXVideoPoster
 from sqlalchemy import delete, select
 
 if TYPE_CHECKING:

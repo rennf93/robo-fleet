@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import (
+from robofleet.runtime.orchestrator import (
     SUPERSEDE_PR_CLOSE_COMMENT,
     SUPERSEDE_PR_COMMENT,
     AgentOrchestrator,
@@ -157,8 +157,8 @@ async def test_close_one_superseded_pr_tags_contributor_and_links_replacement() 
     git.close_pull_request = AsyncMock()
 
     with (
-        patch("roboco.services.task.get_task_service", return_value=task_service),
-        patch("roboco.services.git.GitService", return_value=git),
+        patch("robofleet.services.task.get_task_service", return_value=task_service),
+        patch("robofleet.services.git.GitService", return_value=git),
     ):
         await AgentOrchestrator._close_one_superseded_pr(
             _new_orchestrator(),
@@ -198,8 +198,8 @@ async def test_close_one_superseded_pr_skips_marker_without_pr() -> None:
     git.close_pull_request = AsyncMock()
 
     with (
-        patch("roboco.services.task.get_task_service", return_value=task_service),
-        patch("roboco.services.git.GitService", return_value=git),
+        patch("robofleet.services.task.get_task_service", return_value=task_service),
+        patch("robofleet.services.git.GitService", return_value=git),
     ):
         await AgentOrchestrator._close_one_superseded_pr(
             _new_orchestrator(),
@@ -233,8 +233,8 @@ async def test_close_one_superseded_pr_no_author_still_links_replacement() -> No
     git.close_pull_request = AsyncMock()
 
     with (
-        patch("roboco.services.task.get_task_service", return_value=task_service),
-        patch("roboco.services.git.GitService", return_value=git),
+        patch("robofleet.services.task.get_task_service", return_value=task_service),
+        patch("robofleet.services.git.GitService", return_value=git),
     ):
         await AgentOrchestrator._close_one_superseded_pr(
             _new_orchestrator(),
@@ -269,8 +269,8 @@ async def test_close_one_superseded_pr_isolates_row_failure() -> None:
     git.close_pull_request = AsyncMock(side_effect=RuntimeError("PAT revoked"))
 
     with (
-        patch("roboco.services.task.get_task_service", return_value=task_service),
-        patch("roboco.services.git.GitService", return_value=git),
+        patch("robofleet.services.task.get_task_service", return_value=task_service),
+        patch("robofleet.services.git.GitService", return_value=git),
     ):
         # Must not raise.
         await AgentOrchestrator._close_one_superseded_pr(
@@ -311,7 +311,7 @@ async def test_sweep_hands_each_pending_row_its_own_close_call(
         orch, "_collect_supersede_reconciliations", AsyncMock(return_value=[])
     )
 
-    with patch("roboco.db.base.get_session_factory", return_value=MagicMock()):
+    with patch("robofleet.db.base.get_session_factory", return_value=MagicMock()):
         await AgentOrchestrator._sweep_superseded_prs(orch)
 
     # One _close_one_superseded_pr call per pending row, never one call

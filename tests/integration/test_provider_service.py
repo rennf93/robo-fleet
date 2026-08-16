@@ -14,17 +14,17 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import ModelAssignmentTable
-from roboco.models.base import ModelProvider
-from roboco.services import provider as provider_module
-from roboco.services.base import ConflictError, NotFoundError
-from roboco.services.provider import (
+from robofleet.db.tables import ModelAssignmentTable
+from robofleet.models.base import ModelProvider
+from robofleet.services import provider as provider_module
+from robofleet.services.base import ConflictError, NotFoundError
+from robofleet.services.provider import (
     ProviderCreate,
     ProviderService,
     ProviderUpdate,
     get_provider_service,
 )
-from roboco.utils.crypto import EncryptionError
+from robofleet.utils.crypto import EncryptionError
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

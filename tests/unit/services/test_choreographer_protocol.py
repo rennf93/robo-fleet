@@ -13,7 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer._protocol import ChoreographerHelpers
+from robofleet.services.gateway.choreographer._protocol import ChoreographerHelpers
 
 
 def _empty_env() -> Any:

@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer
-from roboco.services.gateway.evidence_builder import (
+from robofleet.services.gateway.choreographer import Choreographer
+from robofleet.services.gateway.evidence_builder import (
     EVIDENCE_DIFF_CAP_CHARS,
     build_evidence_for_task,
     truncate_diff,

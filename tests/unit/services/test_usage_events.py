@@ -1,4 +1,4 @@
-"""Unit tests for roboco.services.usage_events.
+"""Unit tests for robofleet.services.usage_events.
 
 Covers the publish_usage_snapshot helper.  No real Redis or event bus is
 needed — we use AsyncMock to assert that bus.publish is called with the right
@@ -10,7 +10,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.services.usage_events import UsageSnapshot, publish_usage_snapshot
+from robofleet.services.usage_events import UsageSnapshot, publish_usage_snapshot
 
 # ---------------------------------------------------------------------------
 # publish_usage_snapshot

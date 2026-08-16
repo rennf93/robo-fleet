@@ -16,7 +16,7 @@ import time
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from roboco.llm.providers import codex_auth as ca
+from robofleet.llm.providers import codex_auth as ca
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from roboco.billing.pricing import calculate_cost
-from roboco.models.runtime import MODEL_MAP, ROLE_MODEL_MAP
+from robofleet.billing.pricing import calculate_cost
+from robofleet.models.runtime import MODEL_MAP, ROLE_MODEL_MAP
 
 _M = 1_000_000
 

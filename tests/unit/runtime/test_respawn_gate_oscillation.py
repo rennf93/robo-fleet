@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _new_orchestrator() -> AgentOrchestrator:
@@ -40,9 +40,11 @@ async def test_status_ping_pong_eventually_trips_the_gate() -> None:
     statuses = ["blocked", "in_progress"] * 6
     results = []
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=_quiet_audit()),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.audit.get_audit_service", return_value=_quiet_audit()
+        ),
+        patch(
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
     ):
@@ -64,9 +66,11 @@ async def test_forward_progress_through_new_statuses_never_gates() -> None:
     task_id = str(uuid4())
     lifecycle = ["pending", "claimed", "in_progress", "verifying", "awaiting_qa"]
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=_quiet_audit()),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.audit.get_audit_service", return_value=_quiet_audit()
+        ),
+        patch(
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
     ):
@@ -82,9 +86,11 @@ async def test_single_revisit_within_budget_does_not_gate() -> None:
     orch = _new_orchestrator()
     task_id = str(uuid4())
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=_quiet_audit()),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.audit.get_audit_service", return_value=_quiet_audit()
+        ),
+        patch(
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
     ):

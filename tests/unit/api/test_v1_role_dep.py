@@ -14,9 +14,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from roboco.agents_config import issue_agent_token
-from roboco.api.deps import get_choreographer
-from roboco.api.routes.v1.flow_dev import router as flow_dev_router
+from robofleet.agents_config import issue_agent_token
+from robofleet.api.deps import get_choreographer
+from robofleet.api.routes.v1.flow_dev import router as flow_dev_router
 
 if TYPE_CHECKING:
     import pytest

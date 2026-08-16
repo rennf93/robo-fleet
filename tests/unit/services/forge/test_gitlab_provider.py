@@ -18,8 +18,8 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 import pytest
-from roboco.services.forge.base import RepoRef
-from roboco.services.forge.gitlab import GitLabProvider, ShapedResponse
+from robofleet.services.forge.base import RepoRef
+from robofleet.services.forge.gitlab import GitLabProvider, ShapedResponse
 
 if TYPE_CHECKING:
     from collections.abc import Callable

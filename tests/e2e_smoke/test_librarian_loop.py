@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from roboco.foundation import identity as _foundation
+from robofleet.foundation import identity as _foundation
 from tests.e2e_smoke.harness import ScriptedAgent, expect_ok
 
 if TYPE_CHECKING:
@@ -38,8 +38,8 @@ def _seed_system_and_auditor(stack: E2EStack) -> str:
     RoboCo-project FK anchor every org-scoped program's task still needs).
     Returns the project's slug.
     """
-    from roboco.db.tables import AgentTable, ProjectTable
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable, ProjectTable
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     slug = f"e2e-librarian-{uuid4().hex[:8]}"
 
@@ -93,8 +93,8 @@ def _arm(stack: E2EStack, project_slug: str) -> None:
     flag exists for librarian) — and point ``self_heal_project_slug`` at the
     seeded project (the RoboCo-project resolution roadmap/x_feature/
     periscope/sentinel use)."""
-    from roboco.config import settings as cfg
-    from roboco.db.tables import SystemSettingTable
+    from robofleet.config import settings as cfg
+    from robofleet.db.tables import SystemSettingTable
 
     cfg.self_heal_project_slug = project_slug
 
@@ -107,7 +107,7 @@ def _arm(stack: E2EStack, project_slug: str) -> None:
 
 
 def _run_due_programs(stack: E2EStack) -> list[str]:
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> list[str]:
         return await get_board_program_engine(session).run_due_programs()
@@ -117,8 +117,8 @@ def _run_due_programs(stack: E2EStack) -> list[str]:
 
 
 def _find_librarian_task(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
-    from roboco.services.task import LIBRARIAN_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.services.task import LIBRARIAN_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -153,7 +153,7 @@ def _find_librarian_task(stack: E2EStack) -> dict[str, Any]:
 def _run_due_one(stack: E2EStack) -> Any:
     """Open a cycle off-schedule (enabled + dedup only, no cron-due check) —
     the strategy-engine trigger / "run now" seam."""
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> Any:
         task = await get_board_program_engine(session).open_program_cycle("librarian")
@@ -164,7 +164,7 @@ def _run_due_one(stack: E2EStack) -> Any:
 
 
 def _cycle_state(stack: E2EStack) -> dict[str, Any]:
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
         open_cycle, last_opened_at = await get_board_program_engine(
@@ -177,8 +177,8 @@ def _cycle_state(stack: E2EStack) -> dict[str, Any]:
 
 
 def _drafts_marker(stack: E2EStack, task_id: Any) -> dict[str, Any] | None:
-    from roboco.db.tables import TaskTable
-    from roboco.foundation.policy.content import markers
+    from robofleet.db.tables import TaskTable
+    from robofleet.foundation.policy.content import markers
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any] | None:
@@ -192,7 +192,7 @@ def _drafts_marker(stack: E2EStack, task_id: Any) -> dict[str, Any] | None:
 
 
 def _playbooks(stack: E2EStack) -> list[dict[str, Any]]:
-    from roboco.db.tables import PlaybookTable
+    from robofleet.db.tables import PlaybookTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> list[dict[str, Any]]:
@@ -234,7 +234,7 @@ def test_librarian_loop_originates_dedups_and_completes(
     # The dispatcher's own dev-work skip recognizes this exact task shape —
     # board_librarian is board-dispatched (one-shot Auditor spawn), never
     # handed to the generic dev dispatch loop's give_me_work/claim path.
-    from roboco.runtime.orchestrator import _is_non_dev_dispatch_source
+    from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
 
     assert _is_non_dev_dispatch_source({"source": row["source"]}) is True
 
@@ -258,7 +258,7 @@ def test_librarian_loop_originates_dedups_and_completes(
         "auditor",
         "auditor",
     )
-    do_module = auditor._module("roboco.mcp.do_server")
+    do_module = auditor._module("robofleet.mcp.do_server")
     assert "propose_playbook_drafts" in do_module._TOOLS, (
         "propose_playbook_drafts missing from do_server._TOOLS — the MCP "
         "server has no way to expose it to any role"

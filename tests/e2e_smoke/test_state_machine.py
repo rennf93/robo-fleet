@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 def test_m18_add_dependency_rejects_cycle_and_self(e2e_stack: E2EStack) -> None:
     """M18: wire_dependency on a self-edge must raise through the real
     service path, not silently drop."""
-    from roboco.services.base import ConflictError
+    from robofleet.services.base import ConflictError
 
     stack = e2e_stack
     company = seed_company(stack)
@@ -109,7 +109,7 @@ def test_h5_unclaim_from_blocked_clears_snapshot(e2e_stack: E2EStack) -> None:
     """H5: block a task, unclaim from blocked, then read the row —
     pre_block_state must be null. Driven through the real i_am_blocked +
     unclaim verbs."""
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     stack = e2e_stack
@@ -210,7 +210,7 @@ def test_h6_pass_review_survives_a2a_failure(e2e_stack: E2EStack) -> None:
     )
     dev_arc(stack, company, slug, tid)
     with patch(
-        "roboco.services.a2a.A2AService.send", side_effect=RuntimeError("a2a down")
+        "robofleet.services.a2a.A2AService.send", side_effect=RuntimeError("a2a down")
     ):
         qa_arc(stack, company, tid)
     assert task_state(stack, tid)["status"] == "awaiting_documentation"

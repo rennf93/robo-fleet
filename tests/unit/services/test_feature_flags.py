@@ -9,9 +9,9 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.services import settings as settings_mod
-from roboco.services.settings import (
+from robofleet.config import settings as cfg
+from robofleet.services import settings as settings_mod
+from robofleet.services.settings import (
     SettingsService,
     SettingValidationError,
     validate_setting,

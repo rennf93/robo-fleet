@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from roboco.llm.providers import GeminiCliProvider, GrokCliProvider
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.llm.providers import GeminiCliProvider, GrokCliProvider
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _make_orch() -> AgentOrchestrator:

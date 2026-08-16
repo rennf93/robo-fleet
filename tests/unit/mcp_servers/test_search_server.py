@@ -1,4 +1,4 @@
-"""roboco.mcp.search_server — handler shaping + server construction."""
+"""robofleet.mcp.search_server — handler shaping + server construction."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ from typing import Any
 
 import pytest
 from mcp.server.fastmcp import FastMCP
-from roboco.mcp.search_server import (
+from robofleet.mcp.search_server import (
     _NOT_CONFIGURED,
     _handle_fetch,
     _handle_search,
     create_search_mcp_server,
 )
-from roboco.mcp.utils import ApiClient
+from robofleet.mcp.utils import ApiClient
 
 
 class _FakeClient(ApiClient):

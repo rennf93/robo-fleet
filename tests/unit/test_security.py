@@ -1,4 +1,4 @@
-"""Unit tests for the fastapi-guard HTTP security layer (roboco/security.py).
+"""Unit tests for the fastapi-guard HTTP security layer (robofleet/security.py).
 
 Covers the gated wiring (no-op when off, mounts when on) and the three custom
 content validators. The layer is default-off, so the wiring tests monkeypatch
@@ -13,9 +13,9 @@ import pytest
 from fastapi import FastAPI
 from guard import SecurityMiddleware
 from pydantic import ValidationError
-from roboco import security
-from roboco.api.app import create_app
-from roboco.config import Settings, settings
+from robofleet import security
+from robofleet.api.app import create_app
+from robofleet.config import Settings, settings
 
 if TYPE_CHECKING:
     from guard_core.protocols.request_protocol import GuardRequest

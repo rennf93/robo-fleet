@@ -17,13 +17,18 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings
-from roboco.db.tables import AgentTable, NotificationTable
-from roboco.models import AgentRole, AgentStatus, NotificationPriority, NotificationType
-from roboco.models.base import Team
-from roboco.models.notification import CreateNotificationParams
-from roboco.services.notification import NotificationService
-from roboco.services.notification_delivery import (
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, NotificationTable
+from robofleet.models import (
+    AgentRole,
+    AgentStatus,
+    NotificationPriority,
+    NotificationType,
+)
+from robofleet.models.base import Team
+from robofleet.models.notification import CreateNotificationParams
+from robofleet.services.notification import NotificationService
+from robofleet.services.notification_delivery import (
     NotificationDeliveryService,
     defer_after_commit,
     get_notification_delivery_service,
@@ -380,7 +385,7 @@ async def test_sweep_delivers_via_resolvable_chain_and_commit_is_durable(
     # on `agents.slug`'s uniqueness once the fix's per-row commit makes these
     # rows durable rather than teardown-rolled-back).
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_escalation_target",
+        "robofleet.services.notification_delivery.get_escalation_target",
         lambda _slug: f"tgt-{unique}",
     )
 
@@ -500,7 +505,7 @@ async def test_sweep_one_row_failure_does_not_block_the_other_rows_processing(
     # No resolvable chain for either row — isolates this test to the
     # row-isolation property alone (delivery-path coverage is the other test).
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_escalation_target",
+        "robofleet.services.notification_delivery.get_escalation_target",
         lambda _slug: None,
     )
 

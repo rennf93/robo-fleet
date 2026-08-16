@@ -15,14 +15,14 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     ProjectTable,
     WorkSessionTable,
 )
-from roboco.exceptions import TaskLifecycleError
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.exceptions import TaskLifecycleError
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     BlockerResolverType,
     Complexity,
     SubstituteReason,
@@ -30,15 +30,15 @@ from roboco.models.base import (
     TaskStatus,
     TaskType,
 )
-from roboco.models.permissions import AgentContext
-from roboco.models.task import TaskCreateRequest
-from roboco.models.work_session import WorkSessionCreate, WorkSessionStatus
-from roboco.services.task import (
+from robofleet.models.permissions import AgentContext
+from robofleet.models.task import TaskCreateRequest
+from robofleet.models.work_session import WorkSessionCreate, WorkSessionStatus
+from robofleet.services.task import (
     SoftBlockInfo,
     SoftBlockInput,
     TaskService,
 )
-from roboco.services.work_session import WorkSessionService
+from robofleet.services.work_session import WorkSessionService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -160,7 +160,9 @@ async def test_inject_proactive_context_skips_when_claim_rolled_back(
             return None
 
     factory_instance = _SessionFactory()
-    monkeypatch.setattr("roboco.db.base.get_session_factory", lambda: factory_instance)
+    monkeypatch.setattr(
+        "robofleet.db.base.get_session_factory", lambda: factory_instance
+    )
     # Now the fresh-read returns the task with assigned_to == None,
     # mismatching agent_id passed in
     await svc._inject_proactive_context(task, task_setup["agent_id"])
@@ -178,7 +180,7 @@ async def test_inject_proactive_context_swallows_errors(
     def _fail_factory() -> Any:
         raise RuntimeError("factory broken")
 
-    monkeypatch.setattr("roboco.db.base.get_session_factory", _fail_factory)
+    monkeypatch.setattr("robofleet.db.base.get_session_factory", _fail_factory)
     # Should not raise
     await svc._inject_proactive_context(task, task_setup["agent_id"])
 
@@ -213,7 +215,7 @@ async def test_inject_proactive_context_writes_when_context_nonempty(
             return _Ctx(self._session)
 
     factory = _Factory(db_session)
-    monkeypatch.setattr("roboco.db.base.get_session_factory", lambda: factory)
+    monkeypatch.setattr("robofleet.db.base.get_session_factory", lambda: factory)
 
     fake_context = MagicMock()
     fake_context.is_empty = MagicMock(return_value=False)
@@ -229,7 +231,7 @@ async def test_inject_proactive_context_writes_when_context_nonempty(
         return fake_proactive
 
     monkeypatch.setattr(
-        "roboco.services.proactive.get_proactive_service", _get_proactive
+        "robofleet.services.proactive.get_proactive_service", _get_proactive
     )
     # Patch session.commit so it doesn't really commit
     original_commit = db_session.commit
@@ -442,7 +444,7 @@ async def test_unclaim_for_reaper_abandons_work_session(
     fake_ws_svc.abandon = AsyncMock()
 
     monkeypatch.setattr(
-        "roboco.services.work_session.WorkSessionService",
+        "robofleet.services.work_session.WorkSessionService",
         lambda _s: fake_ws_svc,
     )
     await svc.unclaim_for_reaper(task.id)
@@ -478,7 +480,7 @@ async def test_unclaim_for_agent_abandons_work_session(
     fake_ws_svc.abandon = AsyncMock()
 
     monkeypatch.setattr(
-        "roboco.services.work_session.WorkSessionService",
+        "robofleet.services.work_session.WorkSessionService",
         lambda _s: fake_ws_svc,
     )
     out = await svc.unclaim_for_agent(task.id, agent_id=task_setup["agent_id"])
@@ -510,7 +512,7 @@ async def test_soft_block_spawns_blocker_index(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     out = await svc.soft_block(
         task.id,
         SoftBlockInfo(reason="r", blocker_type="ext", what_needed="w"),
@@ -537,7 +539,7 @@ async def test_pause_spawns_lifecycle_index(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     out = await svc.pause(task.id)
     assert out is not None
     await asyncio.sleep(0.05)
@@ -559,7 +561,7 @@ async def test_resume_spawns_lifecycle_index(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     out = await svc.resume(task.id)
     assert out is not None
     await asyncio.sleep(0.05)
@@ -581,7 +583,7 @@ async def test_unblock_spawns_lifecycle_index(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     out = await svc.unblock(task.id)
     assert out is not None
     await asyncio.sleep(0.05)
@@ -656,7 +658,7 @@ async def test_fail_qa_with_indexing_runs(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     failed = await svc.fail_qa(task.id, notes="needs work")
     assert failed is not None
     await asyncio.sleep(0.1)
@@ -685,7 +687,7 @@ async def test_pass_qa_with_indexing_runs(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     passed = await svc.pass_qa(task.id, notes="all good", agent_role="qa")
     assert passed is not None
     await asyncio.sleep(0.1)
@@ -724,13 +726,13 @@ async def test_cancel_with_branch_and_work_session(
     fake_ws = MagicMock()
     fake_ws.abandon = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.work_session.get_work_session_service",
+        "robofleet.services.work_session.get_work_session_service",
         lambda _s: fake_ws,
     )
     fake_git = MagicMock()
     fake_git.delete_task_branch = AsyncMock()
     fake_git.close_task_pr_best_effort = AsyncMock()
-    monkeypatch.setattr("roboco.services.git.get_git_service", lambda _s: fake_git)
+    monkeypatch.setattr("robofleet.services.git.get_git_service", lambda _s: fake_git)
     out = await svc.cancel(task.id, agent_role="cell_pm")
     assert out is not None
     fake_ws.abandon.assert_awaited()
@@ -756,7 +758,7 @@ async def test_cancel_closes_open_pr(
     fake_git = MagicMock()
     fake_git.delete_task_branch = AsyncMock()
     fake_git.close_task_pr_best_effort = AsyncMock()
-    monkeypatch.setattr("roboco.services.git.get_git_service", lambda _s: fake_git)
+    monkeypatch.setattr("robofleet.services.git.get_git_service", lambda _s: fake_git)
 
     out = await svc.cancel(task.id, agent_role="cell_pm")
 
@@ -780,7 +782,7 @@ async def test_cancel_skips_pr_close_without_pr_number(
     fake_git = MagicMock()
     fake_git.delete_task_branch = AsyncMock()
     fake_git.close_task_pr_best_effort = AsyncMock()
-    monkeypatch.setattr("roboco.services.git.get_git_service", lambda _s: fake_git)
+    monkeypatch.setattr("robofleet.services.git.get_git_service", lambda _s: fake_git)
 
     out = await svc.cancel(task.id, agent_role="cell_pm")
 
@@ -795,7 +797,7 @@ async def test_cancel_descendants_cascades_for_authorized_pm(
     """A `cell_pm` cancel cascades through descendants in any PM-cancelable
     non-terminal state.
 
-    The canonical spec (`roboco.foundation.policy.lifecycle`) authorizes
+    The canonical spec (`robofleet.foundation.policy.lifecycle`) authorizes
     cancel from every non-terminal source for {CELL_PM, MAIN_PM, CEO}
     EXCEPT `awaiting_ceo_approval`, which is CEO-only (a PM cancelling a
     task the CEO is reviewing would bypass the human CEO gate). So a PM
@@ -898,7 +900,7 @@ async def test_soft_block_task_for_agent_full_flow(
     fake_delivery = MagicMock()
     fake_delivery.notify_pm_of_block = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: fake_delivery,
     )
 
@@ -960,7 +962,7 @@ async def test_docs_complete_for_task_invokes_notification(
     fake_delivery = MagicMock()
     fake_delivery.notify_pm_of_docs_complete = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: fake_delivery,
     )
 
@@ -1024,7 +1026,7 @@ async def test_escalate_to_ceo_for_agent_invokes_notification(
     fake_delivery = MagicMock()
     fake_delivery.notify_ceo_of_escalation = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: fake_delivery,
     )
 
@@ -1144,8 +1146,8 @@ async def test_substitute_task_for_agent_runs_update(
         slug="x",
     )
 
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_agent", lambda _s: None)
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_team", lambda _t: None)
+    monkeypatch.setattr("robofleet.agents_config.get_pm_for_agent", lambda _s: None)
+    monkeypatch.setattr("robofleet.agents_config.get_pm_for_team", lambda _t: None)
 
     async def _no_commit() -> None:
         await db_session.flush()

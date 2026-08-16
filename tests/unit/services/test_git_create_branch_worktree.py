@@ -15,8 +15,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.api.schemas.git import GitCreateBranchRequest
-from roboco.services.git import GitService
+from robofleet.api.schemas.git import GitCreateBranchRequest
+from robofleet.services.git import GitService
 
 
 def _service() -> GitService:
@@ -66,13 +66,16 @@ async def _drive(
 
     branch = "feature/backend/abc12345--def67890"
     with (
-        patch("roboco.services.git.build_branch_name", AsyncMock(return_value=branch)),
         patch(
-            "roboco.services.git.get_task_service",
+            "robofleet.services.git.build_branch_name", AsyncMock(return_value=branch)
+        ),
+        patch(
+            "robofleet.services.git.get_task_service",
             MagicMock(return_value=MagicMock(update=AsyncMock())),
         ),
         patch(
-            "roboco.services.git.get_workspace_service", MagicMock(return_value=ws_svc)
+            "robofleet.services.git.get_workspace_service",
+            MagicMock(return_value=ws_svc),
         ),
     ):
         out = await svc.create_branch(Path("/tmp/ws"), "backend", _req(task_id))

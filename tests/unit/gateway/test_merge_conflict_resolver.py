@@ -12,9 +12,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.exceptions import MergeConflictError
-from roboco.models.base import TaskStatus
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.exceptions import MergeConflictError
+from robofleet.models.base import TaskStatus
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 def _make_deps(**overrides: AsyncMock) -> ChoreographerDeps:

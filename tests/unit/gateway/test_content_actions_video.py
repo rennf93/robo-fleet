@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_video — team-gated,
+"""robofleet.services.gateway.content_actions.propose_video — team-gated,
 metadata-only video-authoring draft (no render)."""
 
 from __future__ import annotations
@@ -8,8 +8,11 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.foundation.policy.content import markers
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 class _FakeTask:
@@ -68,7 +71,7 @@ def _mock_active_task(
     video task."""
     task_svc = MagicMock()
     task_svc.get_active_task_for_agent = AsyncMock(return_value=task)
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     return task_svc
 
 
@@ -92,7 +95,7 @@ async def test_propose_video_traces_payload_before_rejecting(
         async def log_event(self, **kwargs: Any) -> None:
             traced.append(kwargs)
 
-    monkeypatch.setattr("roboco.services.audit.get_audit_service", _FakeAuditService)
+    monkeypatch.setattr("robofleet.services.audit.get_audit_service", _FakeAuditService)
 
     env = await _actions("developer", "backend").propose_video(
         agent_id=uuid4(), **_valid_kwargs()

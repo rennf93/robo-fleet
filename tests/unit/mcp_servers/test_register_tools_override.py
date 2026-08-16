@@ -34,7 +34,7 @@ def test_flow_missing_manifest_raises_without_override(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _seed_no_manifest(monkeypatch, tmp_path)
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     with pytest.raises(RuntimeError, match="manifest unavailable"):
         importlib.reload(srv)
@@ -45,7 +45,7 @@ def test_flow_missing_manifest_falls_back_with_override(
 ) -> None:
     _seed_no_manifest(monkeypatch, tmp_path)
     monkeypatch.setenv("ROBOCO_ALLOW_FULL_TOOLSET", "1")
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     # Full tool set registered — every flow tool is on the palette.
@@ -56,7 +56,7 @@ def test_do_missing_manifest_raises_without_override(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _seed_no_manifest(monkeypatch, tmp_path)
-    import roboco.mcp.do_server as srv
+    import robofleet.mcp.do_server as srv
 
     with pytest.raises(RuntimeError, match="manifest unavailable"):
         importlib.reload(srv)
@@ -67,7 +67,7 @@ def test_do_missing_manifest_falls_back_with_override(
 ) -> None:
     _seed_no_manifest(monkeypatch, tmp_path)
     monkeypatch.setenv("ROBOCO_ALLOW_FULL_TOOLSET", "1")
-    import roboco.mcp.do_server as srv
+    import robofleet.mcp.do_server as srv
 
     importlib.reload(srv)
     assert set(srv._REGISTERED_TOOLS) == set(srv._TOOLS.keys())

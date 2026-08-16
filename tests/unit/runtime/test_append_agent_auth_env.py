@@ -5,15 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from roboco.agents_config import (
+from robofleet.agents_config import (
     AGENT_UUIDS,
     get_agent_role,
     get_agent_team,
     verify_agent_token,
 )
-from roboco.config import settings
-from roboco.models.runtime import OrchestratorAgentConfig as AgentConfig
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.models.runtime import OrchestratorAgentConfig as AgentConfig
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 if TYPE_CHECKING:
     import pytest

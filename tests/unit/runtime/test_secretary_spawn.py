@@ -1,17 +1,17 @@
-"""roboco.runtime.orchestrator — Secretary docker-run cmd + host paths (pure)."""
+"""robofleet.runtime.orchestrator — Secretary docker-run cmd + host paths (pure)."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
-from roboco.agents_config import (
+from robofleet.agents_config import (
     get_agent_team,
     issue_agent_token,
     verify_agent_token,
 )
-from roboco.foundation.identity import AGENTS
-from roboco.runtime.orchestrator import (
+from robofleet.foundation.identity import AGENTS
+from robofleet.runtime.orchestrator import (
     SECRETARY_AGENT_ID,
     AgentOrchestrator,
     _SecretaryRunSpec,

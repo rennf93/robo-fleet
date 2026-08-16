@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.services.task import TaskService
+from robofleet.services.task import TaskService
 
 
 def _service() -> TaskService:
@@ -46,7 +46,7 @@ async def test_closes_open_pr_via_git_service() -> None:
     git_service.close_task_pr_best_effort = AsyncMock()
 
     with patch(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         MagicMock(return_value=git_service),
     ):
         await svc._close_task_pr_best_effort(task)
@@ -66,7 +66,7 @@ async def test_skips_when_no_pr_number() -> None:
     git_service.close_task_pr_best_effort = AsyncMock()
 
     with patch(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         MagicMock(return_value=git_service),
     ):
         await svc._close_task_pr_best_effort(task)
@@ -85,7 +85,7 @@ async def test_skips_when_project_slug_unresolvable() -> None:
     git_service.close_task_pr_best_effort = AsyncMock()
 
     with patch(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         MagicMock(return_value=git_service),
     ):
         await svc._close_task_pr_best_effort(task)
@@ -106,7 +106,7 @@ async def test_pr_close_failure_does_not_raise() -> None:
     )
 
     with patch(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         MagicMock(return_value=git_service),
     ):
         await svc._close_task_pr_best_effort(task)  # must not raise

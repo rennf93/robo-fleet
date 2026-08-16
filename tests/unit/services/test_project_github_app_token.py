@@ -17,10 +17,10 @@ import httpx
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from roboco.services.github_app_auth import GitHubAppAPIError
-from roboco.services.github_app_credentials import GitHubAppCredentialsData
-from roboco.services.project import ProjectService
-from roboco.utils.crypto import encrypt_token
+from robofleet.services.github_app_auth import GitHubAppAPIError
+from robofleet.services.github_app_credentials import GitHubAppCredentialsData
+from robofleet.services.project import ProjectService
+from robofleet.utils.crypto import encrypt_token
 
 
 def _generate_rsa_pem() -> str:
@@ -70,7 +70,7 @@ async def test_installation_id_without_app_creds_falls_back_to_pat() -> None:
     fake_creds_svc = MagicMock()
     fake_creds_svc.has_credentials = AsyncMock(return_value=False)
     with patch(
-        "roboco.services.project.get_github_app_credentials_service",
+        "robofleet.services.project.get_github_app_credentials_service",
         return_value=fake_creds_svc,
     ):
         token = await svc.get_decrypted_token(uuid4())
@@ -84,11 +84,11 @@ async def test_installation_id_with_app_creds_mints_token() -> None:
     fake_creds_svc.has_credentials = AsyncMock(return_value=True)
     with (
         patch(
-            "roboco.services.project.get_github_app_credentials_service",
+            "robofleet.services.project.get_github_app_credentials_service",
             return_value=fake_creds_svc,
         ),
         patch(
-            "roboco.services.project.mint_installation_token",
+            "robofleet.services.project.mint_installation_token",
             AsyncMock(return_value="ghs_minted"),
         ),
     ):
@@ -103,11 +103,11 @@ async def test_mint_failure_falls_back_to_pat() -> None:
     fake_creds_svc.has_credentials = AsyncMock(return_value=True)
     with (
         patch(
-            "roboco.services.project.get_github_app_credentials_service",
+            "robofleet.services.project.get_github_app_credentials_service",
             return_value=fake_creds_svc,
         ),
         patch(
-            "roboco.services.project.mint_installation_token",
+            "robofleet.services.project.mint_installation_token",
             AsyncMock(side_effect=GitHubAppAPIError("revoked")),
         ),
     ):
@@ -133,14 +133,16 @@ async def test_mint_network_error_falls_back_to_pat() -> None:
     client.post = AsyncMock(side_effect=httpx.ConnectError("connection refused"))
     with (
         patch(
-            "roboco.services.project.get_github_app_credentials_service",
+            "robofleet.services.project.get_github_app_credentials_service",
             return_value=fake_creds_svc,
         ),
         patch(
-            "roboco.services.github_app_auth.get_github_app_credentials_service",
+            "robofleet.services.github_app_auth.get_github_app_credentials_service",
             return_value=fake_creds_svc,
         ),
-        patch("roboco.services.github_app_auth.httpx.AsyncClient", return_value=client),
+        patch(
+            "robofleet.services.github_app_auth.httpx.AsyncClient", return_value=client
+        ),
     ):
         token = await svc.get_decrypted_token(uuid4())
     assert token == "ghp_fallback"
@@ -159,11 +161,11 @@ async def test_mint_corrupted_pem_falls_back_to_pat() -> None:
     )
     with (
         patch(
-            "roboco.services.project.get_github_app_credentials_service",
+            "robofleet.services.project.get_github_app_credentials_service",
             return_value=fake_creds_svc,
         ),
         patch(
-            "roboco.services.github_app_auth.get_github_app_credentials_service",
+            "robofleet.services.github_app_auth.get_github_app_credentials_service",
             return_value=fake_creds_svc,
         ),
     ):
@@ -178,11 +180,11 @@ async def test_mint_failure_with_no_pat_returns_none() -> None:
     fake_creds_svc.has_credentials = AsyncMock(return_value=True)
     with (
         patch(
-            "roboco.services.project.get_github_app_credentials_service",
+            "robofleet.services.project.get_github_app_credentials_service",
             return_value=fake_creds_svc,
         ),
         patch(
-            "roboco.services.project.mint_installation_token",
+            "robofleet.services.project.mint_installation_token",
             AsyncMock(side_effect=GitHubAppAPIError("revoked")),
         ),
     ):
@@ -197,11 +199,11 @@ async def test_by_slug_mints_token_too() -> None:
     fake_creds_svc.has_credentials = AsyncMock(return_value=True)
     with (
         patch(
-            "roboco.services.project.get_github_app_credentials_service",
+            "robofleet.services.project.get_github_app_credentials_service",
             return_value=fake_creds_svc,
         ),
         patch(
-            "roboco.services.project.mint_installation_token",
+            "robofleet.services.project.mint_installation_token",
             AsyncMock(return_value="ghs_minted"),
         ),
     ):

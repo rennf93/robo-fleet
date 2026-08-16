@@ -9,8 +9,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator, _is_non_dev_dispatch_source
-from roboco.services.task import MEGAPHONE_SOURCE
+from robofleet.runtime.orchestrator import (
+    AgentOrchestrator,
+    _is_non_dev_dispatch_source,
+)
+from robofleet.services.task import MEGAPHONE_SOURCE
 
 
 def _make_orch() -> AgentOrchestrator:

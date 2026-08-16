@@ -7,19 +7,19 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import ProviderConfigTable
-from roboco.models.base import AssignmentScope, ModelProvider
-from roboco.models.llm_catalog import MODEL_CATALOG
-from roboco.services.base import NotFoundError
-from roboco.services.llm import ModelRoutingService, get_model_routing_service
-from roboco.services.provider import ProviderService, ProviderUpdate
-from roboco.utils.crypto import EncryptionError
+from robofleet.db.tables import ProviderConfigTable
+from robofleet.models.base import AssignmentScope, ModelProvider
+from robofleet.models.llm_catalog import MODEL_CATALOG
+from robofleet.services.base import NotFoundError
+from robofleet.services.llm import ModelRoutingService, get_model_routing_service
+from robofleet.services.provider import ProviderService, ProviderUpdate
+from robofleet.utils.crypto import EncryptionError
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from uuid import UUID
 
-    from roboco.services.llm import AgentRoute
+    from robofleet.services.llm import AgentRoute
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -1112,7 +1112,7 @@ async def test_resolve_for_agent_falls_back_on_decrypt_error(
         scope=AssignmentScope.GLOBAL, scope_value=None, model_name=ollama_model
     )
     with patch(
-        "roboco.services.llm.ProviderService.get_decrypted_token",
+        "robofleet.services.llm.ProviderService.get_decrypted_token",
         side_effect=EncryptionError("decrypt"),
         new_callable=AsyncMock,
     ):
@@ -1271,7 +1271,7 @@ async def test_resolve_for_agent_self_hosted_returns_base_url(
         provider_type_override=ModelProvider.LOCAL,
     )
     with patch(
-        "roboco.services.llm.probe_ollama_tags",
+        "robofleet.services.llm.probe_ollama_tags",
         new_callable=AsyncMock,
         return_value=(["llama3.1:8b"], None),
     ):
@@ -1294,7 +1294,7 @@ async def test_resolve_for_agent_falls_back_when_self_hosted_unreachable(
         provider_type_override=ModelProvider.LOCAL,
     )
     with patch(
-        "roboco.services.llm.probe_ollama_tags",
+        "robofleet.services.llm.probe_ollama_tags",
         new_callable=AsyncMock,
         return_value=([], "Could not connect to http://localhost:11434"),
     ):

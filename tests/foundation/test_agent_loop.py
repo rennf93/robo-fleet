@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 
 import pytest
-from roboco.agent_sdk import server
-from roboco.foundation.policy import agent_loop
+from robofleet.agent_sdk import server
+from robofleet.foundation.policy import agent_loop
 
 # Canonical defaults the foundation guarantees. Asserting against named
 # constants keeps the contract explicit (and keeps PLR2004 happy — these

@@ -11,12 +11,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.services.ci_watch_engine import get_ci_watch_engine
-from roboco.services.telemetry.source import TelemetrySample
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.services.ci_watch_engine import get_ci_watch_engine
+from robofleet.services.telemetry.source import TelemetrySample
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,7 +93,7 @@ async def test_notifies_backend_cell_pm_once(db_session: AsyncSession) -> None:
     notifier.send_ack_notification = AsyncMock()
     engine = get_ci_watch_engine(db_session, source=_FakeSource([_breach("red")]))
     with patch(
-        "roboco.services.ci_watch_engine.NotificationService", return_value=notifier
+        "robofleet.services.ci_watch_engine.NotificationService", return_value=notifier
     ):
         created = await engine.run_cycle([proj])
 

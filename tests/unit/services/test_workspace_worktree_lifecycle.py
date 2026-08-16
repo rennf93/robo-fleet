@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from roboco.services.workspace import WorkspaceService
+from robofleet.services.workspace import WorkspaceService
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -69,7 +69,7 @@ async def test_ensure_worktree_creates_linked_worktree_on_new_branch(
     svc = _service()
     wt = clone / ".worktrees" / "a3c40fe7"
 
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
 
     assert (wt / ".git").is_file(), "linked worktree .git must be a gitdir file"
@@ -84,7 +84,7 @@ async def test_ensure_worktree_symlinks_venv_to_clone_root(clone: Path) -> None:
     (clone / ".venv").mkdir()  # clone-root venv exists from install_dev_deps
     wt = clone / ".worktrees" / "a3c40fe7"
 
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
 
     venv_link = wt / ".venv"
@@ -106,7 +106,7 @@ async def test_ensure_worktree_no_dangling_venv_symlink_when_clone_root_venv_mis
     assert not (clone / ".venv").exists()
     wt = clone / ".worktrees" / "a3c40fe7"
 
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
 
     link = wt / ".venv"
@@ -125,12 +125,12 @@ async def test_ensure_worktree_links_venv_once_clone_root_venv_provisioned(
     svc = _service()
     wt = clone / ".worktrees" / "a3c40fe7"
 
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
     assert not (wt / ".venv").is_symlink()
 
     (clone / ".venv").mkdir()  # install_dev_deps completes
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree_for_resume(clone, wt, "feature/a3c40fe7")
 
     link = wt / ".venv"
@@ -142,7 +142,7 @@ async def test_ensure_worktree_idempotent_on_existing_worktree(clone: Path) -> N
     svc = _service()
     wt = clone / ".worktrees" / "a3c40fe7"
 
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
         # Second call must be a no-op, not an error ("already exists").
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
@@ -161,7 +161,9 @@ async def test_ensure_worktree_chowns_both_worktree_and_clone_root(clone: Path) 
     def _capture(p: Path) -> None:
         owned.append(p)
 
-    with patch("roboco.services.workspace._ensure_agent_owned", side_effect=_capture):
+    with patch(
+        "robofleet.services.workspace._ensure_agent_owned", side_effect=_capture
+    ):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
 
     assert clone in owned, "clone root must be chowned (shared .venv/.git)"
@@ -172,7 +174,7 @@ async def test_ensure_worktree_for_resume_noop_when_present(clone: Path) -> None
     svc = _service()
     wt = clone / ".worktrees" / "a3c40fe7"
 
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
         # Resume on an existing worktree: no-op, branch intact.
         await svc.ensure_worktree_for_resume(clone, wt, "feature/a3c40fe7")
@@ -186,13 +188,13 @@ async def test_ensure_worktree_for_resume_readds_pruned_worktree(clone: Path) ->
     svc = _service()
     wt = clone / ".worktrees" / "a3c40fe7"
 
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
         # Simulate eviction: remove the worktree out-of-band.
         _git(clone, "worktree", "remove", str(wt), "--force")
     assert not wt.exists()
 
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree_for_resume(clone, wt, "feature/a3c40fe7")
 
     assert wt.exists()
@@ -203,7 +205,7 @@ async def test_remove_worktree_cleans_up_and_prunes(clone: Path) -> None:
     svc = _service()
     wt = clone / ".worktrees" / "a3c40fe7"
 
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
         await svc.remove_worktree(clone, wt)
 
@@ -228,7 +230,7 @@ async def test_two_concurrent_task_worktrees_independent(clone: Path) -> None:
     wt_a = clone / ".worktrees" / "a3c40fe7"
     wt_b = clone / ".worktrees" / "8e460893"
 
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt_a, "feature/a3c40fe7", "main")
         await svc.ensure_worktree(clone, wt_b, "feature/8e460893", "main")
 
@@ -273,14 +275,14 @@ async def test_self_heal_present_worktree_fetches_but_noops_without_origin(
     # the old no-op, but for a different reason (unresolvable, not skipped).
     svc = _service()
     wt = clone / ".worktrees" / "a3c40fe7"
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
 
     with (
         patch.object(
             WorkspaceService, "_fetch_branch_ref", new_callable=AsyncMock
         ) as fetch,
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.ensure_worktree_self_heal(
             clone, wt, "feature/a3c40fe7", "proj", can_author=True
@@ -299,7 +301,7 @@ async def test_self_heal_readds_pruned_worktree_from_local_ref(clone: Path) -> N
     # runs, it just has no origin/<branch> to compare to.
     svc = _service()
     wt = clone / ".worktrees" / "a3c40fe7"
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, "feature/a3c40fe7", "main")
     _git(clone, "worktree", "remove", str(wt), "--force")  # prune
     assert not wt.exists()
@@ -308,7 +310,7 @@ async def test_self_heal_readds_pruned_worktree_from_local_ref(clone: Path) -> N
         patch.object(
             WorkspaceService, "_fetch_branch_ref", new_callable=AsyncMock
         ) as fetch,
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         # can_author is irrelevant on the absent-worktree path (pre-refresh).
         await svc.ensure_worktree_self_heal(
@@ -413,7 +415,7 @@ async def test_self_heal_recovers_branch_from_origin(tmp_path: Path) -> None:
         patch.object(
             WorkspaceService, "_fetch_branch_ref", new_callable=AsyncMock
         ) as fetch,
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         # can_author is irrelevant on the absent-worktree path (pre-refresh).
         await svc.ensure_worktree_self_heal(clone, wt, branch, "proj", can_author=True)
@@ -445,7 +447,7 @@ async def test_self_heal_falls_back_to_origin_head_when_branch_not_pushed(
         patch.object(
             WorkspaceService, "_fetch_branch_ref", new_callable=AsyncMock
         ) as fetch,
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         # can_author is irrelevant on the absent-worktree path (pre-refresh).
         await svc.ensure_worktree_self_heal(clone, wt, branch, "proj", can_author=True)
@@ -477,7 +479,7 @@ async def _synced_clone_and_worktree(tmp_path: Path, remote: Path, branch: str) 
     )
     svc = _service()
     wt = clone / ".worktrees" / branch.rsplit("/", 1)[-1]
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, branch, "main")
     _git(wt, "push", "origin", branch)
     return clone
@@ -509,7 +511,7 @@ async def _run_self_heal(
 ) -> None:
     with (
         patch.object(WorkspaceService, "_fetch_branch_ref", new_callable=AsyncMock),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.ensure_worktree_self_heal(
             clone, wt, branch, "proj", can_author=can_author
@@ -635,7 +637,7 @@ async def test_refresh_skips_reset_when_worktree_drifted_off_task_branch(
     _git(wt, "checkout", "-b", "other-work")  # worktree drifts off the task branch
 
     svc = _service()
-    with patch("roboco.services.workspace.logger.warning") as warn:
+    with patch("robofleet.services.workspace.logger.warning") as warn:
         await _run_self_heal(svc, clone, wt, branch, can_author=True)
 
     assert warn.called, "a drifted worktree must log a warning instead of resetting"
@@ -678,7 +680,7 @@ async def test_ensure_worktree_restores_clone_root_left_on_task_branch(
     assert _git(clone, "branch", "--show-current").strip() == branch
 
     wt = clone / ".worktrees" / "d3dab0fc"
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, branch, "origin/HEAD")
 
     assert (wt / ".git").is_file(), "worktree must be created despite the collision"
@@ -699,7 +701,7 @@ async def test_ensure_worktree_detaches_when_default_branch_unresolvable(
     assert _git(clone, "branch", "--show-current").strip() == branch
 
     wt = clone / ".worktrees" / "d3dab0fc"
-    with patch("roboco.services.workspace._ensure_agent_owned"):
+    with patch("robofleet.services.workspace._ensure_agent_owned"):
         await svc.ensure_worktree(clone, wt, branch, "origin/HEAD")
 
     assert (wt / ".git").is_file(), "worktree must be created (branch freed via detach)"
@@ -725,7 +727,7 @@ async def test_self_heal_recovers_clone_root_left_on_task_branch(clone: Path) ->
     wt = clone / ".worktrees" / "d3dab0fc"
     with (
         patch.object(WorkspaceService, "_fetch_branch_ref", new_callable=AsyncMock),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         # The local ref here comes straight from `_clone_on_branch`, not a
         # prior `ensure_worktree` — a surviving local ref now also re-adds

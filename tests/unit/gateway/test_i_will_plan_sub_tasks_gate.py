@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 _MIN_APPROACH_LEN = 150  # #171: raised 20→150 (must match _PM_APPROACH_MIN_LEN)
 _GOOD_APPROACH = (

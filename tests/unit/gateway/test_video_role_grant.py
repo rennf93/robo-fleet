@@ -5,7 +5,7 @@ test_content_actions_video.py."""
 
 from __future__ import annotations
 
-from roboco.services.gateway.role_config import get_role_config
+from robofleet.services.gateway.role_config import get_role_config
 
 
 def test_developer_gets_propose_video() -> None:

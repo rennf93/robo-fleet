@@ -39,7 +39,7 @@ def do_module(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
     import importlib
 
-    import roboco.mcp.do_server as srv
+    import robofleet.mcp.do_server as srv
 
     importlib.reload(srv)
     return srv
@@ -112,7 +112,7 @@ def test_build_headers_carries_auth_token_and_team(
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
 
-    import roboco.mcp.do_server as srv
+    import robofleet.mcp.do_server as srv
 
     importlib.reload(srv)
     headers = srv._build_headers()
@@ -141,7 +141,7 @@ def test_build_headers_omits_unsigned_token(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
 
-    import roboco.mcp.do_server as srv
+    import robofleet.mcp.do_server as srv
 
     importlib.reload(srv)
     headers = srv._build_headers()

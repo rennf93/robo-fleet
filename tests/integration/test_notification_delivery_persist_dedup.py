@@ -20,10 +20,15 @@ from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, NotificationTable, ProjectTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, NotificationPriority, NotificationType
-from roboco.models.base import TaskNature, TaskStatus, TaskType, Team
-from roboco.services.notification_delivery import get_notification_delivery_service
+from robofleet.db.tables import AgentTable, NotificationTable, ProjectTable, TaskTable
+from robofleet.models import (
+    AgentRole,
+    AgentStatus,
+    NotificationPriority,
+    NotificationType,
+)
+from robofleet.models.base import TaskNature, TaskStatus, TaskType, Team
+from robofleet.services.notification_delivery import get_notification_delivery_service
 from sqlalchemy import select
 
 if TYPE_CHECKING:
@@ -128,7 +133,7 @@ async def test_persist_and_deliver_suppresses_db_duplicate_past_redis_window(
     # Bypass the 60s Redis re-fire guard so the DB check is the only guard
     # left standing — matches tests/unit/test_notification_delivery_refire.py.
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.all_recipients_recently_notified",
+        "robofleet.services.notification_delivery.all_recipients_recently_notified",
         AsyncMock(return_value=False),
     )
 
@@ -190,7 +195,7 @@ async def test_persist_and_deliver_allows_distinct_recipient_set(
     await db_session.flush()
 
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.all_recipients_recently_notified",
+        "robofleet.services.notification_delivery.all_recipients_recently_notified",
         AsyncMock(return_value=False),
     )
 

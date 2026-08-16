@@ -16,8 +16,8 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from roboco.services.optimal_brain.indexes.base import IngestResult
-from roboco.services.optimal_brain.indexes.docs import DocsIndexPlugin
+from robofleet.services.optimal_brain.indexes.base import IngestResult
+from robofleet.services.optimal_brain.indexes.docs import DocsIndexPlugin
 
 if TYPE_CHECKING:
     from pathlib import Path

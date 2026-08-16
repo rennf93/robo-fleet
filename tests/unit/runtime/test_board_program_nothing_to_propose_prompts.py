@@ -15,8 +15,8 @@ from typing import Any, cast
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.board_programs import PROGRAMS
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.foundation.policy.board_programs import PROGRAMS
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 # program key -> the AgentOrchestrator prompt-builder method name. Every
 # method here accepts a bare ``task`` dict (the LEARN/evidence context

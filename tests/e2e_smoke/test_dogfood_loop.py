@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from roboco.foundation import identity as _foundation
+from robofleet.foundation import identity as _foundation
 from tests.e2e_smoke.arcs import Company, seed_company, seed_project
 
 if TYPE_CHECKING:
@@ -30,9 +30,9 @@ ZERO = 0
 def _seed_system_and_po(stack: E2EStack) -> None:
     """Seed ``system`` + ``product-owner`` at their FIXED foundation UUIDs —
     see test_board_program_loop.py's identical helper for why."""
-    from roboco.db.tables import AgentTable
-    from roboco.foundation import identity as _foundation
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable
+    from robofleet.foundation import identity as _foundation
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     async def _run(session: AsyncSession) -> None:
         for agent_uuid, slug, role, team in (
@@ -68,7 +68,7 @@ def _seed_system_and_po(stack: E2EStack) -> None:
 def _arm_and_opt_in(stack: E2EStack, project_id: Any) -> None:
     """Arm via the settings-store key (the ONLY arming path — no legacy env
     flag exists for dogfood) AND opt the project into the program."""
-    from roboco.db.tables import ProjectTable, SystemSettingTable
+    from robofleet.db.tables import ProjectTable, SystemSettingTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> None:
@@ -89,7 +89,7 @@ def _open_program_cycle(stack: E2EStack, key: str) -> Any:
     """Drives the SAME chokepoint both Dogfood triggers use (the
     release-publish hook and the panel's "run now" button) — see this
     module's docstring."""
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> Any:
         task = await get_board_program_engine(session).open_program_cycle(key)
@@ -99,8 +99,8 @@ def _open_program_cycle(stack: E2EStack, key: str) -> Any:
 
 
 def _find_dogfood_task(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
-    from roboco.services.task import DOGFOOD_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.services.task import DOGFOOD_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -132,7 +132,7 @@ def _find_dogfood_task(stack: E2EStack) -> dict[str, Any]:
 
 
 def _cycle_counters(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import BoardProgramCycleTable
+    from robofleet.db.tables import BoardProgramCycleTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -162,9 +162,9 @@ def _cycle_counters(stack: E2EStack) -> dict[str, Any]:
 def _approve_fake_item(
     stack: E2EStack, task_id: Any, project_slug: str, company: Company
 ) -> str:
-    from roboco.db.tables import TaskTable
-    from roboco.foundation.policy.content import markers
-    from roboco.services.dogfood_service import get_dogfood_service
+    from robofleet.db.tables import TaskTable
+    from robofleet.foundation.policy.content import markers
+    from robofleet.services.dogfood_service import get_dogfood_service
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> str:
@@ -232,7 +232,7 @@ def test_dogfood_loop_originates_dedups_and_records(
     # The dispatcher's own dev-work skip recognizes this exact task shape —
     # board_dogfood is board-dispatched (one-shot PO spawn), never handed to
     # the generic dev dispatch loop's give_me_work/claim path.
-    from roboco.runtime.orchestrator import _is_non_dev_dispatch_source
+    from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
 
     assert _is_non_dev_dispatch_source({"source": row["source"]}) is True
 
@@ -263,7 +263,7 @@ def test_dogfood_never_opens_via_run_due_programs(e2e_stack: E2EStack) -> None:
     project_id, _project_slug = seed_project(stack, company)
     _arm_and_opt_in(stack, project_id)
 
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run_due(session: AsyncSession) -> list[str]:
         return await get_board_program_engine(session).run_due_programs()

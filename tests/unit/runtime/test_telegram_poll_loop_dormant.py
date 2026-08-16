@@ -14,8 +14,8 @@ import types
 from typing import cast
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings as cfg
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 @pytest.mark.asyncio

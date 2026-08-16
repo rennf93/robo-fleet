@@ -16,8 +16,11 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.base import NotFoundError
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.services.base import NotFoundError
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 from sqlalchemy.exc import OperationalError
 
 

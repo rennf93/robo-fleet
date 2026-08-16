@@ -1,11 +1,11 @@
-"""Coverage for roboco.services.base — SingletonHolder pattern."""
+"""Coverage for robofleet.services.base — SingletonHolder pattern."""
 
 from __future__ import annotations
 
 from typing import Any, cast
 
 import pytest
-from roboco.services.base import (
+from robofleet.services.base import (
     BaseService,
     ConflictError,
     NotFoundError,

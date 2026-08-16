@@ -32,22 +32,22 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.db.tables import (
+from robofleet.config import settings
+from robofleet.db.tables import (
     AgentTable,
     IndexedDocumentTable,
     NotificationTable,
     PlaybookTable,
 )
-from roboco.models import NotificationPriority, NotificationType
-from roboco.models.base import AgentRole, AgentStatus, PlaybookStatus, Team
-from roboco.models.notification import CreateNotificationParams
-from roboco.models.optimal import IndexType
-from roboco.services.notification import NotificationService
-from roboco.services.optimal import OptimalService
-from roboco.services.optimal_brain.indexes.base import IngestResult
-from roboco.services.optimal_brain.vector_store import VectorStore
-from roboco.services.playbook import PlaybookService
+from robofleet.models import NotificationPriority, NotificationType
+from robofleet.models.base import AgentRole, AgentStatus, PlaybookStatus, Team
+from robofleet.models.notification import CreateNotificationParams
+from robofleet.models.optimal import IndexType
+from robofleet.services.notification import NotificationService
+from robofleet.services.optimal import OptimalService
+from robofleet.services.optimal_brain.indexes.base import IngestResult
+from robofleet.services.optimal_brain.vector_store import VectorStore
+from robofleet.services.playbook import PlaybookService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -72,7 +72,7 @@ def _chunk_dsn(db_url: str) -> str:
 
 @pytest.mark.asyncio
 async def test_c3_deleted_journal_unindexed(e2e_stack: E2EStack) -> None:
-    from roboco.db import base as db_base
+    from robofleet.db import base as db_base
 
     # Rebind the app's lazy engine to this test's loop (see H12 for the
     # rationale): unindex_journal_entry's tracking-row delete routes through
@@ -208,8 +208,8 @@ async def test_h12_dedup_does_not_drop_new_recipient(e2e_stack: E2EStack) -> Non
     """H12(a) end-to-end: a blocker sent to {be-pm, main-pm} after an unacked
     one to {be-pm} alone must STILL reach main-pm. Pre-fix the overlap
     predicate dropped the entire second notification for ALL recipients."""
-    from roboco.db import base as db_base
-    from roboco.db.base import get_db_context
+    from robofleet.db import base as db_base
+    from robofleet.db.base import get_db_context
 
     # Prior smoke tests in the same session (C3) call get_db_context, binding
     # the app's lazy engine to their event loop. pytest-asyncio gives each
@@ -275,8 +275,8 @@ async def test_m23_approved_unindexed_reconcile(e2e_stack: E2EStack) -> None:
     ``indexed_ok=True``/``indexed_at`` in the DB. Proves the cross-layer
     wiring (the reconcile query → the service → the durable flag) without a
     live embedder (the optimal service is stubbed)."""
-    from roboco.db import base as db_base
-    from roboco.db.base import get_db_context
+    from robofleet.db import base as db_base
+    from robofleet.db.base import get_db_context
 
     # Rebind the lazy engine to this test's loop (see H12 for the rationale).
     db_base._DbHolder.engine = None
@@ -315,7 +315,7 @@ async def test_m23_approved_unindexed_reconcile(e2e_stack: E2EStack) -> None:
     )
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
         patch.object(settings, "org_memory_enabled", True),

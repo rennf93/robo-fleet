@@ -28,13 +28,13 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation.policy.communications import Priority
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.a2a import A2AMessage, SendMessageRequest, TextPart
-from roboco.models.base import NotificationPriority, TaskNature, TaskStatus, TaskType
-from roboco.services.a2a import A2AService
-from roboco.services.notification import NotificationService
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation.policy.communications import Priority
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.a2a import A2AMessage, SendMessageRequest, TextPart
+from robofleet.models.base import NotificationPriority, TaskNature, TaskStatus, TaskType
+from robofleet.services.a2a import A2AService
+from robofleet.services.notification import NotificationService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator
@@ -103,11 +103,11 @@ class _PatchDbContext:
         delivery_mock.deliver = AsyncMock(return_value=None)
         self._patches: list[Any] = [
             patch(
-                "roboco.services.notification.get_db_context",
+                "robofleet.services.notification.get_db_context",
                 lambda: _fake_ctx(db),
             ),
             patch(
-                "roboco.services.notification_delivery."
+                "robofleet.services.notification_delivery."
                 "get_notification_delivery_service",
                 lambda _db: delivery_mock,
             ),
@@ -281,7 +281,7 @@ async def test_create_a2a_notification_metadata_priority_high_propagates(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService",
+        "robofleet.services.notification.NotificationService",
         return_value=mock_ns,
     ):
         await svc.create_a2a_notification(req)
@@ -309,7 +309,7 @@ async def test_create_a2a_notification_metadata_priority_urgent_propagates(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService",
+        "robofleet.services.notification.NotificationService",
         return_value=mock_ns,
     ):
         await svc.create_a2a_notification(req)
@@ -332,7 +332,7 @@ async def test_create_a2a_notification_default_priority_is_normal(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService",
+        "robofleet.services.notification.NotificationService",
         return_value=mock_ns,
     ):
         await svc.create_a2a_notification(req)
@@ -361,7 +361,7 @@ async def test_create_a2a_notification_legacy_urgent_bool_maps_to_urgent(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService",
+        "robofleet.services.notification.NotificationService",
         return_value=mock_ns,
     ):
         await svc.create_a2a_notification(req)
@@ -388,7 +388,7 @@ async def test_create_a2a_notification_unknown_priority_falls_back_to_normal(
     mock_ns = AsyncMock()
     mock_ns.send_a2a_notification = AsyncMock(return_value=None)
     with patch(
-        "roboco.services.notification.NotificationService",
+        "robofleet.services.notification.NotificationService",
         return_value=mock_ns,
     ):
         await svc.create_a2a_notification(req)

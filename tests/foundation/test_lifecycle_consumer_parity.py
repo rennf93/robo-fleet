@@ -14,12 +14,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec
-from roboco.services.gateway.choreographer import (
+from robofleet.foundation.policy import lifecycle as spec
+from robofleet.services.gateway.choreographer import (
     Choreographer,
     ChoreographerDeps,
 )
-from roboco.services.gateway.choreographer._impl import DelegateInputs
+from robofleet.services.gateway.choreographer._impl import DelegateInputs
 
 
 def _make_deps(task_svc: Any = None) -> ChoreographerDeps:

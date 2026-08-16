@@ -7,7 +7,7 @@ from base64 import urlsafe_b64decode
 from collections import Counter
 from typing import TYPE_CHECKING, cast
 
-from roboco.agents_config import (
+from robofleet.agents_config import (
     A2A_ALLOWED_PAIRS,
     can_a2a_direct,
     can_assign_tasks,
@@ -31,8 +31,8 @@ from roboco.agents_config import (
     issue_panel_token,
     verify_agent_token,
 )
-from roboco.foundation import identity as foundation
-from roboco.seeds.initial_data import CEO_AGENT_ID
+from robofleet.foundation import identity as foundation
+from robofleet.seeds.initial_data import CEO_AGENT_ID
 
 if TYPE_CHECKING:
     import pytest

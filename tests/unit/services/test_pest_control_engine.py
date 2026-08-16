@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
@@ -20,13 +20,13 @@ from roboco.db.tables import (
     TaskReviewFindingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, Complexity, Team
-from roboco.models.base import TaskNature as TN
-from roboco.models.base import TaskStatus as TS
-from roboco.models.base import TaskType as TT
-from roboco.services.pest_control_engine import PestControlEngine
-from roboco.services.task import (
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, Complexity, Team
+from robofleet.models.base import TaskNature as TN
+from robofleet.models.base import TaskStatus as TS
+from robofleet.models.base import TaskType as TT
+from robofleet.services.pest_control_engine import PestControlEngine
+from robofleet.services.task import (
     CORONER_SOURCE,
     PEST_CONTROL_SOURCE,
     ROADMAP_SOURCE,
@@ -296,7 +296,7 @@ async def test_evidence_context_reports_recurring_findings(
                 origin="qa",
                 round=round_n,
                 author_slug="qa-1",
-                file="roboco/services/task.py",
+                file="robofleet/services/task.py",
                 line=42,
                 severity="major",
                 expected="a fix",
@@ -306,5 +306,5 @@ async def test_evidence_context_reports_recurring_findings(
     await db_session.flush()
 
     context = await PestControlEngine(db_session).evidence_context()
-    assert "roboco/services/task.py" in context
+    assert "robofleet/services/task.py" in context
     assert "2 findings" in context

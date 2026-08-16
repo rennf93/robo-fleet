@@ -15,10 +15,15 @@ from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, NotificationTable
-from roboco.models import AgentRole, AgentStatus, NotificationPriority, NotificationType
-from roboco.models.base import Team
-from roboco.services.notification_delivery import get_notification_delivery_service
+from robofleet.db.tables import AgentTable, NotificationTable
+from robofleet.models import (
+    AgentRole,
+    AgentStatus,
+    NotificationPriority,
+    NotificationType,
+)
+from robofleet.models.base import Team
+from robofleet.services.notification_delivery import get_notification_delivery_service
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

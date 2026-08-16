@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services.workspace import (
+from robofleet.services.workspace import (
     WorkspaceService,
     _detect_dep_commands,
 )
@@ -71,12 +71,12 @@ async def test_provisions_target_python_and_records_ok(tmp_path: Path) -> None:
     captured: list[list[str]] = []
 
     with (
-        patch("roboco.services.workspace.settings.toolchain_match_enabled", True),
+        patch("robofleet.services.workspace.settings.toolchain_match_enabled", True),
         patch(
-            "roboco.services.workspace.subprocess.run",
+            "robofleet.services.workspace.subprocess.run",
             side_effect=_fake_run_factory(captured, collect_rc=0),
         ),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.install_dev_deps(ws)
 
@@ -95,14 +95,14 @@ async def test_records_broken_on_collection_error(tmp_path: Path) -> None:
     captured: list[list[str]] = []
 
     with (
-        patch("roboco.services.workspace.settings.toolchain_match_enabled", True),
+        patch("robofleet.services.workspace.settings.toolchain_match_enabled", True),
         patch(
-            "roboco.services.workspace.subprocess.run",
+            "robofleet.services.workspace.subprocess.run",
             side_effect=_fake_run_factory(
                 captured, collect_rc=2
             ),  # pytest collect error
         ),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.install_dev_deps(ws)
 
@@ -118,12 +118,12 @@ async def test_flag_off_is_unchanged_no_marker(tmp_path: Path) -> None:
     captured: list[list[str]] = []
 
     with (
-        patch("roboco.services.workspace.settings.toolchain_match_enabled", False),
+        patch("robofleet.services.workspace.settings.toolchain_match_enabled", False),
         patch(
-            "roboco.services.workspace.subprocess.run",
+            "robofleet.services.workspace.subprocess.run",
             side_effect=_fake_run_factory(captured, collect_rc=0),
         ),
-        patch("roboco.services.workspace._ensure_agent_owned"),
+        patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         await svc.install_dev_deps(ws)
 

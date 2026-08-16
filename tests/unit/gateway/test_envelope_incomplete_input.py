@@ -5,7 +5,7 @@ from tracing_gap (which is for end-of-workflow gates).
 
 from __future__ import annotations
 
-from roboco.services.gateway.envelope import Envelope
+from robofleet.services.gateway.envelope import Envelope
 
 
 def test_incomplete_input_carries_missing_and_field_hints() -> None:

@@ -4,7 +4,7 @@ change-detection scan."""
 
 from __future__ import annotations
 
-from roboco.foundation.policy.vault_notes import content_hash
+from robofleet.foundation.policy.vault_notes import content_hash
 
 _BODY = "# Buy milk\n\nGet 2% milk.\n"
 

@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_market_brief — HoM-gated
+"""robofleet.services.gateway.content_actions.propose_market_brief — HoM-gated
 Periscope market-brief authoring. Mirrors test_content_actions_pest_control.py
 for the validation truth table, and test_content_actions_feature_spotlight.py
 for the complete-at-propose asymmetry (a report has no per-item CEO queue)."""
@@ -10,9 +10,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.models.base import TaskStatus
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import TaskStatus
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 class _FakeTask:
@@ -259,7 +262,7 @@ async def test_propose_market_brief_accepts_https_source_url(
     lookup instead of failing on the URL check itself."""
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_market_brief(
         agent_id=uuid4(), **_valid_kwargs(findings=[_valid_finding(0)])
     )
@@ -281,7 +284,7 @@ async def test_propose_market_brief_allows_omitted_threats_and_opportunities(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_market_brief(
         agent_id=uuid4(), **_valid_kwargs()
     )
@@ -330,7 +333,7 @@ async def test_propose_market_brief_allows_empty_positioning_note(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_market_brief(
         agent_id=uuid4(), **_valid_kwargs(positioning_note="")
     )
@@ -349,7 +352,7 @@ async def test_propose_market_brief_no_open_cycle_is_invalid_state(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_market_brief(
         agent_id=uuid4(), **_valid_kwargs()
     )
@@ -364,7 +367,7 @@ async def test_propose_market_brief_ignores_cycle_assigned_to_another_agent(
     cycle_task = _FakeTask(assigned_to=other_agent)
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_market_brief(
         agent_id=uuid4(), **_valid_kwargs()
     )
@@ -382,7 +385,7 @@ async def test_propose_market_brief_ignores_already_authored_cycle(
     )
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[authored])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("head_marketing").propose_market_brief(
         agent_id=agent_id, **_valid_kwargs()
     )
@@ -402,7 +405,7 @@ async def test_propose_market_brief_persists_and_completes_the_exploration_task(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("head_marketing")
     actions.task.session.flush = AsyncMock()
 
@@ -449,7 +452,7 @@ async def test_propose_market_brief_sends_telegram_push_once(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     notify = AsyncMock()
     actions = _actions("head_marketing", notification_delivery=notify)
     actions.task.session.flush = AsyncMock()
@@ -472,7 +475,7 @@ async def test_propose_market_brief_survives_telegram_push_failure(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     notify = MagicMock()
     notify.notify_ceo_of_periscope_brief = AsyncMock(side_effect=RuntimeError("boom"))
     actions = _actions("head_marketing", notification_delivery=notify)
@@ -492,7 +495,7 @@ async def test_propose_market_brief_no_notification_delivery_is_a_no_op(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("head_marketing", notification_delivery=None)
     actions.task.session.flush = AsyncMock()
 
@@ -516,7 +519,7 @@ async def test_propose_market_brief_flags_injection_pattern_without_rejecting(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("head_marketing")
     actions.task.session.flush = AsyncMock()
 
@@ -546,7 +549,7 @@ async def test_propose_market_brief_clean_brief_has_no_injection_hits(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_periscope_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("head_marketing")
     actions.task.session.flush = AsyncMock()
 

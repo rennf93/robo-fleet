@@ -27,7 +27,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _orch() -> AgentOrchestrator:

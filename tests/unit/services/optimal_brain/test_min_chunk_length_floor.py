@@ -7,13 +7,13 @@ learnings an 80-char floor; every other index keeps the 200-char default.
 
 from __future__ import annotations
 
-from roboco.models.optimal import IndexType
-from roboco.services.optimal_brain.indexes.base import (
+from robofleet.models.optimal import IndexType
+from robofleet.services.optimal_brain.indexes.base import (
     _MIN_CHUNK_LENGTH,
     IndexConfig,
     _filter_quality_chunks,
 )
-from roboco.services.optimal_brain.text_chunker import Chunk
+from robofleet.services.optimal_brain.text_chunker import Chunk
 
 # Named constants — ruff PLR2004 forbids magic-number comparisons.
 _JOURNALS_FLOOR = 40

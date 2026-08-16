@@ -15,12 +15,12 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.tasks import router as tasks_router
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskNature, TaskStatus, TaskType
-from roboco.models.permissions import AgentContext
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.tasks import router as tasks_router
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskNature, TaskStatus, TaskType
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -109,13 +109,13 @@ async def test_collision_map_404_for_missing_task(collision_client: dict) -> Non
 @pytest.mark.asyncio
 async def test_collision_map_empty_for_rootless_task(collision_client: dict) -> None:
     client = collision_client["client"]
-    task = _task(collision_client, intends_to_touch=["roboco/services/git.py"])
+    task = _task(collision_client, intends_to_touch=["robofleet/services/git.py"])
     await collision_client["db"].flush()
     response = await client.get(f"/api/tasks/{task.id}/collision-map", headers=_HDR)
     assert response.status_code == HTTPStatus.OK
     body = response.json()
     assert body["parent_task_id"] is None
-    assert body["intends_to_touch"] == ["roboco/services/git.py"]
+    assert body["intends_to_touch"] == ["robofleet/services/git.py"]
     assert body["siblings"] == []
 
 
@@ -128,14 +128,14 @@ async def test_collision_map_shows_overlapping_sibling(collision_client: dict) -
         collision_client,
         parent_task_id=parent.id,
         title="under review",
-        intends_to_touch=["roboco/services/git.py"],
+        intends_to_touch=["robofleet/services/git.py"],
         sequence=0,
     )
     _task(
         collision_client,
         parent_task_id=parent.id,
         title="colliding sibling",
-        intends_to_touch=["roboco/services/git.py", "roboco/services/x.py"],
+        intends_to_touch=["robofleet/services/git.py", "robofleet/services/x.py"],
         sequence=1,
     )
     await collision_client["db"].flush()
@@ -147,7 +147,7 @@ async def test_collision_map_shows_overlapping_sibling(collision_client: dict) -
     assert len(body["siblings"]) == 1
     sib_entry = body["siblings"][0]
     assert sib_entry["title"] == "colliding sibling"
-    assert "roboco/services/git.py" in sib_entry["overlap"]
+    assert "robofleet/services/git.py" in sib_entry["overlap"]
     # panel path carries no actual files → drift is empty (the QA/gate
     # evidence envelopes populate it; the panel schema defaults to []).
     assert sib_entry["undeclared"] == []
@@ -167,26 +167,26 @@ async def test_collision_map_degrades_on_builder_failure(
         collision_client,
         parent_task_id=parent.id,
         title="under review",
-        intends_to_touch=["roboco/services/git.py"],
+        intends_to_touch=["robofleet/services/git.py"],
     )
     _task(
         collision_client,
         parent_task_id=parent.id,
         title="colliding sibling",
-        intends_to_touch=["roboco/services/git.py"],
+        intends_to_touch=["robofleet/services/git.py"],
     )
     await collision_client["db"].flush()
 
     def _boom(**_kw: Any) -> None:
         raise RuntimeError("collision builder exploded")
 
-    monkeypatch.setattr("roboco.api.routes.tasks.build_collision_context", _boom)
+    monkeypatch.setattr("robofleet.api.routes.tasks.build_collision_context", _boom)
 
     response = await client.get(f"/api/tasks/{under.id}/collision-map", headers=_HDR)
     assert response.status_code == HTTPStatus.OK
     body = response.json()
     assert body["siblings"] == []
-    assert body["intends_to_touch"] == ["roboco/services/git.py"]
+    assert body["intends_to_touch"] == ["robofleet/services/git.py"]
 
 
 @pytest.mark.asyncio
@@ -200,13 +200,13 @@ async def test_collision_map_omits_non_overlapping_sibling(
         collision_client,
         parent_task_id=parent.id,
         title="under review",
-        intends_to_touch=["roboco/services/git.py"],
+        intends_to_touch=["robofleet/services/git.py"],
     )
     _task(
         collision_client,
         parent_task_id=parent.id,
         title="parallel sibling",
-        intends_to_touch=["roboco/services/other.py"],
+        intends_to_touch=["robofleet/services/other.py"],
     )
     await collision_client["db"].flush()
 

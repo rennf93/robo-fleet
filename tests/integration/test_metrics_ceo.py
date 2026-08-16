@@ -14,8 +14,8 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AuditLogTable
-from roboco.services.metrics import MetricsService
+from robofleet.db.tables import AuditLogTable
+from robofleet.services.metrics import MetricsService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

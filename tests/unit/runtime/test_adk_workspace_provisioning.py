@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from roboco.models.base import ModelProvider
-from roboco.models.runtime import SpawnGitContext
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.models.base import ModelProvider
+from robofleet.models.runtime import SpawnGitContext
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _SLUG = "be-dev-1"
 
@@ -68,10 +68,10 @@ async def test_adk_spawn_provisions_workspace_for_developer(
     """ADK spawn calls ensure_workspace before _generate_adk_manifest for a
     developer role with a project_slug (clone lands on Filestore before the
     Cloud Run Job starts)."""
-    monkeypatch.setattr("roboco.db.base.get_db_context", _FakeDbContext)
-    monkeypatch.setattr("roboco.services.workspace.WorkspaceService", _FakeWs)
+    monkeypatch.setattr("robofleet.db.base.get_db_context", _FakeDbContext)
+    monkeypatch.setattr("robofleet.services.workspace.WorkspaceService", _FakeWs)
     monkeypatch.setattr(
-        "roboco.runtime.orchestrator.get_agent_role", lambda _s: "developer"
+        "robofleet.runtime.orchestrator.get_agent_role", lambda _s: "developer"
     )
     monkeypatch.setattr(AgentOrchestrator, "_generate_adk_manifest", _fake_adk_manifest)
 
@@ -92,9 +92,11 @@ async def test_adk_spawn_skips_workspace_for_qa(
     """ADK spawn skips ensure_workspace for a no-workspace role (qa): the guard
     only provisions for roles in _ROLES_WITH_AGENT_WORKSPACE /
     _ROLES_WITH_CELL_WORKSPACE."""
-    monkeypatch.setattr("roboco.db.base.get_db_context", _FakeDbContext)
-    monkeypatch.setattr("roboco.services.workspace.WorkspaceService", _FakeWs)
-    monkeypatch.setattr("roboco.runtime.orchestrator.get_agent_role", lambda _s: "qa")
+    monkeypatch.setattr("robofleet.db.base.get_db_context", _FakeDbContext)
+    monkeypatch.setattr("robofleet.services.workspace.WorkspaceService", _FakeWs)
+    monkeypatch.setattr(
+        "robofleet.runtime.orchestrator.get_agent_role", lambda _s: "qa"
+    )
     monkeypatch.setattr(AgentOrchestrator, "_generate_adk_manifest", _fake_adk_manifest)
 
     orch = AgentOrchestrator.__new__(AgentOrchestrator)
@@ -113,10 +115,10 @@ async def test_adk_spawn_skips_workspace_without_project_slug(
 ) -> None:
     """ADK spawn skips ensure_workspace when there is no project_slug (branchless
     / idle spawn): nothing to clone."""
-    monkeypatch.setattr("roboco.db.base.get_db_context", _FakeDbContext)
-    monkeypatch.setattr("roboco.services.workspace.WorkspaceService", _FakeWs)
+    monkeypatch.setattr("robofleet.db.base.get_db_context", _FakeDbContext)
+    monkeypatch.setattr("robofleet.services.workspace.WorkspaceService", _FakeWs)
     monkeypatch.setattr(
-        "roboco.runtime.orchestrator.get_agent_role", lambda _s: "developer"
+        "robofleet.runtime.orchestrator.get_agent_role", lambda _s: "developer"
     )
     monkeypatch.setattr(AgentOrchestrator, "_generate_adk_manifest", _fake_adk_manifest)
 

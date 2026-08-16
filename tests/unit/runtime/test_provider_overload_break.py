@@ -14,9 +14,9 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.config import settings
-from roboco.models.runtime import AgentInstance, WaitingRecord
-from roboco.runtime.orchestrator import (
+from robofleet.config import settings
+from robofleet.models.runtime import AgentInstance, WaitingRecord
+from robofleet.runtime.orchestrator import (
     _OVERLOAD_RETRY_AFTER_S,
     _RATE_LIMIT_RETRY_AFTER_S,
     AgentOrchestrator,

@@ -18,12 +18,12 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.agents_config import (
+from robofleet.agents_config import (
     AGENT_UUIDS,
     issue_agent_token,
     verify_agent_token,
 )
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _orch() -> Any:

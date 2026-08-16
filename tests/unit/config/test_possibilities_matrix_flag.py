@@ -6,8 +6,8 @@ from __future__ import annotations
 import os
 from unittest import mock
 
-from roboco.config import Settings
-from roboco.services.settings import FEATURE_FLAGS, validate_setting
+from robofleet.config import Settings
+from robofleet.services.settings import FEATURE_FLAGS, validate_setting
 
 
 def test_possibilities_matrix_disabled_by_default() -> None:

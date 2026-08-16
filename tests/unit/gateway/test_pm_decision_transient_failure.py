@@ -33,8 +33,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.choreographer import _impl as _impl_module
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import _impl as _impl_module
 from sqlalchemy.exc import OperationalError
 
 
@@ -69,7 +69,7 @@ async def test_check_pm_decision_required_transient_failure_satisfies_gate(
     substance, the write was a convenience.
 
     ``_impl.py`` logs via ``structlog.get_logger()`` directly; absent this
-    process having called ``roboco.logging.setup_logging()`` (never true in
+    process having called ``robofleet.logging.setup_logging()`` (never true in
     a bare unit-test run), structlog uses its own default global config and
     never touches stdlib ``logging`` — so ``caplog`` cannot see it. Patching
     the module-level ``logger`` object is the reliable way to assert a

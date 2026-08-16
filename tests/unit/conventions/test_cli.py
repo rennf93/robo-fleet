@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from roboco.conventions.__main__ import main
-from roboco.conventions.runner import ValidatorCouldNotRun
+from robofleet.conventions.__main__ import main
+from robofleet.conventions.runner import ValidatorCouldNotRun
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -68,7 +68,7 @@ def test_cli_exits_three_when_validator_cannot_run(
     def boom(*_args: object, **_kw: object) -> list:
         raise ValidatorCouldNotRun("no grammar")
 
-    monkeypatch.setattr("roboco.conventions.__main__.run", boom)
+    monkeypatch.setattr("robofleet.conventions.__main__.run", boom)
     rc = main(["check", "--root", str(tmp_path), "--files", "x.py"])
     assert rc == _EXIT_COULD_NOT_RUN
     payload = json.loads(capsys.readouterr().err)

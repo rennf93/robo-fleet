@@ -16,7 +16,7 @@ on:
       - 'docs/**'
       - 'hotfix/**'
     paths:
-      - 'roboco/**'
+      - 'robofleet/**'
       - 'alembic/**'
       - 'tests/**'
       - 'Makefile'
@@ -29,7 +29,7 @@ on:
       # Fleet PRs target the dev branch — see ci.yml's pull_request note.
       - slave
     paths:
-      - 'roboco/**'
+      - 'robofleet/**'
       - 'alembic/**'
       - 'tests/**'
       - 'Makefile'

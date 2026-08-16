@@ -13,9 +13,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models import NotificationPriority, NotificationType
-from roboco.models.notification import CreateNotificationParams
-from roboco.services.notification import NotificationService
+from robofleet.models import NotificationPriority, NotificationType
+from robofleet.models.notification import CreateNotificationParams
+from robofleet.services.notification import NotificationService
 
 
 class _FakeDBCtx:
@@ -61,11 +61,11 @@ async def test_create_notification_suppresses_same_purpose_duplicate() -> None:
     cc._resolve_recipients = AsyncMock(return_value=[recip])
     with (
         patch(
-            "roboco.services.notification.get_db_context",
+            "robofleet.services.notification.get_db_context",
             return_value=_FakeDBCtx(db),
         ),
         patch(
-            "roboco.services.notification._resolve_agent_uuid",
+            "robofleet.services.notification._resolve_agent_uuid",
             AsyncMock(return_value=uuid4()),
         ),
     ):
@@ -98,15 +98,15 @@ async def test_create_notification_unequal_recipient_set_not_suppressed() -> Non
     cc._resolve_recipients = AsyncMock(return_value=[recip_a, recip_b])
     with (
         patch(
-            "roboco.services.notification.get_db_context",
+            "robofleet.services.notification.get_db_context",
             return_value=_FakeDBCtx(db),
         ),
         patch(
-            "roboco.services.notification._resolve_agent_uuid",
+            "robofleet.services.notification._resolve_agent_uuid",
             AsyncMock(return_value=uuid4()),
         ),
         patch(
-            "roboco.services.notification_delivery.get_notification_delivery_service",
+            "robofleet.services.notification_delivery.get_notification_delivery_service",
             lambda _db: MagicMock(deliver=AsyncMock(return_value=None)),
         ),
     ):
@@ -148,15 +148,15 @@ async def test_informational_knowledge_share_not_deduped() -> None:
     )
     with (
         patch(
-            "roboco.services.notification.get_db_context",
+            "robofleet.services.notification.get_db_context",
             return_value=_FakeDBCtx(db),
         ),
         patch(
-            "roboco.services.notification._resolve_agent_uuid",
+            "robofleet.services.notification._resolve_agent_uuid",
             AsyncMock(return_value=uuid4()),
         ),
         patch(
-            "roboco.services.notification_delivery.get_notification_delivery_service",
+            "robofleet.services.notification_delivery.get_notification_delivery_service",
             lambda _db: MagicMock(deliver=AsyncMock(return_value=None)),
         ),
     ):
@@ -197,15 +197,15 @@ async def test_create_notification_suppresses_refire_when_guard_true() -> None:
     )
     with (
         patch(
-            "roboco.services.notification.get_db_context",
+            "robofleet.services.notification.get_db_context",
             return_value=_FakeDBCtx(db),
         ),
         patch(
-            "roboco.services.notification._resolve_agent_uuid",
+            "robofleet.services.notification._resolve_agent_uuid",
             AsyncMock(return_value=uuid4()),
         ),
         patch(
-            "roboco.services.notification.all_recipients_recently_notified",
+            "robofleet.services.notification.all_recipients_recently_notified",
             AsyncMock(return_value=True),
         ),
     ):
@@ -239,19 +239,19 @@ async def test_create_notification_passes_through_when_guard_false() -> None:
     )
     with (
         patch(
-            "roboco.services.notification.get_db_context",
+            "robofleet.services.notification.get_db_context",
             return_value=_FakeDBCtx(db),
         ),
         patch(
-            "roboco.services.notification._resolve_agent_uuid",
+            "robofleet.services.notification._resolve_agent_uuid",
             AsyncMock(return_value=uuid4()),
         ),
         patch(
-            "roboco.services.notification.all_recipients_recently_notified",
+            "robofleet.services.notification.all_recipients_recently_notified",
             AsyncMock(return_value=False),
         ),
         patch(
-            "roboco.services.notification_delivery.get_notification_delivery_service",
+            "robofleet.services.notification_delivery.get_notification_delivery_service",
             lambda _db: MagicMock(deliver=AsyncMock(return_value=None)),
         ),
     ):

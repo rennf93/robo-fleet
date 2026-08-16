@@ -13,16 +13,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.db.tables import AgentTable, BoardProgramCycleTable, ProjectTable
-from roboco.db.tables import SystemSettingTable as SST
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskStatus as TS
-from roboco.services.task import WAR_ROOM_SOURCE, get_task_service
-from roboco.services.war_room_engine import WarRoomEngine, get_war_room_engine
-from roboco.services.x_client import XClient, XMention, XPostResult
+from robofleet.config import settings as cfg
+from robofleet.db.tables import AgentTable, BoardProgramCycleTable, ProjectTable
+from robofleet.db.tables import SystemSettingTable as SST
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskStatus as TS
+from robofleet.services.task import WAR_ROOM_SOURCE, get_task_service
+from robofleet.services.war_room_engine import WarRoomEngine, get_war_room_engine
+from robofleet.services.x_client import XClient, XMention, XPostResult
 from sqlalchemy import select
 
 if TYPE_CHECKING:

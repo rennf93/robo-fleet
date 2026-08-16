@@ -1,4 +1,4 @@
-"""roboco.services.pitch — CRUD + approve/reject orchestration (mocked deps).
+"""robofleet.services.pitch — CRUD + approve/reject orchestration (mocked deps).
 
 The approve path constructs real domain models (ProjectCreate, ProductCellMapping,
 TaskCreateRequest) but the downstream services and the GitHub provisioner are
@@ -12,17 +12,17 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import PitchTable
-from roboco.foundation.identity import Team
-from roboco.models.pitch import PitchCreate, PitchStatus
-from roboco.services import pitch as pitch_module
-from roboco.services.base import ConflictError
-from roboco.services.github_provisioning import (
+from robofleet.db.tables import PitchTable
+from robofleet.foundation.identity import Team
+from robofleet.models.pitch import PitchCreate, PitchStatus
+from robofleet.services import pitch as pitch_module
+from robofleet.services.base import ConflictError
+from robofleet.services.github_provisioning import (
     GitHubProvisioningService,
     ProvisionedRepo,
     ProvisioningDisabledError,
 )
-from roboco.services.pitch import PitchService
+from robofleet.services.pitch import PitchService
 
 
 def _session() -> MagicMock:

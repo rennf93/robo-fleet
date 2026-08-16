@@ -11,14 +11,14 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from roboco.models import AgentRole, Team
-from roboco.models.permissions import (
+from robofleet.models import AgentRole, Team
+from robofleet.models.permissions import (
     AgentContext,
     KBAction,
     PermissionLevel,
     TaskAction,
 )
-from roboco.services.permissions import PermissionService
+from robofleet.services.permissions import PermissionService
 
 
 @pytest.fixture
@@ -240,7 +240,7 @@ def test_can_notify_unknown_scope_returns_false(svc: PermissionService) -> None:
     recipient = _ctx(AgentRole.DEVELOPER, team=Team.BACKEND)
     # Patch _get_notification_scope directly to a bogus value type.
     with patch(
-        "roboco.services.permissions._get_notification_scope",
+        "robofleet.services.permissions._get_notification_scope",
         return_value="garbage_scope",
     ):
         assert svc.can_notify(sender, recipient) is False

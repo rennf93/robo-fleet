@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roboco.templates.git.pr_internal import (
+from robofleet.templates.git.pr_internal import (
     InternalCommitInfo,
     InternalPRContext,
     _format_commits_list,

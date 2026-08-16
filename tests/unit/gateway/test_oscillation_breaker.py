@@ -19,9 +19,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.models.base import BlockerResolverType, TaskStatus
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import BlockerResolverType, TaskStatus
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 # Mirrors _OSCILLATION_TRIP_THRESHOLD in _impl.py — ruff PLR2004 forbids
 # magic-value comparisons.

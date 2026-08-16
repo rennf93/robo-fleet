@@ -10,8 +10,8 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-from roboco.models.optimal import IndexType
-from roboco.services.optimal_brain.indexes.playbooks import PlaybooksIndexPlugin
+from robofleet.models.optimal import IndexType
+from robofleet.services.optimal_brain.indexes.playbooks import PlaybooksIndexPlugin
 
 
 def _plugin() -> PlaybooksIndexPlugin:

@@ -15,9 +15,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
-from roboco.api.app import app as default_app
-from roboco.api.app import create_app, lifespan
-from roboco.api.deps import clear_orchestrator, set_orchestrator
+from robofleet.api.app import app as default_app
+from robofleet.api.app import create_app, lifespan
+from robofleet.api.deps import clear_orchestrator, set_orchestrator
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -121,16 +121,18 @@ async def test_lifespan_startup_and_shutdown_happy_path() -> None:
     transcription_mock.stop = AsyncMock()
 
     with (
-        patch("roboco.api.app.init_db", new=AsyncMock()),
-        patch("roboco.api.app.close_db", new=AsyncMock()),
-        patch("roboco.api.app.TranscriptionService", return_value=transcription_mock),
-        patch("roboco.api.app.ExtractionService"),
-        patch("roboco.api.app.ExtractionPipeline"),
+        patch("robofleet.api.app.init_db", new=AsyncMock()),
+        patch("robofleet.api.app.close_db", new=AsyncMock()),
         patch(
-            "roboco.api.app.get_optimal_service",
+            "robofleet.api.app.TranscriptionService", return_value=transcription_mock
+        ),
+        patch("robofleet.api.app.ExtractionService"),
+        patch("robofleet.api.app.ExtractionPipeline"),
+        patch(
+            "robofleet.api.app.get_optimal_service",
             new=AsyncMock(return_value=MagicMock()),
         ),
-        patch("roboco.api.app.close_optimal_service", new=AsyncMock()),
+        patch("robofleet.api.app.close_optimal_service", new=AsyncMock()),
     ):
         app = create_app()
         async with lifespan(app):
@@ -160,17 +162,19 @@ async def test_lifespan_never_awaits_the_rag_reconcile() -> None:
     transcription_mock.stop = AsyncMock()
 
     with (
-        patch("roboco.api.app.init_db", new=AsyncMock()),
-        patch("roboco.api.app.close_db", new=AsyncMock()),
-        patch("roboco.api.app.TranscriptionService", return_value=transcription_mock),
-        patch("roboco.api.app.ExtractionService"),
-        patch("roboco.api.app.ExtractionPipeline"),
+        patch("robofleet.api.app.init_db", new=AsyncMock()),
+        patch("robofleet.api.app.close_db", new=AsyncMock()),
         patch(
-            "roboco.api.app.get_optimal_service",
+            "robofleet.api.app.TranscriptionService", return_value=transcription_mock
+        ),
+        patch("robofleet.api.app.ExtractionService"),
+        patch("robofleet.api.app.ExtractionPipeline"),
+        patch(
+            "robofleet.api.app.get_optimal_service",
             new=AsyncMock(return_value=MagicMock()),
         ),
-        patch("roboco.api.app.close_optimal_service", new=AsyncMock()),
-        patch("roboco.api.app._reconcile_rag_indexes", new=_slow_reconcile),
+        patch("robofleet.api.app.close_optimal_service", new=AsyncMock()),
+        patch("robofleet.api.app._reconcile_rag_indexes", new=_slow_reconcile),
     ):
         app = create_app()
         async with lifespan(app):
@@ -208,19 +212,20 @@ async def test_lifespan_stops_orchestrator_before_closing_db_and_optimal() -> No
     set_orchestrator(orchestrator_mock)
     try:
         with (
-            patch("roboco.api.app.init_db", new=AsyncMock()),
-            patch("roboco.api.app.close_db", new=_record("close_db")),
+            patch("robofleet.api.app.init_db", new=AsyncMock()),
+            patch("robofleet.api.app.close_db", new=_record("close_db")),
             patch(
-                "roboco.api.app.close_optimal_service",
+                "robofleet.api.app.close_optimal_service",
                 new=_record("close_optimal_service"),
             ),
             patch(
-                "roboco.api.app.TranscriptionService", return_value=transcription_mock
+                "robofleet.api.app.TranscriptionService",
+                return_value=transcription_mock,
             ),
-            patch("roboco.api.app.ExtractionService"),
-            patch("roboco.api.app.ExtractionPipeline"),
+            patch("robofleet.api.app.ExtractionService"),
+            patch("robofleet.api.app.ExtractionPipeline"),
             patch(
-                "roboco.api.app.get_optimal_service",
+                "robofleet.api.app.get_optimal_service",
                 new=AsyncMock(return_value=MagicMock()),
             ),
         ):
@@ -247,16 +252,18 @@ async def test_lifespan_handles_optimal_init_failure_gracefully() -> None:
     transcription_mock.stop = AsyncMock()
 
     with (
-        patch("roboco.api.app.init_db", new=AsyncMock()),
-        patch("roboco.api.app.close_db", new=AsyncMock()),
-        patch("roboco.api.app.TranscriptionService", return_value=transcription_mock),
-        patch("roboco.api.app.ExtractionService"),
-        patch("roboco.api.app.ExtractionPipeline"),
+        patch("robofleet.api.app.init_db", new=AsyncMock()),
+        patch("robofleet.api.app.close_db", new=AsyncMock()),
         patch(
-            "roboco.api.app.get_optimal_service",
+            "robofleet.api.app.TranscriptionService", return_value=transcription_mock
+        ),
+        patch("robofleet.api.app.ExtractionService"),
+        patch("robofleet.api.app.ExtractionPipeline"),
+        patch(
+            "robofleet.api.app.get_optimal_service",
             new=AsyncMock(side_effect=RuntimeError("boom")),
         ),
-        patch("roboco.api.app.close_optimal_service", new=AsyncMock()),
+        patch("robofleet.api.app.close_optimal_service", new=AsyncMock()),
     ):
         app = create_app()
         async with lifespan(app):
@@ -268,16 +275,18 @@ def _lifespan_io_patches() -> list:
     transcription_mock.start = AsyncMock()
     transcription_mock.stop = AsyncMock()
     return [
-        patch("roboco.api.app.init_db", new=AsyncMock()),
-        patch("roboco.api.app.close_db", new=AsyncMock()),
-        patch("roboco.api.app.TranscriptionService", return_value=transcription_mock),
-        patch("roboco.api.app.ExtractionService"),
-        patch("roboco.api.app.ExtractionPipeline"),
+        patch("robofleet.api.app.init_db", new=AsyncMock()),
+        patch("robofleet.api.app.close_db", new=AsyncMock()),
         patch(
-            "roboco.api.app.get_optimal_service",
+            "robofleet.api.app.TranscriptionService", return_value=transcription_mock
+        ),
+        patch("robofleet.api.app.ExtractionService"),
+        patch("robofleet.api.app.ExtractionPipeline"),
+        patch(
+            "robofleet.api.app.get_optimal_service",
             new=AsyncMock(return_value=MagicMock()),
         ),
-        patch("roboco.api.app.close_optimal_service", new=AsyncMock()),
+        patch("robofleet.api.app.close_optimal_service", new=AsyncMock()),
     ]
 
 
@@ -295,9 +304,9 @@ async def _run_lifespan_with(*, auth_required: bool, logger_mock: MagicMock) -> 
         for cm in _lifespan_io_patches():
             stack.enter_context(cm)
         stack.enter_context(
-            patch("roboco.api.app._auth_required", return_value=auth_required)
+            patch("robofleet.api.app._auth_required", return_value=auth_required)
         )
-        stack.enter_context(patch("roboco.api.app.logger", logger_mock))
+        stack.enter_context(patch("robofleet.api.app.logger", logger_mock))
         app = create_app()
         async with lifespan(app):
             pass

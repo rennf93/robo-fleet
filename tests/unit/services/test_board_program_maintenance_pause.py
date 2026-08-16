@@ -15,13 +15,13 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import SystemSettingTable
-from roboco.foundation.policy.maintenance_pause import PauseScope
-from roboco.services import board_programs as bp_module
-from roboco.services.board_programs import BoardProgramEngine
-from roboco.services.coroner_engine import CoronerEngine
-from roboco.services.maintenance_pause import get_maintenance_pause_service
-from roboco.services.war_room_engine import WarRoomEngine
+from robofleet.db.tables import SystemSettingTable
+from robofleet.foundation.policy.maintenance_pause import PauseScope
+from robofleet.services import board_programs as bp_module
+from robofleet.services.board_programs import BoardProgramEngine
+from robofleet.services.coroner_engine import CoronerEngine
+from robofleet.services.maintenance_pause import get_maintenance_pause_service
+from robofleet.services.war_room_engine import WarRoomEngine
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

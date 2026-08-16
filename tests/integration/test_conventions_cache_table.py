@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     ProjectConventionsCacheTable,
     ProjectTable,
 )
-from roboco.models import AgentRole, AgentStatus, Team
+from robofleet.models import AgentRole, AgentStatus, Team
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 

@@ -18,14 +18,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models.optimal import (
+from robofleet.models.optimal import (
     IndexJournalEntryParams,
     IndexReviewParams,
     IndexType,
 )
-from roboco.services.optimal import OptimalService
-from roboco.services.optimal_brain.indexes.base import IngestResult
-from roboco.services.optimal_brain.indexes.learnings import (
+from robofleet.services.optimal import OptimalService
+from robofleet.services.optimal_brain.indexes.base import IngestResult
+from robofleet.services.optimal_brain.indexes.learnings import (
     LearningsIndexPlugin,
     RecordLearningParams,
 )

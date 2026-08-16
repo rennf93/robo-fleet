@@ -2,7 +2,7 @@
 
 Migration 002 originally created `audit_log.details` as `postgresql.JSONB`
 when the alembic chain was applied cleanly, BUT the ORM in
-`roboco/db/tables.py` declared the column as generic `JSON`. Two failure
+`robofleet/db/tables.py` declared the column as generic `JSON`. Two failure
 modes followed:
 
 1. DBs bootstrapped via `Base.metadata.create_all` (the production

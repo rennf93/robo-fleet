@@ -15,7 +15,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator, AgentReadinessError
+from robofleet.runtime.orchestrator import AgentOrchestrator, AgentReadinessError
 
 
 def _orch() -> Any:

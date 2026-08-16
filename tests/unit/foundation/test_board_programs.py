@@ -3,8 +3,8 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from roboco.config import Settings
-from roboco.foundation.policy.board_programs import (
+from robofleet.config import Settings
+from robofleet.foundation.policy.board_programs import (
     PROGRAMS,
     WEEK_SECONDS,
     BoardProgram,
@@ -190,7 +190,7 @@ def test_dogfood_is_never_cron_due() -> None:
     """An EVENT program is never cron-due regardless of how long it's been
     since the last cycle opened — mirrors test_coroner_is_never_cron_due,
     but against Dogfood: unlike Coroner it DOES have a real originator (see
-    roboco.services.board_programs._originate_dogfood), so this asserts the
+    robofleet.services.board_programs._originate_dogfood), so this asserts the
     cron loop's own gate refuses it, not that no originator exists."""
     assert not program_due(
         PROGRAMS["dogfood"],

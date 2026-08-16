@@ -28,14 +28,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import httpx
-from roboco.models.runtime import (
+from robofleet.models.runtime import (
     AgentInstance,
     OrchestratorAgentConfig,
     OrchestratorAgentState,
     WaitingRecord,
 )
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.utils.converters import require_uuid
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.utils.converters import require_uuid
 
 # ---------------------------------------------------------------------------
 # Module-level constants (ruff PLR2004: no magic values in comparisons)
@@ -192,9 +192,11 @@ async def test_finalize_spawn_session_success_calls_calculate_cost() -> None:
         return _FakeHTTPClient(_handler)
 
     with (
-        patch("roboco.runtime.orchestrator.httpx.AsyncClient", _client_cls),
-        patch("roboco.db.base.get_session_factory", return_value=db_factory),
-        patch("roboco.billing.pricing.calculate_cost", return_value=0.001) as mock_cost,
+        patch("robofleet.runtime.orchestrator.httpx.AsyncClient", _client_cls),
+        patch("robofleet.db.base.get_session_factory", return_value=db_factory),
+        patch(
+            "robofleet.billing.pricing.calculate_cost", return_value=0.001
+        ) as mock_cost,
     ):
         await orch._finalize_spawn_session(_AGENT_ID, exit_reason="stopped")
 
@@ -233,9 +235,9 @@ async def test_finalize_spawn_session_success_executes_select_and_update() -> No
         return _FakeHTTPClient(_handler)
 
     with (
-        patch("roboco.runtime.orchestrator.httpx.AsyncClient", _client_cls),
-        patch("roboco.db.base.get_session_factory", return_value=db_factory),
-        patch("roboco.billing.pricing.calculate_cost", return_value=0.0),
+        patch("robofleet.runtime.orchestrator.httpx.AsyncClient", _client_cls),
+        patch("robofleet.db.base.get_session_factory", return_value=db_factory),
+        patch("robofleet.billing.pricing.calculate_cost", return_value=0.0),
     ):
         await orch._finalize_spawn_session(_AGENT_ID, exit_reason="completed")
 
@@ -268,10 +270,12 @@ async def test_finalize_spawn_session_http_error_uses_zero_tokens() -> None:
         return _FakeHTTPClient(_boom)
 
     with (
-        patch("roboco.runtime.orchestrator.httpx.AsyncClient", _client_cls),
+        patch("robofleet.runtime.orchestrator.httpx.AsyncClient", _client_cls),
         patch.object(orch, "_usage_from_transcript", return_value=(0, 0, 0, 0, 0)),
-        patch("roboco.db.base.get_session_factory", return_value=db_factory),
-        patch("roboco.billing.pricing.calculate_cost", return_value=0.0) as mock_cost,
+        patch("robofleet.db.base.get_session_factory", return_value=db_factory),
+        patch(
+            "robofleet.billing.pricing.calculate_cost", return_value=0.0
+        ) as mock_cost,
     ):
         # Must not raise even though the SDK is unreachable
         await orch._finalize_spawn_session(_AGENT_ID, exit_reason="stopped")
@@ -302,10 +306,12 @@ async def test_finalize_spawn_session_non_200_uses_zero_tokens() -> None:
         return _FakeHTTPClient(_handler)
 
     with (
-        patch("roboco.runtime.orchestrator.httpx.AsyncClient", _client_cls),
+        patch("robofleet.runtime.orchestrator.httpx.AsyncClient", _client_cls),
         patch.object(orch, "_usage_from_transcript", return_value=(0, 0, 0, 0, 0)),
-        patch("roboco.db.base.get_session_factory", return_value=db_factory),
-        patch("roboco.billing.pricing.calculate_cost", return_value=0.0) as mock_cost,
+        patch("robofleet.db.base.get_session_factory", return_value=db_factory),
+        patch(
+            "robofleet.billing.pricing.calculate_cost", return_value=0.0
+        ) as mock_cost,
     ):
         await orch._finalize_spawn_session(_AGENT_ID, exit_reason="stopped")
 
@@ -349,8 +355,8 @@ async def test_sweep_token_snapshots_inserts_snapshot_for_active_agent() -> None
         return _FakeHTTPClient(_handler)
 
     with (
-        patch("roboco.runtime.orchestrator.httpx.AsyncClient", _client_cls),
-        patch("roboco.db.base.get_session_factory", return_value=db_factory),
+        patch("robofleet.runtime.orchestrator.httpx.AsyncClient", _client_cls),
+        patch("robofleet.db.base.get_session_factory", return_value=db_factory),
     ):
         await orch._sweep_token_snapshots()
 
@@ -388,9 +394,9 @@ async def test_sweep_token_snapshots_skips_zero_token_agents() -> None:
         return _FakeHTTPClient(_handler)
 
     with (
-        patch("roboco.runtime.orchestrator.httpx.AsyncClient", _client_cls),
+        patch("robofleet.runtime.orchestrator.httpx.AsyncClient", _client_cls),
         patch.object(orch, "_usage_from_transcript", return_value=(0, 0, 0, 0, 0)),
-        patch("roboco.db.base.get_session_factory", return_value=db_factory),
+        patch("robofleet.db.base.get_session_factory", return_value=db_factory),
     ):
         await orch._sweep_token_snapshots()
 
@@ -433,8 +439,8 @@ async def test_sweep_token_snapshots_per_agent_error_does_not_abort_loop() -> No
         return _FakeHTTPClient(_handler)
 
     with (
-        patch("roboco.runtime.orchestrator.httpx.AsyncClient", _client_cls),
-        patch("roboco.db.base.get_session_factory", return_value=db_factory),
+        patch("robofleet.runtime.orchestrator.httpx.AsyncClient", _client_cls),
+        patch("robofleet.db.base.get_session_factory", return_value=db_factory),
     ):
         await orch._sweep_token_snapshots()
 
@@ -505,7 +511,7 @@ async def test_sweep_daily_rollup_inserts_new_row() -> None:
         db.execute = AsyncMock(side_effect=_exec)
         yield db
 
-    with patch("roboco.db.base.get_session_factory", return_value=_db_context):
+    with patch("robofleet.db.base.get_session_factory", return_value=_db_context):
         await orch._sweep_daily_rollup()
 
     # Exactly one new DailyUsageRollupTable row must have been added
@@ -684,8 +690,8 @@ async def test_release_stopped_agent_claim_calls_unclaim_for_reaper() -> None:
     fake_factory = MagicMock(return_value=_factory_ctx())
 
     with (
-        patch("roboco.db.base.get_session_factory", return_value=fake_factory),
-        patch("roboco.services.task.TaskService", return_value=svc),
+        patch("robofleet.db.base.get_session_factory", return_value=fake_factory),
+        patch("robofleet.services.task.TaskService", return_value=svc),
     ):
         await orch._release_stopped_agent_claim(_AGENT_ID, task_id)
 
@@ -810,7 +816,7 @@ async def test_resolve_final_turns_tools_from_sdk() -> None:
         return _mock_response(200, {"turns": 7, "tool_calls": 42, "tokens_input": 1})
 
     with patch(
-        "roboco.runtime.orchestrator.httpx.AsyncClient",
+        "robofleet.runtime.orchestrator.httpx.AsyncClient",
         lambda **_kw: _FakeHTTPClient(_handler),
     ):
         turns, tool_calls = await orch._resolve_final_turns_tools(_AGENT_ID)
@@ -831,7 +837,7 @@ async def test_resolve_final_turns_tools_transcript_fallback_for_turns() -> None
     transcript_turns = 9
     with (
         patch(
-            "roboco.runtime.orchestrator.httpx.AsyncClient",
+            "robofleet.runtime.orchestrator.httpx.AsyncClient",
             lambda **_kw: _FakeHTTPClient(_handler),
         ),
         patch.object(

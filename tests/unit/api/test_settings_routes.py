@@ -14,11 +14,11 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.agents_config import issue_panel_token
-from roboco.api import deps as _deps
-from roboco.api.auth.backend import SESSION_COOKIE_NAME
-from roboco.api.routes.settings import router as settings_router
-from roboco.db.base import get_db
+from robofleet.agents_config import issue_panel_token
+from robofleet.api import deps as _deps
+from robofleet.api.auth.backend import SESSION_COOKIE_NAME
+from robofleet.api.routes.settings import router as settings_router
+from robofleet.db.base import get_db
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -36,7 +36,7 @@ async def settings_client(
     fake_service = MagicMock()
     fake_service.all = AsyncMock(return_value={})
     monkeypatch.setattr(
-        "roboco.api.routes.settings.get_settings_service",
+        "robofleet.api.routes.settings.get_settings_service",
         lambda _db: fake_service,
     )
 
@@ -80,7 +80,7 @@ async def test_settings_accepts_valid_cookie_under_cloud_auth(
 ) -> None:
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
     with patch(
-        "roboco.api.deps.resolve_session_user",
+        "robofleet.api.deps.resolve_session_user",
         new=AsyncMock(return_value=MagicMock()),
     ):
         r = await settings_client.get(

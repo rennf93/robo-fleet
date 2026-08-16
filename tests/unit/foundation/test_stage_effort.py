@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from roboco.foundation.policy.stage_effort import StageEffort, compute_stage_effort
+from robofleet.foundation.policy.stage_effort import StageEffort, compute_stage_effort
 
 _BASE = datetime(2026, 7, 1, 12, 0, 0, tzinfo=UTC)
 

@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
-from roboco.llm.providers.cloudrun_jobs import CloudRunJobsProvider
-from roboco.models.runtime import OrchestratorAgentConfig as AgentConfig
-from roboco.models.runtime import SpawnGitContext
+from robofleet.llm.providers.cloudrun_jobs import CloudRunJobsProvider
+from robofleet.models.runtime import OrchestratorAgentConfig as AgentConfig
+from robofleet.models.runtime import SpawnGitContext
 
 if TYPE_CHECKING:
     from google.cloud import run_v2
@@ -82,18 +82,20 @@ def _patch_identity(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
         calls["team"] = team
         return _TOKEN
 
-    monkeypatch.setattr("roboco.agents_config.issue_agent_token", _fake_issue)
-    monkeypatch.setattr("roboco.agents_config.get_agent_role", lambda _s: _ROLE)
-    monkeypatch.setattr("roboco.agents_config.get_agent_team", lambda _s: _TEAM)
-    monkeypatch.setattr("roboco.seeds.initial_data.AGENT_UUIDS", {_SLUG: _UUID})
+    monkeypatch.setattr("robofleet.agents_config.issue_agent_token", _fake_issue)
+    monkeypatch.setattr("robofleet.agents_config.get_agent_role", lambda _s: _ROLE)
+    monkeypatch.setattr("robofleet.agents_config.get_agent_team", lambda _s: _TEAM)
+    monkeypatch.setattr("robofleet.seeds.initial_data.AGENT_UUIDS", {_SLUG: _UUID})
     return calls
 
 
 def _patch_client(monkeypatch: pytest.MonkeyPatch) -> _FakeJobsClient:
     fake = _FakeJobsClient()
-    monkeypatch.setattr("roboco.llm.providers.cloudrun_jobs._jobs_client", lambda: fake)
     monkeypatch.setattr(
-        "roboco.llm.providers.cloudrun_jobs._upload_manifest",
+        "robofleet.llm.providers.cloudrun_jobs._jobs_client", lambda: fake
+    )
+    monkeypatch.setattr(
+        "robofleet.llm.providers.cloudrun_jobs._upload_manifest",
         _noop_manifest,
     )
     return fake
@@ -104,15 +106,15 @@ async def test_spawn_env_identity_token_signed_over_uuid(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Full env surface present; AGENT_ID is the UUID; token signed over UUID."""
-    monkeypatch.setattr("roboco.config.settings.api_url", "http://orch:8000")
-    monkeypatch.setattr("roboco.config.settings.flow_verb_timeout_seconds", 120.0)
-    monkeypatch.setattr("roboco.config.settings.flow_verb_slow_timeout_seconds", 900)
-    monkeypatch.setattr("roboco.config.settings.gcp_project_id", "test-proj")
-    monkeypatch.setattr("roboco.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("robofleet.config.settings.flow_verb_timeout_seconds", 120.0)
+    monkeypatch.setattr("robofleet.config.settings.flow_verb_slow_timeout_seconds", 900)
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
     calls = _patch_identity(monkeypatch)
     fake = _patch_client(monkeypatch)
 
-    provider = CloudRunJobsProvider(host=object(), image="gcr.io/roboco/agent")
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(_config(), initial_prompt="do the work")
 
     assert fake.captured is not None
@@ -141,21 +143,23 @@ async def test_spawn_filestore_volume_and_vpc_when_gcp_armed(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Filestore NFS volume mounted at workspaces root + VpcAccess set."""
-    monkeypatch.setattr("roboco.config.settings.api_url", "http://orch:8000")
-    monkeypatch.setattr("roboco.config.settings.gcp_project_id", "test-proj")
-    monkeypatch.setattr("roboco.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
     monkeypatch.setattr(
-        "roboco.config.settings.workspaces_root", "/mnt/fileshare/workspaces"
+        "robofleet.config.settings.workspaces_root", "/mnt/fileshare/workspaces"
     )
-    monkeypatch.setattr("roboco.config.settings.gcp_filestore_ip", "10.0.0.5")
-    monkeypatch.setattr("roboco.config.settings.gcp_filestore_nfs_path", "/workspaces")
+    monkeypatch.setattr("robofleet.config.settings.gcp_filestore_ip", "10.0.0.5")
     monkeypatch.setattr(
-        "roboco.config.settings.gcp_vpc_connector_name", "roboco-connector"
+        "robofleet.config.settings.gcp_filestore_nfs_path", "/workspaces"
+    )
+    monkeypatch.setattr(
+        "robofleet.config.settings.gcp_vpc_connector_name", "roboco-connector"
     )
     _patch_identity(monkeypatch)
     fake = _patch_client(monkeypatch)
 
-    provider = CloudRunJobsProvider(host=object(), image="gcr.io/roboco/agent")
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(_config(), initial_prompt="do the work")
 
     assert fake.captured is not None
@@ -179,16 +183,16 @@ async def test_spawn_no_volume_vpc_when_gcp_unset(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Local-dev: no Filestore volume, no VpcAccess when GCP fields empty."""
-    monkeypatch.setattr("roboco.config.settings.api_url", None)
-    monkeypatch.setattr("roboco.config.settings.gcp_project_id", "test-proj")
-    monkeypatch.setattr("roboco.config.settings.gcp_region", "us-central1")
-    monkeypatch.setattr("roboco.config.settings.gcp_filestore_ip", "")
-    monkeypatch.setattr("roboco.config.settings.gcp_filestore_nfs_path", "")
-    monkeypatch.setattr("roboco.config.settings.gcp_vpc_connector_name", "")
+    monkeypatch.setattr("robofleet.config.settings.api_url", None)
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("robofleet.config.settings.gcp_filestore_ip", "")
+    monkeypatch.setattr("robofleet.config.settings.gcp_filestore_nfs_path", "")
+    monkeypatch.setattr("robofleet.config.settings.gcp_vpc_connector_name", "")
     _patch_identity(monkeypatch)
     fake = _patch_client(monkeypatch)
 
-    provider = CloudRunJobsProvider(host=object(), image="gcr.io/roboco/agent")
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(_config(), initial_prompt="do the work")
 
     assert fake.captured is not None
@@ -223,18 +227,18 @@ async def test_spawn_wires_git_token_from_project_pat(
         async def __aexit__(self, *exc: object) -> None:
             return None
 
-    monkeypatch.setattr("roboco.config.settings.api_url", "http://orch:8000")
-    monkeypatch.setattr("roboco.config.settings.gcp_project_id", "test-proj")
-    monkeypatch.setattr("roboco.config.settings.gcp_region", "us-central1")
-    monkeypatch.setattr("roboco.db.base.get_db_context", _FakeDbContext)
+    monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("robofleet.db.base.get_db_context", _FakeDbContext)
     monkeypatch.setattr(
-        "roboco.services.project.get_project_service",
+        "robofleet.services.project.get_project_service",
         lambda _db: _FakeProjectService(),
     )
     _patch_identity(monkeypatch)
     fake = _patch_client(monkeypatch)
 
-    provider = CloudRunJobsProvider(host=object(), image="gcr.io/roboco/agent")
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(
         _config(git_context=SpawnGitContext(project_slug="roboco")),
         initial_prompt="do the work",
@@ -263,18 +267,18 @@ async def test_spawn_no_git_token_when_project_has_no_pat(
         async def __aexit__(self, *exc: object) -> None:
             return None
 
-    monkeypatch.setattr("roboco.config.settings.api_url", "http://orch:8000")
-    monkeypatch.setattr("roboco.config.settings.gcp_project_id", "test-proj")
-    monkeypatch.setattr("roboco.config.settings.gcp_region", "us-central1")
-    monkeypatch.setattr("roboco.db.base.get_db_context", _FakeDbContext)
+    monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("robofleet.db.base.get_db_context", _FakeDbContext)
     monkeypatch.setattr(
-        "roboco.services.project.get_project_service",
+        "robofleet.services.project.get_project_service",
         lambda _db: _FakeProjectService(),
     )
     _patch_identity(monkeypatch)
     fake = _patch_client(monkeypatch)
 
-    provider = CloudRunJobsProvider(host=object(), image="gcr.io/roboco/agent")
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(
         _config(git_context=SpawnGitContext(project_slug="empty-project")),
         initial_prompt="do the work",
@@ -293,18 +297,22 @@ async def test_spawn_sets_working_dir_and_workspace_env_for_developer(
     _resolve_workspace_cwd's path (clone root when no task branch). The ADK
     git/file tools read ROBOCO_WORKSPACE_DIR; setting both working_dir (process
     cwd IS the workspace) and the env var keeps them in lockstep."""
-    monkeypatch.setattr("roboco.config.settings.api_url", "http://orch:8000")
-    monkeypatch.setattr("roboco.config.settings.gcp_project_id", "test-proj")
-    monkeypatch.setattr("roboco.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
     _patch_identity(monkeypatch)
     # _resolve_workspace_cwd reads the orchestrator module's module-level
     # get_agent_role / get_agent_team (imported at top of orchestrator.py),
     # not the lazy in-function import the provider's spawn uses.
-    monkeypatch.setattr("roboco.runtime.orchestrator.get_agent_role", lambda _s: _ROLE)
-    monkeypatch.setattr("roboco.runtime.orchestrator.get_agent_team", lambda _s: _TEAM)
+    monkeypatch.setattr(
+        "robofleet.runtime.orchestrator.get_agent_role", lambda _s: _ROLE
+    )
+    monkeypatch.setattr(
+        "robofleet.runtime.orchestrator.get_agent_team", lambda _s: _TEAM
+    )
     fake = _patch_client(monkeypatch)
 
-    provider = CloudRunJobsProvider(host=object(), image="gcr.io/roboco/agent")
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(
         _config(git_context=SpawnGitContext(project_slug="roboco")),
         initial_prompt="do the work",
@@ -325,22 +333,26 @@ async def test_spawn_omits_working_dir_and_workspace_env_for_qa(
     """QA role (no workspace): neither working_dir nor ROBOCO_WORKSPACE_DIR is
     set. git_tools._worktree falls back to the process cwd (Part 1), so a
     no-workspace role never needs the env var."""
-    monkeypatch.setattr("roboco.config.settings.api_url", "http://orch:8000")
-    monkeypatch.setattr("roboco.config.settings.gcp_project_id", "test-proj")
-    monkeypatch.setattr("roboco.config.settings.gcp_region", "us-central1")
-    monkeypatch.setattr("roboco.agents_config.get_agent_role", lambda _s: "qa")
-    monkeypatch.setattr("roboco.agents_config.get_agent_team", lambda _s: _TEAM)
-    monkeypatch.setattr("roboco.runtime.orchestrator.get_agent_role", lambda _s: "qa")
-    monkeypatch.setattr("roboco.runtime.orchestrator.get_agent_team", lambda _s: _TEAM)
-    monkeypatch.setattr("roboco.seeds.initial_data.AGENT_UUIDS", {_SLUG: _UUID})
+    monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("robofleet.agents_config.get_agent_role", lambda _s: "qa")
+    monkeypatch.setattr("robofleet.agents_config.get_agent_team", lambda _s: _TEAM)
+    monkeypatch.setattr(
+        "robofleet.runtime.orchestrator.get_agent_role", lambda _s: "qa"
+    )
+    monkeypatch.setattr(
+        "robofleet.runtime.orchestrator.get_agent_team", lambda _s: _TEAM
+    )
+    monkeypatch.setattr("robofleet.seeds.initial_data.AGENT_UUIDS", {_SLUG: _UUID})
 
     def _qa_token(_uuid: str, _role: str, _team: str, *, ttl_seconds: int) -> str:
         return _TOKEN
 
-    monkeypatch.setattr("roboco.agents_config.issue_agent_token", _qa_token)
+    monkeypatch.setattr("robofleet.agents_config.issue_agent_token", _qa_token)
     fake = _patch_client(monkeypatch)
 
-    provider = CloudRunJobsProvider(host=object(), image="gcr.io/roboco/agent")
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(
         _config(git_context=SpawnGitContext(project_slug="roboco")),
         initial_prompt="do the work",

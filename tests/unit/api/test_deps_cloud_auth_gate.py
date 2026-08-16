@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException, status
-from roboco.api import deps as d
-from roboco.api.deps import get_current_agent_slug
+from robofleet.api import deps as d
+from robofleet.api.deps import get_current_agent_slug
 
 
 async def _run(

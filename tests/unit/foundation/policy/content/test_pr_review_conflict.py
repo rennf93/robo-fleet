@@ -10,7 +10,7 @@ approval can never sail over a blocker.
 
 from __future__ import annotations
 
-from roboco.foundation.policy.content import pr_review_conflict
+from robofleet.foundation.policy.content import pr_review_conflict
 
 _BLOCKER = {"file": "a.py", "severity": "blocker", "expected": "x", "actual": "y"}
 _MAJOR = {"file": "a.py", "severity": "major", "expected": "x", "actual": "y"}

@@ -4,8 +4,8 @@ build/parse round-trip, and chat-id authorization. No I/O, no DB."""
 from __future__ import annotations
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.services.telegram_inbound import (
+from robofleet.config import settings as cfg
+from robofleet.services.telegram_inbound import (
     _MESSAGE_CHAR_LIMIT,
     ParsedCallback,
     _authorized_chat,

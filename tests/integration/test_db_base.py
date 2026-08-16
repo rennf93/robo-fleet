@@ -1,4 +1,4 @@
-"""roboco.db.base coverage — engine/session helpers + migration runner.
+"""robofleet.db.base coverage — engine/session helpers + migration runner.
 
 Covers the DB lifecycle helpers — get_engine/get_session_factory caching,
 get_db / get_db_context async generators (commit-on-success, rollback-on-
@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import Request
-from roboco.db.base import (
+from robofleet.db.base import (
     _db_has_alembic_version,
     _db_has_tables,
     _DbHolder,
@@ -59,7 +59,7 @@ def _reset_holder() -> Generator[None]:
 def test_get_engine_creates_and_caches() -> None:
     _DbHolder.engine = None
     fake_engine = MagicMock()
-    with patch("roboco.db.base.create_async_engine", return_value=fake_engine) as ce:
+    with patch("robofleet.db.base.create_async_engine", return_value=fake_engine) as ce:
         eng1 = get_engine()
         eng2 = get_engine()
     assert eng1 is fake_engine
@@ -77,7 +77,7 @@ def test_get_engine_rebinds_on_a_different_event_loop() -> None:
     _DbHolder.session_factory = None
     _DbHolder.loop = None
     engines = [MagicMock(), MagicMock()]
-    with patch("roboco.db.base.create_async_engine", side_effect=engines) as ce:
+    with patch("robofleet.db.base.create_async_engine", side_effect=engines) as ce:
 
         async def _grab() -> object:
             return get_engine()
@@ -95,7 +95,7 @@ def test_get_engine_same_loop_keeps_the_cache() -> None:
     _DbHolder.session_factory = None
     _DbHolder.loop = None
     fake_engine = MagicMock()
-    with patch("roboco.db.base.create_async_engine", return_value=fake_engine) as ce:
+    with patch("robofleet.db.base.create_async_engine", return_value=fake_engine) as ce:
 
         async def _grab_twice() -> tuple[object, object]:
             return get_engine(), get_engine()
@@ -112,8 +112,8 @@ def test_get_session_factory_creates_and_caches() -> None:
     fake_engine = MagicMock()
     fake_factory = MagicMock()
     with (
-        patch("roboco.db.base.create_async_engine", return_value=fake_engine),
-        patch("roboco.db.base.async_sessionmaker", return_value=fake_factory) as sm,
+        patch("robofleet.db.base.create_async_engine", return_value=fake_engine),
+        patch("robofleet.db.base.async_sessionmaker", return_value=fake_factory) as sm,
     ):
         f1 = get_session_factory()
         f2 = get_session_factory()
@@ -143,7 +143,7 @@ async def test_get_db_yields_session_and_commits_on_success() -> None:
 
     fake_factory = MagicMock(return_value=_Cm())
 
-    with patch("roboco.db.base.get_session_factory", return_value=fake_factory):
+    with patch("robofleet.db.base.get_session_factory", return_value=fake_factory):
         gen = get_db()
         s = await gen.__anext__()
         assert s is fake_session
@@ -159,7 +159,7 @@ async def test_get_db_yields_session_and_commits_on_success() -> None:
 async def test_get_db_committed_stashes_session_on_request_state() -> None:
     """DbCommitMiddleware (api/middleware.py) reads request.state.db_session
     to commit it before the response reaches the client — get_db_committed
-    (the roboco.api.deps.DbSession target) must stash the session there
+    (the robofleet.api.deps.DbSession target) must stash the session there
     before yielding it back unchanged."""
     fake_session = MagicMock()
     request = Request({"type": "http"})
@@ -187,7 +187,7 @@ async def test_get_db_rolls_back_on_exception() -> None:
 
     fake_factory = MagicMock(return_value=_Cm())
 
-    with patch("roboco.db.base.get_session_factory", return_value=fake_factory):
+    with patch("robofleet.db.base.get_session_factory", return_value=fake_factory):
         gen = get_db()
         await gen.__anext__()
         # Push an exception into the generator at the yield point.
@@ -217,7 +217,8 @@ async def test_get_db_context_commits_on_success() -> None:
             return None
 
     with patch(
-        "roboco.db.base.get_session_factory", return_value=MagicMock(return_value=_Cm())
+        "robofleet.db.base.get_session_factory",
+        return_value=MagicMock(return_value=_Cm()),
     ):
         async with get_db_context() as s:
             assert s is fake_session
@@ -240,7 +241,7 @@ async def test_get_db_context_rolls_back_on_exception() -> None:
 
     with (
         patch(
-            "roboco.db.base.get_session_factory",
+            "robofleet.db.base.get_session_factory",
             return_value=MagicMock(return_value=_Cm()),
         ),
         pytest.raises(RuntimeError, match="boom"),
@@ -308,10 +309,10 @@ async def test_run_migrations_no_stamp_when_alembic_version_present() -> None:
     fake_engine.connect = MagicMock(return_value=_ConnCm())
 
     with (
-        patch("roboco.db.base.get_engine", return_value=fake_engine),
-        patch("roboco.db.base.command") as cmd,
-        patch("roboco.db.base.Config"),
-        patch("roboco.db.base.asyncio.to_thread", new=AsyncMock()) as to_thread,
+        patch("robofleet.db.base.get_engine", return_value=fake_engine),
+        patch("robofleet.db.base.command") as cmd,
+        patch("robofleet.db.base.Config"),
+        patch("robofleet.db.base.asyncio.to_thread", new=AsyncMock()) as to_thread,
     ):
         await run_migrations()
         # The work runs in a thread.
@@ -352,10 +353,10 @@ async def test_run_migrations_stamps_when_pre_migration_db() -> None:
     fake_engine.connect = MagicMock(return_value=_ConnCm())
 
     with (
-        patch("roboco.db.base.get_engine", return_value=fake_engine),
-        patch("roboco.db.base.command") as cmd,
-        patch("roboco.db.base.Config"),
-        patch("roboco.db.base.asyncio.to_thread", new=AsyncMock()) as to_thread,
+        patch("robofleet.db.base.get_engine", return_value=fake_engine),
+        patch("robofleet.db.base.command") as cmd,
+        patch("robofleet.db.base.Config"),
+        patch("robofleet.db.base.asyncio.to_thread", new=AsyncMock()) as to_thread,
     ):
         await run_migrations()
         target = to_thread.call_args.args[0]
@@ -387,9 +388,9 @@ async def test_init_db_happy_path_runs_migrations() -> None:
     fake_engine.dispose = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_engine", return_value=fake_engine),
-        patch("roboco.db.base._db_has_tables", new=AsyncMock(return_value=True)),
-        patch("roboco.db.base.run_migrations", new=AsyncMock()) as rm,
+        patch("robofleet.db.base.get_engine", return_value=fake_engine),
+        patch("robofleet.db.base._db_has_tables", new=AsyncMock(return_value=True)),
+        patch("robofleet.db.base.run_migrations", new=AsyncMock()) as rm,
     ):
         await init_db()
 
@@ -416,9 +417,9 @@ async def test_init_db_pgvector_failure_is_swallowed() -> None:
     fake_engine.dispose = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_engine", return_value=fake_engine),
-        patch("roboco.db.base._db_has_tables", new=AsyncMock(return_value=True)),
-        patch("roboco.db.base.run_migrations", new=AsyncMock()),
+        patch("robofleet.db.base.get_engine", return_value=fake_engine),
+        patch("robofleet.db.base._db_has_tables", new=AsyncMock(return_value=True)),
+        patch("robofleet.db.base.run_migrations", new=AsyncMock()),
     ):
         await init_db()
 
@@ -451,10 +452,10 @@ async def test_init_db_raises_when_migrations_fail_on_existing_db() -> None:
     fake_engine.dispose = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_engine", return_value=fake_engine),
-        patch("roboco.db.base._db_has_tables", new=AsyncMock(return_value=True)),
+        patch("robofleet.db.base.get_engine", return_value=fake_engine),
+        patch("robofleet.db.base._db_has_tables", new=AsyncMock(return_value=True)),
         patch(
-            "roboco.db.base.run_migrations",
+            "robofleet.db.base.run_migrations",
             new=AsyncMock(side_effect=RuntimeError("alembic broken")),
         ),
         pytest.raises(RuntimeError, match="alembic broken"),
@@ -488,9 +489,9 @@ async def test_init_db_fresh_db_runs_migrations() -> None:
     fake_engine.dispose = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_engine", return_value=fake_engine),
-        patch("roboco.db.base._db_has_tables", new=AsyncMock(return_value=False)),
-        patch("roboco.db.base.run_migrations", new=AsyncMock()) as rm,
+        patch("robofleet.db.base.get_engine", return_value=fake_engine),
+        patch("robofleet.db.base._db_has_tables", new=AsyncMock(return_value=False)),
+        patch("robofleet.db.base.run_migrations", new=AsyncMock()) as rm,
     ):
         await init_db()
 
@@ -524,9 +525,9 @@ async def test_init_db_second_call_same_db_is_noop() -> None:
     second call must not re-enter the alembic machinery (2026-07-08 NAS hang)."""
     fake_engine, _ = _fake_engine_for_init()
     with (
-        patch("roboco.db.base.get_engine", return_value=fake_engine),
-        patch("roboco.db.base._db_has_tables", new=AsyncMock(return_value=True)),
-        patch("roboco.db.base.run_migrations", new=AsyncMock()) as rm,
+        patch("robofleet.db.base.get_engine", return_value=fake_engine),
+        patch("robofleet.db.base._db_has_tables", new=AsyncMock(return_value=True)),
+        patch("robofleet.db.base.run_migrations", new=AsyncMock()) as rm,
     ):
         await init_db()
         await init_db()
@@ -541,9 +542,9 @@ async def test_init_db_reruns_for_a_different_database_url() -> None:
     _InitState.completed_url = "postgresql+asyncpg://other-host/other-db"
     fake_engine, _ = _fake_engine_for_init()
     with (
-        patch("roboco.db.base.get_engine", return_value=fake_engine),
-        patch("roboco.db.base._db_has_tables", new=AsyncMock(return_value=True)),
-        patch("roboco.db.base.run_migrations", new=AsyncMock()) as rm,
+        patch("robofleet.db.base.get_engine", return_value=fake_engine),
+        patch("robofleet.db.base._db_has_tables", new=AsyncMock(return_value=True)),
+        patch("robofleet.db.base.run_migrations", new=AsyncMock()) as rm,
     ):
         await init_db()
 
@@ -555,9 +556,9 @@ async def test_drop_db_resets_the_init_latch() -> None:
     """drop_db clears the latch so a rebuild in the same process runs fully."""
     fake_engine, _ = _fake_engine_for_init()
     with (
-        patch("roboco.db.base.get_engine", return_value=fake_engine),
-        patch("roboco.db.base._db_has_tables", new=AsyncMock(return_value=True)),
-        patch("roboco.db.base.run_migrations", new=AsyncMock()) as rm,
+        patch("robofleet.db.base.get_engine", return_value=fake_engine),
+        patch("robofleet.db.base._db_has_tables", new=AsyncMock(return_value=True)),
+        patch("robofleet.db.base.run_migrations", new=AsyncMock()) as rm,
     ):
         await init_db()
         await drop_db()
@@ -575,13 +576,13 @@ async def test_run_migrations_times_out_loudly_on_wedged_worker() -> None:
     fake_command = MagicMock()
     fake_command.upgrade = MagicMock(side_effect=lambda *_a, **_k: time.sleep(0.5))
     with (
-        patch("roboco.db.base.get_engine", return_value=fake_engine),
+        patch("robofleet.db.base.get_engine", return_value=fake_engine),
         patch(
-            "roboco.db.base._db_has_alembic_version",
+            "robofleet.db.base._db_has_alembic_version",
             new=AsyncMock(return_value=True),
         ),
-        patch("roboco.db.base.command", fake_command),
-        patch("roboco.db.base._ALEMBIC_TIMEOUT_SECONDS", 0.05),
+        patch("robofleet.db.base.command", fake_command),
+        patch("robofleet.db.base._ALEMBIC_TIMEOUT_SECONDS", 0.05),
         pytest.raises(RuntimeError, match="alembic migration runner exceeded"),
     ):
         await run_migrations()
@@ -607,7 +608,7 @@ async def test_drop_db_runs_drop_all() -> None:
     fake_engine = MagicMock()
     fake_engine.begin = MagicMock(return_value=_ConnCm())
 
-    with patch("roboco.db.base.get_engine", return_value=fake_engine):
+    with patch("robofleet.db.base.get_engine", return_value=fake_engine):
         await drop_db()
 
     fake_conn.run_sync.assert_awaited_once()

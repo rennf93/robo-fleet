@@ -12,7 +12,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.services.optimal_brain.vector_store import VectorStore
+from robofleet.services.optimal_brain.vector_store import VectorStore
 
 
 @pytest.mark.asyncio

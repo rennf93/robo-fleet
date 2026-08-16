@@ -2,7 +2,7 @@
 
 Audit D15. The `quarantined` member was added to the taskstatus enum in
 migration 009 alongside the lifecycle-table entry
-`"quarantined": ["pending"]` in `roboco/enforcement/task_lifecycle.py`,
+`"quarantined": ["pending"]` in `robofleet/enforcement/task_lifecycle.py`,
 on the assumption that some service path would later route problematic
 tasks through it. None ever did. No verb, no API route, no orchestrator
 sweep, and no service method ever sets `task.status = QUARANTINED` or

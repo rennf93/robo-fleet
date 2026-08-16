@@ -9,12 +9,12 @@ from uuid import UUID, uuid4
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.project import router as project_router
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.permissions import AgentContext
-from roboco.services.conventions import get_conventions_service
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.project import router as project_router
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.permissions import AgentContext
+from robofleet.services.conventions import get_conventions_service
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

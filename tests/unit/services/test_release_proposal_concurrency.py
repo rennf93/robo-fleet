@@ -11,10 +11,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import TaskStatus
-from roboco.services import release_proposal as rp
-from roboco.services.release_executor import ReleaseResult
-from roboco.services.release_proposal import (
+from robofleet.models.base import TaskStatus
+from robofleet.services import release_proposal as rp
+from robofleet.services.release_executor import ReleaseResult
+from robofleet.services.release_proposal import (
     _RELEASE_LOCK_PREFIX,
     ReleaseProposalService,
 )
@@ -115,19 +115,20 @@ def _wire(
         "report": report,
         "patches": [
             patch(
-                "roboco.services.release_proposal.get_task_service",
+                "robofleet.services.release_proposal.get_task_service",
                 return_value=task_svc,
             ),
             patch(
-                "roboco.services.release_proposal.get_release_executor",
+                "robofleet.services.release_proposal.get_release_executor",
                 AsyncMock(return_value=executor),
             ),
-            patch("roboco.services.release_proposal.markers", markers_mod),
+            patch("robofleet.services.release_proposal.markers", markers_mod),
             patch(
-                "roboco.services.release_proposal.report_from_dict", return_value=report
+                "robofleet.services.release_proposal.report_from_dict",
+                return_value=report,
             ),
             patch(
-                "roboco.services.release_proposal.redis.from_url",
+                "robofleet.services.release_proposal.redis.from_url",
                 return_value=fake_redis,
             ),
         ],
@@ -261,7 +262,7 @@ async def test_fenced_release_does_not_delete_a_usurper_lock() -> None:
     svc = ReleaseProposalService(_session())
 
     with patch(
-        "roboco.services.release_proposal.redis.from_url", return_value=fake_redis
+        "robofleet.services.release_proposal.redis.from_url", return_value=fake_redis
     ):
         token_a = await svc._acquire_release_lock(lock_key)
         assert token_a is not None
@@ -278,7 +279,7 @@ async def test_fenced_release_does_not_delete_a_usurper_lock() -> None:
 
     # And the positive case: releasing with the owning token does clear it.
     with patch(
-        "roboco.services.release_proposal.redis.from_url", return_value=fake_redis
+        "robofleet.services.release_proposal.redis.from_url", return_value=fake_redis
     ):
         await svc._release_release_lock(lock_key, "usurper-token")
     assert await fake_redis.get(lock_key) is None
@@ -317,19 +318,21 @@ async def test_redis_outage_returns_redis_unavailable_not_already_in_progress() 
     svc = ReleaseProposalService(_session())
     with (
         patch(
-            "roboco.services.release_proposal.get_task_service", return_value=task_svc
+            "robofleet.services.release_proposal.get_task_service",
+            return_value=task_svc,
         ),
         patch(
-            "roboco.services.release_proposal.get_release_executor",
+            "robofleet.services.release_proposal.get_release_executor",
             AsyncMock(return_value=executor),
         ),
-        patch("roboco.services.release_proposal.markers", markers_mod),
+        patch("robofleet.services.release_proposal.markers", markers_mod),
         patch(
-            "roboco.services.release_proposal.report_from_dict",
+            "robofleet.services.release_proposal.report_from_dict",
             report_from_dict_mock,
         ),
         patch(
-            "roboco.services.release_proposal.redis.from_url", return_value=broken_redis
+            "robofleet.services.release_proposal.redis.from_url",
+            return_value=broken_redis,
         ),
     ):
         result = await svc.approve(task.id)
@@ -463,7 +466,7 @@ async def test_one_redis_client_per_approve_not_per_heartbeat(
     # call count after the approve completes.
     from_mock = MagicMock(return_value=fake_redis)
     w["patches"][4] = patch(
-        "roboco.services.release_proposal.redis.from_url", new=from_mock
+        "robofleet.services.release_proposal.redis.from_url", new=from_mock
     )
     svc = ReleaseProposalService(_session())
 

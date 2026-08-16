@@ -7,8 +7,8 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import CompanyGoalsTable
-from roboco.services.company_goals import (
+from robofleet.db.tables import CompanyGoalsTable
+from robofleet.services.company_goals import (
     SINGLETON_ID,
     get_company_goals_service,
 )

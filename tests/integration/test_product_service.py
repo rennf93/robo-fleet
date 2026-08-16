@@ -5,12 +5,12 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation.identity import Team
-from roboco.models import AgentRole, AgentStatus
-from roboco.models.product import ProductCellMapping, ProductCreate, ProductUpdate
-from roboco.services.base import ConflictError
-from roboco.services.product import ProductService
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation.identity import Team
+from robofleet.models import AgentRole, AgentStatus
+from robofleet.models.product import ProductCellMapping, ProductCreate, ProductUpdate
+from robofleet.services.base import ConflictError
+from robofleet.services.product import ProductService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

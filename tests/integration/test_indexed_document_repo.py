@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.services.repositories.indexed_document import (
+from robofleet.services.repositories.indexed_document import (
     IndexedDocumentRepository,
 )
 

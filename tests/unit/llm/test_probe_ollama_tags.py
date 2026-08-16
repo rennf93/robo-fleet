@@ -1,4 +1,4 @@
-"""Unit tests for roboco.services.llm.probe_ollama_tags.
+"""Unit tests for robofleet.services.llm.probe_ollama_tags.
 
 Covers all five branches of the function:
   1. Successful JSON parse → returns model names list
@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-from roboco.services.llm import probe_ollama_tags
+from robofleet.services.llm import probe_ollama_tags
 
 _BASE_URL = "http://localhost:11434"
 
@@ -39,7 +39,7 @@ async def test_probe_ollama_tags_success() -> None:
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=False)
 
-    with patch("roboco.services.llm.httpx.AsyncClient", return_value=mock_client):
+    with patch("robofleet.services.llm.httpx.AsyncClient", return_value=mock_client):
         models, error = await probe_ollama_tags(_BASE_URL)
 
     assert error is None
@@ -54,7 +54,7 @@ async def test_probe_ollama_tags_timeout() -> None:
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=False)
 
-    with patch("roboco.services.llm.httpx.AsyncClient", return_value=mock_client):
+    with patch("robofleet.services.llm.httpx.AsyncClient", return_value=mock_client):
         models, error = await probe_ollama_tags(_BASE_URL)
 
     assert models == []
@@ -70,7 +70,7 @@ async def test_probe_ollama_tags_connect_error() -> None:
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=False)
 
-    with patch("roboco.services.llm.httpx.AsyncClient", return_value=mock_client):
+    with patch("robofleet.services.llm.httpx.AsyncClient", return_value=mock_client):
         models, error = await probe_ollama_tags(_BASE_URL)
 
     assert models == []
@@ -95,7 +95,7 @@ async def test_probe_ollama_tags_http_status_error() -> None:
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=False)
 
-    with patch("roboco.services.llm.httpx.AsyncClient", return_value=mock_client):
+    with patch("robofleet.services.llm.httpx.AsyncClient", return_value=mock_client):
         models, error = await probe_ollama_tags(_BASE_URL)
 
     assert models == []
@@ -118,8 +118,8 @@ async def test_probe_ollama_tags_generic_exception_logs_and_returns_generic() ->
     mock_client.__aexit__ = AsyncMock(return_value=False)
 
     with (
-        patch("roboco.services.llm.httpx.AsyncClient", return_value=mock_client),
-        patch("roboco.services.llm._log") as mock_log,
+        patch("robofleet.services.llm.httpx.AsyncClient", return_value=mock_client),
+        patch("robofleet.services.llm._log") as mock_log,
     ):
         models, error = await probe_ollama_tags(_BASE_URL)
 

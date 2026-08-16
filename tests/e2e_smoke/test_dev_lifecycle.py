@@ -70,7 +70,7 @@ def test_leaf_dev_task_reaches_pm_review_with_fable_mode_on(
     the gateway/lifecycle arc itself: the same scenario must reach the same
     outcome with the flag on as with it off.
     """
-    with patch("roboco.config.settings.fable_mode_enabled", True):
+    with patch("robofleet.config.settings.fable_mode_enabled", True):
         stack = e2e_stack
         company = seed_company(stack)
         project_id, project_slug = seed_project(stack, company)

@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.services.task import TaskService
+from robofleet.services.task import TaskService
 
 
 def _service() -> TaskService:
@@ -47,10 +47,11 @@ async def test_create_branch_failure_removes_worktree() -> None:
 
     with (
         patch(
-            "roboco.services.git.get_git_service", MagicMock(return_value=git_service)
+            "robofleet.services.git.get_git_service",
+            MagicMock(return_value=git_service),
         ),
         patch(
-            "roboco.services.workspace.get_workspace_service",
+            "robofleet.services.workspace.get_workspace_service",
             MagicMock(return_value=ws_svc),
         ),
         pytest.raises(RuntimeError, match="push failed"),
@@ -93,10 +94,11 @@ async def test_successful_create_does_not_remove_worktree() -> None:
 
     with (
         patch(
-            "roboco.services.git.get_git_service", MagicMock(return_value=git_service)
+            "robofleet.services.git.get_git_service",
+            MagicMock(return_value=git_service),
         ),
         patch(
-            "roboco.services.workspace.get_workspace_service",
+            "robofleet.services.workspace.get_workspace_service",
             MagicMock(return_value=ws_svc),
         ),
     ):

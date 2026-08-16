@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roboco.foundation.policy.forge import (
+from robofleet.foundation.policy.forge import (
     KNOWN_PROVIDERS,
     detect_provider,
     validate_project_forge,

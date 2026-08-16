@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_campaign — Head-of-
+"""robofleet.services.gateway.content_actions.propose_campaign — Head-of-
 Marketing-gated War Room campaign authoring. Mirrors
 test_content_actions_coroner.py."""
 
@@ -10,8 +10,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import TaskStatus
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.models.base import TaskStatus
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 THREE = 3
 
@@ -124,7 +127,7 @@ async def test_propose_campaign_accepts_six_posts_shape() -> None:
     (the "no open cycle" rejection proves the count check itself passed)."""
     posts = [_post(publish_after=_future(i + 1)) for i in range(6)]
     actions = _actions("head_marketing")
-    with patch("roboco.services.task.get_task_service") as get_task_service:
+    with patch("robofleet.services.task.get_task_service") as get_task_service:
         task_svc = MagicMock()
         task_svc.list_open_war_room_cycles = AsyncMock(return_value=[])
         get_task_service.return_value = task_svc
@@ -199,7 +202,7 @@ async def test_propose_campaign_rejects_malformed_publish_after() -> None:
 @pytest.mark.asyncio
 async def test_propose_campaign_no_open_cycle_assigned() -> None:
     actions = _actions("head_marketing")
-    with patch("roboco.services.task.get_task_service") as get_task_service:
+    with patch("robofleet.services.task.get_task_service") as get_task_service:
         task_svc = MagicMock()
         task_svc.list_open_war_room_cycles = AsyncMock(return_value=[])
         get_task_service.return_value = task_svc
@@ -228,8 +231,8 @@ async def test_propose_campaign_materializes_every_post_in_order_and_completes()
         return drafted
 
     with (
-        patch("roboco.services.task.get_task_service") as get_task_service,
-        patch("roboco.services.x_engine.get_x_engine") as get_x_engine,
+        patch("robofleet.services.task.get_task_service") as get_task_service,
+        patch("robofleet.services.x_engine.get_x_engine") as get_x_engine,
     ):
         task_svc = MagicMock()
         task_svc.list_open_war_room_cycles = AsyncMock(return_value=[task])

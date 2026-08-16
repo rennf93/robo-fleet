@@ -8,7 +8,7 @@ is null, so every consumer behaves identically until a real ladder is declared.
 from __future__ import annotations
 
 import pytest
-from roboco.models.env_branches import (
+from robofleet.models.env_branches import (
     EnvRung,
     effective_environments,
     head_branch,

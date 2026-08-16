@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
-from roboco.foundation.policy.content import (
+from robofleet.foundation.policy.content import (
     AuditorNote,
     ContentValidationError,
     DeveloperNote,
@@ -18,8 +18,8 @@ from roboco.foundation.policy.content import (
     validate_content,
     validate_findings,
 )
-from roboco.foundation.policy.content.enums import Severity, Verdict
-from roboco.foundation.policy.content.models import CONTENT_MODELS
+from robofleet.foundation.policy.content.enums import Severity, Verdict
+from robofleet.foundation.policy.content.models import CONTENT_MODELS
 
 # --------------------------------------------------------------------------- #
 # Valid construction
@@ -32,7 +32,7 @@ def test_pr_review_valid() -> None:
             "summary": "The change is correct and covered by tests.",
             "findings": [
                 {
-                    "file": "roboco/services/git.py",
+                    "file": "robofleet/services/git.py",
                     "line": 42,
                     "severity": "major",
                     "expected": "raises on 422",
@@ -293,7 +293,7 @@ _FINDING_TEXT_CAP = 300
 
 def _finding(**overrides: object) -> dict[str, object]:
     base: dict[str, object] = {
-        "file": "roboco/services/task.py",
+        "file": "robofleet/services/task.py",
         "line": 42,
         "severity": "major",
         "expected": "raises on invalid input",
@@ -336,14 +336,14 @@ def test_finding_rejects_dotdot_traversal_path() -> None:
 
 def test_finding_rejects_dotdot_leading_segment() -> None:
     with pytest.raises(ValidationError):
-        Finding.model_validate(_finding(file="../roboco/services/task.py"))
+        Finding.model_validate(_finding(file="../robofleet/services/task.py"))
 
 
 def test_finding_accepts_dot_segment_and_double_dot_substring() -> None:
     # A literal ".." SEGMENT is rejected, but a filename merely containing
     # dots (not a traversal component) must not false-positive.
-    ok = Finding.model_validate(_finding(file="./roboco/services/foo..bar.py"))
-    assert ok.file == "./roboco/services/foo..bar.py"
+    ok = Finding.model_validate(_finding(file="./robofleet/services/foo..bar.py"))
+    assert ok.file == "./robofleet/services/foo..bar.py"
 
 
 def test_finding_rejects_prose_file_with_spaces() -> None:
@@ -358,9 +358,9 @@ def test_finding_rejects_prose_file_with_spaces() -> None:
 
 def test_finding_accepts_real_nested_path() -> None:
     ok = Finding.model_validate(
-        _finding(file="roboco/services/gateway/choreographer/findings.py")
+        _finding(file="robofleet/services/gateway/choreographer/findings.py")
     )
-    assert ok.file == "roboco/services/gateway/choreographer/findings.py"
+    assert ok.file == "robofleet/services/gateway/choreographer/findings.py"
 
 
 def test_finding_accepts_nextjs_route_group_and_dynamic_segment_paths() -> None:

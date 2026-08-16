@@ -1,4 +1,4 @@
-"""roboco.services.secretary — directive gate + execution (mocked deps)."""
+"""robofleet.services.secretary — directive gate + execution (mocked deps)."""
 
 from __future__ import annotations
 
@@ -8,12 +8,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import SecretaryDirectiveTable
-from roboco.models.base import Complexity, TaskNature, TaskStatus, Team
-from roboco.models.secretary import DirectiveKind, DirectiveStatus
-from roboco.services import secretary as sec_module
-from roboco.services.base import ValidationError
-from roboco.services.secretary import SecretaryService
+from robofleet.db.tables import SecretaryDirectiveTable
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, Team
+from robofleet.models.secretary import DirectiveKind, DirectiveStatus
+from robofleet.services import secretary as sec_module
+from robofleet.services.base import ValidationError
+from robofleet.services.secretary import SecretaryService
 
 
 def _session() -> MagicMock:
@@ -44,7 +44,7 @@ def _patch(monkeypatch: pytest.MonkeyPatch) -> dict[str, MagicMock]:
     notifier.send_ack_notification = AsyncMock()
     notifier.send_broadcast_notification = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification.NotificationService", lambda: notifier
+        "robofleet.services.notification.NotificationService", lambda: notifier
     )
     monkeypatch.setattr(sec_module, "NotificationService", lambda: notifier)
     return {

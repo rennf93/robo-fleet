@@ -1,5 +1,5 @@
 """
-Unit tests for roboco.billing.pricing — calculate_cost().
+Unit tests for robofleet.billing.pricing — calculate_cost().
 
 Covers:
 - Each model tier (opus, sonnet, haiku) with all 4 token types.
@@ -15,8 +15,8 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from roboco.billing import pricing as p
-from roboco.billing.pricing import (
+from robofleet.billing import pricing as p
+from robofleet.billing.pricing import (
     CostResult,
     _is_anthropic_model,
     calculate_cost,

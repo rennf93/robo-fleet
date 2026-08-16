@@ -2,7 +2,7 @@
 
 ``tasks.stalled_reason`` + ``tasks.stalled_since`` record a give-up decision
 the dispatcher's respawn breaker (``_pm_respawn_should_gate`` in
-``roboco/runtime/orchestrator.py``) makes on a task's behalf — previously
+``robofleet/runtime/orchestrator.py``) makes on a task's behalf — previously
 only a log line + a one-shot CEO notification that ages out of the bell,
 with nothing durable on the task itself. Both nullable/additive: a null
 ``stalled_reason`` means "never stalled or since cleared by genuine forward

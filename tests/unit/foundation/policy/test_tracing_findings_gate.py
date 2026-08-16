@@ -7,7 +7,7 @@ the checker itself, its registration in VERB_REQUIREMENTS["i_am_done"], and the
 
 from __future__ import annotations
 
-from roboco.foundation.policy import tracing as tr
+from robofleet.foundation.policy import tracing as tr
 
 
 def test_findings_addressed_is_required_by_i_am_done() -> None:

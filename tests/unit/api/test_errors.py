@@ -6,7 +6,7 @@ from http import HTTPStatus
 
 import pytest
 from fastapi import HTTPException
-from roboco.api.utils.errors import (
+from robofleet.api.utils.errors import (
     conflict,
     forbidden,
     handle_service_error,
@@ -16,7 +16,7 @@ from roboco.api.utils.errors import (
     unauthorized,
     validation_error,
 )
-from roboco.services.base import (
+from robofleet.services.base import (
     ConflictError,
     NotFoundError,
     ServiceError,

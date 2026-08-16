@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from roboco.foundation import identity
-from roboco.foundation.policy import journaling
-from roboco.models.base import JournalEntryType
+from robofleet.foundation import identity
+from robofleet.foundation.policy import journaling
+from robofleet.models.base import JournalEntryType
 
 
 def test_scope_enum_has_five_panel_ui_values() -> None:

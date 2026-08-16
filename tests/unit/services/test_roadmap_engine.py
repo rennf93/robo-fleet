@@ -14,19 +14,19 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings as cfg
-from roboco.db.tables import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import (
     AgentTable,
     BoardProgramCycleTable,
     ProjectTable,
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskStatus as TS
-from roboco.services.roadmap_engine import RoadmapEngine
-from roboco.services.task import (
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskStatus as TS
+from robofleet.services.roadmap_engine import RoadmapEngine
+from robofleet.services.task import (
     ROADMAP_SOURCE,
     X_FEATURE_EXPLORATION_SOURCE,
     get_task_service,

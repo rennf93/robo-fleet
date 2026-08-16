@@ -21,8 +21,11 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.enforcement.a2a_access import A2AAccessDeniedError
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.enforcement.a2a_access import A2AAccessDeniedError
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 def _make_deps(**overrides: object) -> ContentActionsDeps:

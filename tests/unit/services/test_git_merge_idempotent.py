@@ -14,9 +14,9 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.exceptions import MergeConflictError
-from roboco.services.forge import RepoRef
-from roboco.services.git import GitService
+from robofleet.exceptions import MergeConflictError
+from robofleet.services.forge import RepoRef
+from robofleet.services.git import GitService
 
 
 def _git_service() -> GitService:
@@ -89,7 +89,7 @@ async def test_pr_is_merged_true_when_github_reports_merged() -> None:
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
     client.get = AsyncMock(return_value=resp)
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=client):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=client):
         assert await svc._pr_is_merged(RepoRef("acme", "repo"), 42, "tok") is True
 
 
@@ -101,5 +101,5 @@ async def test_pr_is_merged_false_on_non_success() -> None:
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
     client.get = AsyncMock(return_value=resp)
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=client):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=client):
         assert await svc._pr_is_merged(RepoRef("acme", "repo"), 42, "tok") is False

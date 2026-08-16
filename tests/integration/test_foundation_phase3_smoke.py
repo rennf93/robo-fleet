@@ -6,20 +6,20 @@ import importlib
 import inspect
 
 import pytest
-from roboco import agents_config
-from roboco.foundation import identity
-from roboco.foundation.policy.agent_loop import (
+from robofleet import agents_config
+from robofleet.foundation import identity
+from robofleet.foundation.policy.agent_loop import (
     DEFAULT_BUDGET,
     VERB_RETRY_LIMITS,
 )
-from roboco.foundation.policy.communications import (
+from robofleet.foundation.policy.communications import (
     ACK_REQUIRED_BY_TYPE,
     NOTIFY_SENDER_ROLES,
     Priority,
 )
-from roboco.models.base import NotificationType
-from roboco.services.gateway import content_actions
-from roboco.services.gateway.envelope import Envelope
+from robofleet.models.base import NotificationType
+from robofleet.services.gateway import content_actions
+from robofleet.services.gateway.envelope import Envelope
 
 _EXPECTED_VERB_RETRY_LIMIT = 3
 
@@ -27,7 +27,7 @@ _EXPECTED_VERB_RETRY_LIMIT = 3
 def test_notification_perms_module_removed() -> None:
     """services/enforcement/notification_perms.py is gone."""
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("roboco.enforcement.notification_perms")
+        importlib.import_module("robofleet.enforcement.notification_perms")
 
 
 def test_agents_config_notification_permissions_removed() -> None:

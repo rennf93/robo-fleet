@@ -10,8 +10,8 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import MagicMock
 
-from roboco.api.routes.v1._role_dep import envelope_to_response
-from roboco.services.gateway.envelope import Envelope
+from robofleet.api.routes.v1._role_dep import envelope_to_response
+from robofleet.services.gateway.envelope import Envelope
 from structlog.testing import capture_logs
 
 

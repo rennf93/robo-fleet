@@ -57,7 +57,7 @@ from typing import Any, cast
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec
+from robofleet.foundation.policy import lifecycle as spec
 
 _FIXTURE = Path(__file__).parent.parent / "fixtures" / "2026-05-08-smoke-trace.json"
 

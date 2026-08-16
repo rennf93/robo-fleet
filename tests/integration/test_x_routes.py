@@ -11,16 +11,16 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.x import router as x_router
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation.policy.content import markers
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-from roboco.models.permissions import AgentContext
-from roboco.services.task import X_POST_SOURCE
-from roboco.services.x_client import XClient, XMention, XPostResult
-from roboco.services.x_post_service import XPostService
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.x import router as x_router
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation.policy.content import markers
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+from robofleet.models.permissions import AgentContext
+from robofleet.services.task import X_POST_SOURCE
+from robofleet.services.x_client import XClient, XMention, XPostResult
+from robofleet.services.x_post_service import XPostService
 
 HISTORY_LIMIT = 2
 
@@ -158,7 +158,7 @@ async def test_approve_posts_and_returns_tweet_id(
     task = await _seed_draft(db_session)
     with (
         patch(
-            "roboco.services.x_post_service.build_x_client",
+            "robofleet.services.x_post_service.build_x_client",
             return_value=_StubClient(),
         ),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),
@@ -225,7 +225,7 @@ async def test_history_returns_posted_and_rejected_newest_first(
     posted_project = await db_session.get(ProjectTable, posted.project_id)
     with (
         patch(
-            "roboco.services.x_post_service.build_x_client",
+            "robofleet.services.x_post_service.build_x_client",
             return_value=_StubClient(),
         ),
         patch.object(XPostService, "_acquire_lock", AsyncMock(return_value="tok")),

@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 SHA_OLD = "aaaa1111bbbb2222cccc3333dddd4444eeee5555"
 SHA_NEW = "9999888877776666555544443333222211110000"

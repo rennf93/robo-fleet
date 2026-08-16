@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from roboco.config import Settings
+from robofleet.config import Settings
 
 if TYPE_CHECKING:
     import pytest

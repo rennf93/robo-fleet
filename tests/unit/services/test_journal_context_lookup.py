@@ -15,8 +15,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import TaskStatus
-from roboco.services.task import TaskService
+from robofleet.models.base import TaskStatus
+from robofleet.services.task import TaskService
 
 
 def _service_with(execute_returns: object) -> TaskService:

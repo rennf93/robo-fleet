@@ -1,6 +1,6 @@
 """Route-guard role-sets in api/deps + api/routes/v1/_role_dep derive from foundation.
 
-The HTTP-layer guards in `roboco.api.deps` and `roboco.api.routes.v1._role_dep`
+The HTTP-layer guards in `robofleet.api.deps` and `robofleet.api.routes.v1._role_dep`
 historically used hand-written frozensets of role-name strings. Phase 4 Task 11
 moves those literals onto `foundation.identity` so adding/renaming a role only
 edits one file. These tests pin the foundation-derived membership and the
@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import inspect
 
-from roboco.api import deps
-from roboco.api.deps import (
+from robofleet.api import deps
+from robofleet.api.deps import (
     _DEVELOPER_OR_ABOVE_ROLES,
     _GLOBAL_CELL_ACCESS_ROLES,
     _PM_OR_ABOVE_ROLES,
 )
-from roboco.api.routes.v1 import _role_dep
-from roboco.foundation.identity import BOARD_ROLES, DEV_ROLES, PM_ROLES, Role
+from robofleet.api.routes.v1 import _role_dep
+from robofleet.foundation.identity import BOARD_ROLES, DEV_ROLES, PM_ROLES, Role
 
 
 def test_pm_or_above_roles_matches_foundation_composition() -> None:
@@ -50,15 +50,15 @@ def test_global_cell_access_roles_matches_foundation_composition() -> None:
 
 
 def test_deps_module_imports_from_foundation() -> None:
-    """`roboco.api.deps` sources its role-set primitives from foundation."""
+    """`robofleet.api.deps` sources its role-set primitives from foundation."""
     src = inspect.getsource(deps)
-    assert "from roboco.foundation.identity import" in src
+    assert "from robofleet.foundation.identity import" in src
 
 
 def test_role_dep_module_imports_from_foundation() -> None:
-    """`roboco.api.routes.v1._role_dep` sources its Role enum from foundation."""
+    """`robofleet.api.routes.v1._role_dep` sources its Role enum from foundation."""
     src = inspect.getsource(_role_dep)
-    assert "from roboco.foundation.identity import" in src
+    assert "from robofleet.foundation.identity import" in src
 
 
 def test_v1_role_dep_sets_match_foundation_roles() -> None:

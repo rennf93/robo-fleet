@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import structlog
-from roboco.logging import (
+from robofleet.logging import (
     LogContext,
     _redact_secrets,
     _resolve_log_dir,
@@ -97,8 +97,8 @@ def test_redact_event_dict_preserves_non_string_values() -> None:
 def test_setup_logging_development_branch(tmp_path: Path) -> None:
     """Development env uses the colored console renderer."""
     with (
-        patch("roboco.logging.settings") as mock_settings,
-        patch("roboco.logging._resolve_log_dir", return_value=tmp_path),
+        patch("robofleet.logging.settings") as mock_settings,
+        patch("robofleet.logging._resolve_log_dir", return_value=tmp_path),
     ):
         mock_settings.environment = "development"
         mock_settings.app_version = "0.0.0"
@@ -111,8 +111,8 @@ def test_setup_logging_development_branch(tmp_path: Path) -> None:
 def test_setup_logging_production_branch(tmp_path: Path) -> None:
     """Production env uses JSON renderer."""
     with (
-        patch("roboco.logging.settings") as mock_settings,
-        patch("roboco.logging._resolve_log_dir", return_value=tmp_path),
+        patch("robofleet.logging.settings") as mock_settings,
+        patch("robofleet.logging._resolve_log_dir", return_value=tmp_path),
     ):
         mock_settings.environment = "production"
         mock_settings.app_version = "1.0.0"
@@ -124,8 +124,8 @@ def test_setup_logging_production_branch(tmp_path: Path) -> None:
 def test_setup_logging_handles_missing_log_dir() -> None:
     """If `log_dir` resolves to None, only stdout handler is attached."""
     with (
-        patch("roboco.logging.settings") as mock_settings,
-        patch("roboco.logging._resolve_log_dir", return_value=None),
+        patch("robofleet.logging.settings") as mock_settings,
+        patch("robofleet.logging._resolve_log_dir", return_value=None),
     ):
         mock_settings.environment = "production"
         mock_settings.app_version = "x"
@@ -150,8 +150,8 @@ def test_setup_logging_handles_log_dir_oserror() -> None:
             return "x"
 
     with (
-        patch("roboco.logging.settings") as mock_settings,
-        patch("roboco.logging._resolve_log_dir", return_value=_BadPath()),
+        patch("robofleet.logging.settings") as mock_settings,
+        patch("robofleet.logging._resolve_log_dir", return_value=_BadPath()),
     ):
         mock_settings.environment = "production"
         mock_settings.app_version = "x"
@@ -175,7 +175,7 @@ def test_resolve_log_dir_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_resolve_log_dir_container_path(monkeypatch: pytest.MonkeyPatch) -> None:
     """When /data/logs exists, prefer it."""
     monkeypatch.delenv("ROBOCO_LOG_DIR", raising=False)
-    with patch("roboco.logging.Path") as mock_path_cls:
+    with patch("robofleet.logging.Path") as mock_path_cls:
         # Make Path("/data/logs").is_dir() return True
         container = mock_path_cls.return_value
         container.is_dir.return_value = True
@@ -209,7 +209,7 @@ def test_resolve_log_dir_dev_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
             return _NonexistentPath()
         return real_path(p)
 
-    with patch("roboco.logging.Path", side_effect=fake_path):
+    with patch("robofleet.logging.Path", side_effect=fake_path):
         out = _resolve_log_dir()
     assert isinstance(out, Path)
     assert str(out) == "data/logs"
@@ -220,7 +220,7 @@ def test_resolve_log_dir_dev_fallback_honors_data_dir(
 ) -> None:
     """The host-side fallback honors $ROBOCO_DATA_DIR so it matches the mount."""
     monkeypatch.delenv("ROBOCO_LOG_DIR", raising=False)
-    monkeypatch.setenv("ROBOCO_DATA_DIR", "/srv/roboco/data")
+    monkeypatch.setenv("ROBOCO_DATA_DIR", "/srv/robofleet/data")
 
     real_path = Path
 
@@ -229,9 +229,9 @@ def test_resolve_log_dir_dev_fallback_honors_data_dir(
             return _NonexistentPath()
         return real_path(p)
 
-    with patch("roboco.logging.Path", side_effect=fake_path):
+    with patch("robofleet.logging.Path", side_effect=fake_path):
         out = _resolve_log_dir()
-    assert str(out) == "/srv/roboco/data/logs"
+    assert str(out) == "/srv/robofleet/data/logs"
 
 
 # ---------------------------------------------------------------------------

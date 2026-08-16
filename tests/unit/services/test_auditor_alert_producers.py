@@ -13,14 +13,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.models.base import (
+from robofleet.models.base import (
     NotificationPriority,
     NotificationType,
     TaskStatus,
 )
-from roboco.services.notification_delivery import NotificationDeliveryService
-from roboco.services.task import TaskService
-from roboco.utils.converters import require_uuid
+from robofleet.services.notification_delivery import NotificationDeliveryService
+from robofleet.services.task import TaskService
+from robofleet.utils.converters import require_uuid
 
 
 def _mock_task(
@@ -93,7 +93,7 @@ async def test_notify_auditor_of_rework_creates_alert_to_auditor(
 
     task = _mock_task()
     with patch(
-        "roboco.services.notification_delivery.all_recipients_recently_notified",
+        "robofleet.services.notification_delivery.all_recipients_recently_notified",
         AsyncMock(return_value=False),
     ):
         await svc.notify_auditor_of_rework(
@@ -137,11 +137,11 @@ async def test_notify_auditor_of_rework_not_suppressed_by_existing_duplicate(
     task = _mock_task()
     with (
         patch(
-            "roboco.services.notification_delivery.all_recipients_recently_notified",
+            "robofleet.services.notification_delivery.all_recipients_recently_notified",
             AsyncMock(return_value=False),
         ),
         patch(
-            "roboco.services.notification_delivery.duplicate_unacked_notification_exists",
+            "robofleet.services.notification_delivery.duplicate_unacked_notification_exists",
             dedup_spy,
         ),
     ):
@@ -197,7 +197,7 @@ async def test_alert_auditor_of_rework_calls_delivery_service() -> None:
     fake_delivery.notify_auditor_of_rework = AsyncMock()
 
     with patch(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: fake_delivery,
     ):
         await svc._alert_auditor_of_rework(
@@ -223,7 +223,7 @@ async def test_alert_auditor_of_rework_is_best_effort() -> None:
     svc = TaskService(session)
 
     with patch(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         side_effect=RuntimeError("redis down"),
     ):
         await svc._alert_auditor_of_rework(
@@ -257,10 +257,10 @@ async def test_fail_qa_emits_auditor_alert(
 
     with (
         patch(
-            "roboco.services.task.extract_original_developer",
+            "robofleet.services.task.extract_original_developer",
             return_value=str(uuid4()),
         ),
-        patch("roboco.services.task.asyncio.create_task", MagicMock()),
+        patch("robofleet.services.task.asyncio.create_task", MagicMock()),
     ):
         out = await svc.fail_qa(task.id, notes="missing tests")
 
@@ -332,7 +332,7 @@ async def test_request_changes_emits_auditor_alert(
     alert_spy = AsyncMock()
     monkeypatch.setattr(svc, "_alert_auditor_of_rework", alert_spy)
 
-    with patch("roboco.services.task.extract_original_developer", return_value=None):
+    with patch("robofleet.services.task.extract_original_developer", return_value=None):
         out = await svc.request_changes(
             pm_id,
             task.id,

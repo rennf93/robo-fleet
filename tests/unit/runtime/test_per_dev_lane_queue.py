@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import TaskStatus
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.models.base import TaskStatus
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _new_orchestrator() -> AgentOrchestrator:
@@ -57,8 +57,8 @@ def _patch_siblings(siblings: list[MagicMock]) -> Any:
 
     factory = MagicMock(return_value=_CM())
     return (
-        patch("roboco.db.base.get_session_factory", return_value=factory),
-        patch("roboco.services.task.get_task_service", return_value=svc),
+        patch("robofleet.db.base.get_session_factory", return_value=factory),
+        patch("robofleet.services.task.get_task_service", return_value=svc),
     )
 
 
@@ -173,7 +173,7 @@ async def test_db_failure_falls_through_to_dispatch() -> None:
     orch = _new_orchestrator()
     task = _task(1, "be-dev-1")
     boom = patch(
-        "roboco.db.base.get_session_factory", side_effect=RuntimeError("db down")
+        "robofleet.db.base.get_session_factory", side_effect=RuntimeError("db down")
     )
     with boom:
         assert await orch._blocked_by_earlier_lane_sibling(task) is False

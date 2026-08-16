@@ -17,7 +17,7 @@ the live uvicorn + middleware + dependency stack — no stubbed deps:
     to close a prior unauthenticated metrics/scorecard exposure).
 (f) the same REAL CEO session cookie → ``GET /api/dashboard/ceo`` 200.
 
-The running uvicorn app reads the same ``roboco.config.settings`` singleton
+The running uvicorn app reads the same ``robofleet.config.settings`` singleton
 per-request, so monkeypatching it live takes effect without a restart.
 """
 
@@ -31,7 +31,7 @@ import httpx
 
 if TYPE_CHECKING:
     import pytest
-    from roboco.db.tables import UserTable
+    from robofleet.db.tables import UserTable
     from sqlalchemy.ext.asyncio import AsyncSession
     from tests.e2e_smoke.harness import E2EStack
 
@@ -46,7 +46,7 @@ _CEO_PASSWORD = "e2e-ceo-password"
 
 def _arm_cloud_auth(monkeypatch: pytest.MonkeyPatch) -> None:
     """Flip the cloud-auth flag + secrets on for the live uvicorn app."""
-    from roboco.config import settings
+    from robofleet.config import settings
 
     monkeypatch.setattr(settings, "cloud_auth_enabled", True)
     monkeypatch.setattr(settings, "cloud_auth_secret", _JWT_SECRET)
@@ -58,7 +58,7 @@ def _arm_cloud_auth(monkeypatch: pytest.MonkeyPatch) -> None:
 async def _seed_ceo_user(session: AsyncSession) -> UserTable:
     """Insert the single CEO login row the auth backend resolves cookies against."""
     from fastapi_users.password import PasswordHelper
-    from roboco.db.tables import UserTable
+    from robofleet.db.tables import UserTable
 
     user = UserTable(
         email=_CEO_EMAIL,
@@ -74,7 +74,7 @@ async def _seed_ceo_user(session: AsyncSession) -> UserTable:
 
 def _mint_ceo_session_cookie(user: UserTable) -> str:
     """Mint a real JWT session cookie via the auth backend's strategy."""
-    from roboco.api.auth.backend import get_jwt_strategy
+    from robofleet.api.auth.backend import get_jwt_strategy
 
     return asyncio.run(get_jwt_strategy().write_token(user))
 
@@ -170,6 +170,6 @@ def test_dashboard_real_ceo_cookie_passes(
 
 
 def _ceo_agent_id() -> str:
-    from roboco.agents_config import CEO_AGENT_ID
+    from robofleet.agents_config import CEO_AGENT_ID
 
     return CEO_AGENT_ID

@@ -17,8 +17,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import Team
-from roboco.services.task import TaskService
+from robofleet.models.base import Team
+from robofleet.services.task import TaskService
 
 
 def _service() -> TaskService:
@@ -85,11 +85,11 @@ async def test_cancel_removes_worktree_for_assignee() -> None:
 
     with (
         patch(
-            "roboco.services.git.get_git_service",
+            "robofleet.services.git.get_git_service",
             MagicMock(return_value=git_service),
         ),
         patch(
-            "roboco.services.workspace.get_workspace_service",
+            "robofleet.services.workspace.get_workspace_service",
             MagicMock(return_value=ws_svc),
         ),
     ):
@@ -130,11 +130,11 @@ async def test_cancel_skips_worktree_when_no_assignee() -> None:
 
     with (
         patch(
-            "roboco.services.git.get_git_service",
+            "robofleet.services.git.get_git_service",
             MagicMock(return_value=git_service),
         ),
         patch(
-            "roboco.services.workspace.get_workspace_service",
+            "robofleet.services.workspace.get_workspace_service",
             MagicMock(return_value=ws_svc),
         ),
     ):
@@ -158,11 +158,11 @@ async def test_cancel_skips_worktree_when_no_branch() -> None:
 
     with (
         patch(
-            "roboco.services.git.get_git_service",
+            "robofleet.services.git.get_git_service",
             MagicMock(return_value=git_service),
         ),
         patch(
-            "roboco.services.workspace.get_workspace_service",
+            "robofleet.services.workspace.get_workspace_service",
             MagicMock(return_value=ws_svc),
         ),
     ):
@@ -194,11 +194,11 @@ async def test_worktree_cleanup_failure_does_not_raise() -> None:
 
     with (
         patch(
-            "roboco.services.git.get_git_service",
+            "robofleet.services.git.get_git_service",
             MagicMock(return_value=git_service),
         ),
         patch(
-            "roboco.services.workspace.get_workspace_service",
+            "robofleet.services.workspace.get_workspace_service",
             MagicMock(return_value=ws_svc),
         ),
     ):

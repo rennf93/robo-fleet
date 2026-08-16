@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.pitch — Board-gated product proposal."""
+"""robofleet.services.gateway.content_actions.pitch — Board-gated product proposal."""
 
 from __future__ import annotations
 
@@ -7,7 +7,10 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 def _actions(role: str, *, notification_delivery: Any = None) -> ContentActions:
@@ -50,7 +53,7 @@ async def test_pitch_creates_for_board(monkeypatch: pytest.MonkeyPatch) -> None:
     created.id = uuid4()
     svc = MagicMock()
     svc.create = AsyncMock(return_value=created)
-    monkeypatch.setattr("roboco.services.pitch.get_pitch_service", lambda _s: svc)
+    monkeypatch.setattr("robofleet.services.pitch.get_pitch_service", lambda _s: svc)
     env = await _actions("product_owner").pitch(
         agent_id=uuid4(),
         title="Widget",
@@ -86,7 +89,7 @@ async def test_pitch_notifies_ceo_on_success(monkeypatch: pytest.MonkeyPatch) ->
     created.id = uuid4()
     svc = MagicMock()
     svc.create = AsyncMock(return_value=created)
-    monkeypatch.setattr("roboco.services.pitch.get_pitch_service", lambda _s: svc)
+    monkeypatch.setattr("robofleet.services.pitch.get_pitch_service", lambda _s: svc)
     notification_delivery = AsyncMock()
     env = await _actions(
         "product_owner", notification_delivery=notification_delivery
@@ -112,7 +115,7 @@ async def test_pitch_survives_notification_failure(
     created.id = uuid4()
     svc = MagicMock()
     svc.create = AsyncMock(return_value=created)
-    monkeypatch.setattr("roboco.services.pitch.get_pitch_service", lambda _s: svc)
+    monkeypatch.setattr("robofleet.services.pitch.get_pitch_service", lambda _s: svc)
     notification_delivery = AsyncMock()
     notification_delivery.notify_ceo_of_pitch.side_effect = RuntimeError("db down")
     env = await _actions(

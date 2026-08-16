@@ -11,11 +11,11 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.api.schemas.git import GitMergePRRequest
-from roboco.models.base import AgentRole
-from roboco.services import git as git_module
-from roboco.services.base import ValidationError
-from roboco.services.git import GitService
+from robofleet.api.schemas.git import GitMergePRRequest
+from robofleet.models.base import AgentRole
+from robofleet.services import git as git_module
+from robofleet.services.base import ValidationError
+from robofleet.services.git import GitService
 
 _RECORDED_PR = 42  # the task's own recorded PR number (source of truth)
 _CALLER_PR = 7  # a stale/wrong caller-provided number that must not redirect the merge

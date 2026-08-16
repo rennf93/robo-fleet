@@ -17,10 +17,10 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context
-from roboco.api.routes.optimal import router as optimal_router
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
+from robofleet.api.deps import get_agent_context
+from robofleet.api.routes.optimal import router as optimal_router
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -53,9 +53,9 @@ async def test_mentor_ask_logs_and_surfaces_real_upstream_error(
     mentor.ask = AsyncMock(side_effect=RuntimeError("ollama connection refused"))
 
     with (
-        patch("roboco.api.routes.optimal.get_mentor_service") as mock_mentor,
-        patch("roboco.api.routes.optimal.get_optimal_service") as mock_get,
-        patch("roboco.api.routes.optimal.logger") as mock_logger,
+        patch("robofleet.api.routes.optimal.get_mentor_service") as mock_mentor,
+        patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get,
+        patch("robofleet.api.routes.optimal.logger") as mock_logger,
     ):
         mock_mentor.return_value = mentor
         mock_get.return_value = AsyncMock()

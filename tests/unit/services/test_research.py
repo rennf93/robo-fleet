@@ -1,4 +1,4 @@
-"""roboco.services.research — provider adapters + service coverage.
+"""robofleet.services.research — provider adapters + service coverage.
 
 Provider HTTP is exercised against ``httpx.MockTransport`` (no network, no
 extra dependency); the service-level tests use a recording fake to assert the
@@ -12,8 +12,8 @@ from collections.abc import Callable
 
 import httpx
 import pytest
-from roboco.config import settings
-from roboco.services.research import (
+from robofleet.config import settings
+from robofleet.services.research import (
     BraveProvider,
     ExaProvider,
     FetchOutcome,

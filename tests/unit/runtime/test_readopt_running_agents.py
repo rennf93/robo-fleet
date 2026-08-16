@@ -19,7 +19,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator, AgentState
+from robofleet.runtime.orchestrator import AgentOrchestrator, AgentState
 
 _EXPECTED_READOPTED = 2
 

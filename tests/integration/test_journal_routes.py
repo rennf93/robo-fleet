@@ -16,18 +16,18 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.journals import router as journals_router
-from roboco.db.tables import (
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.journals import router as journals_router
+from robofleet.db.tables import (
     AgentTable,
     JournalEntryTable,
     JournalTable,
     ProjectTable,
     TaskTable,
 )
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import JournalEntryType, TaskNature, TaskStatus, TaskType
-from roboco.models.permissions import AgentContext
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import JournalEntryType, TaskNature, TaskStatus, TaskType
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator
@@ -1117,7 +1117,7 @@ async def test_create_entry_returns_409_when_service_returns_none(
     """create_entry returning None → 409 (line 183)."""
     client, _ = journal_client
     with patch(
-        "roboco.services.journal.JournalService.create_entry", return_value=None
+        "robofleet.services.journal.JournalService.create_entry", return_value=None
     ):
         response = await client.post(
             "/api/journals/me/entries",
@@ -1138,7 +1138,7 @@ async def test_add_task_reflection_returns_409_when_service_returns_none(
     """add_task_reflection returning None → 409 (line 339)."""
     client, _ = journal_client
     with patch(
-        "roboco.services.journal.JournalService.add_task_reflection",
+        "robofleet.services.journal.JournalService.add_task_reflection",
         return_value=None,
     ):
         response = await client.post(
@@ -1163,7 +1163,7 @@ async def test_add_decision_log_returns_409_when_service_returns_none(
     """add_decision_log returning None → 409 (line 391)."""
     client, _ = journal_client
     with patch(
-        "roboco.services.journal.JournalService.add_decision_log",
+        "robofleet.services.journal.JournalService.add_decision_log",
         return_value=None,
     ):
         response = await client.post(
@@ -1188,7 +1188,7 @@ async def test_add_learning_returns_409_when_service_returns_none(
     """add_learning returning None → 409 (line 441)."""
     client, _ = journal_client
     with patch(
-        "roboco.services.journal.JournalService.add_learning", return_value=None
+        "robofleet.services.journal.JournalService.add_learning", return_value=None
     ):
         response = await client.post(
             "/api/journals/me/learnings",
@@ -1205,7 +1205,7 @@ async def test_add_struggle_returns_409_when_service_returns_none(
     """add_struggle returning None → 409 (line 492)."""
     client, _ = journal_client
     with patch(
-        "roboco.services.journal.JournalService.add_struggle", return_value=None
+        "robofleet.services.journal.JournalService.add_struggle", return_value=None
     ):
         response = await client.post(
             "/api/journals/me/struggles",
@@ -1226,7 +1226,7 @@ async def test_add_general_entry_returns_409_when_service_returns_none(
     """add_general_entry returning None → 409 (line 542)."""
     client, _ = journal_client
     with patch(
-        "roboco.services.journal.JournalService.add_general_entry",
+        "robofleet.services.journal.JournalService.add_general_entry",
         return_value=None,
     ):
         response = await client.post(
@@ -1246,7 +1246,7 @@ async def test_get_my_stats_returns_zero_defaults_when_no_stats(
     # Force the journal-exists branch first by GET-ing /me, then stub stats=None.
     await client.get("/api/journals/me", headers=_HDR)
     with patch(
-        "roboco.services.journal.JournalService.get_journal_stats",
+        "robofleet.services.journal.JournalService.get_journal_stats",
         return_value=None,
     ):
         response = await client.get("/api/journals/me/stats", headers=_HDR)
@@ -1278,7 +1278,9 @@ async def test_get_entry_journal_not_found_404(
     db_session.add(entry)
     await db_session.flush()
 
-    with patch("roboco.services.journal.JournalService.get_journal", return_value=None):
+    with patch(
+        "robofleet.services.journal.JournalService.get_journal", return_value=None
+    ):
         response = await client.get(f"/api/journals/entries/{entry.id}", headers=_HDR)
     assert response.status_code == HTTPStatus.NOT_FOUND
 
@@ -1307,7 +1309,7 @@ async def test_get_entry_owner_not_found_404(
     await db_session.flush()
 
     with patch(
-        "roboco.services.journal.JournalService.get_agent_slug",
+        "robofleet.services.journal.JournalService.get_agent_slug",
         return_value=None,
     ):
         response = await client.get(f"/api/journals/entries/{entry.id}", headers=_HDR)

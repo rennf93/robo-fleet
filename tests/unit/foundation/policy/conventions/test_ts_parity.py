@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from roboco.foundation.policy.conventions.models import ConventionsStandard
+from robofleet.foundation.policy.conventions.models import ConventionsStandard
 
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _TS_FILE = _REPO_ROOT / "panel" / "src" / "lib" / "api" / "conventions.ts"

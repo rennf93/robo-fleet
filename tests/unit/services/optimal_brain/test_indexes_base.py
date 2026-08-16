@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from roboco.services.optimal_brain.indexes.base import build_doc_source
-from roboco.services.optimal_brain.indexes.journals import JournalsIndexPlugin
+from robofleet.services.optimal_brain.indexes.base import build_doc_source
+from robofleet.services.optimal_brain.indexes.journals import JournalsIndexPlugin
 
 # ---------------------------------------------------------------------------
 # Tests for build_doc_source (module-level helper)

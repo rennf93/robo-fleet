@@ -1,5 +1,5 @@
 """The eval harness patches ``settings.api_url`` to its disposable stack URL
-(see ``roboco/eval/runner.py``'s ``_bench_environment``). ``_generate_mcp_config``
+(see ``robofleet/eval/runner.py``'s ``_bench_environment``). ``_generate_mcp_config``
 must honor that patch so a spawned container's MCP servers resolve to the
 throwaway orchestrator, never the real production hostname
 (``http://roboco-orchestrator:8000``) or ``127.0.0.1:{port}`` — the
@@ -17,7 +17,7 @@ the disposable orchestrator backed by a throwaway DB. Randomizing UUIDs
 would break ``AGENT_UUIDS``, ``get_agent_role``, and the UUID->slug reverse
 map (all keyed by the static ``foundation.identity.AGENTS`` registry) and
 make the bench less realistic. See ``_seed_company``'s docstring in
-``roboco/eval/runner.py`` for the authoritative statement.
+``robofleet/eval/runner.py`` for the authoritative statement.
 """
 
 from __future__ import annotations
@@ -26,9 +26,9 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from roboco.config import settings
-from roboco.foundation import identity as _foundation
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.foundation import identity as _foundation
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 if TYPE_CHECKING:
     import pytest
@@ -68,7 +68,7 @@ async def test_mcp_config_preserves_real_agent_uuid(
     confers no production reach because the spawned container's MCP servers
     point at the disposable orchestrator (``settings.api_url`` patched to
     ``stack.container_url``), never the production one. See
-    ``_seed_company``'s docstring in ``roboco/eval/runner.py``."""
+    ``_seed_company``'s docstring in ``robofleet/eval/runner.py``."""
     monkeypatch.setattr(settings, "api_url", _DISPOSABLE_URL)
     orch = AgentOrchestrator.__new__(AgentOrchestrator)
     config_path = await orch._generate_mcp_config(_AGENT_SLUG)

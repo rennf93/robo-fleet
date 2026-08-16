@@ -11,14 +11,14 @@
 set -euo pipefail
 
 # The orchestrator mounts the host ~/.gemini DIRECTORY read-only at this
-# staging path (roboco.llm.providers.gemini._append_gemini_auth_mount). Copy it
+# staging path (robofleet.llm.providers.gemini._append_gemini_auth_mount). Copy it
 # into the image's own ~/.gemini (agent-owned, writable — see the Dockerfile)
 # so the CLI's in-process OAuth refresh (google-auth-library) can write the
 # refreshed token back locally: Google's refresh token is REUSABLE, so each
 # container refreshing its OWN copy independently is safe (contrast grok's
 # live-symlinked RO mount, which needs single-writer orchestrator-side
 # serialization because xAI's refresh token is single-use — see
-# roboco.llm.providers.gemini's module docstring). The host's copy is never
+# robofleet.llm.providers.gemini's module docstring). The host's copy is never
 # touched.
 AUTH_STAGING_DIR="/home/agent/.gemini-auth-ro"
 if [ -d "$AUTH_STAGING_DIR" ]; then
@@ -44,13 +44,13 @@ fi
 # their workspace-clone cwd, whose own roboco/ dir would shadow it on the
 # sys.path front (the ModuleNotFound lesson). The render reads
 # ROBOCO_MCP_CONFIG + ROBOCO_AGENT_ID and writes the config files.
-( cd /app && python -m roboco.llm.providers.gemini_cli_config )
+( cd /app && python -m robofleet.llm.providers.gemini_cli_config )
 
 # Prompt-injection guard (parity with the Claude UserPromptSubmit hook / the
 # grok path): the task prompt is DATA, not instructions — refuse a poisoned
 # one before the model sees it. Same patterns as
 # docker/scripts/user-prompt-hook.sh; run from /app too.
-if ! ( cd /app && python -m roboco.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
+if ! ( cd /app && python -m robofleet.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
   echo "Refusing to run: task prompt matched a prompt-injection pattern." >&2
   exit 1
 fi
@@ -101,7 +101,7 @@ set -e
 # the run. Run from /app for the same module-resolution reason as the render
 # above.
 ( cd /app && ROBOCO_GEMINI_RUN_LOG="$RUN_LOG" \
-    python -m roboco.llm.providers.gemini_cli_usage ) || true
+    python -m robofleet.llm.providers.gemini_cli_usage ) || true
 
 # Exit-code classification. 41 (auth) is the CLI's own dedicated exit code and
 # passes through unchanged. A quota/rate-limit error has NO dedicated CLI exit
@@ -112,7 +112,7 @@ set -e
 # instead of the dispatcher respawning the same task every tick.
 classified_rc=$(cd /app && ROBOCO_GEMINI_RUN_LOG="$RUN_LOG" \
     ROBOCO_GEMINI_CLI_EXIT_CODE="$run_rc" \
-    python -m roboco.llm.providers.gemini_cli_usage --classify-exit)
+    python -m robofleet.llm.providers.gemini_cli_usage --classify-exit)
 if [ "$classified_rc" != "$run_rc" ]; then
   echo "[gemini] exit $run_rc reclassified to $classified_rc (quota/rate-limit" \
     "detected in the run output) — the orchestrator parks the provider; the" \

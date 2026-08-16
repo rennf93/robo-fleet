@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.agent_sdk.intake_driver import (
+from robofleet.agent_sdk.intake_driver import (
     _INTAKE_BASE_TOOLS,
     IntakeDriver,
     SdkIntakeSession,

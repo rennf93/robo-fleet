@@ -21,8 +21,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.models.base import StalledReason
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.models.base import StalledReason
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _new_orchestrator() -> AgentOrchestrator:
@@ -67,13 +67,15 @@ async def test_breaker_trip_records_durable_stalled_marker() -> None:
     task_service.mark_stalled = AsyncMock()
 
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=_quiet_audit()),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.audit.get_audit_service", return_value=_quiet_audit()
+        ),
+        patch(
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
-        patch("roboco.db.base.get_db_context", _fake_db_context),
-        patch("roboco.services.task.TaskService", return_value=task_service),
+        patch("robofleet.db.base.get_db_context", _fake_db_context),
+        patch("robofleet.services.task.TaskService", return_value=task_service),
     ):
         await _trip(orch, "be-pm", task)
 
@@ -92,9 +94,11 @@ async def test_genuine_progress_clears_stalled_marker() -> None:
     task_service.clear_stalled_marker = AsyncMock()
 
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=_quiet_audit()),
-        patch("roboco.db.base.get_db_context", _fake_db_context),
-        patch("roboco.services.task.TaskService", return_value=task_service),
+        patch(
+            "robofleet.services.audit.get_audit_service", return_value=_quiet_audit()
+        ),
+        patch("robofleet.db.base.get_db_context", _fake_db_context),
+        patch("robofleet.services.task.TaskService", return_value=task_service),
     ):
         # First tick just seeds the tracker (no prior status to compare).
         await orch._pm_respawn_should_gate(
@@ -120,9 +124,11 @@ async def test_revisited_status_does_not_clear_stalled_marker() -> None:
     task_service.clear_stalled_marker = AsyncMock()
 
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=_quiet_audit()),
-        patch("roboco.db.base.get_db_context", _fake_db_context),
-        patch("roboco.services.task.TaskService", return_value=task_service),
+        patch(
+            "robofleet.services.audit.get_audit_service", return_value=_quiet_audit()
+        ),
+        patch("robofleet.db.base.get_db_context", _fake_db_context),
+        patch("robofleet.services.task.TaskService", return_value=task_service),
     ):
         await orch._pm_respawn_should_gate(
             "be-pm", {"id": task_id, "status": "blocked"}
@@ -154,13 +160,15 @@ async def test_retrip_after_cooldown_is_one_shot_not_double_counted() -> None:
     notifier.send_stuck_agent_notification = AsyncMock()
 
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=_quiet_audit()),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.audit.get_audit_service", return_value=_quiet_audit()
+        ),
+        patch(
+            "robofleet.services.notification.NotificationService",
             return_value=notifier,
         ),
-        patch("roboco.db.base.get_db_context", _fake_db_context),
-        patch("roboco.services.task.TaskService", return_value=task_service),
+        patch("robofleet.db.base.get_db_context", _fake_db_context),
+        patch("robofleet.services.task.TaskService", return_value=task_service),
     ):
         await _trip(orch, "be-dev-1", task)
         assert task_service.mark_stalled.await_count == 1

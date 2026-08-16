@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
-from roboco.api.schemas.tasks import TaskUpdate
+from robofleet.api.schemas.tasks import TaskUpdate
 
 
 def test_task_update_accepts_omitting_acceptance_criteria() -> None:

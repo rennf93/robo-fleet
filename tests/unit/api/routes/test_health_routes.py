@@ -10,7 +10,7 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.routes.health import router as health_router
+from robofleet.api.routes.health import router as health_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -38,11 +38,11 @@ async def test_readiness_check_all_healthy(health_client: AsyncClient) -> None:
     """When DB + Redis are healthy → status: ok (line 41-46)."""
     with (
         patch(
-            "roboco.api.routes.health.check_database",
+            "robofleet.api.routes.health.check_database",
             AsyncMock(return_value=("connected", True)),
         ),
         patch(
-            "roboco.api.routes.health.check_redis",
+            "robofleet.api.routes.health.check_redis",
             AsyncMock(return_value=("connected", True)),
         ),
     ):
@@ -59,11 +59,11 @@ async def test_readiness_check_degraded(health_client: AsyncClient) -> None:
     """When DB is down → status: degraded."""
     with (
         patch(
-            "roboco.api.routes.health.check_database",
+            "robofleet.api.routes.health.check_database",
             AsyncMock(return_value=("disconnected", False)),
         ),
         patch(
-            "roboco.api.routes.health.check_redis",
+            "robofleet.api.routes.health.check_redis",
             AsyncMock(return_value=("connected", True)),
         ),
     ):

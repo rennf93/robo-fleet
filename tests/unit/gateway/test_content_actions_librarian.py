@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.propose_playbook_drafts —
+"""robofleet.services.gateway.content_actions.propose_playbook_drafts —
 Auditor-gated Librarian playbook-mining authoring. Mirrors
 test_content_actions_sentinel.py for the validation truth table and the
 complete-at-propose asymmetry, and test_content_actions_coroner.py for the
@@ -11,10 +11,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.content import markers
-from roboco.models.base import TaskStatus
-from roboco.services.base import ConflictError
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import TaskStatus
+from robofleet.services.base import ConflictError
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 TWO = 2
 
@@ -73,7 +76,7 @@ def _no_existing_titles() -> Any:
     engine = MagicMock()
     engine.existing_playbook_titles_lower = AsyncMock(return_value=set())
     return patch(
-        "roboco.services.librarian_engine.get_librarian_engine",
+        "robofleet.services.librarian_engine.get_librarian_engine",
         return_value=engine,
     )
 
@@ -132,7 +135,7 @@ async def test_propose_playbook_drafts_accepts_three_drafts_shape(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("auditor").propose_playbook_drafts(
         agent_id=uuid4(), drafts=_valid_drafts(3)
     )
@@ -267,7 +270,7 @@ async def test_propose_playbook_drafts_no_open_cycle_is_invalid_state(
 ) -> None:
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("auditor").propose_playbook_drafts(
         agent_id=uuid4(), drafts=_valid_drafts(1)
     )
@@ -282,7 +285,7 @@ async def test_propose_playbook_drafts_ignores_cycle_assigned_to_another_agent(
     cycle_task = _FakeTask(assigned_to=other_agent)
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("auditor").propose_playbook_drafts(
         agent_id=uuid4(), drafts=_valid_drafts(1)
     )
@@ -300,7 +303,7 @@ async def test_propose_playbook_drafts_ignores_already_authored_cycle(
     )
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[authored])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     env = await _actions("auditor").propose_playbook_drafts(
         agent_id=agent_id, drafts=_valid_drafts(1)
     )
@@ -321,14 +324,14 @@ async def test_propose_playbook_drafts_rejects_title_duplicating_existing_playbo
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
 
     engine = MagicMock()
     engine.existing_playbook_titles_lower = AsyncMock(
         return_value={draft["title"].lower()}
     )
     with patch(
-        "roboco.services.librarian_engine.get_librarian_engine",
+        "robofleet.services.librarian_engine.get_librarian_engine",
         return_value=engine,
     ):
         env = await _actions("auditor").propose_playbook_drafts(
@@ -351,7 +354,7 @@ async def test_propose_playbook_drafts_creates_playbooks_and_completes_task(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("auditor")
     actions.task.session.flush = AsyncMock()
 
@@ -364,7 +367,7 @@ async def test_propose_playbook_drafts_creates_playbooks_and_completes_task(
     with (
         _no_existing_titles(),
         patch(
-            "roboco.services.playbook.get_playbook_service",
+            "robofleet.services.playbook.get_playbook_service",
             return_value=playbook_svc,
         ),
     ):
@@ -399,7 +402,7 @@ async def test_propose_playbook_drafts_calls_playbook_service_draft_directly(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("auditor")
     actions.task.session.flush = AsyncMock()
 
@@ -411,7 +414,7 @@ async def test_propose_playbook_drafts_calls_playbook_service_draft_directly(
     with (
         _no_existing_titles(),
         patch(
-            "roboco.services.playbook.get_playbook_service",
+            "robofleet.services.playbook.get_playbook_service",
             return_value=playbook_svc,
         ) as get_playbook_svc,
     ):
@@ -441,7 +444,7 @@ async def test_propose_playbook_drafts_conflict_error_is_clean_rejection(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("auditor")
     actions.task.session.flush = AsyncMock()
 
@@ -453,7 +456,7 @@ async def test_propose_playbook_drafts_conflict_error_is_clean_rejection(
     with (
         _no_existing_titles(),
         patch(
-            "roboco.services.playbook.get_playbook_service",
+            "robofleet.services.playbook.get_playbook_service",
             return_value=playbook_svc,
         ),
     ):
@@ -473,7 +476,7 @@ async def test_propose_playbook_drafts_sends_telegram_push_once(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     notify = AsyncMock()
     actions = _actions("auditor", notification_delivery=notify)
     actions.task.session.flush = AsyncMock()
@@ -486,7 +489,7 @@ async def test_propose_playbook_drafts_sends_telegram_push_once(
     with (
         _no_existing_titles(),
         patch(
-            "roboco.services.playbook.get_playbook_service",
+            "robofleet.services.playbook.get_playbook_service",
             return_value=playbook_svc,
         ),
     ):
@@ -510,7 +513,7 @@ async def test_propose_playbook_drafts_survives_telegram_push_failure(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     notify = MagicMock()
     notify.notify_ceo_of_librarian_drafts = AsyncMock(side_effect=RuntimeError("boom"))
     actions = _actions("auditor", notification_delivery=notify)
@@ -524,7 +527,7 @@ async def test_propose_playbook_drafts_survives_telegram_push_failure(
     with (
         _no_existing_titles(),
         patch(
-            "roboco.services.playbook.get_playbook_service",
+            "robofleet.services.playbook.get_playbook_service",
             return_value=playbook_svc,
         ),
     ):
@@ -544,7 +547,7 @@ async def test_propose_playbook_drafts_no_notification_delivery_is_a_no_op(
     cycle_task = _FakeTask(assigned_to=agent_id)
     task_svc = MagicMock()
     task_svc.list_open_librarian_cycles = AsyncMock(return_value=[cycle_task])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _s: task_svc)
+    monkeypatch.setattr("robofleet.services.task.get_task_service", lambda _s: task_svc)
     actions = _actions("auditor", notification_delivery=None)
     actions.task.session.flush = AsyncMock()
 
@@ -556,7 +559,7 @@ async def test_propose_playbook_drafts_no_notification_delivery_is_a_no_op(
     with (
         _no_existing_titles(),
         patch(
-            "roboco.services.playbook.get_playbook_service",
+            "robofleet.services.playbook.get_playbook_service",
             return_value=playbook_svc,
         ),
     ):

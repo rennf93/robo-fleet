@@ -20,9 +20,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.exceptions import GitTimeoutError
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.config import settings
+from robofleet.exceptions import GitTimeoutError
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 def _deps_for_evidence(

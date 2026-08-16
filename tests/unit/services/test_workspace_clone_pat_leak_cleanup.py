@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
-from roboco.services.workspace import WorkspaceError, WorkspaceService
+from robofleet.services.workspace import WorkspaceError, WorkspaceService
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -67,7 +67,7 @@ async def test_configure_git_failure_rmtrees_leaked_workspace(tmp_path: Path) ->
 
     with (
         patch(
-            "roboco.services.workspace.subprocess.run",
+            "robofleet.services.workspace.subprocess.run",
             side_effect=_leak_side_effect(workspace, token),
         ),
         pytest.raises(WorkspaceError),
@@ -99,7 +99,7 @@ async def test_clone_timeout_rmtrees_partial_workspace(tmp_path: Path) -> None:
         raise subprocess.TimeoutExpired(cmd=argv, timeout=1)
 
     with (
-        patch("roboco.services.workspace.subprocess.run", side_effect=_impl),
+        patch("robofleet.services.workspace.subprocess.run", side_effect=_impl),
         pytest.raises(WorkspaceError),
     ):
         await svc._clone_repo(
@@ -132,7 +132,7 @@ async def test_clone_argv_carries_token_via_extraheader_not_url(tmp_path: Path) 
             cfg.write_text('[remote "origin"]\n\turl = https://github.com/o/r\n')
         return _completed(argv)
 
-    with patch("roboco.services.workspace.subprocess.run", side_effect=_impl):
+    with patch("robofleet.services.workspace.subprocess.run", side_effect=_impl):
         await svc._clone_repo(
             workspace,
             git_url="https://github.com/o/r",

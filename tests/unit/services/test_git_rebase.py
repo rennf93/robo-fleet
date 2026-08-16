@@ -39,13 +39,13 @@ import pydantic
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.git import router as git_router
-from roboco.api.schemas.git import GitRebaseRequest
-from roboco.models.base import AgentRole
-from roboco.models.permissions import AgentContext
-from roboco.services.base import ValidationError
-from roboco.services.git import GitService
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.git import router as git_router
+from robofleet.api.schemas.git import GitRebaseRequest
+from robofleet.models.base import AgentRole
+from robofleet.models.permissions import AgentContext
+from robofleet.services.base import ValidationError
+from robofleet.services.git import GitService
 
 _HTTP_200 = 200
 _HTTP_403 = 403
@@ -398,7 +398,7 @@ async def test_rebase_raises_for_project_declared_protected_target_branch() -> N
     project = MagicMock(protected_branches=["release"])
     with (
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
         pytest.raises(ValidationError, match="REBASE_FORBIDDEN"),
@@ -420,7 +420,7 @@ async def test_rebase_allows_target_not_in_projects_protected_list(
     svc = _git_service()
     project = MagicMock(protected_branches=["release"])
     with patch(
-        "roboco.services.git.get_project_service",
+        "robofleet.services.git.get_project_service",
         return_value=_project_service_returning(project),
     ):
         conflict, files = await svc.rebase(
@@ -443,7 +443,7 @@ async def test_rebase_empty_protected_branches_matches_hardcoded_only_behavior(
     svc = _git_service()
     project = MagicMock(protected_branches=[])
     with patch(
-        "roboco.services.git.get_project_service",
+        "robofleet.services.git.get_project_service",
         return_value=_project_service_returning(project),
     ):
         conflict, files = await svc.rebase(
@@ -464,7 +464,7 @@ async def test_rebase_no_project_slug_matches_hardcoded_only_behavior(
         GitService, "get_current_branch", AsyncMock(return_value="feature/x")
     )
     svc = _git_service()
-    with patch("roboco.services.git.get_project_service") as get_project_service:
+    with patch("robofleet.services.git.get_project_service") as get_project_service:
         conflict, files = await svc.rebase(_WORKSPACE, "feature/backend/some-task")
     assert (conflict, files) == (False, [])
     get_project_service.assert_not_called()
@@ -480,7 +480,7 @@ async def test_rebase_matches_stripped_target_case_sensitively() -> None:
     svc = _git_service()
     with (
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
         pytest.raises(ValidationError, match="REBASE_FORBIDDEN"),
@@ -501,7 +501,7 @@ async def test_rebase_union_never_collapses_hardcoded_floor_to_project_list_only
     svc = _git_service()
     with (
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
         pytest.raises(ValidationError, match="REBASE_FORBIDDEN"),
@@ -511,7 +511,7 @@ async def test_rebase_union_never_collapses_hardcoded_floor_to_project_list_only
     svc2 = _git_service()
     with (
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
         pytest.raises(ValidationError, match="REBASE_FORBIDDEN"),
@@ -550,7 +550,7 @@ def _patch_sync_plumbing(
     # _protected_branches_for (called from the new HEAD guard) resolves the
     # project independently via get_project_service, not _project_for_task.
     monkeypatch.setattr(
-        "roboco.services.git.get_project_service",
+        "robofleet.services.git.get_project_service",
         lambda _session: _project_service_returning(project),
     )
     monkeypatch.setattr(
@@ -826,9 +826,9 @@ async def test_rebase_endpoint_pm_gets_200() -> None:
 
     with (
         patch(
-            "roboco.api.utils.git.get_project_service", return_value=mock_project_svc
+            "robofleet.api.utils.git.get_project_service", return_value=mock_project_svc
         ),
-        patch("roboco.api.routes.git.get_git_service", return_value=mock_git_svc),
+        patch("robofleet.api.routes.git.get_git_service", return_value=mock_git_svc),
     ):
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(

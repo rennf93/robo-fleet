@@ -1,4 +1,4 @@
-"""roboco.services.gateway.content_actions.nothing_to_propose — the generic
+"""robofleet.services.gateway.content_actions.nothing_to_propose — the generic
 "this cycle found nothing worth proposing" exit for any Board Program
 exploration task. Mirrors test_content_actions_barfly.py's mock-based shape;
 registry-driven (not a hardcoded role set), so the role gate is exercised
@@ -11,8 +11,11 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import TaskStatus
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
+from robofleet.models.base import TaskStatus
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
 
 
 class _FakeTask:
@@ -61,7 +64,7 @@ def _patch_board_program_engine(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     engine = MagicMock()
     engine.record_nothing_to_propose = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.board_programs.get_board_program_engine", lambda _s: engine
+        "robofleet.services.board_programs.get_board_program_engine", lambda _s: engine
     )
     return engine
 
@@ -299,7 +302,7 @@ async def test_nothing_to_propose_learn_record_failure_does_not_fail_verb(
     engine = MagicMock()
     engine.record_nothing_to_propose = AsyncMock(side_effect=RuntimeError("db down"))
     monkeypatch.setattr(
-        "roboco.services.board_programs.get_board_program_engine", lambda _s: engine
+        "robofleet.services.board_programs.get_board_program_engine", lambda _s: engine
     )
 
     actions.task.session.flush = AsyncMock()

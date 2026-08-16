@@ -14,8 +14,8 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.models.runtime import AgentInstance
-from roboco.runtime.orchestrator import (
+from robofleet.models.runtime import AgentInstance
+from robofleet.runtime.orchestrator import (
     _GROK_AUTH_EXIT_CODE,
     _GROK_RATE_LIMIT_EXIT_CODE,
     _GROK_RATE_LIMIT_RETRY_AFTER_S,

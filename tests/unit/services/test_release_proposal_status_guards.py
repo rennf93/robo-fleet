@@ -18,18 +18,24 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import AgentRole, AgentStatus, TaskNature, TaskStatus, TaskType
-from roboco.models.base import Team as T
-from roboco.services.release_executor import ReleaseResult
-from roboco.services.release_proposal import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import (
+    AgentRole,
+    AgentStatus,
+    TaskNature,
+    TaskStatus,
+    TaskType,
+)
+from robofleet.models.base import Team as T
+from robofleet.services.release_executor import ReleaseResult
+from robofleet.services.release_proposal import (
     ReleaseProposalService,
     TaskAlreadyCompletedError,
 )
-from roboco.services.release_readiness import ReleaseReadinessReport, report_to_dict
-from roboco.services.task import RELEASE_MANAGER_SOURCE, TaskService
+from robofleet.services.release_readiness import ReleaseReadinessReport, report_to_dict
+from robofleet.services.task import RELEASE_MANAGER_SOURCE, TaskService
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -125,7 +131,7 @@ async def test_approve_refuses_already_rejected_proposal(
     fake_executor.execute = AsyncMock()
 
     with patch(
-        "roboco.services.release_proposal.get_release_executor",
+        "robofleet.services.release_proposal.get_release_executor",
         AsyncMock(return_value=fake_executor),
     ):
         result = await ReleaseProposalService(db_session).approve(cast("UUID", task.id))
@@ -151,7 +157,7 @@ async def test_approve_refuses_already_published_proposal(
     fake_executor.execute = AsyncMock()
 
     with patch(
-        "roboco.services.release_proposal.get_release_executor",
+        "robofleet.services.release_proposal.get_release_executor",
         AsyncMock(return_value=fake_executor),
     ):
         result = await ReleaseProposalService(db_session).approve(cast("UUID", task.id))
@@ -296,7 +302,7 @@ async def test_approve_commits_completed_under_lock(
 
     with (
         patch(
-            "roboco.services.release_proposal.get_release_executor",
+            "robofleet.services.release_proposal.get_release_executor",
             AsyncMock(return_value=fake_executor),
         ),
         patch.object(

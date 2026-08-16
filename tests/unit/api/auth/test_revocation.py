@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.api.auth import revocation
+from robofleet.api.auth import revocation
 
 _REVOKE_TTL = 60
 

@@ -1,4 +1,4 @@
-"""Tests for the ADK gateway tool-shim (roboco.agent.gateway_shim)."""
+"""Tests for the ADK gateway tool-shim (robofleet.agent.gateway_shim)."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ async def test_flow_tool_posts_to_role_segment(
         return httpx.Response(200, json={"status": "ok", "next": "i_will_work_on"})
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-    from roboco.agent.gateway_shim import call_verb
+    from robofleet.agent.gateway_shim import call_verb
 
     env = await call_verb("give_me_work", {})
     assert captured["url"] == "http://orch:8000/api/v1/flow/developer/give_me_work"
@@ -58,7 +58,7 @@ async def test_board_role_uses_board_segment(
         return httpx.Response(200, json={"status": "ok"})
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-    from roboco.agent.gateway_shim import call_verb
+    from robofleet.agent.gateway_shim import call_verb
 
     await call_verb("triage", {})
     assert captured["url"] == "http://orch:8000/api/v1/flow/board/triage"
@@ -84,7 +84,7 @@ async def test_intent_to_public_remap_pass_review(
         return httpx.Response(200, json={"status": "ok"})
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-    from roboco.agent.gateway_shim import call_verb
+    from robofleet.agent.gateway_shim import call_verb
 
     await call_verb("pass_review", {"task_id": "t1"})
     await call_verb("fail_review", {"task_id": "t1"})
@@ -113,7 +113,7 @@ async def test_unsigned_token_omitted(
         return httpx.Response(200, json={"status": "ok"})
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-    from roboco.agent.gateway_shim import call_verb
+    from robofleet.agent.gateway_shim import call_verb
 
     await call_verb("give_me_work", {})
     assert "X-Agent-Token" not in captured["headers"]
@@ -135,7 +135,7 @@ async def test_call_do_posts_to_do_route(
         return httpx.Response(200, json={"status": "ok"})
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-    from roboco.agent.gateway_shim import call_do
+    from robofleet.agent.gateway_shim import call_do
 
     await call_do("commit", {"message": "m"})
     assert captured["url"] == "http://orch:8000/api/v1/do/commit"
@@ -152,7 +152,7 @@ def test_build_gateway_tools_wraps_manifest(
     monkeypatch.setenv("ROBOCO_AGENT_ID", "66666666-6666-6666-6666-666666666666")
     monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
-    from roboco.agent.gateway_shim import build_gateway_tools
+    from robofleet.agent.gateway_shim import build_gateway_tools
 
     tools = build_gateway_tools()
     assert len(tools) == 2

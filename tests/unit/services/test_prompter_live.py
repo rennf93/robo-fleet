@@ -8,8 +8,8 @@ import time
 
 import httpx
 import pytest
-import roboco.services.prompter_live as pl
-from roboco.services.prompter_live import (
+import robofleet.services.prompter_live as pl
+from robofleet.services.prompter_live import (
     PrompterLiveRegistry,
     get_live_registry,
 )

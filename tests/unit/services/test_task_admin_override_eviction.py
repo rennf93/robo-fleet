@@ -13,8 +13,8 @@ longer legitimately held. The same gap applied to
 
 The fix moved the eviction machinery (``_evict_stranded_agent`` /
 ``_schedule_stranded_eviction``) from the API route layer
-(``roboco/api/utils/tasks.py``) into ``TaskService.admin_set_status`` itself
-(``roboco/services/task.py``) -- the chokepoint every caller of a status
+(``robofleet/api/utils/tasks.py``) into ``TaskService.admin_set_status`` itself
+(``robofleet/services/task.py``) -- the chokepoint every caller of a status
 override routes through -- and made the trigger the fact that a live claim
 actually got cleared, not the ``force`` flag. Every caller (the PATCH route,
 the Secretary's override action) gets the eviction for free.
@@ -33,9 +33,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.api.deps import clear_orchestrator, set_orchestrator
-from roboco.models.base import TaskStatus
-from roboco.services.task import TaskService, _evict_stranded_agent
+from robofleet.api.deps import clear_orchestrator, set_orchestrator
+from robofleet.models.base import TaskStatus
+from robofleet.services.task import TaskService, _evict_stranded_agent
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -85,12 +85,12 @@ class _FakeSessionCM:
 
 def _patch_session_factory(fake_session: Any = None) -> Any:
     """`_evict_stranded_agent` opens a FRESH session via
-    `roboco.db.base.get_session_factory` (a local import), so patch it at
+    `robofleet.db.base.get_session_factory` (a local import), so patch it at
     its source module so the local re-import picks up the fake."""
     session_factory = MagicMock(
         return_value=_FakeSessionCM(fake_session or MagicMock())
     )
-    return patch("roboco.db.base.get_session_factory", return_value=session_factory)
+    return patch("robofleet.db.base.get_session_factory", return_value=session_factory)
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +119,7 @@ async def test_evicts_live_agent_holding_the_overridden_task() -> None:
     with (
         _patch_session_factory(),
         patch(
-            "roboco.services.agent.get_agent_service",
+            "robofleet.services.agent.get_agent_service",
             return_value=fake_agent_service,
         ),
     ):
@@ -141,7 +141,7 @@ async def test_noops_silently_when_orchestrator_absent() -> None:
     task_id = uuid4()
     prior_holder = uuid4()
 
-    with patch("roboco.services.agent.get_agent_service") as agent_service_fn:
+    with patch("robofleet.services.agent.get_agent_service") as agent_service_fn:
         await _evict_stranded_agent(task_id, prior_holder)
         agent_service_fn.assert_not_called()
 
@@ -170,7 +170,7 @@ async def test_noops_when_live_instance_is_on_a_different_task() -> None:
     with (
         _patch_session_factory(),
         patch(
-            "roboco.services.agent.get_agent_service",
+            "robofleet.services.agent.get_agent_service",
             return_value=fake_agent_service,
         ),
     ):
@@ -196,7 +196,7 @@ async def test_eviction_failure_is_swallowed() -> None:
     with (
         _patch_session_factory(),
         patch(
-            "roboco.services.agent.get_agent_service",
+            "robofleet.services.agent.get_agent_service",
             return_value=fake_agent_service,
         ),
     ):
@@ -228,7 +228,9 @@ async def test_admin_set_status_schedules_eviction_without_force() -> None:
     svc = TaskService(session)
     _bind(svc, "get", AsyncMock(return_value=task))
 
-    with patch("roboco.services.notification_delivery.defer_after_commit") as deferred:
+    with patch(
+        "robofleet.services.notification_delivery.defer_after_commit"
+    ) as deferred:
         out = await svc.admin_set_status(task.id, TaskStatus.NEEDS_REVISION)
 
     assert out is task
@@ -239,7 +241,7 @@ async def test_admin_set_status_schedules_eviction_without_force() -> None:
 
     # The scheduled work targets the PRE-clear claimant.
     with patch(
-        "roboco.services.task._evict_stranded_agent", new=AsyncMock()
+        "robofleet.services.task._evict_stranded_agent", new=AsyncMock()
     ) as evict_mock:
         await deferred_work()
     evict_mock.assert_awaited_once_with(task.id, dev)
@@ -261,7 +263,9 @@ async def test_admin_set_status_schedules_eviction_with_force_too() -> None:
     svc = TaskService(session)
     _bind(svc, "get", AsyncMock(return_value=task))
 
-    with patch("roboco.services.notification_delivery.defer_after_commit") as deferred:
+    with patch(
+        "robofleet.services.notification_delivery.defer_after_commit"
+    ) as deferred:
         await svc.admin_set_status(
             task.id, TaskStatus.AWAITING_QA, actor_id=dev, force=True
         )
@@ -282,7 +286,9 @@ async def test_admin_set_status_no_live_claimant_schedules_no_eviction() -> None
     svc = TaskService(session)
     _bind(svc, "get", AsyncMock(return_value=task))
 
-    with patch("roboco.services.notification_delivery.defer_after_commit") as deferred:
+    with patch(
+        "robofleet.services.notification_delivery.defer_after_commit"
+    ) as deferred:
         await svc.admin_set_status(task.id, TaskStatus.NEEDS_REVISION)
 
     deferred.assert_not_called()
@@ -304,7 +310,9 @@ async def test_admin_set_status_blocked_target_schedules_no_eviction() -> None:
     svc = TaskService(session)
     _bind(svc, "get", AsyncMock(return_value=task))
 
-    with patch("roboco.services.notification_delivery.defer_after_commit") as deferred:
+    with patch(
+        "robofleet.services.notification_delivery.defer_after_commit"
+    ) as deferred:
         await svc.admin_set_status(task.id, TaskStatus.BLOCKED)
 
     deferred.assert_not_called()
@@ -332,7 +340,9 @@ async def test_admin_set_status_ceo_approval_target_schedules_eviction() -> None
     svc = TaskService(session)
     _bind(svc, "get", AsyncMock(return_value=task))
 
-    with patch("roboco.services.notification_delivery.defer_after_commit") as deferred:
+    with patch(
+        "robofleet.services.notification_delivery.defer_after_commit"
+    ) as deferred:
         await svc.admin_set_status(task.id, TaskStatus.AWAITING_CEO_APPROVAL)
 
     assert task.active_claimant_id is None

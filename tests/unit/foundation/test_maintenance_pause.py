@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 import pytest
-from roboco.foundation.policy.maintenance_pause import (
+from robofleet.foundation.policy.maintenance_pause import (
     MAX_PAUSE_HOURS,
     PauseScope,
     PauseState,

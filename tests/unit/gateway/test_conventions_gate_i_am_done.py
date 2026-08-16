@@ -11,8 +11,8 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.config import settings
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.config import settings
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 _BLOCK_RESULT: dict[str, Any] = {
     "findings": [

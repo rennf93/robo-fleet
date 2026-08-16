@@ -17,8 +17,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-from roboco.services.project import ProjectService
-from roboco.services.release_executor import (
+from robofleet.services.project import ProjectService
+from robofleet.services.release_executor import (
     _CLONE_TIMEOUT_SECONDS,
     _GIT_OP_TIMEOUT_SECONDS,
     _PUBLISH_TIMEOUT_SECONDS,
@@ -159,11 +159,11 @@ async def test_git_op_times_out_and_kills_proc(monkeypatch: pytest.MonkeyPatch) 
     """A hung git op returns rc 124 (fail-closed) and kills the child proc — it
     must not hang the release loop."""
     monkeypatch.setattr(
-        "roboco.services.release_executor._GIT_OP_TIMEOUT_SECONDS", 0.05
+        "robofleet.services.release_executor._GIT_OP_TIMEOUT_SECONDS", 0.05
     )
     proc = _HangingProc()
     monkeypatch.setattr(
-        "roboco.services.release_executor.asyncio.create_subprocess_exec",
+        "robofleet.services.release_executor.asyncio.create_subprocess_exec",
         _exec_returning(proc),
     )
     ops = _ops()
@@ -178,11 +178,11 @@ async def test_git_op_timeout_reaps_the_zombie(monkeypatch: pytest.MonkeyPatch) 
     """A timed-out child is ``kill()`` + ``wait()`` — reaped, not left as a
     zombie that leaks the PID/PGID and pipe FDs over a long release session."""
     monkeypatch.setattr(
-        "roboco.services.release_executor._GIT_OP_TIMEOUT_SECONDS", 0.05
+        "robofleet.services.release_executor._GIT_OP_TIMEOUT_SECONDS", 0.05
     )
     proc = _HangingProc()
     monkeypatch.setattr(
-        "roboco.services.release_executor.asyncio.create_subprocess_exec",
+        "robofleet.services.release_executor.asyncio.create_subprocess_exec",
         _exec_returning(proc),
     )
     ops = _ops()
@@ -199,12 +199,12 @@ async def test_run_gate_fails_closed_on_absent_ci(
     (fail-closed) with a detail naming the branch and sha."""
     proc = _DoneProc(0, b"deadbeefcafe\n")
     monkeypatch.setattr(
-        "roboco.services.release_executor.asyncio.create_subprocess_exec",
+        "robofleet.services.release_executor.asyncio.create_subprocess_exec",
         _exec_returning(proc),
     )
     fake_git = MagicMock()
     fake_git.get_latest_ci_conclusion = AsyncMock(return_value=None)
-    monkeypatch.setattr("roboco.services.git.get_git_service", lambda _s: fake_git)
+    monkeypatch.setattr("robofleet.services.git.get_git_service", lambda _s: fake_git)
     ops = _ops()
     passed, detail = await asyncio.wait_for(ops.run_gate(), timeout=2.0)
     assert passed is False
@@ -323,10 +323,12 @@ async def test_clone_run_times_out_and_kills_proc(
 ) -> None:
     """A hung ``git clone`` (the release-clone prep) returns rc 124 and kills
     the child — the caller raises, fail-closed, instead of hanging."""
-    monkeypatch.setattr("roboco.services.release_executor._CLONE_TIMEOUT_SECONDS", 0.05)
+    monkeypatch.setattr(
+        "robofleet.services.release_executor._CLONE_TIMEOUT_SECONDS", 0.05
+    )
     proc = _HangingProc()
     monkeypatch.setattr(
-        "roboco.services.release_executor.asyncio.create_subprocess_exec",
+        "robofleet.services.release_executor.asyncio.create_subprocess_exec",
         _exec_returning(proc),
     )
     rc, out = await asyncio.wait_for(
@@ -357,7 +359,7 @@ async def test_await_proc_kills_child_on_outer_cancellation() -> None:
         return proc
 
     with patch(
-        "roboco.services.release_executor.asyncio.create_subprocess_exec",
+        "robofleet.services.release_executor.asyncio.create_subprocess_exec",
         _capturing_create,
     ):
         task = asyncio.ensure_future(_run(["sleep", "30"]))
@@ -387,7 +389,7 @@ async def test_git_op_green_path_returns_real_rc(
     returns its real rc + decoded stdout, and is NOT killed."""
     proc = _DoneProc(0, b"deadbeef\n")
     monkeypatch.setattr(
-        "roboco.services.release_executor.asyncio.create_subprocess_exec",
+        "robofleet.services.release_executor.asyncio.create_subprocess_exec",
         _exec_returning(proc),
     )
     ops = _ops()
@@ -404,14 +406,14 @@ async def test_run_gate_green_ci_returns_true(
     """A green CI verdict on the head rung passes the gate."""
     proc = _DoneProc(0, b"deadbeefcafe\n")
     monkeypatch.setattr(
-        "roboco.services.release_executor.asyncio.create_subprocess_exec",
+        "robofleet.services.release_executor.asyncio.create_subprocess_exec",
         _exec_returning(proc),
     )
     fake_git = MagicMock()
     fake_git.get_latest_ci_conclusion = AsyncMock(
         return_value={"conclusion": "success", "head_sha": "deadbeefcafe"}
     )
-    monkeypatch.setattr("roboco.services.git.get_git_service", lambda _s: fake_git)
+    monkeypatch.setattr("robofleet.services.git.get_git_service", lambda _s: fake_git)
     ops = _ops()
     passed, detail = await asyncio.wait_for(ops.run_gate(), timeout=2.0)
     assert passed is True

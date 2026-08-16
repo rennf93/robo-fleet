@@ -20,8 +20,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.models.base import TaskStatus, TaskType, Team
-from roboco.services.task import TaskService, _is_cell_pm_owned_task
+from robofleet.models.base import TaskStatus, TaskType, Team
+from robofleet.services.task import TaskService, _is_cell_pm_owned_task
 
 
 def _bind(svc: TaskService, name: str, value: object) -> None:

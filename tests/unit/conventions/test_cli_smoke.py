@@ -31,7 +31,7 @@ def test_cli_module_entrypoint_emits_jsonl(tmp_path: Path) -> None:
         [
             sys.executable,
             "-m",
-            "roboco.conventions",
+            "robofleet.conventions",
             "check",
             "--root",
             str(tmp_path),

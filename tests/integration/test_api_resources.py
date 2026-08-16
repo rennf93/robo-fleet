@@ -9,15 +9,15 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from roboco.api.utils.resources import (
+from robofleet.api.utils.resources import (
     get_by_field_or_404,
     get_or_404,
     require_membership,
     require_ownership,
     require_recipient,
 )
-from roboco.db.tables import AgentTable
-from roboco.models import AgentRole, AgentStatus, Team
+from robofleet.db.tables import AgentTable
+from robofleet.models import AgentRole, AgentStatus, Team
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

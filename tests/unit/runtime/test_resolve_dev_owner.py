@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _ASSIGNED = "11111111-1111-1111-1111-111111111111"
 _CLAIMED = "22222222-2222-2222-2222-222222222222"

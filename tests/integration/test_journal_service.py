@@ -12,21 +12,21 @@ from uuid import uuid4 as _u
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     JournalEntryTable,
     JournalTable,
     ProjectTable,
     TaskTable,
 )
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     JournalEntryType,
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.journal import (
+from robofleet.models.journal import (
     DecisionLogParams,
     GeneralEntryParams,
     JournalEntryCreate,
@@ -35,7 +35,7 @@ from roboco.models.journal import (
     StruggleEntryParams,
     TaskReflectionParams,
 )
-from roboco.services.journal import JournalService, drain_rag_index_tasks
+from robofleet.services.journal import JournalService, drain_rag_index_tasks
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError as _IE
 

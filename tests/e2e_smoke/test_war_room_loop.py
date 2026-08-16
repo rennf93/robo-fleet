@@ -18,7 +18,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from roboco.foundation import identity as _foundation
+from robofleet.foundation import identity as _foundation
 from tests.e2e_smoke.harness import ScriptedAgent, expect_ok
 
 if TYPE_CHECKING:
@@ -48,8 +48,8 @@ def _seed_system_hom_and_secretary(stack: E2EStack) -> tuple[Any, str]:
     never deleted), so an unscoped "count every board_war_room row" query
     would double-count across runs.
     """
-    from roboco.db.tables import AgentTable, ProjectTable
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable, ProjectTable
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     slug = f"e2e-war-room-{uuid4().hex[:8]}"
     project_id = uuid4()
@@ -111,9 +111,9 @@ def _arm(stack: E2EStack, project_slug: str) -> None:
     seeded project, and seed X credentials: ``WarRoomEngine``'s own creds
     gate would otherwise no-op every origination call, mirroring XEngine's
     release/spotlight guard."""
-    from roboco.config import settings as cfg
-    from roboco.db.tables import SystemSettingTable
-    from roboco.services.x_credentials import get_x_credentials_service
+    from robofleet.config import settings as cfg
+    from robofleet.db.tables import SystemSettingTable
+    from robofleet.services.x_credentials import get_x_credentials_service
 
     cfg.self_heal_project_slug = project_slug
 
@@ -135,7 +135,7 @@ def _run_now(stack: E2EStack) -> Any:
     """The CEO's "run now" seam — ``open_program_cycle`` does not check
     trigger kind, only ``run_due_programs`` (the cron loop) does, so this is
     the real EVENT-program run-now path."""
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> Any:
         task = await get_board_program_engine(session).open_program_cycle("war_room")
@@ -146,7 +146,7 @@ def _run_now(stack: E2EStack) -> Any:
 
 
 def _run_due_programs(stack: E2EStack) -> list[str]:
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> list[str]:
         return await get_board_program_engine(session).run_due_programs()
@@ -159,8 +159,8 @@ def _find_war_room_task(stack: E2EStack, project_id: Any) -> dict[str, Any]:
     """Scoped to ``project_id`` — see ``_seed_system_hom_and_secretary``'s
     docstring for why an unscoped query double-counts against the shared
     test Postgres."""
-    from roboco.db.tables import TaskTable
-    from roboco.services.task import WAR_ROOM_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.services.task import WAR_ROOM_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -197,9 +197,9 @@ def _find_war_room_task(stack: E2EStack, project_id: Any) -> dict[str, Any]:
 
 def _campaign_drafts(stack: E2EStack, project_id: Any) -> list[dict[str, Any]]:
     """Scoped to ``project_id`` for the same reason as ``_find_war_room_task``."""
-    from roboco.db.tables import TaskTable
-    from roboco.foundation.policy.content import markers
-    from roboco.services.task import X_CAMPAIGN_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.foundation.policy.content import markers
+    from robofleet.services.task import X_CAMPAIGN_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> list[dict[str, Any]]:
@@ -254,7 +254,7 @@ def test_war_room_loop_run_now_then_propose_campaign(e2e_stack: E2EStack) -> Non
     assert row["project_id"] is not None  # resolves against the RoboCo project
 
     # The dispatcher's own dev-work skip recognizes this exact task shape.
-    from roboco.runtime.orchestrator import _is_non_dev_dispatch_source
+    from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
 
     assert _is_non_dev_dispatch_source({"source": row["source"]}) is True
 
@@ -273,7 +273,7 @@ def test_war_room_loop_run_now_then_propose_campaign(e2e_stack: E2EStack) -> Non
         "head-marketing",
         "head_marketing",
     )
-    do_module = hom._module("roboco.mcp.do_server")
+    do_module = hom._module("robofleet.mcp.do_server")
     assert "propose_campaign" in do_module._TOOLS, (
         "propose_campaign missing from do_server._TOOLS — the MCP server "
         "has no way to expose it to any role"

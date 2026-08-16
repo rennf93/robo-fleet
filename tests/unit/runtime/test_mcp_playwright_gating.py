@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 if TYPE_CHECKING:
     import pytest

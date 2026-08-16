@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from roboco.services.gateway.commit_validator import (
+from robofleet.services.gateway.commit_validator import (
     DEFAULT_MIN_CHARS,
     ValidationResult,
     validate_commit_message,

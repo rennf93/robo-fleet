@@ -12,15 +12,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import uuid4
 
-from roboco.foundation.identity import Role
-from roboco.foundation.policy.lifecycle import (
+from robofleet.foundation.identity import Role
+from robofleet.foundation.policy.lifecycle import (
     Context,
     Status,
     can_invoke_intent,
     intents_for_role,
     status_after,
 )
-from roboco.services.gateway.role_config import _CELL_PM_FLOW, _MAIN_PM_FLOW
+from robofleet.services.gateway.role_config import _CELL_PM_FLOW, _MAIN_PM_FLOW
 
 
 def test_request_changes_is_a_pm_flow_verb() -> None:

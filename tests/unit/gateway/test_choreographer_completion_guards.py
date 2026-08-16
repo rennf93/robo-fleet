@@ -2,7 +2,7 @@
 
 cell_pm_complete / main_pm_complete / submit_up must refuse to advance
 the parent past awaiting_pm_review when any subtask is still non-
-terminal. Pre-gateway location: roboco/services/task.py closure check.
+terminal. Pre-gateway location: robofleet/services/task.py closure check.
 
 These tests verify:
 1. The non-terminal-subtask refusal fires.
@@ -18,8 +18,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.base import UnauthorizedError
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.base import UnauthorizedError
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 def _make_deps(**overrides: Any) -> ChoreographerDeps:

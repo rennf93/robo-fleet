@@ -18,16 +18,16 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings as _roboco_settings
-from roboco.services.gateway.choreographer import (
+from robofleet.config import settings as _roboco_settings
+from robofleet.services.gateway.choreographer import (
     Choreographer,
     ChoreographerDeps,
 )
-from roboco.services.gateway.choreographer import _impl as _choreo_impl
+from robofleet.services.gateway.choreographer import _impl as _choreo_impl
 
 
 def _freeze_clock(monkeypatch: pytest.MonkeyPatch, at: datetime) -> None:
-    """Pin ``roboco.services.gateway.choreographer._impl.datetime.now()``.
+    """Pin ``robofleet.services.gateway.choreographer._impl.datetime.now()``.
 
     Used to make boundary assertions (decision age == window) precise —
     without freezing the clock, microsecond drift between the test's

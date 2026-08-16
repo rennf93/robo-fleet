@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from roboco.api.schemas.websocket import (
+from robofleet.api.schemas.websocket import (
     WSAgentStream,
     WSMessage,
     WSNotification,

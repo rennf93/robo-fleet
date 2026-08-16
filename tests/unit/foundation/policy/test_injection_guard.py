@@ -4,7 +4,7 @@ neutralize-instead-of-deny posture for engine-ingested external text."""
 from __future__ import annotations
 
 import pytest
-from roboco.foundation.policy.injection_guard import (
+from robofleet.foundation.policy.injection_guard import (
     detect_injection,
     screen_external_text,
 )

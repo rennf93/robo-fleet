@@ -13,14 +13,14 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentSpawnSessionTable,
     AgentTable,
     NotificationTable,
     ProjectTable,
     TaskTable,
 )
-from roboco.models.base import (
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -30,8 +30,8 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.models.metrics import TaskMetrics
-from roboco.services.notification_delivery import (
+from robofleet.models.metrics import TaskMetrics
+from robofleet.services.notification_delivery import (
     _format_completion_body,
     get_notification_delivery_service,
 )

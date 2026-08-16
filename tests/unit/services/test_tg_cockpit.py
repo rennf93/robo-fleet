@@ -14,26 +14,26 @@ from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.db.tables import AgentSpawnSessionTable, AgentTable, TaskTable
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import (
+from robofleet.config import settings
+from robofleet.db.tables import AgentSpawnSessionTable, AgentTable, TaskTable
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
     Team,
 )
-from roboco.models.base import TaskNature as TN
-from roboco.models.base import TaskStatus as TS
-from roboco.models.base import TaskType as TT
-from roboco.services.task import (
+from robofleet.models.base import TaskNature as TN
+from robofleet.models.base import TaskStatus as TS
+from robofleet.models.base import TaskType as TT
+from robofleet.services.task import (
     RELEASE_MANAGER_SOURCE,
     ROADMAP_SOURCE,
     VIDEO_POST_SOURCE,
     X_POST_SOURCE,
 )
-from roboco.services.tg_cockpit import get_tg_cockpit_service
+from robofleet.services.tg_cockpit import get_tg_cockpit_service
 
 if TYPE_CHECKING:
     from uuid import UUID

@@ -7,7 +7,7 @@ import tomllib
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
-from roboco.llm.providers import grok_cli_config as gc
+from robofleet.llm.providers import grok_cli_config as gc
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -18,7 +18,7 @@ _SAMPLE_MCP = {
     "mcpServers": {
         "roboco-flow": {
             "command": "uv",
-            "args": ["run", "--no-sync", "python", "-m", "roboco.mcp.flow_server"],
+            "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
             "env": {"ROBOCO_AGENT_ID": "be-dev-1", "ROBOCO_AGENT_TOKEN": "tok-123"},
         },
         "roboco-do": {"command": "uv", "args": ["run", "x"]},
@@ -183,9 +183,9 @@ def test_write_grok_fable_hooks_writes_honesty_nudge_when_enabled(
 ) -> None:
     hooks_dir = tmp_path / "hooks"
     with (
-        patch("roboco.config.settings.fable_mode_enabled", True),
+        patch("robofleet.config.settings.fable_mode_enabled", True),
         patch(
-            "roboco.llm.providers.grok_cli_config.FABLE_HONESTY_NUDGE_HOOK",
+            "robofleet.llm.providers.grok_cli_config.FABLE_HONESTY_NUDGE_HOOK",
             "/app/scripts/fable-honesty-nudge-hook.sh",
         ),
         patch("pathlib.Path.is_file", return_value=True),
@@ -198,7 +198,7 @@ def test_write_grok_fable_hooks_writes_honesty_nudge_when_enabled(
 
 def test_write_grok_fable_hooks_noop_when_disabled(tmp_path: Path) -> None:
     hooks_dir = tmp_path / "hooks"
-    with patch("roboco.config.settings.fable_mode_enabled", False):
+    with patch("robofleet.config.settings.fable_mode_enabled", False):
         result = gc.write_grok_fable_hooks(hooks_dir=hooks_dir)
     assert result is False
     assert not hooks_dir.exists()

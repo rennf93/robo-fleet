@@ -55,7 +55,7 @@ def _reset_lazy_db_holder() -> Iterator[None]:
     engine bound to the uvicorn thread's loop cannot be awaited away from it.
     """
     yield
-    from roboco.db import base as db_base
+    from robofleet.db import base as db_base
 
     db_base._DbHolder.engine = None
     db_base._DbHolder.session_factory = None
@@ -79,7 +79,7 @@ def _isolate_per_test_tables(e2e_stack: E2EStack) -> Iterator[None]:
     """
     yield
 
-    from roboco.db.base import Base
+    from robofleet.db.base import Base
     from sqlalchemy import text
     from tests.e2e_smoke.arcs import _COMPANY_CACHE
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from roboco.services.gateway.choreographer import Choreographer
+from robofleet.services.gateway.choreographer import Choreographer
 
 
 def _task(criteria: list[str]) -> SimpleNamespace:

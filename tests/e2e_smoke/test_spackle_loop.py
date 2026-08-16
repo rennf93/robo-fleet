@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from roboco.foundation import identity as _foundation
+from robofleet.foundation import identity as _foundation
 from tests.e2e_smoke.arcs import Company, seed_company, seed_project
 
 if TYPE_CHECKING:
@@ -25,9 +25,9 @@ ZERO = 0
 def _seed_system_and_po(stack: E2EStack) -> None:
     """Seed ``system`` + ``product-owner`` at their FIXED foundation UUIDs —
     see test_board_program_loop.py's identical helper for why."""
-    from roboco.db.tables import AgentTable
-    from roboco.foundation import identity as _foundation
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable
+    from robofleet.foundation import identity as _foundation
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     async def _run(session: AsyncSession) -> None:
         for agent_uuid, slug, role, team in (
@@ -63,7 +63,7 @@ def _seed_system_and_po(stack: E2EStack) -> None:
 def _arm_and_opt_in(stack: E2EStack, project_id: Any) -> None:
     """Arm via the settings-store key (the ONLY arming path — no legacy env
     flag exists for spackle) AND opt the project into the program."""
-    from roboco.db.tables import ProjectTable, SystemSettingTable
+    from robofleet.db.tables import ProjectTable, SystemSettingTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> None:
@@ -81,7 +81,7 @@ def _arm_and_opt_in(stack: E2EStack, project_id: Any) -> None:
 
 
 def _run_due_programs(stack: E2EStack) -> list[str]:
-    from roboco.services.board_programs import get_board_program_engine
+    from robofleet.services.board_programs import get_board_program_engine
 
     async def _run(session: AsyncSession) -> list[str]:
         return await get_board_program_engine(session).run_due_programs()
@@ -91,8 +91,8 @@ def _run_due_programs(stack: E2EStack) -> list[str]:
 
 
 def _find_spackle_task(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
-    from roboco.services.task import SPACKLE_SOURCE
+    from robofleet.db.tables import TaskTable
+    from robofleet.services.task import SPACKLE_SOURCE
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -124,7 +124,7 @@ def _find_spackle_task(stack: E2EStack) -> dict[str, Any]:
 
 
 def _cycle_counters(stack: E2EStack) -> dict[str, Any]:
-    from roboco.db.tables import BoardProgramCycleTable
+    from robofleet.db.tables import BoardProgramCycleTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -154,9 +154,9 @@ def _cycle_counters(stack: E2EStack) -> dict[str, Any]:
 def _approve_fake_item(
     stack: E2EStack, task_id: Any, project_slug: str, company: Company
 ) -> str:
-    from roboco.db.tables import TaskTable
-    from roboco.foundation.policy.content import markers
-    from roboco.services.spackle_service import get_spackle_service
+    from robofleet.db.tables import TaskTable
+    from robofleet.foundation.policy.content import markers
+    from robofleet.services.spackle_service import get_spackle_service
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> str:
@@ -176,7 +176,7 @@ def _approve_fake_item(
                         "team": "backend",
                         "priority": 2,
                         "evidence": (
-                            "roboco/api/routes/widgets.py:12 defines GET /widgets; "
+                            "robofleet/api/routes/widgets.py:12 defines GET /widgets; "
                             "no panel/src page calls it"
                         ),
                         "status": "proposed",
@@ -219,7 +219,7 @@ def test_spackle_loop_originates_dedups_and_records(
     # The dispatcher's own dev-work skip recognizes this exact task shape —
     # board_spackle is board-dispatched (one-shot PO spawn), never handed to
     # the generic dev dispatch loop's give_me_work/claim path.
-    from roboco.runtime.orchestrator import _is_non_dev_dispatch_source
+    from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
 
     assert _is_non_dev_dispatch_source({"source": row["source"]}) is True
 

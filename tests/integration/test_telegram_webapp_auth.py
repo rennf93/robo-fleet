@@ -23,13 +23,13 @@ from cryptography.fernet import Fernet
 from fastapi import FastAPI
 from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
-from roboco.api.app import create_app
-from roboco.api.auth.backend import SESSION_COOKIE_NAME
-from roboco.api.deps import get_db
-from roboco.api.routes.telegram import webapp_auth_router
-from roboco.config import settings
-from roboco.db.tables import UserTable
-from roboco.services.telegram_credentials import get_telegram_credentials_service
+from robofleet.api.app import create_app
+from robofleet.api.auth.backend import SESSION_COOKIE_NAME
+from robofleet.api.deps import get_db
+from robofleet.api.routes.telegram import webapp_auth_router
+from robofleet.config import settings
+from robofleet.db.tables import UserTable
+from robofleet.services.telegram_credentials import get_telegram_credentials_service
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -111,7 +111,7 @@ async def client(db_session: AsyncSession) -> AsyncIterator[AsyncClient]:
 
 # ---------------------------------------------------------------------------
 # Conditional mount — both flags required. Built through the REAL
-# `roboco.api.app.create_app()` factory (the exact pattern used by
+# `robofleet.api.app.create_app()` factory (the exact pattern used by
 # `tests/unit/api/test_app.py` and `tests/unit/runtime/test_rate_limit_sweep.py`)
 # rather than a test-local mirror of app.py's inline conditional-mount logic,
 # so app.py:560-571 (the actual mount gate) is the code under test.

@@ -22,8 +22,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from roboco.models.runtime import OrchestratorAgentConfig, SpawnGitContext
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.models.runtime import OrchestratorAgentConfig, SpawnGitContext
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _WS = "/data/workspaces/roboco-api/backend/be-dev-1"
 _CELL = "/data/workspaces/roboco-api/backend"
@@ -50,7 +50,7 @@ def _make_dev_config() -> OrchestratorAgentConfig:
 def _build_image_args() -> list[str]:
     cmd: list[str] = []
     with patch(
-        "roboco.runtime.orchestrator._resolve_agent_cli_model",
+        "robofleet.runtime.orchestrator._resolve_agent_cli_model",
         return_value="claude-sonnet-5",
     ):
         AgentOrchestrator._append_image_and_claude_args(cmd, _make_dev_config(), None)
@@ -176,7 +176,7 @@ class TestFableModeHooksInjection:
     """Fable-mode hooks are additive to settings.json, gated by the flag."""
 
     def test_fable_hooks_absent_when_flag_disabled(self) -> None:
-        with patch("roboco.config.settings.fable_mode_enabled", False):
+        with patch("robofleet.config.settings.fable_mode_enabled", False):
             orch = _orch()
             path = orch._generate_agent_settings(
                 agent_id="be-dev-1",
@@ -190,7 +190,7 @@ class TestFableModeHooksInjection:
         assert not any("fable" in c for c in stop_cmds)
 
     def test_fable_hooks_present_when_flag_enabled(self) -> None:
-        with patch("roboco.config.settings.fable_mode_enabled", True):
+        with patch("robofleet.config.settings.fable_mode_enabled", True):
             orch = _orch()
             path = orch._generate_agent_settings(
                 agent_id="be-dev-1",
@@ -224,7 +224,7 @@ class TestFableModeHooksInjection:
 
     def test_fable_hooks_off_leaves_hooks_dict_unchanged(self) -> None:
         """Regression guard: flag-off output equals a captured pre-Phase-2 baseline."""
-        with patch("roboco.config.settings.fable_mode_enabled", False):
+        with patch("robofleet.config.settings.fable_mode_enabled", False):
             orch = _orch()
             path = orch._generate_agent_settings(
                 agent_id="be-dev-1",

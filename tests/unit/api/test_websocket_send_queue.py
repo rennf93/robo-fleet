@@ -17,7 +17,7 @@ import contextlib
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.api.websocket import (
+from robofleet.api.websocket import (
     MAX_SEND_QUEUE,
     SEND_TIMEOUT_SECONDS,
     ConnectionManager,
@@ -70,7 +70,7 @@ async def test_broadcast_returns_promptly_with_slow_registered_client() -> None:
     await mgr.connect_system(slow_ws)
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("roboco.api.websocket.SEND_TIMEOUT_SECONDS", 0.1)
+        mp.setattr("robofleet.api.websocket.SEND_TIMEOUT_SECONDS", 0.1)
         # Must return in well under 1s — enqueue must not await the slow send.
         await asyncio.wait_for(
             mgr.broadcast_system({"type": "RATE_LIMIT_HIT"}), timeout=1.0
@@ -93,7 +93,7 @@ async def test_slow_client_does_not_block_fast_client() -> None:
     await mgr.connect_system(fast_ws)
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("roboco.api.websocket.SEND_TIMEOUT_SECONDS", 0.1)
+        mp.setattr("robofleet.api.websocket.SEND_TIMEOUT_SECONDS", 0.1)
         # Broadcast returns promptly despite the slow client.
         await asyncio.wait_for(
             mgr.broadcast_system({"type": "USAGE_SNAPSHOT"}), timeout=1.0
@@ -138,7 +138,7 @@ async def test_broadcast_drops_and_warns_when_queue_full() -> None:
     assert conn.queue.full()
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("roboco.api.websocket.SEND_TIMEOUT_SECONDS", 0.1)
+        mp.setattr("robofleet.api.websocket.SEND_TIMEOUT_SECONDS", 0.1)
         # Must not raise and must not block.
         await asyncio.wait_for(
             mgr.broadcast_system({"type": "RATE_LIMIT_HIT"}), timeout=1.0
@@ -201,7 +201,7 @@ async def test_broadcast_send_timeout_protects_legacy_unregistered_socket() -> N
     mgr.system_connections.add(legacy_ws)
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("roboco.api.websocket.SEND_TIMEOUT_SECONDS", 0.1)
+        mp.setattr("robofleet.api.websocket.SEND_TIMEOUT_SECONDS", 0.1)
         # Must return in well under 1s — the slow send is timed out, not
         # awaited indefinitely.
         await asyncio.wait_for(
@@ -252,7 +252,7 @@ async def test_sender_keeps_live_socket_on_send_timeout_only() -> None:
     await mgr.connect_system(slow_ws)
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("roboco.api.websocket.SEND_TIMEOUT_SECONDS", 0.1)
+        mp.setattr("robofleet.api.websocket.SEND_TIMEOUT_SECONDS", 0.1)
         await mgr.broadcast_system({"type": "RATE_LIMIT_HIT"})
         await asyncio.sleep(0.2)
 

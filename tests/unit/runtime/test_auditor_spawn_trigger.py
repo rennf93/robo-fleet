@@ -5,7 +5,7 @@ reflect notes on patterns worth surfacing. Smoke run 3 never spawned
 auditor because no spawn trigger was registered for the events the
 auditor cares about.
 
-Handler lives in roboco/events/handlers.py and is registered by
+Handler lives in robofleet/events/handlers.py and is registered by
 register_default_handlers(). The orchestrator is injected via
 set_event_context(orchestrator=...) so the handler can call
 _context.orchestrator.spawn_agent("auditor").
@@ -17,12 +17,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.events.handlers import (
+from robofleet.events.handlers import (
     handle_auditor_spawn,
     register_default_handlers,
     set_event_context,
 )
-from roboco.models.events import Event, EventContext, EventType
+from robofleet.models.events import Event, EventContext, EventType
 
 # ---------------------------------------------------------------------------
 # Helpers

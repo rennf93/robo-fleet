@@ -20,7 +20,7 @@ from sqlalchemy import select
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     ProductTable,
     ProjectTable,
@@ -29,7 +29,7 @@ from roboco.db.tables import (
     TaskDraftTable,
     TaskTable,
 )
-from roboco.models.base import (
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -38,10 +38,10 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.seeds.initial_data import AGENT_UUIDS
-from roboco.services import prompter as prompter_module
-from roboco.services.base import NotFoundError, ServiceError, ValidationError
-from roboco.services.prompter import (
+from robofleet.seeds.initial_data import AGENT_UUIDS
+from robofleet.services import prompter as prompter_module
+from robofleet.services.base import NotFoundError, ServiceError, ValidationError
+from robofleet.services.prompter import (
     _HISTORY_DIGEST_PER_PROJECT_LIMIT,
     _HISTORY_TITLE_EXCERPT_CAP,
     PrompterService,
@@ -58,7 +58,7 @@ from roboco.services.prompter import (
     history_digest_layer,
     parse_readiness,
 )
-from roboco.services.task import get_task_service
+from robofleet.services.task import get_task_service
 
 # =============================================================================
 # Pure function tests (no DB)
@@ -544,7 +544,7 @@ async def test_confirm_live_batch_builds_umbrella_and_sequenced_subtasks(
             "acceptance_criteria": ["a"],
             "team": "backend",
             "project_id": str(project1),
-            "intends_to_touch": ["roboco/services/foo.py"],
+            "intends_to_touch": ["robofleet/services/foo.py"],
             "adds_migration": True,
         },
         {
@@ -552,7 +552,7 @@ async def test_confirm_live_batch_builds_umbrella_and_sequenced_subtasks(
             "acceptance_criteria": ["b"],
             "team": "backend",
             "project_id": str(project1),
-            "intends_to_touch": ["roboco/services/bar.py"],
+            "intends_to_touch": ["robofleet/services/bar.py"],
             "adds_migration": True,
         },
         {
@@ -563,7 +563,7 @@ async def test_confirm_live_batch_builds_umbrella_and_sequenced_subtasks(
             "intends_to_touch": ["panel/src/widget.tsx"],
         },
     ]
-    with patch("roboco.services.prompter.redis.from_url", return_value=_FakeRedis()):
+    with patch("robofleet.services.prompter.redis.from_url", return_value=_FakeRedis()):
         result = await service.confirm_live_batch(
             "Three things",
             drafts,
@@ -633,7 +633,7 @@ async def test_confirm_live_batch_board_route_holds_subtasks_in_backlog(
             "project_id": str(project2),
         },
     ]
-    with patch("roboco.services.prompter.redis.from_url", return_value=_FakeRedis()):
+    with patch("robofleet.services.prompter.redis.from_url", return_value=_FakeRedis()):
         result = await service.confirm_live_batch(
             "Two repos",
             drafts,
@@ -743,7 +743,7 @@ def _make_batch_drafts(project1: UUID, project2: UUID) -> list[dict[str, Any]]:
             "acceptance_criteria": ["a"],
             "team": "backend",
             "project_id": str(project1),
-            "intends_to_touch": ["roboco/services/a.py"],
+            "intends_to_touch": ["robofleet/services/a.py"],
         },
         {
             "title": "B",
@@ -764,7 +764,7 @@ async def test_confirm_live_batch_idempotent_on_retry(db_session: Any) -> None:
     service = get_prompter_service(db=db_session)
     drafts = _make_batch_drafts(project1, project2)
     fake = _FakeRedis()
-    with patch("roboco.services.prompter.redis.from_url", return_value=fake):
+    with patch("robofleet.services.prompter.redis.from_url", return_value=fake):
         r1 = await service.confirm_live_batch(
             "Batch",
             drafts,
@@ -813,7 +813,7 @@ async def test_confirm_live_batch_in_progress_raises_when_sidecar_absent(
     fake = _FakeRedis()
     fake._store["roboco:megatask_confirm:sess-inflight"] = "1"  # guard held, no sidecar
     with (
-        patch("roboco.services.prompter.redis.from_url", return_value=fake),
+        patch("robofleet.services.prompter.redis.from_url", return_value=fake),
         pytest.raises(ServiceError, match="already in progress"),
     ):
         await service.confirm_live_batch(
@@ -851,7 +851,7 @@ async def test_confirm_live_batch_redis_unreachable_fails_closed(
     service = get_prompter_service(db=db_session)
     drafts = _make_batch_drafts(project1, project2)
     with (
-        patch("roboco.services.prompter.redis.from_url", side_effect=_boom_from_url),
+        patch("robofleet.services.prompter.redis.from_url", side_effect=_boom_from_url),
         pytest.raises(ServiceError, match="idempotency guard unavailable"),
     ):
         await service.confirm_live_batch(
@@ -887,7 +887,7 @@ async def test_confirm_live_batch_strips_assigned_to_from_drafts(
     for d in drafts:
         d["assigned_to"] = str(po_uuid)
     fake = _FakeRedis()
-    with patch("roboco.services.prompter.redis.from_url", return_value=fake):
+    with patch("robofleet.services.prompter.redis.from_url", return_value=fake):
         result = await service.confirm_live_batch(
             "Batch",
             drafts,
@@ -931,7 +931,7 @@ async def _confirm_board_batch(
 ) -> dict[str, Any]:
     """Confirm a board-routed MegaTask (held root-subtasks) to redraft against."""
     service = get_prompter_service(db=db_session)
-    with patch("roboco.services.prompter.redis.from_url", return_value=_FakeRedis()):
+    with patch("robofleet.services.prompter.redis.from_url", return_value=_FakeRedis()):
         return await service.confirm_live_batch(
             "Seed batch",
             drafts,
@@ -1111,7 +1111,7 @@ async def test_update_live_batch_rewires_dependency_edges(db_session: Any) -> No
             "acceptance_criteria": ["a"],
             "team": "backend",
             "project_id": str(project1),
-            "intends_to_touch": ["roboco/services/foo.py"],
+            "intends_to_touch": ["robofleet/services/foo.py"],
             "adds_migration": True,
         },
         {
@@ -1119,7 +1119,7 @@ async def test_update_live_batch_rewires_dependency_edges(db_session: Any) -> No
             "acceptance_criteria": ["b"],
             "team": "backend",
             "project_id": str(project1),
-            "intends_to_touch": ["roboco/services/bar.py"],
+            "intends_to_touch": ["robofleet/services/bar.py"],
             "adds_migration": True,
         },
         {

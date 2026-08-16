@@ -9,8 +9,8 @@ expressions that compute from foundation.AGENTS. After this task:
 
 from __future__ import annotations
 
-from roboco.agents_config import AGENT_ROLE_MAP, AGENT_TEAM_MAP, CELL_MEMBERS
-from roboco.foundation import identity
+from robofleet.agents_config import AGENT_ROLE_MAP, AGENT_TEAM_MAP, CELL_MEMBERS
+from robofleet.foundation import identity
 
 
 def test_agent_role_map_matches_foundation() -> None:

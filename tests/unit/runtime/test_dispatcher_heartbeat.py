@@ -15,7 +15,7 @@ from unittest.mock import MagicMock
 from uuid import uuid4  # noqa: F401 - parity with sibling harnesses
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _TWO_HEARTBEATS = 2
 

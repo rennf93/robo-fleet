@@ -1,4 +1,4 @@
-"""Tests for roboco.mcp.utils._get_agent_headers UNSIGNED-token guard."""
+"""Tests for robofleet.mcp.utils._get_agent_headers UNSIGNED-token guard."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 def test_get_agent_headers_omits_unsigned_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from roboco.mcp import utils as mcp_utils
+    from robofleet.mcp import utils as mcp_utils
 
     monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "UNSIGNED")
     h = mcp_utils._get_agent_headers("be-dev-1")
@@ -20,7 +20,7 @@ def test_get_agent_headers_omits_unsigned_token(
 
 
 def test_get_agent_headers_sends_real_token(monkeypatch: pytest.MonkeyPatch) -> None:
-    from roboco.mcp import utils as mcp_utils
+    from robofleet.mcp import utils as mcp_utils
 
     monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "signed-token-abc")
     h = mcp_utils._get_agent_headers("be-dev-1")

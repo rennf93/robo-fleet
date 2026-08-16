@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from roboco.api.schemas import common as _common
-from roboco.api.schemas.common import (
+from robofleet.api.schemas import common as _common
+from robofleet.api.schemas.common import (
     ApiResponse,
     ErrorCode,
     ErrorDetail,

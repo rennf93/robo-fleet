@@ -1,4 +1,4 @@
-"""Schema checks for the golden-task fixtures (roboco/eval/fixtures.py).
+"""Schema checks for the golden-task fixtures (robofleet/eval/fixtures.py).
 
 Nothing here touches a DB or the network — these are pure sanity checks on
 the static FIXTURES tuple so a malformed fixture (a duplicate key, a fixture
@@ -13,7 +13,7 @@ import dataclasses
 from typing import Any, cast
 
 import pytest
-from roboco.eval.fixtures import FIXTURES, BenchTaskSpec
+from robofleet.eval.fixtures import FIXTURES, BenchTaskSpec
 
 _MIN_FIXTURES = 5
 _MAX_FIXTURES = 8

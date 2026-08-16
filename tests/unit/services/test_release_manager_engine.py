@@ -14,24 +14,31 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings as cfg
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskStatus as TS
-from roboco.services.git import GitService
-from roboco.services.release_manager_engine import ReleaseAssessor, ReleaseManagerEngine
-from roboco.services.release_readiness import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskStatus as TS
+from robofleet.services.git import GitService
+from robofleet.services.release_manager_engine import (
+    ReleaseAssessor,
+    ReleaseManagerEngine,
+)
+from robofleet.services.release_readiness import (
     BumpKind,
     Gap,
     ReleaseReadinessReport,
     report_from_dict,
     report_to_dict,
 )
-from roboco.services.task import RELEASE_MANAGER_SOURCE, TaskService, get_task_service
-from roboco.services.workspace import WorkspaceService
-from roboco.utils.crypto import encrypt_token
+from robofleet.services.task import (
+    RELEASE_MANAGER_SOURCE,
+    TaskService,
+    get_task_service,
+)
+from robofleet.services.workspace import WorkspaceService
+from robofleet.utils.crypto import encrypt_token
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -274,7 +281,7 @@ async def test_proposes_sends_telegram_push(
     _enable(monkeypatch)
     notify = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.NotificationDeliveryService."
+        "robofleet.services.notification_delivery.NotificationDeliveryService."
         "notify_ceo_of_queue_item",
         notify,
     )
@@ -304,7 +311,7 @@ async def test_proposes_does_not_double_notify_via_send_ack_notification(
     _enable(monkeypatch)
     send_ack = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification.NotificationService.send_ack_notification",
+        "robofleet.services.notification.NotificationService.send_ack_notification",
         send_ack,
     )
     engine = ReleaseManagerEngine(db_session, assessor=_assessor(_report()))
@@ -321,7 +328,7 @@ async def test_proposes_survives_telegram_push_failure(
     await _seed(db_session)
     _enable(monkeypatch)
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.NotificationDeliveryService."
+        "robofleet.services.notification_delivery.NotificationDeliveryService."
         "notify_ceo_of_queue_item",
         AsyncMock(side_effect=RuntimeError("boom")),
     )
@@ -553,11 +560,11 @@ async def test_production_assess_passes_head_sha_to_ci_gate(
 
     project = type("P", (), {"slug": SLUG, "git_url": "https://x/y.git"})()
     monkeypatch.setattr(
-        "roboco.services.release_manager_engine.get_project_service",
+        "robofleet.services.release_manager_engine.get_project_service",
         lambda _session: _FakeProjectService(project),
     )
     monkeypatch.setattr(
-        "roboco.services.workspace.get_workspace_service",
+        "robofleet.services.workspace.get_workspace_service",
         lambda _session: type(
             "WS",
             (),
@@ -571,7 +578,7 @@ async def test_production_assess_passes_head_sha_to_ci_gate(
         return {"conclusion": "success", "head_sha": str(kwargs.get("head_sha") or "")}
 
     monkeypatch.setattr(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         lambda _session: _FakeGitService(_fake_ci_for),
     )
 
@@ -598,11 +605,11 @@ async def test_production_assess_head_unresolvable_passes_none(
 
     project = type("P", (), {"slug": SLUG, "git_url": "https://x/y.git"})()
     monkeypatch.setattr(
-        "roboco.services.release_manager_engine.get_project_service",
+        "robofleet.services.release_manager_engine.get_project_service",
         lambda _session: _FakeProjectService(project),
     )
     monkeypatch.setattr(
-        "roboco.services.workspace.get_workspace_service",
+        "robofleet.services.workspace.get_workspace_service",
         lambda _session: type(
             "WS",
             (),
@@ -616,7 +623,7 @@ async def test_production_assess_head_unresolvable_passes_none(
         return None  # no CI signal → unknown gate
 
     monkeypatch.setattr(
-        "roboco.services.git.get_git_service",
+        "robofleet.services.git.get_git_service",
         lambda _session: _FakeGitService(_fake_ci_for),
     )
 

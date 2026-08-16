@@ -15,8 +15,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services.forge import RepoRef
-from roboco.services.git import GitService
+from robofleet.services.forge import RepoRef
+from robofleet.services.git import GitService
 
 
 def _service() -> GitService:
@@ -47,7 +47,7 @@ async def test_delete_skips_branch_with_open_dependents() -> None:
     svc = _service()
     _bind(svc, "_branch_has_open_dependents", AsyncMock(return_value=True))
     client = _fake_client()
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=client):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=client):
         await svc._delete_remote_branch_best_effort(
             RepoRef("acme", "repo"), "feature/main_pm/abc123", "tok"
         )
@@ -59,7 +59,7 @@ async def test_delete_removes_leaf_branch_with_no_dependents() -> None:
     svc = _service()
     _bind(svc, "_branch_has_open_dependents", AsyncMock(return_value=False))
     client = _fake_client()
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=client):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=client):
         await svc._delete_remote_branch_best_effort(
             RepoRef("acme", "repo"), "feature/backend/abc--cell--leaf", "tok"
         )
@@ -72,7 +72,7 @@ async def test_delete_skips_default_branch_before_checking_dependents() -> None:
     dep = AsyncMock(return_value=False)
     _bind(svc, "_branch_has_open_dependents", dep)
     client = _fake_client()
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=client):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=client):
         await svc._delete_remote_branch_best_effort(
             RepoRef("acme", "repo"), "master", "tok"
         )
@@ -105,9 +105,9 @@ async def test_delete_skips_project_declared_protected_branch() -> None:
     client = _fake_client()
     project = MagicMock(protected_branches=["release"])
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -128,9 +128,9 @@ async def test_delete_allows_branch_not_in_projects_protected_list() -> None:
     client = _fake_client()
     project = MagicMock(protected_branches=["release"])
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -155,9 +155,9 @@ async def test_delete_empty_protected_branches_matches_hardcoded_only_behavior()
     client = _fake_client()
     project = MagicMock(protected_branches=[])
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -178,8 +178,8 @@ async def test_delete_no_project_slug_matches_hardcoded_only_behavior() -> None:
     _bind(svc, "_branch_has_open_dependents", AsyncMock(return_value=False))
     client = _fake_client()
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
-        patch("roboco.services.git.get_project_service") as get_project_service,
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.get_project_service") as get_project_service,
     ):
         await svc._delete_remote_branch_best_effort(
             RepoRef("acme", "repo"), "feature/backend/abc--cell--leaf", "tok"
@@ -199,9 +199,9 @@ async def test_delete_matches_stripped_branch_case_sensitively() -> None:
     client = _fake_client()
     project = MagicMock(protected_branches=[" Release "])
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -214,9 +214,9 @@ async def test_delete_matches_stripped_branch_case_sensitively() -> None:
 
     client2 = _fake_client()
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client2),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client2),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -248,9 +248,9 @@ async def test_delete_refuses_env_ladder_rung_not_in_declared_list() -> None:
         ],
     )
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -275,9 +275,9 @@ async def test_delete_refuses_null_ladder_default_branch() -> None:
         protected_branches=[], environments=None, default_branch="trunk"
     )
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -305,9 +305,9 @@ async def test_delete_allows_branch_that_is_neither_field_rung_nor_floor() -> No
         ],
     )
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -342,9 +342,9 @@ async def test_delete_pr_branch_refuses_rung_source_via_merge_cleanup_path() -> 
         ],
     )
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -370,9 +370,9 @@ async def test_delete_union_never_collapses_hardcoded_floor_to_project_list_only
     _bind(svc, "_branch_has_open_dependents", dep)
     client = _fake_client()
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -384,9 +384,9 @@ async def test_delete_union_never_collapses_hardcoded_floor_to_project_list_only
 
     client2 = _fake_client()
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client2),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client2),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(project),
         ),
     ):
@@ -423,9 +423,9 @@ async def test_delete_skips_entirely_when_project_lookup_raises() -> None:
     _bind(svc, "_branch_has_open_dependents", dep)
     client = _fake_client()
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_raising(RuntimeError("db blip")),
         ),
     ):
@@ -446,9 +446,9 @@ async def test_delete_proceeds_with_floor_when_project_genuinely_gone() -> None:
     _bind(svc, "_branch_has_open_dependents", AsyncMock(return_value=False))
     client = _fake_client()
     with (
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         patch(
-            "roboco.services.git.get_project_service",
+            "robofleet.services.git.get_project_service",
             return_value=_project_service_returning(None),
         ),
     ):
@@ -471,7 +471,7 @@ async def test_has_open_dependents_true_when_open_pr_targets_base() -> None:
     resp.json.return_value = [{"number": 5}]
     client = _fake_client()
     client.get = AsyncMock(return_value=resp)
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=client):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=client):
         out = await svc._branch_has_open_dependents(
             RepoRef("acme", "repo"), "feature/main_pm/abc123", "tok"
         )
@@ -485,7 +485,7 @@ async def test_has_open_dependents_false_when_none() -> None:
     resp.json.return_value = []
     client = _fake_client()
     client.get = AsyncMock(return_value=resp)
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=client):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=client):
         out = await svc._branch_has_open_dependents(
             RepoRef("acme", "repo"), "feature/x--leaf", "tok"
         )
@@ -498,7 +498,7 @@ async def test_has_open_dependents_fails_safe_on_non_success() -> None:
     resp = MagicMock(is_success=False)
     client = _fake_client()
     client.get = AsyncMock(return_value=resp)
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=client):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=client):
         out = await svc._branch_has_open_dependents(
             RepoRef("acme", "repo"), "feature/main_pm/abc123", "tok"
         )

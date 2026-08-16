@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer
+from robofleet.services.gateway.choreographer import Choreographer
 
 _FLOOR = 0.6
 
@@ -63,7 +63,7 @@ class TestInstitutionalMemoryStatus:
     async def test_disabled_when_subsystem_off(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("roboco.config.settings.org_memory_enabled", False)
+        monkeypatch.setattr("robofleet.config.settings.org_memory_enabled", False)
         choreo, _ = _choreographer(similar_memory_out={"items": [], "status": "ok"})
         briefing = await choreo._briefing_for(uuid4(), uuid4(), task=_task(), full=True)
         assert briefing["institutional_memory"]["status"] == "disabled"
@@ -73,7 +73,7 @@ class TestInstitutionalMemoryStatus:
     async def test_error_when_search_raises(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("roboco.config.settings.org_memory_enabled", True)
+        monkeypatch.setattr("robofleet.config.settings.org_memory_enabled", True)
         # similar_memory itself swallows RAG errors and returns status=error;
         # simulate that contract (the choreographer trusts the repo's status).
         choreo, _ = _choreographer(similar_memory_out={"items": [], "status": "error"})
@@ -85,7 +85,7 @@ class TestInstitutionalMemoryStatus:
     async def test_empty_when_search_yields_nothing(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("roboco.config.settings.org_memory_enabled", True)
+        monkeypatch.setattr("robofleet.config.settings.org_memory_enabled", True)
         choreo, _ = _choreographer(similar_memory_out={"items": [], "status": "empty"})
         briefing = await choreo._briefing_for(uuid4(), uuid4(), task=_task(), full=True)
         assert briefing["institutional_memory"]["status"] == "empty"
@@ -95,7 +95,7 @@ class TestInstitutionalMemoryStatus:
     async def test_below_floor_when_all_under_floor(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("roboco.config.settings.org_memory_enabled", True)
+        monkeypatch.setattr("robofleet.config.settings.org_memory_enabled", True)
         choreo, _ = _choreographer(
             similar_memory_out={"items": [], "status": "below_floor"}
         )
@@ -105,7 +105,7 @@ class TestInstitutionalMemoryStatus:
 
     @pytest.mark.asyncio
     async def test_ok_injects_lessons(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("roboco.config.settings.org_memory_enabled", True)
+        monkeypatch.setattr("robofleet.config.settings.org_memory_enabled", True)
         lesson = {"kind": "learning", "summary": "s", "source": "src", "score": 0.9}
         choreo, _ = _choreographer(
             similar_memory_out={"items": [lesson], "status": "ok"}
@@ -120,7 +120,7 @@ class TestInstitutionalMemoryStatus:
     ) -> None:
         """Slim (non-full) briefings don't run the heavy section, so the block
         is absent — preserves the existing slim/full split."""
-        monkeypatch.setattr("roboco.config.settings.org_memory_enabled", True)
+        monkeypatch.setattr("robofleet.config.settings.org_memory_enabled", True)
         choreo, _ = _choreographer(similar_memory_out={"items": [], "status": "ok"})
         briefing = await choreo._briefing_for(uuid4(), uuid4(), task=_task())
         assert "institutional_memory" not in briefing

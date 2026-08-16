@@ -11,7 +11,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services.git import GitError, GitService
+from robofleet.services.git import GitError, GitService
 
 _PR = 42
 
@@ -50,7 +50,7 @@ def _patch_project() -> Any:
     fake.get_by_slug = AsyncMock(
         return_value=MagicMock(git_url="https://github.com/acme/repo.git")
     )
-    return patch("roboco.services.git.get_project_service", return_value=fake)
+    return patch("robofleet.services.git.get_project_service", return_value=fake)
 
 
 @pytest.mark.asyncio
@@ -62,7 +62,7 @@ async def test_post_pr_review_posts_request_changes() -> None:
     )
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await svc.post_pr_review("roboco", _PR, "Please fix X.")
     client.post.assert_awaited_once()
@@ -88,7 +88,7 @@ async def test_post_pr_review_raises_on_github_error() -> None:
     client = _client(_resp(status_code=422, text="Unprocessable"))
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         pytest.raises(GitError),
     ):
         await svc.post_pr_review("roboco", _PR, "body")
@@ -115,7 +115,7 @@ async def test_post_pr_review_self_review_falls_back_to_comment() -> None:
     )
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await svc.post_pr_review("roboco", _PR, "Please fix X.")
     assert client.post.await_count == 2  # noqa: PLR2004
@@ -142,7 +142,7 @@ async def test_post_pr_review_self_review_comment_failure_raises() -> None:
     )
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         pytest.raises(GitError),
     ):
         await svc.post_pr_review("roboco", _PR, "body")

@@ -1,9 +1,9 @@
-"""Coverage for roboco.enforcement.task_ownership."""
+"""Coverage for robofleet.enforcement.task_ownership."""
 
 from __future__ import annotations
 
 import pytest
-from roboco.enforcement.task_ownership import (
+from robofleet.enforcement.task_ownership import (
     TaskOwnershipError,
     can_review_task,
     validate_task_ownership,

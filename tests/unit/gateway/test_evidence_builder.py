@@ -6,7 +6,7 @@ from typing import Any
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-from roboco.services.gateway.evidence_builder import (
+from robofleet.services.gateway.evidence_builder import (
     BRIEFING_LIST_CAP,
     FINDING_EVIDENCE_EXCERPT_CAP,
     BriefingInputs,
@@ -254,7 +254,7 @@ def _finding_row(**over: Any) -> MagicMock:
         "origin": "qa",
         "status": "open",
         "severity": "major",
-        "file": "roboco/services/task.py",
+        "file": "robofleet/services/task.py",
         "line": 10,
         "expected": "raises on bad input",
         "actual": "swallows the error",
@@ -275,7 +275,7 @@ class TestRenderFindings:
         assert entry["round"] == row.round
         assert entry["origin"] == "qa"
         assert entry["status"] == "open"
-        assert entry["file"] == "roboco/services/task.py"
+        assert entry["file"] == "robofleet/services/task.py"
         assert entry["line"] == row.line
         assert entry["expected"] == "raises on bad input"
         assert entry["actual"] == "swallows the error"

@@ -18,9 +18,9 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.config import settings
-from roboco.models.sandbox import SandboxConnection, SandboxInfo
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.models.sandbox import SandboxConnection, SandboxInfo
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _make_orchestrator() -> tuple[AgentOrchestrator, MagicMock]:
@@ -54,7 +54,7 @@ async def test_flag_off_returns_empty_without_project_lookup(
     monkeypatch.setattr(settings, "sandbox_db_enabled", False)
     orch, sandbox = _make_orchestrator()
 
-    with patch("roboco.services.project.get_project_service") as get_svc:
+    with patch("robofleet.services.project.get_project_service") as get_svc:
         result = await orch._sandbox_available_services("roboco-api")
 
     assert result == []
@@ -73,9 +73,11 @@ async def test_project_without_sandbox_services_returns_empty(
     project_service.get_by_slug = AsyncMock(return_value=project)
 
     with (
-        patch("roboco.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())),
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())
+        ),
+        patch(
+            "robofleet.services.project.get_project_service",
             return_value=project_service,
         ),
     ):
@@ -93,9 +95,11 @@ async def test_missing_project_returns_empty(monkeypatch: pytest.MonkeyPatch) ->
     project_service.get_by_slug = AsyncMock(return_value=None)
 
     with (
-        patch("roboco.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())),
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())
+        ),
+        patch(
+            "robofleet.services.project.get_project_service",
             return_value=project_service,
         ),
     ):
@@ -115,9 +119,11 @@ async def test_opted_in_project_returns_services_without_provisioning(
     project_service.get_by_slug = AsyncMock(return_value=project)
 
     with (
-        patch("roboco.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())),
         patch(
-            "roboco.services.project.get_project_service",
+            "robofleet.db.base.get_db_context", return_value=_fake_db_ctx(MagicMock())
+        ),
+        patch(
+            "robofleet.services.project.get_project_service",
             return_value=project_service,
         ),
     ):
@@ -134,7 +140,7 @@ async def test_project_lookup_failure_degrades_to_no_sandbox(
     monkeypatch.setattr(settings, "sandbox_db_enabled", True)
     orch, sandbox = _make_orchestrator()
 
-    with patch("roboco.db.base.get_db_context", side_effect=RuntimeError("db down")):
+    with patch("robofleet.db.base.get_db_context", side_effect=RuntimeError("db down")):
         result = await orch._sandbox_available_services("roboco-api")
 
     assert result == []

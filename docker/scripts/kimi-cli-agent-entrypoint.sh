@@ -21,10 +21,10 @@ command -v kimi >/dev/null || {
 }
 
 # Symlink phase. The orchestrator mounts the host ~/.kimi-code DIRECTORY
-# READ-WRITE at this path (roboco.llm.providers.kimi._append_kimi_auth_mount).
+# READ-WRITE at this path (robofleet.llm.providers.kimi._append_kimi_auth_mount).
 # Moonshot's refresh token is rotation-with-short-reuse-grace, not truly
 # reusable (live-verified: a per-container COPY cross-invalidates the shared
-# chain once the grace window passes — see roboco.llm.providers.kimi's
+# chain once the grace window passes — see robofleet.llm.providers.kimi's
 # module docstring), so every container must redeem the SAME chain the host
 # uses: symlink credentials/ AND oauth/ (the cross-process refresh lock
 # directory — entirely missing from the old copy-in, and load-bearing: it's
@@ -45,14 +45,14 @@ fi
 # roboco package: dev/doc/qa agents run at their workspace-clone cwd, whose
 # own roboco/ dir would shadow it on the sys.path front (the same
 # ModuleNotFound lesson the codex/grok entrypoints document).
-( cd /app && python -m roboco.llm.providers.kimi_cli_config )
+( cd /app && python -m robofleet.llm.providers.kimi_cli_config )
 
 # Prompt-injection guard (parity with the Claude/grok/codex path): the task
 # prompt is DATA, not instructions — refuse a poisoned one before the model
 # ever sees it. The composed role blueprint travels separately via the
 # additive AGENTS.md (rendered above), so only the raw task prompt is
 # screened here. Run from /app too.
-if ! ( cd /app && python -m roboco.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
+if ! ( cd /app && python -m robofleet.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
   echo "Refusing to run: task prompt matched a prompt-injection pattern." >&2
   exit 1
 fi
@@ -65,7 +65,7 @@ fi
 # credentials/kimi-code.json's expires_at (a plain JSON field, no JWT
 # decode) and refuse fast (exit 78 / EX_CONFIG) on missing/expired, instead
 # of the CLI hanging or failing deep into the run.
-if ! ( cd /app && python -m roboco.llm.providers.kimi_cli_config --check ); then
+if ! ( cd /app && python -m robofleet.llm.providers.kimi_cli_config --check ); then
   echo "[kimi] auth credential missing or expired — refusing to run. Run" \
     "\`kimi login\` on the host (or set ROBOCO_HOST_KIMI_DIR to the" \
     "directory holding credentials/kimi-code.json) before spawning Kimi" \
@@ -110,7 +110,7 @@ set -e
 # carries the captured workspace cwd so the usage reader can find the right
 # sessions/wd_<cwd-basename>_*/ directory after this subshell's own `cd /app`.
 ( cd /app && ROBOCO_KIMI_RUN_LOG="$RUN_LOG" ROBOCO_KIMI_WORKDIR="$WORKDIR" \
-    python -m roboco.llm.providers.kimi_cli_usage ) || true
+    python -m robofleet.llm.providers.kimi_cli_usage ) || true
 
 # Kimi has NO documented exit-code taxonomy for `-p` (a claimed 75/1 split is
 # unverified noise) — every failure looks the same at the process level.
@@ -126,7 +126,7 @@ set -e
 #   - auth/membership failure (a lapsed subscription or an expired credential
 #     discovered mid-run, past the --check backstop above) -> exit 78
 #     (EX_CONFIG): parked the same way as a pre-run auth miss.
-SNIFF="$( (cd /app && python -m roboco.llm.providers.kimi_cli_sniff "$RUN_LOG" "$ERR_LOG") 2>/dev/null || true)"
+SNIFF="$( (cd /app && python -m robofleet.llm.providers.kimi_cli_sniff "$RUN_LOG" "$ERR_LOG") 2>/dev/null || true)"
 if [ "$SNIFF" = "rate_limit" ]; then
   echo "[kimi] rate-limited — exiting 75 so the orchestrator parks the" \
     "provider; the task is retried when the limit lifts." >&2

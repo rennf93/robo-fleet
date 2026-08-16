@@ -10,9 +10,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
-from roboco.services.gateway.role_config import get_role_config
+from robofleet.config import settings
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
+from robofleet.services.gateway.role_config import get_role_config
 
 
 def _actions(role: str) -> ContentActions:
@@ -86,11 +89,11 @@ async def test_curate_vault_writes_narrative_for_auditor(
     data = MagicMock()
     with (
         patch(
-            "roboco.services.vault_assembly.assemble_task_note_data",
+            "robofleet.services.vault_assembly.assemble_task_note_data",
             AsyncMock(return_value=data),
         ) as assemble,
-        patch("roboco.services.vault_writer.get_vault_writer", return_value=writer),
-        patch("roboco.services.project.get_project_service"),
+        patch("robofleet.services.vault_writer.get_vault_writer", return_value=writer),
+        patch("robofleet.services.project.get_project_service"),
     ):
         env = await actions.curate_vault(
             agent_id=uuid4(), task_id=task_id, narrative="Shipped after one rework."
@@ -112,10 +115,10 @@ async def test_curate_vault_write_failure_returns_invalid_state(
     actions.task.get = AsyncMock(return_value=MagicMock())
     with (
         patch(
-            "roboco.services.vault_assembly.assemble_task_note_data",
+            "robofleet.services.vault_assembly.assemble_task_note_data",
             AsyncMock(side_effect=OSError("disk full")),
         ),
-        patch("roboco.services.project.get_project_service"),
+        patch("robofleet.services.project.get_project_service"),
     ):
         env = await actions.curate_vault(
             agent_id=uuid4(), task_id=uuid4(), narrative="x"

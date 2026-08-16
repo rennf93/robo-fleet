@@ -50,8 +50,8 @@ def _cancel(stack: E2EStack, task_id: Any) -> None:
     """Direct terminal-status write — mirrors dispatcher_assign/set_branch_name's
     style (arcs.py): stands in for the real dev->QA->doc->PM chain reaching a
     terminal state, out of scope for this gate-only scenario."""
-    from roboco.db.tables import TaskTable
-    from roboco.models.base import TaskStatus
+    from robofleet.db.tables import TaskTable
+    from robofleet.models.base import TaskStatus
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> None:
@@ -66,8 +66,8 @@ def _cancel(stack: E2EStack, task_id: Any) -> None:
 def test_sibling_sequence_blocks_claim_until_earlier_sibling_terminal(
     e2e_stack: E2EStack,
 ) -> None:
-    from roboco.models import Team
-    from roboco.models.base import TaskType
+    from robofleet.models import Team
+    from robofleet.models.base import TaskType
 
     stack = e2e_stack
     company = seed_company(stack)

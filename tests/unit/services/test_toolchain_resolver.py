@@ -12,7 +12,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from roboco.services.toolchain import ResolvedPython, resolve_target_python, satisfies
+from robofleet.services.toolchain import (
+    ResolvedPython,
+    resolve_target_python,
+    satisfies,
+)
 
 
 def _write(root: Path, *, pyproject: str | None = None, pin: str | None = None) -> None:

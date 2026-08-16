@@ -4,7 +4,7 @@ Revision ID: 020_backfill_enum_values
 Revises: 019_seed_default_providers
 Create Date: 2026-06-02
 
-Several StrEnum values were added to the ORM (roboco/models/base.py) over time
+Several StrEnum values were added to the ORM (robofleet/models/base.py) over time
 WITHOUT a matching `ALTER TYPE ... ADD VALUE` migration. Migration 017 was
 autogenerate-derived, and Alembic autogenerate does NOT detect added enum
 labels — so the drift survived. On any database whose `<enum>` type predates the

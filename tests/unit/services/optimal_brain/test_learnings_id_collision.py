@@ -15,11 +15,11 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.services.optimal_brain.indexes.learnings import (
+from robofleet.services.optimal_brain.indexes.learnings import (
     LearningsIndexPlugin,
     RecordLearningParams,
 )
-from roboco.services.optimal_brain.text_chunker import Chunk
+from robofleet.services.optimal_brain.text_chunker import Chunk
 
 
 def _wire(plugin: object, source: str) -> AsyncMock:

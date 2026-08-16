@@ -12,13 +12,13 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_current_agent_id, get_db
-from roboco.api.routes.notifications import router as notifications_router
-from roboco.api.schemas.notifications import NotificationResponse
-from roboco.db.tables import AgentTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import NotificationPriority, NotificationType
-from roboco.models.permissions import AgentContext
+from robofleet.api.deps import get_agent_context, get_current_agent_id, get_db
+from robofleet.api.routes.notifications import router as notifications_router
+from robofleet.api.schemas.notifications import NotificationResponse
+from robofleet.db.tables import AgentTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import NotificationPriority, NotificationType
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -166,7 +166,7 @@ async def test_list_notifications_system_role(db_session: AsyncSession) -> None:
 async def test_get_notification_permission_error(notif_client: dict) -> None:
     client = notif_client["client"]
     with patch(
-        "roboco.api.routes.notifications.get_notification_delivery_service"
+        "robofleet.api.routes.notifications.get_notification_delivery_service"
     ) as mock_get:
         instance = AsyncMock()
         instance.get_for_recipient_and_mark_read = AsyncMock(
@@ -181,7 +181,7 @@ async def test_get_notification_permission_error(notif_client: dict) -> None:
 async def test_acknowledge_value_error(notif_client: dict) -> None:
     client = notif_client["client"]
     with patch(
-        "roboco.api.routes.notifications.get_notification_delivery_service"
+        "robofleet.api.routes.notifications.get_notification_delivery_service"
     ) as mock_get:
         instance = AsyncMock()
         instance.acknowledge_for_recipient = AsyncMock(
@@ -196,7 +196,7 @@ async def test_acknowledge_value_error(notif_client: dict) -> None:
 async def test_mark_read_permission_error(notif_client: dict) -> None:
     client = notif_client["client"]
     with patch(
-        "roboco.api.routes.notifications.get_notification_delivery_service"
+        "robofleet.api.routes.notifications.get_notification_delivery_service"
     ) as mock_get:
         instance = AsyncMock()
         instance.mark_read_for_recipient = AsyncMock(
@@ -230,13 +230,13 @@ async def test_get_notification_returns_response(notif_client: dict) -> None:
         expires_at=None,
     )
     with patch(
-        "roboco.api.routes.notifications.get_notification_delivery_service"
+        "robofleet.api.routes.notifications.get_notification_delivery_service"
     ) as mock_get:
         instance = AsyncMock()
         instance.get_for_recipient_and_mark_read = AsyncMock(return_value=fake_notif)
         mock_get.return_value = instance
         with patch(
-            "roboco.api.routes.notifications.notification_to_response",
+            "robofleet.api.routes.notifications.notification_to_response",
             return_value=fake_response,
         ):
             response = await client.get(f"/api/notifications/{uuid4()}", headers=_HDR)
@@ -248,7 +248,7 @@ async def test_acknowledge_permission_error(notif_client: dict) -> None:
     """Line 121: PermissionError on ack → 403."""
     client = notif_client["client"]
     with patch(
-        "roboco.api.routes.notifications.get_notification_delivery_service"
+        "robofleet.api.routes.notifications.get_notification_delivery_service"
     ) as mock_get:
         instance = AsyncMock()
         instance.acknowledge_for_recipient = AsyncMock(
@@ -282,13 +282,13 @@ async def test_acknowledge_returns_response(notif_client: dict) -> None:
         expires_at=None,
     )
     with patch(
-        "roboco.api.routes.notifications.get_notification_delivery_service"
+        "robofleet.api.routes.notifications.get_notification_delivery_service"
     ) as mock_get:
         instance = AsyncMock()
         instance.acknowledge_for_recipient = AsyncMock(return_value=fake_notif)
         mock_get.return_value = instance
         with patch(
-            "roboco.api.routes.notifications.notification_to_response",
+            "robofleet.api.routes.notifications.notification_to_response",
             return_value=fake_response,
         ):
             response = await client.post(

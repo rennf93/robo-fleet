@@ -10,8 +10,8 @@ import threading
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.models.transcription import TranscriptionConfig
-from roboco.services.transcription import TranscriptionService
+from robofleet.models.transcription import TranscriptionConfig
+from robofleet.services.transcription import TranscriptionService
 
 
 def _svc() -> TranscriptionService:

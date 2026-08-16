@@ -13,8 +13,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.models.base import AssignmentScope, ModelProvider
-from roboco.services.llm import ModelRoutingService, _ResolvedAssignment
+from robofleet.models.base import AssignmentScope, ModelProvider
+from robofleet.services.llm import ModelRoutingService, _ResolvedAssignment
 
 _AGENT_SLUG = "be-dev-1"
 
@@ -60,7 +60,7 @@ async def test_resolve_for_agent_strict_raises_on_disabled_provider() -> None:
         patch.object(
             svc, "_resolve_assignment", AsyncMock(return_value=_disabled_resolved())
         ),
-        patch("roboco.services.llm.settings", MagicMock(routing_strict=True)),
+        patch("robofleet.services.llm.settings", MagicMock(routing_strict=True)),
         pytest.raises(RuntimeError, match="routing_strict"),
     ):
         await svc.resolve_for_agent(_AGENT_SLUG)

@@ -16,9 +16,9 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     BlockerResolverType,
     Complexity,
     SubstituteReason,
@@ -26,15 +26,15 @@ from roboco.models.base import (
     TaskStatus,
     TaskType,
 )
-from roboco.models.permissions import AgentContext
-from roboco.models.task import TaskCreateRequest
-from roboco.services.base import (
+from robofleet.models.permissions import AgentContext
+from robofleet.models.task import TaskCreateRequest
+from robofleet.services.base import (
     NotFoundError,
     ServiceError,
     UnauthorizedError,
     ValidationError,
 )
-from roboco.services.task import (
+from robofleet.services.task import (
     SoftBlockInput,
     TaskService,
     notify_pm_for_substitute,
@@ -294,7 +294,7 @@ async def test_soft_block_task_for_agent_unauthorized_when_not_assignee(
         resolver_type=BlockerResolverType.AGENT,
     )
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: AsyncMock(),
     )
     with pytest.raises(UnauthorizedError):
@@ -317,7 +317,7 @@ async def test_soft_block_task_for_agent_preserves_human_resolver(
     fake_delivery.notify_pm_of_block = AsyncMock()
 
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: fake_delivery,
     )
 
@@ -360,7 +360,7 @@ async def test_soft_block_task_for_agent_pm_blocks_other_task(
     agent_ctx = _ctx(cast("UUID", pm.id), AgentRole.CELL_PM)
 
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: AsyncMock(),
     )
     req = SoftBlockInput(
@@ -384,7 +384,7 @@ async def test_soft_block_task_for_agent_validation_when_not_in_progress(
     await db_session.flush()
     agent_ctx = _ctx(task_setup["agent_id"], AgentRole.DEVELOPER)
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: AsyncMock(),
     )
     req = SoftBlockInput(
@@ -411,7 +411,7 @@ async def test_docs_complete_for_task_only_documenter(
     await db_session.flush()
     agent_ctx = _ctx(task_setup["agent_id"], AgentRole.DEVELOPER)
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: AsyncMock(),
     )
     with pytest.raises(UnauthorizedError, match="documenters"):
@@ -436,11 +436,11 @@ async def test_docs_complete_for_task_self_documentation_blocked(
 
     audit_instance = _Audit()
     monkeypatch.setattr(
-        "roboco.services.audit.get_audit_service",
+        "robofleet.services.audit.get_audit_service",
         lambda: audit_instance,
     )
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: AsyncMock(),
     )
     with pytest.raises(UnauthorizedError, match="own task"):
@@ -456,7 +456,7 @@ async def test_docs_complete_for_task_missing_notes(
     await db_session.flush()
     agent_ctx = _ctx(task_setup["agent_id"], AgentRole.DOCUMENTER)
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: AsyncMock(),
     )
     with pytest.raises(ValidationError, match="DOC_NOTES_REQUIRED"):
@@ -473,7 +473,7 @@ async def test_docs_complete_for_task_validation_when_invalid_status(
     await db_session.flush()
     agent_ctx = _ctx(task_setup["agent_id"], AgentRole.DOCUMENTER)
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: AsyncMock(),
     )
     with pytest.raises(ValidationError, match="invalid status"):
@@ -513,7 +513,7 @@ async def test_docs_complete_for_task_succeeds(
     fake_delivery = AsyncMock()
     fake_delivery.notify_pm_of_docs_complete = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: fake_delivery,
     )
     out = await svc.docs_complete_for_task(
@@ -771,7 +771,7 @@ async def test_escalate_to_ceo_for_agent_succeeds(
     fake_delivery = AsyncMock()
     fake_delivery.notify_ceo_of_escalation = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: fake_delivery,
     )
     out = await svc.escalate_to_ceo_for_agent(
@@ -855,7 +855,9 @@ async def test_substitute_task_for_agent_low_context_routes_to_pending(
     task.assigned_to = task_setup["agent_id"]
     await db_session.flush()
     agent_ctx = _ctx(task_setup["agent_id"], AgentRole.DEVELOPER)
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_agent", lambda _slug: pm.slug)
+    monkeypatch.setattr(
+        "robofleet.agents_config.get_pm_for_agent", lambda _slug: pm.slug
+    )
     out = await svc.substitute_task_for_agent(
         task.id, agent_ctx, SubstituteReason.LOW_CONTEXT.value, "ran out of context"
     )
@@ -899,13 +901,17 @@ async def test_substitute_task_for_agent_qa_task_complete_routes_to_pm_review(
     task.assigned_to = qa.id
     await db_session.flush()
     agent_ctx = _ctx(cast("UUID", qa.id), AgentRole.QA)
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_agent", lambda _slug: pm.slug)
+    monkeypatch.setattr(
+        "robofleet.agents_config.get_pm_for_agent", lambda _slug: pm.slug
+    )
 
     # Patch notify_pm_for_substitute so we don't hit the notification stack
     async def _fake_notify(*_args: Any, **_kwargs: Any) -> None:
         return None
 
-    monkeypatch.setattr("roboco.services.task.notify_pm_for_substitute", _fake_notify)
+    monkeypatch.setattr(
+        "robofleet.services.task.notify_pm_for_substitute", _fake_notify
+    )
     out = await svc.substitute_task_for_agent(
         task.id, agent_ctx, SubstituteReason.TASK_COMPLETE.value, "qa done"
     )
@@ -922,8 +928,8 @@ async def test_substitute_task_for_agent_blocked_external_routes_to_blocked(
     task.assigned_to = task_setup["agent_id"]
     await db_session.flush()
     agent_ctx = _ctx(task_setup["agent_id"], AgentRole.DEVELOPER)
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_agent", lambda _slug: None)
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_team", lambda _team: None)
+    monkeypatch.setattr("robofleet.agents_config.get_pm_for_agent", lambda _slug: None)
+    monkeypatch.setattr("robofleet.agents_config.get_pm_for_team", lambda _team: None)
     out = await svc.substitute_task_for_agent(
         task.id,
         agent_ctx,
@@ -943,8 +949,8 @@ async def test_substitute_task_for_agent_update_failure_raises(
     task.assigned_to = task_setup["agent_id"]
     await db_session.flush()
     agent_ctx = _ctx(task_setup["agent_id"], AgentRole.DEVELOPER)
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_agent", lambda _slug: None)
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_team", lambda _team: None)
+    monkeypatch.setattr("robofleet.agents_config.get_pm_for_agent", lambda _slug: None)
+    monkeypatch.setattr("robofleet.agents_config.get_pm_for_team", lambda _team: None)
 
     # Force update() to return None
     object.__setattr__(svc, "update", AsyncMock(return_value=None))
@@ -984,11 +990,11 @@ async def test_build_substitute_update_resolves_pm_via_team(
     await db_session.flush()
     task = await svc.create(_req(task_setup))
     monkeypatch.setattr(
-        "roboco.agents_config.get_pm_for_agent",
+        "robofleet.agents_config.get_pm_for_agent",
         lambda _slug: None,
     )
     monkeypatch.setattr(
-        "roboco.agents_config.get_pm_for_team",
+        "robofleet.agents_config.get_pm_for_team",
         lambda _team: pm.slug,
     )
     update_data, target_pm_slug = await svc.build_substitute_update(
@@ -1011,8 +1017,8 @@ async def test_build_substitute_update_resolves_pm_via_team(
 async def test_resolve_pm_for_substitute_returns_none_when_no_match(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_agent", lambda _s: None)
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_team", lambda _t: None)
+    monkeypatch.setattr("robofleet.agents_config.get_pm_for_agent", lambda _s: None)
+    monkeypatch.setattr("robofleet.agents_config.get_pm_for_team", lambda _t: None)
     slug, pm_uuid = await resolve_pm_for_substitute(
         db_session, agent_slug="x", task_team=Team.BACKEND
     )
@@ -1026,10 +1032,10 @@ async def test_resolve_pm_for_substitute_returns_none_when_pm_not_in_db(
 ) -> None:
     """PM slug exists in config but no AgentTable row matches → uuid is None."""
     monkeypatch.setattr(
-        "roboco.agents_config.get_pm_for_agent",
+        "robofleet.agents_config.get_pm_for_agent",
         lambda _s: "nonexistent-pm",
     )
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_team", lambda _t: None)
+    monkeypatch.setattr("robofleet.agents_config.get_pm_for_team", lambda _t: None)
     slug, pm_uuid = await resolve_pm_for_substitute(
         db_session, agent_slug="x", task_team=Team.BACKEND
     )
@@ -1057,10 +1063,10 @@ async def test_resolve_pm_for_substitute_returns_uuid_when_found(
     db_session.add(pm)
     await db_session.flush()
     monkeypatch.setattr(
-        "roboco.agents_config.get_pm_for_agent",
+        "robofleet.agents_config.get_pm_for_agent",
         lambda _s: pm.slug,
     )
-    monkeypatch.setattr("roboco.agents_config.get_pm_for_team", lambda _t: None)
+    monkeypatch.setattr("robofleet.agents_config.get_pm_for_team", lambda _t: None)
     slug, pm_uuid = await resolve_pm_for_substitute(
         db_session, agent_slug="x", task_team=Team.BACKEND
     )
@@ -1109,7 +1115,7 @@ async def test_notify_pm_for_substitute_creates_notification(
     fake_delivery = AsyncMock()
     fake_delivery.deliver = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_notification_delivery_service",
+        "robofleet.services.notification_delivery.get_notification_delivery_service",
         lambda _s: fake_delivery,
     )
     await notify_pm_for_substitute(

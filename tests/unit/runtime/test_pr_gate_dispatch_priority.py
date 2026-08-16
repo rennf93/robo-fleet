@@ -24,10 +24,10 @@ from typing import Any, cast
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 # Every coroutine `_dispatch_all_work` awaits, in the source order it
-# constructs the `dispatchers` list (see roboco/runtime/orchestrator.py).
+# constructs the `dispatchers` list (see robofleet/runtime/orchestrator.py).
 _ALL_DISPATCH_METHODS = (
     "_dispatch_pm_work",
     "_dispatch_pm_closure_work",

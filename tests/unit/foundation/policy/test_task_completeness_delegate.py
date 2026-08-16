@@ -13,12 +13,12 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from roboco.foundation.policy.task_completeness import (
+from robofleet.foundation.policy.task_completeness import (
     TASK_AT_CREATE,
     TASK_AT_DELEGATE,
     check,
 )
-from roboco.models.base import TaskType
+from robofleet.models.base import TaskType
 
 
 def _payload(**overrides: Any) -> SimpleNamespace:

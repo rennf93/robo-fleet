@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation import identity as _foundation
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -22,8 +22,8 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.models.task import TaskCreateRequest
-from roboco.services.task import DEP_UPDATE_SOURCE, get_task_service
+from robofleet.models.task import TaskCreateRequest
+from robofleet.services.task import DEP_UPDATE_SOURCE, get_task_service
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

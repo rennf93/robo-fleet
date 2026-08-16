@@ -17,15 +17,15 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from httpx import ASGITransport, AsyncClient
-from roboco.api.app import create_app
-from roboco.models.events import EventType
-from roboco.models.runtime import WaitingRecord
-from roboco.runtime.orchestrator import (
+from robofleet.api.app import create_app
+from robofleet.models.events import EventType
+from robofleet.models.runtime import WaitingRecord
+from robofleet.runtime.orchestrator import (
     _CEO_NOTIFY_THRESHOLD,
     _PROBE_GIVE_UP_THRESHOLD,
     AgentOrchestrator,
 )
-from roboco.services.gateway.rate_limit_tracker import RateLimitStateTracker
+from robofleet.services.gateway.rate_limit_tracker import RateLimitStateTracker
 
 _HTTP_OK = 200
 _HTTP_NOT_FOUND = 404
@@ -148,7 +148,7 @@ class TestProbeSuccessPath:
             patch.object(orch, "_make_tracker", return_value=tracker_mock),
             patch.object(orch, "resolve_wait", new=AsyncMock(return_value=None)),
             patch.object(orch, "_do_probe", new=AsyncMock(return_value=True)),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock()
@@ -181,7 +181,7 @@ class TestProbeSuccessPath:
             patch.object(orch, "resolve_wait", new=resolve_mock),
             patch.object(orch, "_make_tracker", return_value=tracker_mock),
             patch.object(orch, "_do_probe", new=AsyncMock(return_value=True)),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock()
@@ -209,7 +209,7 @@ class TestProbeSuccessPath:
             patch.object(orch, "resolve_wait", new=AsyncMock(return_value=None)),
             patch.object(orch, "_make_tracker", return_value=tracker_mock),
             patch.object(orch, "_do_probe", new=AsyncMock(return_value=True)),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock(side_effect=published_events.append)
@@ -235,7 +235,7 @@ class TestProbeSuccessPath:
             patch.object(orch, "resolve_wait", new=AsyncMock(return_value=None)),
             patch.object(orch, "_make_tracker", return_value=tracker_mock),
             patch.object(orch, "_do_probe", new=AsyncMock(return_value=True)),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock()
@@ -347,7 +347,7 @@ class TestProbeGiveUpEscapeHatch:
             patch.object(orch, "resolve_wait", new=resolve_mock),
             patch.object(orch, "_do_probe", new=AsyncMock(return_value=False)),
             patch.object(orch, "_notify_rate_limit_ceo", new=AsyncMock()),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock()
@@ -372,7 +372,7 @@ class TestProbeGiveUpEscapeHatch:
             patch.object(orch, "resolve_wait", new=AsyncMock(return_value=None)),
             patch.object(orch, "_do_probe", new=AsyncMock(return_value=False)),
             patch.object(orch, "_notify_rate_limit_ceo", new=AsyncMock()),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock()
@@ -397,7 +397,7 @@ class TestProbeGiveUpEscapeHatch:
             patch.object(orch, "resolve_wait", new=AsyncMock(return_value=None)),
             patch.object(orch, "_do_probe", new=AsyncMock(return_value=False)),
             patch.object(orch, "_notify_rate_limit_ceo", new=AsyncMock()),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock(side_effect=published.append)
@@ -421,7 +421,7 @@ class TestProbeGiveUpEscapeHatch:
             patch.object(orch, "resolve_wait", new=AsyncMock(return_value=None)),
             patch.object(orch, "_do_probe", new=AsyncMock(return_value=False)),
             patch.object(orch, "_notify_rate_limit_ceo", new=AsyncMock()),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock()
@@ -447,7 +447,7 @@ class TestProbeGiveUpEscapeHatch:
             patch.object(orch, "resolve_wait", new=AsyncMock(return_value=None)),
             patch.object(orch, "_do_probe", new=AsyncMock(return_value=False)),
             patch.object(orch, "_notify_rate_limit_ceo", new=notify_mock),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock()
@@ -539,7 +539,7 @@ class TestCEONotificationThreshold:
             patch.object(orch, "_make_tracker", return_value=tracker_mock),
             patch.object(orch, "_notify_rate_limit_ceo", new=notify_mock),
             patch.object(orch, "_do_probe", new=AsyncMock(return_value=True)),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock()
@@ -597,7 +597,7 @@ class TestOrphanProviderFallback:
                 "list_rate_limited_providers",
                 new=AsyncMock(return_value=[]),
             ),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock()
@@ -637,7 +637,7 @@ class TestOrphanProviderFallback:
                 "list_rate_limited_providers",
                 new=AsyncMock(return_value=[(provider, state)]),
             ),
-            patch("roboco.events.get_event_bus") as mock_bus_fn,
+            patch("robofleet.events.get_event_bus") as mock_bus_fn,
         ):
             bus_mock = AsyncMock()
             bus_mock.publish = AsyncMock()
@@ -711,7 +711,7 @@ class TestRateLimitsEndpoint:
         app = create_app()
 
         with patch(
-            "roboco.api.routes.system.RateLimitStateTracker"
+            "robofleet.api.routes.system.RateLimitStateTracker"
             ".list_rate_limited_providers",
             new_callable=AsyncMock,
             return_value=[],
@@ -737,7 +737,7 @@ class TestRateLimitsEndpoint:
         }
 
         with patch(
-            "roboco.api.routes.system.RateLimitStateTracker"
+            "robofleet.api.routes.system.RateLimitStateTracker"
             ".list_rate_limited_providers",
             new_callable=AsyncMock,
             return_value=[("anthropic", state)],
@@ -763,7 +763,7 @@ class TestRateLimitsEndpoint:
         app = create_app()
 
         with patch(
-            "roboco.api.routes.system.RateLimitStateTracker"
+            "robofleet.api.routes.system.RateLimitStateTracker"
             ".list_rate_limited_providers",
             new_callable=AsyncMock,
             return_value=[],

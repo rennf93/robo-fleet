@@ -3,7 +3,7 @@
 The proof-the-stack-is-Google artifact for judges who run the repo. Asserts the
 three mandatory All Things Agentic / Fortified Enterprise Fleet items:
 
-1. A Gemini 3.5 model id is the agent model (``roboco.agent.adk_entry._MODEL``
+1. A Gemini 3.5 model id is the agent model (``robofleet.agent.adk_entry._MODEL``
    resolves to a ``gemini-3.5-*`` id).
 2. Google ADK is the runner (``google.adk.runners.Runner`` is importable).
 3. At least one GCP infra service is wired (``async_engine_for_cloudsql`` is
@@ -51,7 +51,7 @@ def test_agent_model_resolves_to_gemini_3_5(
     if ADK is missing this test also fails with the ImportError, which is the
     intended outcome for the proof artifact.
     """
-    from roboco.agent import adk_entry
+    from robofleet.agent import adk_entry
 
     monkeypatch.setenv("ROBOCO_AGENT_MODEL", "gemini-3.5-flash")
     importlib.reload(adk_entry)
@@ -74,11 +74,11 @@ def test_cloudsql_engine_factory_is_wired(
     monkeypatch the holder to a clean state, arm the setting, stub the builder,
     and confirm ``get_engine`` routes through it. No real GCP call is made.
     """
-    from roboco.db import base as db_base
-    from roboco.infra import cloudsql
+    from robofleet.db import base as db_base
+    from robofleet.infra import cloudsql
 
     assert callable(cloudsql.async_engine_for_cloudsql), (
-        "roboco.infra.cloudsql.async_engine_for_cloudsql is not callable"
+        "robofleet.infra.cloudsql.async_engine_for_cloudsql is not callable"
     )
 
     monkeypatch.setattr(db_base._DbHolder, "engine", None)
@@ -110,7 +110,7 @@ def test_live_gcp_cloudsql_instance_configured() -> None:
     """
     if os.environ.get("ROBOCO_GCP_E2E") != "1":
         pytest.skip("set ROBOCO_GCP_E2E=1 to run the live-GCP assertions")
-    from roboco.config import settings
+    from robofleet.config import settings
 
     assert settings.gcp_cloudsql_instance, (
         "gcp_cloudsql_instance not set in the live config"

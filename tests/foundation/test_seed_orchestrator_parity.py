@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from roboco.foundation import identity
-from roboco.runtime import orchestrator
-from roboco.seeds.initial_data import AGENT_UUIDS, DEFAULT_AGENTS
+from robofleet.foundation import identity
+from robofleet.runtime import orchestrator
+from robofleet.seeds.initial_data import AGENT_UUIDS, DEFAULT_AGENTS
 
 
 def test_seed_agent_uuids_derive_from_foundation() -> None:

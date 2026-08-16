@@ -22,8 +22,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from roboco.config import settings
-from roboco.models.base import TaskStatus
+from robofleet.config import settings
+from robofleet.models.base import TaskStatus
 from tests.e2e_smoke.arcs import seed_company, seed_project, seed_task
 from tests.e2e_smoke.harness import ScriptedAgent, expect_error
 
@@ -37,7 +37,7 @@ def _set_sandbox_services(
     stack: E2EStack, project_id: object, services: list[str]
 ) -> None:
     """System-side project opt-in write (mirrors ``arcs.set_branch_name``)."""
-    from roboco.db.tables import ProjectTable
+    from robofleet.db.tables import ProjectTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> None:
@@ -54,7 +54,7 @@ def _set_sandbox_services(
 def test_manifest_grants_request_sandbox_to_dev_and_qa_only() -> None:
     """role_config -> spawn_manifest wiring: the verb reaches dev/qa manifests
     and no other role — the exact scope e418a4ca added it under."""
-    from roboco.runtime.spawn_manifest import SpawnInputs, build_for_role
+    from robofleet.runtime.spawn_manifest import SpawnInputs, build_for_role
 
     def do_tools(role: str) -> list[str]:
         manifest = build_for_role(

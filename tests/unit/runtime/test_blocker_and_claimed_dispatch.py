@@ -18,9 +18,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models.runtime import AgentInstance
-from roboco.runtime.orchestrator import AgentOrchestrator, AgentState
-from roboco.seeds.initial_data import AGENT_UUIDS
+from robofleet.models.runtime import AgentInstance
+from robofleet.runtime.orchestrator import AgentOrchestrator, AgentState
+from robofleet.seeds.initial_data import AGENT_UUIDS
 
 
 def _orch() -> AgentOrchestrator:

@@ -1,7 +1,7 @@
 """Dashboard auditor flag/report mutating routes (``create_auditor_flag``,
 ``resolve_auditor_flag``, ``create_auditor_report``, ``send_auditor_report``)
 are gated to AUDITOR or CEO via a ``CurrentAgentContext`` dependency plus a
-coarse role gate, mirroring ``roboco/api/routes/playbooks.py::_require_curator``.
+coarse role gate, mirroring ``robofleet/api/routes/playbooks.py::_require_curator``.
 """
 
 from __future__ import annotations
@@ -14,11 +14,11 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.dashboard import router as dashboard_router
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
-from roboco.services.dashboard import reset_storage
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.dashboard import router as dashboard_router
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
+from robofleet.services.dashboard import reset_storage
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator

@@ -12,7 +12,7 @@ from __future__ import annotations
 import tomllib
 from typing import TYPE_CHECKING
 
-from roboco.agent_sdk import grok_intake_main, grok_secretary_main
+from robofleet.agent_sdk import grok_intake_main, grok_secretary_main
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -37,7 +37,7 @@ def test_intake_render_wires_roboco_intake_mcp(
         "--no-sync",
         "python",
         "-m",
-        "roboco.mcp.intake_server",
+        "robofleet.mcp.intake_server",
     ]
     assert server["env"]["UV_PROJECT_ENVIRONMENT"] == "/app/.venv"
     assert server["env"]["ROBOCO_API_URL"] == "http://orch:8000"
@@ -62,7 +62,7 @@ def test_secretary_render_wires_mcp_and_hmac_identity(
         "--no-sync",
         "python",
         "-m",
-        "roboco.mcp.secretary_server",
+        "robofleet.mcp.secretary_server",
     ]
     # The HMAC identity the directive tools authenticate with must flow through.
     assert server["env"]["ROBOCO_AGENT_TOKEN"] == "hmac-xyz"

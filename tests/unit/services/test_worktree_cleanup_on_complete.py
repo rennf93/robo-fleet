@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models.base import TaskStatus
-from roboco.services.task import TaskService
+from robofleet.models.base import TaskStatus
+from robofleet.services.task import TaskService
 
 
 def _build_task(**overrides: object) -> MagicMock:
@@ -242,7 +242,7 @@ async def test_recurring_worktree_cleanup_failure_escalates_to_ceo() -> None:
     )
 
     with patch(
-        "roboco.services.notification.NotificationService.send_ack_notification",
+        "robofleet.services.notification.NotificationService.send_ack_notification",
         new=AsyncMock(),
     ) as notifier:
         for _ in range(n - 1):
@@ -273,7 +273,7 @@ async def test_worktree_cleanup_success_resets_failure_streak() -> None:
     _bind(svc, "_remove_task_worktree_best_effort", remove)
 
     with patch(
-        "roboco.services.notification.NotificationService.send_ack_notification",
+        "robofleet.services.notification.NotificationService.send_ack_notification",
         new=AsyncMock(),
     ) as notifier:
         for _ in range(n - 1):
@@ -309,7 +309,7 @@ async def test_non_fs_worktree_cleanup_failure_does_not_escalate() -> None:
     )
 
     with patch(
-        "roboco.services.notification.NotificationService.send_ack_notification",
+        "robofleet.services.notification.NotificationService.send_ack_notification",
         new=AsyncMock(),
     ) as notifier:
         for _ in range(n + 2):

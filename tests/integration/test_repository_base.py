@@ -7,10 +7,10 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.services.base import NotFoundError
-from roboco.services.repositories.base import BaseRepository
+from robofleet.db.tables import AgentTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.services.base import NotFoundError
+from robofleet.services.repositories.base import BaseRepository
 from sqlalchemy import func, select
 
 if TYPE_CHECKING:

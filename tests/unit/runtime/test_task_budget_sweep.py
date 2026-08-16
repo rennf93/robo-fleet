@@ -14,9 +14,9 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.config import settings
-from roboco.models.base import BlockerResolverType, TaskStatus, TaskType
-from roboco.runtime.orchestrator import AgentOrchestrator, AgentState
+from robofleet.config import settings
+from robofleet.models.base import BlockerResolverType, TaskStatus, TaskType
+from robofleet.runtime.orchestrator import AgentOrchestrator, AgentState
 
 _MOCK_TASK_SPEND_USD = 3.0
 
@@ -188,10 +188,10 @@ async def test_handle_breach_blocks_task_and_notifies_ceo() -> None:
     delivery.notify_ceo_of_budget_breach = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_db_context", _db_ctx(db)),
-        patch("roboco.services.task.TaskService", return_value=task_svc),
+        patch("robofleet.db.base.get_db_context", _db_ctx(db)),
+        patch("robofleet.services.task.TaskService", return_value=task_svc),
         patch(
-            "roboco.services.notification_delivery.get_notification_delivery_service",
+            "robofleet.services.notification_delivery.get_notification_delivery_service",
             return_value=delivery,
         ),
     ):
@@ -222,10 +222,10 @@ async def test_handle_breach_skips_a_task_that_already_moved_on() -> None:
     delivery.notify_ceo_of_budget_breach = AsyncMock()
 
     with (
-        patch("roboco.db.base.get_db_context", _db_ctx(db)),
-        patch("roboco.services.task.TaskService", return_value=task_svc),
+        patch("robofleet.db.base.get_db_context", _db_ctx(db)),
+        patch("robofleet.services.task.TaskService", return_value=task_svc),
         patch(
-            "roboco.services.notification_delivery.get_notification_delivery_service",
+            "robofleet.services.notification_delivery.get_notification_delivery_service",
             return_value=delivery,
         ),
     ):
@@ -257,8 +257,8 @@ async def test_null_budget_is_never_a_breach() -> None:
     db = MagicMock()
 
     with (
-        patch("roboco.db.base.get_db_context", _db_ctx(db)),
-        patch("roboco.services.task.TaskService", return_value=task_svc),
+        patch("robofleet.db.base.get_db_context", _db_ctx(db)),
+        patch("robofleet.services.task.TaskService", return_value=task_svc),
     ):
         breach = await orch._task_budget_breach(task_id)
 
@@ -281,8 +281,8 @@ async def test_breach_none_when_task_left_claimed_or_in_progress() -> None:
     db = MagicMock()
 
     with (
-        patch("roboco.db.base.get_db_context", _db_ctx(db)),
-        patch("roboco.services.task.TaskService", return_value=task_svc),
+        patch("robofleet.db.base.get_db_context", _db_ctx(db)),
+        patch("robofleet.services.task.TaskService", return_value=task_svc),
     ):
         breach = await orch._task_budget_breach(task_id)
 
@@ -326,8 +326,8 @@ async def test_repeated_ticks_do_not_refire_once_blocked(
         patch.object(
             AgentOrchestrator, "_fetch_budget_status", AsyncMock(return_value=None)
         ),
-        patch("roboco.db.base.get_db_context", _db_ctx(db)),
-        patch("roboco.services.task.TaskService", return_value=task_svc),
+        patch("robofleet.db.base.get_db_context", _db_ctx(db)),
+        patch("robofleet.services.task.TaskService", return_value=task_svc),
         patch.object(orch, "_handle_task_budget_breach", AsyncMock()) as handle_mock,
         patch.object(orch, "stop_agent", AsyncMock()) as stop_mock,
     ):

@@ -15,8 +15,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.services.forge import RepoRef
-from roboco.services.git import GitService
+from robofleet.services.forge import RepoRef
+from robofleet.services.git import GitService
 
 
 def _git_service() -> GitService:
@@ -192,7 +192,7 @@ async def test_close_pull_request_patches_state_closed(
             calls.append(("PATCH", url))
             return _Resp()
 
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=_Client()):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=_Client()):
         await svc.close_pull_request(
             159,
             project_id=uuid4(),
@@ -269,7 +269,7 @@ async def test_close_pull_request_does_not_delete_branch_by_default(
         async def patch(self, _url: str, **_kw: Any) -> _Resp:
             return _Resp()
 
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=_Client()):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=_Client()):
         # No delete_branch kwarg → default must preserve the branch.
         await svc.close_pull_request(159, project_id=uuid4(), comment="superseded")
 
@@ -340,7 +340,7 @@ async def test_close_pull_request_idempotent_when_already_closed(
             calls.append(("PATCH", url))
             return _Resp()
 
-    with patch("roboco.services.git.httpx.AsyncClient", return_value=_Client()):
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=_Client()):
         await svc.close_pull_request(
             159,
             project_id=uuid4(),

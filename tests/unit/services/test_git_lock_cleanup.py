@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
-from roboco.exceptions import GitTimeoutError
-from roboco.services.git import GitService
+from robofleet.exceptions import GitTimeoutError
+from robofleet.services.git import GitService
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -52,7 +52,7 @@ async def test_timeout_removes_stale_git_locks(
     def _boom(*_a: object, **_k: object) -> subprocess.CompletedProcess[str]:
         raise subprocess.TimeoutExpired(cmd=["git", "commit"], timeout=5)
 
-    monkeypatch.setattr("roboco.services.git.subprocess.run", _boom)
+    monkeypatch.setattr("robofleet.services.git.subprocess.run", _boom)
 
     with pytest.raises(GitTimeoutError):
         await _svc()._run_git(workspace, ["commit", "-m", "x"], check=True)
@@ -75,7 +75,7 @@ async def test_timeout_lock_cleanup_is_best_effort_no_git_dir(
     def _boom(*_a: object, **_k: object) -> subprocess.CompletedProcess[str]:
         raise subprocess.TimeoutExpired(cmd=["git", "reset", "--hard"], timeout=5)
 
-    monkeypatch.setattr("roboco.services.git.subprocess.run", _boom)
+    monkeypatch.setattr("robofleet.services.git.subprocess.run", _boom)
 
     with pytest.raises(GitTimeoutError):
         await _svc()._run_git(workspace, ["reset", "--hard", "origin/main"])
@@ -95,10 +95,10 @@ async def test_clean_exit_does_not_touch_locks(
     ok = subprocess.CompletedProcess(
         args=["git", "status"], returncode=0, stdout="", stderr=""
     )
-    monkeypatch.setattr("roboco.services.git.subprocess.run", lambda *_a, **_k: ok)
+    monkeypatch.setattr("robofleet.services.git.subprocess.run", lambda *_a, **_k: ok)
     # _ensure_agent_owned runs after a clean exit — no-op it.
     monkeypatch.setattr(
-        "roboco.services.workspace._ensure_agent_owned", lambda _ws: None
+        "robofleet.services.workspace._ensure_agent_owned", lambda _ws: None
     )
 
     await _svc()._run_git(workspace, ["status"], check=True)

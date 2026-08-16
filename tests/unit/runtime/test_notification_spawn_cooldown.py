@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-from roboco.config import settings
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _orch() -> AgentOrchestrator:
@@ -34,7 +34,7 @@ async def test_cooldown_expires() -> None:
     orch = _orch()
     with (
         patch.object(settings, "notification_spawn_cooldown_seconds", 600),
-        patch("roboco.runtime.orchestrator.time.monotonic") as clock,
+        patch("robofleet.runtime.orchestrator.time.monotonic") as clock,
     ):
         clock.return_value = 1_000.0
         assert await orch._notification_spawn_cooled("be-pm", "n1") is False
@@ -66,7 +66,7 @@ async def test_hard_cap_breaks_respawn_loop() -> None:
     with (
         patch.object(settings, "notification_spawn_cooldown_seconds", 600),
         patch.object(settings, "notification_spawn_max_attempts", 3),
-        patch("roboco.runtime.orchestrator.time.monotonic") as clock,
+        patch("robofleet.runtime.orchestrator.time.monotonic") as clock,
         patch.object(
             AgentOrchestrator, "_notify_notification_spawn_capped", AsyncMock()
         ),
@@ -89,7 +89,7 @@ async def test_zero_max_attempts_disables_cap() -> None:
     with (
         patch.object(settings, "notification_spawn_cooldown_seconds", 600),
         patch.object(settings, "notification_spawn_max_attempts", 0),
-        patch("roboco.runtime.orchestrator.time.monotonic") as clock,
+        patch("robofleet.runtime.orchestrator.time.monotonic") as clock,
     ):
         # Cap off: only the cooldown gates, every elapsed window respawns.
         for i in range(20):
@@ -105,7 +105,7 @@ async def test_cap_survives_prune() -> None:
     with (
         patch.object(settings, "notification_spawn_cooldown_seconds", 600),
         patch.object(settings, "notification_spawn_max_attempts", 2),
-        patch("roboco.runtime.orchestrator.time.monotonic") as clock,
+        patch("robofleet.runtime.orchestrator.time.monotonic") as clock,
         patch.object(
             AgentOrchestrator, "_notify_notification_spawn_capped", AsyncMock()
         ),
@@ -131,7 +131,7 @@ async def test_map_prunes_expired_entries() -> None:
     prune_at = AgentOrchestrator._NOTIFICATION_COOLDOWN_PRUNE_AT
     with (
         patch.object(settings, "notification_spawn_cooldown_seconds", 600),
-        patch("roboco.runtime.orchestrator.time.monotonic") as clock,
+        patch("robofleet.runtime.orchestrator.time.monotonic") as clock,
     ):
         clock.return_value = 1_000.0
         for i in range(prune_at + 1):
@@ -152,9 +152,9 @@ async def test_cap_trip_sends_one_ceo_notification() -> None:
     with (
         patch.object(settings, "notification_spawn_cooldown_seconds", 600),
         patch.object(settings, "notification_spawn_max_attempts", 2),
-        patch("roboco.runtime.orchestrator.time.monotonic") as clock,
+        patch("robofleet.runtime.orchestrator.time.monotonic") as clock,
         patch(
-            "roboco.services.notification.NotificationService"
+            "robofleet.services.notification.NotificationService"
             ".send_notification_spawn_cap_notification",
             new_callable=AsyncMock,
         ) as send_mock,
@@ -189,9 +189,9 @@ async def test_notification_failure_swallowed() -> None:
     with (
         patch.object(settings, "notification_spawn_cooldown_seconds", 600),
         patch.object(settings, "notification_spawn_max_attempts", 1),
-        patch("roboco.runtime.orchestrator.time.monotonic") as clock,
+        patch("robofleet.runtime.orchestrator.time.monotonic") as clock,
         patch(
-            "roboco.services.notification.NotificationService"
+            "robofleet.services.notification.NotificationService"
             ".send_notification_spawn_cap_notification",
             new_callable=AsyncMock,
             side_effect=RuntimeError("boom"),

@@ -29,19 +29,19 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.models.base import TaskStatus as TS
-from roboco.runtime.orchestrator import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskStatus as TS
+from robofleet.runtime.orchestrator import (
     _MAX_VIDEO_RENDER_ATTEMPTS,
     AgentOrchestrator,
 )
-from roboco.services import video_engine as video_engine_module
-from roboco.services.task import VIDEO_POST_SOURCE, get_task_service
-from roboco.services.video_engine import VideoEngine
+from robofleet.services import video_engine as video_engine_module
+from robofleet.services.task import VIDEO_POST_SOURCE, get_task_service
+from robofleet.services.video_engine import VideoEngine
 from sqlalchemy import select
 
 if TYPE_CHECKING:
@@ -207,14 +207,14 @@ def _render_patches(renderer: _FakeRenderer, workspace: Any, db: Any) -> Any:
     the shared (never-committing) test session."""
     return (
         patch(
-            "roboco.services.video_renderer_client.get_video_renderer",
+            "robofleet.services.video_renderer_client.get_video_renderer",
             lambda: renderer,
         ),
         patch(
-            "roboco.services.workspace.get_workspace_service",
+            "robofleet.services.workspace.get_workspace_service",
             lambda _db: workspace,
         ),
-        patch("roboco.db.get_db_context", _db_ctx(db)),
+        patch("robofleet.db.get_db_context", _db_ctx(db)),
     )
 
 
@@ -255,10 +255,10 @@ async def test_run_cycle_delegates_one_call_per_completed_task_id() -> None:
     task_svc.list_completed_video_tasks = AsyncMock(return_value=[task_a, task_b])
     orch._render_video_task = AsyncMock()
     with (
-        patch("roboco.db.get_db_context", _db_ctx(db)),
-        patch("roboco.services.task.get_task_service", return_value=task_svc),
+        patch("robofleet.db.get_db_context", _db_ctx(db)),
+        patch("robofleet.services.task.get_task_service", return_value=task_svc),
         patch(
-            "roboco.services.maintenance_pause.is_paused",
+            "robofleet.services.maintenance_pause.is_paused",
             AsyncMock(return_value=False),
         ),
     ):
@@ -280,10 +280,10 @@ async def test_run_cycle_with_no_completed_tasks_calls_nothing() -> None:
     task_svc.list_completed_video_tasks = AsyncMock(return_value=[])
     orch._render_video_task = AsyncMock()
     with (
-        patch("roboco.db.get_db_context", _db_ctx(db)),
-        patch("roboco.services.task.get_task_service", return_value=task_svc),
+        patch("robofleet.db.get_db_context", _db_ctx(db)),
+        patch("robofleet.services.task.get_task_service", return_value=task_svc),
         patch(
-            "roboco.services.maintenance_pause.is_paused",
+            "robofleet.services.maintenance_pause.is_paused",
             AsyncMock(return_value=False),
         ),
     ):
@@ -317,10 +317,10 @@ async def test_run_cycle_a_raise_stops_later_ids_but_prior_ids_already_ran() -> 
 
     orch._render_video_task = AsyncMock(side_effect=_render)
     with (
-        patch("roboco.db.get_db_context", _db_ctx(db)),
-        patch("roboco.services.task.get_task_service", return_value=task_svc),
+        patch("robofleet.db.get_db_context", _db_ctx(db)),
+        patch("robofleet.services.task.get_task_service", return_value=task_svc),
         patch(
-            "roboco.services.maintenance_pause.is_paused",
+            "robofleet.services.maintenance_pause.is_paused",
             AsyncMock(return_value=False),
         ),
         pytest.raises(RuntimeError, match="B blew up"),
@@ -389,16 +389,20 @@ async def test_render_video_task_holds_no_session_across_render_calls() -> None:
     renderer = SimpleNamespace(render=AsyncMock(side_effect=_render))
 
     with (
-        patch("roboco.db.get_db_context", _fake_db_ctx),
-        patch("roboco.services.task.get_task_service", return_value=task_svc),
-        patch("roboco.services.project.get_project_service", return_value=project_svc),
-        patch("roboco.services.workspace.get_workspace_service", lambda _db: workspace),
+        patch("robofleet.db.get_db_context", _fake_db_ctx),
+        patch("robofleet.services.task.get_task_service", return_value=task_svc),
         patch(
-            "roboco.services.video_renderer_client.get_video_renderer",
+            "robofleet.services.project.get_project_service", return_value=project_svc
+        ),
+        patch(
+            "robofleet.services.workspace.get_workspace_service", lambda _db: workspace
+        ),
+        patch(
+            "robofleet.services.video_renderer_client.get_video_renderer",
             lambda: renderer,
         ),
         patch(
-            "roboco.services.video_engine.get_video_engine",
+            "robofleet.services.video_engine.get_video_engine",
             return_value=video_engine,
         ),
     ):
@@ -634,7 +638,7 @@ async def test_render_video_task_terminal_after_max_attempts(
         p2,
         p3,
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             return_value=notify_svc,
         ),
     ):
@@ -685,7 +689,7 @@ async def test_render_video_task_notify_failure_does_not_raise(
         p2,
         p3,
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             side_effect=RuntimeError("notification DB unreachable"),
         ),
     ):

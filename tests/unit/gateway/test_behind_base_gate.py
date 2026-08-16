@@ -15,8 +15,8 @@ from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.choreographer._impl import _IAmDoneContext
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer._impl import _IAmDoneContext
 
 
 def _make_deps(**overrides: object) -> ChoreographerDeps:
@@ -77,7 +77,7 @@ async def test_behind_base_gate_refuses_and_steers_to_sync_branch() -> None:
     ctx = _ctx(t)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c._behind_base_gate(ctx)
@@ -100,7 +100,7 @@ async def test_behind_base_gate_passes_when_up_to_date() -> None:
     ctx = _ctx(t)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c._behind_base_gate(ctx)
@@ -134,7 +134,7 @@ async def test_behind_base_gate_skips_protected_base() -> None:
     ctx = _ctx(t)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value="master"),
     ):
         env = await c._behind_base_gate(ctx)
@@ -152,7 +152,7 @@ async def test_behind_base_gate_fail_opens_on_base_resolution_error() -> None:
     ctx = _ctx(t)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(side_effect=RuntimeError("db unavailable")),
     ):
         env = await c._behind_base_gate(ctx)
@@ -171,7 +171,7 @@ async def test_behind_base_gate_fail_opens_on_git_error() -> None:
     ctx = _ctx(t)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c._behind_base_gate(ctx)

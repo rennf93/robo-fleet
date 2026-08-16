@@ -1,0 +1,342 @@
+"""Gated release-manager engine — dormant by default.
+
+Mirrors the self-heal engine's "detect → originate a CEO-gated artifact → hold"
+shape, but for releases. At a logical point (accumulated unreleased changes past
+the threshold AND a green gate) it runs the deterministic readiness sweep
+(``ReleaseReadinessService``) and originates ONE release PROPOSAL held for the
+CEO. It is deliberately conservative:
+
+* **Default OFF.** ``release_manager_enabled`` is False, so the orchestrator loop
+  never runs and nothing is proposed.
+* **Never publishes.** The proposal is HELD (``confirmed_by_human=False``, owned
+  by the Secretary, and explicitly skipped by every dispatcher) — it is acted on
+  only by the CEO-gated release routes + the fail-closed executor, never by the
+  loop. The loop NEVER calls start / approve / merge / publish.
+* **Repo-singular.** It assesses RoboCo's own project (``self_heal_project_slug``,
+  the canonical "this project IS RoboCo" pointer; defaults to ``roboco-api``).
+* **Bounded.** At most one open proposal at a time (dedup by source).
+
+Correctness is deterministic: the readiness audit lives in code
+(``release_readiness``), not in agent judgment.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
+
+from robofleet.config import settings
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType, Team
+from robofleet.services.base import BaseService
+from robofleet.services.notification_delivery import get_notification_delivery_service
+from robofleet.services.project import get_project_service
+from robofleet.services.release_readiness import (
+    ReleaseReadinessReport,
+    _run_git,
+    assess,
+    gather_snapshot,
+    report_to_dict,
+)
+from robofleet.services.task import (
+    RELEASE_MANAGER_SOURCE,
+    TaskCreateRequest,
+    get_task_service,
+)
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from robofleet.db.tables import TaskTable
+
+# An assessor produces the readiness report (or None when it can't assess). The
+# default is the production git path; tests inject a synthetic one.
+ReleaseAssessor = Callable[[], Awaitable[ReleaseReadinessReport | None]]
+
+
+def _roboco_slug() -> str:
+    """The registered project that IS RoboCo itself (reused from self-heal)."""
+    return (settings.self_heal_project_slug or "roboco-api").strip()
+
+
+def _past_threshold(report: ReleaseReadinessReport) -> bool:
+    """A release is warranted past the commit floor, or for any feat/security."""
+    n_commits = len(report.change_summary)
+    significant = report.bump_kind != "patch" or any(
+        summary.startswith("security:") for summary in report.change_summary
+    )
+    return n_commits >= settings.release_min_commits or significant
+
+
+def _proposal_description(report: ReleaseReadinessReport) -> str:
+    lines = [
+        f"Proposed release: v{report.proposed_version} ({report.bump_kind} bump).",
+        f"{len(report.change_summary)} change(s) since the last tag; "
+        f"gate is {report.gate_state}.",
+        "",
+        "## Drafted CHANGELOG",
+        report.drafted_changelog.rstrip(),
+    ]
+    if report.gaps:
+        lines.append("")
+        lines.append("## Gaps to resolve before publish")
+        lines.extend(f"- [{gap.category}] {gap.detail}" for gap in report.gaps)
+    if report.migration_notes:
+        lines.append("")
+        lines.append("## Migrations")
+        lines.extend(f"- {note}" for note in report.migration_notes)
+    return "\n".join(lines)
+
+
+class ReleaseManagerEngine(BaseService):
+    """Detect release-readiness and originate ONE CEO-gated proposal (never publish)."""
+
+    service_name = "release_manager_engine"
+
+    def __init__(
+        self, session: AsyncSession, assessor: ReleaseAssessor | None = None
+    ) -> None:
+        super().__init__(session)
+        self._assessor: ReleaseAssessor = assessor or self._production_assess
+
+    async def run_cycle(self) -> TaskTable | None:
+        """Assess and, if warranted, originate one held proposal. Else no-op.
+
+        No-op unless ``release_manager_enabled``, or while the ``engines``
+        maintenance-pause scope is active. Originates only past the
+        threshold, with a green gate, and when no proposal is already open. The
+        proposal is held for the CEO; this never starts/approves/publishes.
+        """
+        from robofleet.services.maintenance_pause import PauseScope, is_paused
+
+        if not settings.release_manager_enabled or await is_paused(
+            self.session, PauseScope.ENGINES
+        ):
+            return None
+        task_svc = get_task_service(self.session)
+        if await task_svc.list_open_release_proposals():
+            return None  # one open proposal at a time
+        await self._release_pool_connection()
+        report = await self._ready_report()
+        if report is None:
+            return None
+        project = await get_project_service(self.session).get_by_slug(_roboco_slug())
+        if project is None or project.id is None:
+            self.log.warning(
+                "release-manager: RoboCo project not resolvable; skipping",
+                slug=_roboco_slug(),
+            )
+            return None
+        return await self._originate(report, cast("UUID", project.id))
+
+    async def _release_pool_connection(self) -> None:
+        """End the current transaction so its pool connection is returned.
+
+        Called right before the readiness assessment below, and again inside
+        ``_production_assess`` right after its own CI-query DB resolve (see
+        that method) and inside ``WorkspaceService.ensure_read_clone`` right
+        after its own token DB resolve - the assessment's read-clone
+        fetch/clone, CI status HTTP call, and git subprocess snapshot are
+        each released into separately, not held across as one long span,
+        since each of those steps does its own fresh DB read immediately
+        beforehand that a release here alone can't prevent. Mirrors
+        content_actions.evidence()'s pool-release commit (2026-07-29
+        pool-exhaustion incident): the next read/write reopens a fresh
+        transaction on demand. A poisoned session rolls back instead -
+        ending the transaction is the point, either way works.
+        """
+        from sqlalchemy.exc import PendingRollbackError
+
+        try:
+            await self.session.commit()
+        except PendingRollbackError:
+            await self.session.rollback()
+
+    async def _ready_report(self) -> ReleaseReadinessReport | None:
+        """Assess and return a report only when a release is actually warranted.
+
+        Returns None (propose nothing) when the assessor can't assess, the gate
+        is not green, or the change set is below the threshold.
+        """
+        report = await self._assessor()
+        if report is None:
+            return None
+        if report.gate_state != "green":
+            self.log.info(
+                "release-manager: gate not green; not proposing",
+                gate=report.gate_state,
+            )
+            return None
+        if not _past_threshold(report):
+            return None
+        return report
+
+    async def _originate(
+        self, report: ReleaseReadinessReport, project_id: UUID
+    ) -> TaskTable:
+        """Open ONE PENDING, HELD release proposal owned by the Secretary."""
+        task_svc = get_task_service(self.session)
+        task = await task_svc.create(
+            TaskCreateRequest(
+                title=f"Release proposal: v{report.proposed_version}",
+                description=_proposal_description(report),
+                acceptance_criteria=[
+                    f"CEO approves cutting v{report.proposed_version}",
+                    "All flagged gaps are resolved or accepted before publish",
+                ],
+                team=Team.MAIN_PM,
+                assigned_to=_foundation.AGENTS["secretary-1"].uuid,
+                created_by=_foundation.AGENTS["system"].uuid,
+                task_type=TaskType.ADMINISTRATIVE,
+                nature=TaskNature.NON_TECHNICAL,
+                estimated_complexity=Complexity.LOW,
+                project_id=project_id,
+                status=TaskStatus.PENDING,
+                source=RELEASE_MANAGER_SOURCE,
+                confirmed_by_human=False,  # HELD for the CEO; never dispatched
+            )
+        )
+        # Carry the machine-readable report so the CEO surface + executor can use
+        # it without re-deriving (the description is the human-readable mirror).
+        markers.set_release_report(task, report_to_dict(report))
+        await self.session.flush()
+        await self._notify_ceo(report, task)
+        self.log.info(
+            "release proposal opened (held for CEO)",
+            task_id=str(task.id),
+            version=report.proposed_version,
+            bump=report.bump_kind,
+            gaps=len(report.gaps),
+        )
+        return task
+
+    async def _notify_ceo(
+        self, report: ReleaseReadinessReport, task: TaskTable
+    ) -> None:
+        """Push the queue-item DM + in-app row for the freshly-opened release
+        proposal. Used to also fire a second, separate ``send_ack_notification``
+        ALERT for the same event (from_agent="system" vs this call's CEO
+        self-notify): two pending-ack rows for one proposal, with no dedup
+        path merging them since the sender differed. Removed: this call alone
+        carries the better payload (the styled Telegram push with an
+        Approve/Reject/Open keyboard, plus an in-app row that now resolves via
+        ``related_task_id`` the moment the CEO decides, see
+        ``notify_ceo_of_queue_item``'s docstring)."""
+        try:
+            await get_notification_delivery_service(
+                self.session
+            ).notify_ceo_of_queue_item(
+                kind="release",
+                id8=str(task.id)[:8],
+                title=f"v{report.proposed_version} ready",
+                related_task_id=cast("UUID", task.id),
+            )
+        except Exception as exc:
+            self.log.warning(
+                "release telegram notify failed (best-effort)", error=str(exc)
+            )
+
+    async def _production_assess(self) -> ReleaseReadinessReport | None:
+        """Real path: read-clone RoboCo, fetch CI, gather the snapshot, assess.
+
+        Read-only and fail-safe: if the project / clone can't be resolved it
+        returns None (propose nothing) rather than raising. The CI conclusion is
+        injected into the snapshot (None → unknown gate → no proposal).
+        """
+        from robofleet.models.env_branches import head_branch, prod_branch
+        from robofleet.services.git import get_git_service
+        from robofleet.services.workspace import get_workspace_service
+
+        slug = _roboco_slug()
+        project = await get_project_service(self.session).get_by_slug(slug)
+        if project is None:
+            return None
+        try:
+            root = await get_workspace_service(self.session).ensure_read_clone(slug)
+        except Exception as exc:
+            self.log.warning("release-manager: read clone failed", error=str(exc))
+            return None
+        # Resolve the read-clone HEAD so the CI gate is scoped to THIS commit;
+        # without head_sha the latest COMPLETED run (on an older commit) reads
+        # "green" while HEAD's CI is still in_progress. If HEAD can't be
+        # resolved, conclusion=None → unknown gate → no proposal.
+        try:
+            head_sha = (
+                await asyncio.to_thread(_run_git, Path(root), ["rev-parse", "HEAD"])
+            ).strip() or None
+        except Exception as exc:
+            self.log.warning(
+                "release-manager: read-clone HEAD resolve failed", error=str(exc)
+            )
+            head_sha = None
+        # Resolve (DB: project + token) THEN release THEN fetch (HTTP only) -
+        # get_latest_ci_conclusion's own first statement is a fresh get_by_slug
+        # DB read, so calling it directly here would re-check-out a connection
+        # and hold it through the HTTP call below, same as if no release ever
+        # ran. resolve_ci_query/get_latest_ci_conclusion_for split the two.
+        git_service = get_git_service(self.session)
+        ci_query = await git_service.resolve_ci_query(slug)
+        await self._release_pool_connection()
+        ci = (
+            await git_service.get_latest_ci_conclusion_for(
+                ci_query,
+                workflow=(settings.self_heal_ci_workflow or None),
+                head_sha=head_sha,
+            )
+            if ci_query is not None
+            else None
+        )
+        conclusion = None if head_sha is None else (ci or {}).get("conclusion")
+        # Env-branches diff baseline: the read clone is pinned to head, so fetch
+        # the prod rung so origin/<prod> resolves for the prod..head diff. Only
+        # the env-split case (prod != head) needs it; degenerate (prod==head) is
+        # already present. Best-effort: a fetch failure degrades to last_tag..HEAD
+        # (gather_snapshot falls back when prod_tip is None) — never aborts.
+        prod_name = prod_branch(project)
+        prod_for_snapshot = await self._ensure_prod_fetched(
+            root, prod_name, prod_name != head_branch(project)
+        )
+        today = datetime.now(UTC).strftime("%Y-%m-%d")
+        # gather_snapshot runs multiple sync `subprocess.run` git calls + a
+        # filesystem walk; offload so the shared API event loop isn't blocked
+        # while the release-manager background loop assesses.
+        snapshot = await asyncio.to_thread(
+            gather_snapshot,
+            Path(root),
+            master_ci_conclusion=conclusion,
+            prod_branch=prod_for_snapshot,
+        )
+        return assess(snapshot, today=today)
+
+    async def _ensure_prod_fetched(
+        self, root: Path, prod_name: str, needs_fetch: bool
+    ) -> str | None:
+        """Ensure ``origin/<prod>`` is fetched for the prod..head readiness diff.
+
+        Degenerate (prod==head) needs no fetch — the read clone is pinned to
+        head==prod. Best-effort: a fetch failure returns None so gather_snapshot
+        falls back to last_tag..HEAD rather than aborting the assessment.
+        """
+        if not needs_fetch:
+            return prod_name
+        try:
+            await asyncio.to_thread(
+                _run_git, Path(root), ["fetch", "origin", prod_name]
+            )
+        except Exception as exc:
+            self.log.warning("release-manager: prod fetch failed", error=str(exc))
+            return None
+        return prod_name
+
+
+def get_release_manager_engine(
+    session: AsyncSession, assessor: ReleaseAssessor | None = None
+) -> ReleaseManagerEngine:
+    """Build a ReleaseManagerEngine for ``session`` (optional injected assessor)."""
+    return ReleaseManagerEngine(session, assessor=assessor)

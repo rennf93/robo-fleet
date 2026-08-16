@@ -12,14 +12,14 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     A2AConversationTable,
     AgentTable,
     NotificationTable,
     ProjectTable,
 )
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     Complexity,
     NotificationPriority,
     NotificationType,
@@ -27,9 +27,9 @@ from roboco.models.base import (
     TaskStatus,
     TaskType,
 )
-from roboco.models.task import TaskCreateRequest
-from roboco.services.gateway.evidence_repo import EvidenceRepo
-from roboco.services.task import TaskService
+from robofleet.models.task import TaskCreateRequest
+from robofleet.services.gateway.evidence_repo import EvidenceRepo
+from robofleet.services.task import TaskService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

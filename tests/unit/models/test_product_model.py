@@ -4,8 +4,8 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
-from roboco.foundation.identity import Team
-from roboco.models.product import ProductCellMapping, ProductCreate
+from robofleet.foundation.identity import Team
+from robofleet.models.product import ProductCellMapping, ProductCreate
 
 
 def test_product_create_requires_slug_pattern() -> None:

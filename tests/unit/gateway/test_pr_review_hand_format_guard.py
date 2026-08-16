@@ -28,8 +28,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec_module
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.foundation.policy import lifecycle as spec_module
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 def _make_choreographer() -> Any:
@@ -158,7 +158,7 @@ async def test_structured_findings_with_summary_body_is_allowed() -> None:
         "REQUEST_CHANGES",
         findings=[
             {
-                "file": "roboco/services/git.py",
+                "file": "robofleet/services/git.py",
                 "line": 42,
                 "severity": "blocker",
                 "expected": "retry as COMMENT",

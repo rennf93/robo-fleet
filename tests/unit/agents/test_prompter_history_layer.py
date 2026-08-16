@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from roboco.agents.factories._base import compose_prompt
-from roboco.models import AgentRole
+from robofleet.agents.factories._base import compose_prompt
+from robofleet.models import AgentRole
 
 
 def test_task_history_guidance_present_for_prompter() -> None:

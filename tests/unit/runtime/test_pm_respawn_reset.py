@@ -28,8 +28,8 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.seeds.initial_data import AGENT_UUIDS
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.seeds.initial_data import AGENT_UUIDS
 
 
 def _new_orchestrator() -> AgentOrchestrator:
@@ -60,7 +60,7 @@ async def test_three_tracing_gap_responses_do_not_trip_kill() -> None:
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=True)
 
     spawn_attempts = 5
-    with patch("roboco.services.audit.get_audit_service", return_value=fake_audit):
+    with patch("robofleet.services.audit.get_audit_service", return_value=fake_audit):
         for _ in range(spawn_attempts):
             should_gate = await orch._pm_respawn_should_gate("be-pm", task)
             assert should_gate is False
@@ -89,9 +89,9 @@ async def test_unending_tracing_gap_is_bounded_and_eventually_trips() -> None:
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=True)
 
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=fake_audit),
+        patch("robofleet.services.audit.get_audit_service", return_value=fake_audit),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
     ):
@@ -120,9 +120,9 @@ async def test_three_no_progress_spawns_still_trip_kill() -> None:
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=False)
 
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=fake_audit),
+        patch("robofleet.services.audit.get_audit_service", return_value=fake_audit),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             return_value=AsyncMock(),
         ),
     ):
@@ -151,9 +151,9 @@ async def test_stuck_loop_alerts_overseer_once() -> None:
     notifier.send_stuck_agent_notification = AsyncMock()
 
     with (
-        patch("roboco.services.audit.get_audit_service", return_value=fake_audit),
+        patch("robofleet.services.audit.get_audit_service", return_value=fake_audit),
         patch(
-            "roboco.services.notification.NotificationService",
+            "robofleet.services.notification.NotificationService",
             return_value=notifier,
         ),
     ):
@@ -181,7 +181,7 @@ async def test_status_change_resets_strike_count() -> None:
     fake_audit = AsyncMock()
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=False)
 
-    with patch("roboco.services.audit.get_audit_service", return_value=fake_audit):
+    with patch("robofleet.services.audit.get_audit_service", return_value=fake_audit):
         # Two strikes on pending.
         await orch._pm_respawn_should_gate(
             "be-pm", {"id": task_id, "status": "pending"}
@@ -208,7 +208,7 @@ async def test_audit_query_uses_correct_agent_uuid_and_task_id() -> None:
     fake_audit = AsyncMock()
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=True)
 
-    with patch("roboco.services.audit.get_audit_service", return_value=fake_audit):
+    with patch("robofleet.services.audit.get_audit_service", return_value=fake_audit):
         # First call seeds the record (no audit query yet).
         await orch._pm_respawn_should_gate("be-pm", task)
         # Second call should consult audit with be-pm's UUID + task UUID + since.
@@ -236,7 +236,7 @@ async def test_unknown_slug_falls_back_to_status_only() -> None:
     fake_audit = AsyncMock()
     fake_audit.has_recent_tracing_gap = AsyncMock(return_value=False)
 
-    with patch("roboco.services.audit.get_audit_service", return_value=fake_audit):
+    with patch("robofleet.services.audit.get_audit_service", return_value=fake_audit):
         # Slug not present in AGENT_UUIDS — should not raise.
         for _ in range(3):
             assert await orch._pm_respawn_should_gate("not-a-real-slug", task) is False
@@ -259,7 +259,7 @@ async def test_audit_query_failure_does_not_crash_gate() -> None:
     fake_audit = AsyncMock()
     fake_audit.has_recent_tracing_gap = AsyncMock(side_effect=RuntimeError("db down"))
 
-    with patch("roboco.services.audit.get_audit_service", return_value=fake_audit):
+    with patch("robofleet.services.audit.get_audit_service", return_value=fake_audit):
         # Strikes 1-3: allowed. 4th: gated. Same as the no-tracing-gap case.
         for _ in range(3):
             assert await orch._pm_respawn_should_gate("be-pm", task) is False

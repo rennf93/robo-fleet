@@ -21,8 +21,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models.optimal import IndexType
-from roboco.services.optimal import OptimalService
+from robofleet.models.optimal import IndexType
+from robofleet.services.optimal import OptimalService
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -70,7 +70,7 @@ async def test_unindex_journal_entry_removes_chunks_and_tracking_row() -> None:
     session = _fake_session()
 
     with patch(
-        "roboco.db.get_db_context",
+        "robofleet.db.get_db_context",
         lambda: _fake_db_context(session),
     ):
         await svc.unindex_journal_entry(entry_id)
@@ -102,7 +102,7 @@ async def test_unindex_journal_entry_is_idempotent() -> None:
     session = _fake_session()
 
     with patch(
-        "roboco.db.get_db_context",
+        "robofleet.db.get_db_context",
         lambda: _fake_db_context(session),
     ):
         await svc.unindex_journal_entry(entry_id)
@@ -129,7 +129,7 @@ async def test_unindex_journal_entry_swallows_vector_store_failure() -> None:
     session = _fake_session()
 
     with patch(
-        "roboco.db.get_db_context",
+        "robofleet.db.get_db_context",
         lambda: _fake_db_context(session),
     ):
         # Must not raise.
@@ -154,7 +154,7 @@ async def test_unindex_journal_entry_swallows_tracking_row_failure() -> None:
     session.execute = AsyncMock(side_effect=RuntimeError("db connection lost"))
     session.flush = AsyncMock()
 
-    with patch("roboco.db.get_db_context", lambda: _fake_db_context(session)):
+    with patch("robofleet.db.get_db_context", lambda: _fake_db_context(session)):
         # Must not raise.
         await svc.unindex_journal_entry(entry_id)
 
@@ -232,7 +232,7 @@ async def test_unindex_deleted_doc_file_removes_chunks_and_tracking_row() -> Non
     plugin: Any = svc._plugins[IndexType.DOCUMENTATION]
     session = _fake_session()
 
-    with patch("roboco.db.get_db_context", lambda: _fake_db_context(session)):
+    with patch("robofleet.db.get_db_context", lambda: _fake_db_context(session)):
         await svc._unindex_deleted_doc_file(file_path, "rag")
 
     plugin._require_store.delete_by_source.assert_awaited_once_with(
@@ -272,7 +272,7 @@ async def test_unindex_deleted_doc_file_swallows_vector_store_failure() -> None:
     )
     session = _fake_session()
 
-    with patch("roboco.db.get_db_context", lambda: _fake_db_context(session)):
+    with patch("robofleet.db.get_db_context", lambda: _fake_db_context(session)):
         await svc._unindex_deleted_doc_file("/app/docs/rag/x.md", "rag")
 
     session.execute.assert_not_awaited()
@@ -364,10 +364,10 @@ async def test_reconcile_deleted_docs_from_db_deindexes_missing_row(
     with (
         patch.object(svc, "_unindex_deleted_doc_file", new=unindex_mock),
         patch(
-            "roboco.services.repositories.IndexedDocumentRepository.get_by_index_type",
+            "robofleet.services.repositories.IndexedDocumentRepository.get_by_index_type",
             repo_mock,
         ),
-        patch("roboco.db.get_db_context", lambda: _fake_db_context(MagicMock())),
+        patch("robofleet.db.get_db_context", lambda: _fake_db_context(MagicMock())),
     ):
         await svc._reconcile_deleted_docs_from_db()
 
@@ -398,10 +398,10 @@ async def test_reconcile_deleted_docs_from_db_skips_present_and_out_of_scope(
     with (
         patch.object(svc, "_unindex_deleted_doc_file", new=unindex_mock),
         patch(
-            "roboco.services.repositories.IndexedDocumentRepository.get_by_index_type",
+            "robofleet.services.repositories.IndexedDocumentRepository.get_by_index_type",
             repo_mock,
         ),
-        patch("roboco.db.get_db_context", lambda: _fake_db_context(MagicMock())),
+        patch("robofleet.db.get_db_context", lambda: _fake_db_context(MagicMock())),
     ):
         await svc._reconcile_deleted_docs_from_db()
 
@@ -423,10 +423,10 @@ async def test_reconcile_deleted_docs_from_db_swallows_query_failure(
     repo_mock = AsyncMock(side_effect=RuntimeError("db unavailable"))
     with (
         patch(
-            "roboco.services.repositories.IndexedDocumentRepository.get_by_index_type",
+            "robofleet.services.repositories.IndexedDocumentRepository.get_by_index_type",
             repo_mock,
         ),
-        patch("roboco.db.get_db_context", lambda: _fake_db_context(MagicMock())),
+        patch("robofleet.db.get_db_context", lambda: _fake_db_context(MagicMock())),
     ):
         # Must not raise.
         await svc._reconcile_deleted_docs_from_db()

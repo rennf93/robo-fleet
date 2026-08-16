@@ -14,8 +14,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.services.dep_update_engine import DepUpdateEngine
+from robofleet.config import settings
+from robofleet.services.dep_update_engine import DepUpdateEngine
 
 
 def _project(slug: str, git_url: str, command: str) -> SimpleNamespace:
@@ -46,13 +46,14 @@ def _make_engine(
     engine = DepUpdateEngine(session, workspace=workspace or _FakeWorkspace())
     patchers = [
         patch(
-            "roboco.services.dep_update_engine.get_task_service", return_value=task_svc
+            "robofleet.services.dep_update_engine.get_task_service",
+            return_value=task_svc,
         ),
         # session is a bare MagicMock: is_paused's real settings-store read
         # would raise on it and fail closed (treats as paused), so run_cycle
         # would no-op regardless of the scenario under test.
         patch(
-            "roboco.services.maintenance_pause.is_paused",
+            "robofleet.services.maintenance_pause.is_paused",
             AsyncMock(return_value=False),
         ),
     ]

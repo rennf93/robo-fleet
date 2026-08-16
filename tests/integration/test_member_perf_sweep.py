@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentSpawnSessionTable,
     AgentTable,
     AuditLogTable,
@@ -24,7 +24,7 @@ from roboco.db.tables import (
     ProjectTable,
     TaskTable,
 )
-from roboco.models.base import (
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -33,7 +33,7 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 from sqlalchemy import select
 
 if TYPE_CHECKING:
@@ -248,7 +248,7 @@ async def _run_sweep(db: AsyncSession) -> None:
     async def _cm() -> Any:
         yield _NoCommitSession(db)
 
-    with patch("roboco.db.base.get_session_factory", return_value=_cm):
+    with patch("robofleet.db.base.get_session_factory", return_value=_cm):
         await orch._sweep_member_performance()
 
 

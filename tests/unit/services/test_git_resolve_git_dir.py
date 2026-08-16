@@ -13,7 +13,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from roboco.services.git import resolve_git_dir
+from robofleet.services.git import resolve_git_dir
 
 
 def _git(cwd: Path, *args: str) -> str:

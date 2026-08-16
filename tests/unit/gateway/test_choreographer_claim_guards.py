@@ -7,7 +7,7 @@ Predicates ported into Choreographer claim verbs:
 - ROLE_TYPED_CLAIM            (developer/qa/documenter cannot cross-claim)
 
 These mirror pre-gateway gates at commit 0c3d15a, file
-roboco/mcp/tasks/handlers/_helpers.py lines 124-204.
+robofleet/mcp/tasks/handlers/_helpers.py lines 124-204.
 """
 
 from __future__ import annotations
@@ -18,8 +18,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.claim_guards import paused_tasks_guard
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.claim_guards import paused_tasks_guard
 
 # #172: a developer fresh claim must carry a substantive step checklist.
 # Inert on re-entry/error/non-dev paths, so safe to pass everywhere.

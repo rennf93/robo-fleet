@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.models import NotificationPriority, NotificationType
-from roboco.services.notification_delivery import NotificationDeliveryService
+from robofleet.models import NotificationPriority, NotificationType
+from robofleet.services.notification_delivery import NotificationDeliveryService
 
 
 def _notification(
@@ -49,7 +49,7 @@ async def test_persist_and_deliver_suppresses_when_guard_true() -> None:
     svc = _svc(session)
 
     with patch(
-        "roboco.services.notification_delivery.all_recipients_recently_notified",
+        "robofleet.services.notification_delivery.all_recipients_recently_notified",
         AsyncMock(return_value=True),
     ):
         await svc._persist_and_deliver(_notification())
@@ -68,7 +68,7 @@ async def test_persist_and_deliver_passes_through_when_guard_false() -> None:
 
     notif = _notification()
     with patch(
-        "roboco.services.notification_delivery.all_recipients_recently_notified",
+        "robofleet.services.notification_delivery.all_recipients_recently_notified",
         AsyncMock(return_value=False),
     ):
         await svc._persist_and_deliver(notif)

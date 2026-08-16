@@ -12,8 +12,8 @@ import pytest
 import pytest_asyncio
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from roboco.db.tables import GitHubAppCredentialsTable
-from roboco.services.github_app_credentials import (
+from robofleet.db.tables import GitHubAppCredentialsTable
+from robofleet.services.github_app_credentials import (
     GitHubAppCredentialsService,
     GitHubAppCredentialsValidationError,
     get_github_app_credentials_service,

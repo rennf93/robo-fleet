@@ -15,17 +15,17 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
-from roboco.config import settings
-from roboco.exceptions import (
+from robofleet.config import settings
+from robofleet.exceptions import (
     GitCommandError,
     GitError,
     GitTimeoutError,
     MergeConflictError,
 )
-from roboco.services.base import NotFoundError, UnauthorizedError, ValidationError
-from roboco.services.forge import RepoRef
-from roboco.services.gateway.quality_gate import GateResult
-from roboco.services.git import GitService
+from robofleet.services.base import NotFoundError, UnauthorizedError, ValidationError
+from robofleet.services.forge import RepoRef
+from robofleet.services.gateway.quality_gate import GateResult
+from robofleet.services.git import GitService
 
 if TYPE_CHECKING:
     from contextlib import AbstractContextManager
@@ -53,7 +53,9 @@ def _patch_project_service(project: object | None) -> AbstractContextManager[obj
     fake_service = MagicMock()
     fake_service.get = AsyncMock(return_value=project)
     fake_service.get_by_slug = AsyncMock(return_value=project)
-    return patch("roboco.services.git.get_project_service", return_value=fake_service)
+    return patch(
+        "robofleet.services.git.get_project_service", return_value=fake_service
+    )
 
 
 def _bind(svc: GitService, name: str, value: object) -> None:
@@ -118,7 +120,9 @@ async def test_project_for_task_resolves_coordination_root_via_product() -> None
     product_svc = MagicMock(distinct_project_ids=AsyncMock(return_value=[pid]))
     with (
         _patch_project_service(fake_project),
-        patch("roboco.services.product.get_product_service", return_value=product_svc),
+        patch(
+            "robofleet.services.product.get_product_service", return_value=product_svc
+        ),
     ):
         out = await svc._project_for_task(task)
     assert out is fake_project
@@ -383,7 +387,7 @@ async def test_pr_head_is_task_branch_not_current() -> None:
     svc = _service()
     _bind(svc, "get_current_branch", AsyncMock(return_value="feature/frontend/OTHER"))
     req = MagicMock(task_id=uuid4())
-    with patch("roboco.services.git.get_task_service") as gts:
+    with patch("robofleet.services.git.get_task_service") as gts:
         gts.return_value.get = AsyncMock(return_value=task)
         head = await svc._pr_head_branch(Path("/tmp/ws"), req)
     assert head == "feature/frontend/TASK"
@@ -446,7 +450,7 @@ async def test_run_codegen_and_commit_noop_when_command_unset() -> None:
     _bind(svc, "_task_for_branch", AsyncMock(return_value=task))
     _bind(svc, "_project_for_task", AsyncMock(return_value=project))
     run_mock = AsyncMock()
-    with patch("roboco.services.git.run_quality_commands", run_mock):
+    with patch("robofleet.services.git.run_quality_commands", run_mock):
         await svc._run_codegen_and_commit("feature/backend/abc", Path("/tmp/ws"))
     run_mock.assert_not_awaited()
 
@@ -456,7 +460,7 @@ async def test_run_codegen_and_commit_noop_when_no_task() -> None:
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=None))
     run_mock = AsyncMock()
-    with patch("roboco.services.git.run_quality_commands", run_mock):
+    with patch("robofleet.services.git.run_quality_commands", run_mock):
         await svc._run_codegen_and_commit("feature/backend/missing", Path("/tmp/ws"))
     run_mock.assert_not_awaited()
 
@@ -496,7 +500,7 @@ async def test_run_codegen_and_commit_commits_drift() -> None:
     _bind(svc, "_run_git", AsyncMock(side_effect=_run_git))
     gate_result = GateResult(passed=True, output="ok")
     with patch(
-        "roboco.services.git.run_quality_commands",
+        "robofleet.services.git.run_quality_commands",
         AsyncMock(return_value=gate_result),
     ):
         await svc._run_codegen_and_commit(
@@ -550,7 +554,7 @@ async def test_run_codegen_and_commit_excludes_pre_existing_dirty_file() -> None
     _bind(svc, "_run_git", AsyncMock(side_effect=_run_git))
     gate_result = GateResult(passed=True, output="ok")
     with patch(
-        "roboco.services.git.run_quality_commands",
+        "robofleet.services.git.run_quality_commands",
         AsyncMock(return_value=gate_result),
     ):
         await svc._run_codegen_and_commit("feature/backend/abc", Path("/tmp/ws"))
@@ -583,7 +587,7 @@ async def test_run_codegen_and_commit_noop_when_no_new_drift() -> None:
     _bind(svc, "_run_git", AsyncMock(side_effect=_run_git))
     gate_result = GateResult(passed=True, output="ok")
     with patch(
-        "roboco.services.git.run_quality_commands",
+        "robofleet.services.git.run_quality_commands",
         AsyncMock(return_value=gate_result),
     ):
         await svc._run_codegen_and_commit("feature/backend/abc", Path("/tmp/ws"))
@@ -612,7 +616,7 @@ async def test_run_codegen_and_commit_noop_when_codegen_clean() -> None:
     _bind(svc, "_run_git", AsyncMock(side_effect=_run_git))
     gate_result = GateResult(passed=True, output="ok")
     with patch(
-        "roboco.services.git.run_quality_commands",
+        "robofleet.services.git.run_quality_commands",
         AsyncMock(return_value=gate_result),
     ):
         await svc._run_codegen_and_commit("feature/backend/abc", Path("/tmp/ws"))
@@ -642,7 +646,7 @@ async def test_run_codegen_and_commit_fail_open_on_command_failure() -> None:
     _bind(svc, "_run_git", AsyncMock(side_effect=_run_git))
     gate_result = GateResult(passed=False, failures=("codegen",), output="boom")
     with patch(
-        "roboco.services.git.run_quality_commands",
+        "robofleet.services.git.run_quality_commands",
         AsyncMock(return_value=gate_result),
     ):
         await svc._run_codegen_and_commit("feature/backend/abc", Path("/tmp/ws"))
@@ -686,7 +690,7 @@ async def test_run_codegen_and_commit_links_commit_to_task() -> None:
     _bind(svc, "_run_git", AsyncMock(side_effect=_run_git))
     gate_result = GateResult(passed=True, output="ok")
     with patch(
-        "roboco.services.git.run_quality_commands",
+        "robofleet.services.git.run_quality_commands",
         AsyncMock(return_value=gate_result),
     ):
         await svc._run_codegen_and_commit(
@@ -1003,7 +1007,7 @@ async def test_pr_target_returns_base_ref() -> None:
 
     with (
         _patch_project_service(fake_project),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=fake_client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=fake_client),
     ):
         out = await svc.pr_target(42, project_id=project_id)
     assert out == "feature/parent"
@@ -1282,7 +1286,7 @@ def _non_httpx_raising_client() -> MagicMock:
 async def test_ensure_label_exists_swallows_non_httpx_error() -> None:
     svc = _service()
     with patch(
-        "roboco.services.git.httpx.AsyncClient",
+        "robofleet.services.git.httpx.AsyncClient",
         return_value=_non_httpx_raising_client(),
     ):
         await svc._ensure_label_exists(RepoRef("acme", "repo"), "tok", "cell/backend")
@@ -1293,7 +1297,7 @@ async def test_apply_pr_labels_swallows_non_httpx_error() -> None:
     svc = _service()
     _bind(svc, "_ensure_label_exists", AsyncMock())
     with patch(
-        "roboco.services.git.httpx.AsyncClient",
+        "robofleet.services.git.httpx.AsyncClient",
         return_value=_non_httpx_raising_client(),
     ):
         await svc._apply_pr_labels(RepoRef("acme", "repo"), "tok", 11, ["cell/backend"])
@@ -1804,9 +1808,11 @@ async def test_link_commit_to_task_does_not_commit_session() -> None:
     fake_ws_service.add_commit = AsyncMock()
 
     with (
-        patch("roboco.services.git.get_task_service", return_value=fake_task_service),
         patch(
-            "roboco.services.git.get_work_session_service",
+            "robofleet.services.git.get_task_service", return_value=fake_task_service
+        ),
+        patch(
+            "robofleet.services.git.get_work_session_service",
             return_value=fake_ws_service,
         ),
     ):
@@ -1825,7 +1831,9 @@ async def test_link_commit_to_task_swallows_errors_without_commit() -> None:
     fake_task_service = MagicMock()
     fake_task_service.get = AsyncMock(side_effect=RuntimeError("boom"))
 
-    with patch("roboco.services.git.get_task_service", return_value=fake_task_service):
+    with patch(
+        "robofleet.services.git.get_task_service", return_value=fake_task_service
+    ):
         await svc._link_commit_to_task(uuid4(), "deadbeef", "msg", uuid4())
 
     session.commit.assert_not_awaited()
@@ -1853,7 +1861,7 @@ async def test_pr_is_merged_returns_none_on_httpx_error() -> None:
     """On httpx.HTTPError the lookup is indeterminate -> None, not False."""
     svc = _service()
     with patch(
-        "roboco.services.git.httpx.AsyncClient",
+        "robofleet.services.git.httpx.AsyncClient",
         return_value=_httpx_raising_client(),
     ):
         out = await svc._pr_is_merged(RepoRef("acme", "repo"), 11, "tok")
@@ -2022,9 +2030,11 @@ async def test_update_pr_for_task_threads_actor_agent_id() -> None:
     fake_client.post = AsyncMock()
 
     with (
-        patch("roboco.services.git.get_task_service", return_value=fake_task_service),
+        patch(
+            "robofleet.services.git.get_task_service", return_value=fake_task_service
+        ),
         _patch_project_service(fake_project),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=fake_client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=fake_client),
     ):
         await svc.update_pr_for_task(
             UUID(str(task.id)),

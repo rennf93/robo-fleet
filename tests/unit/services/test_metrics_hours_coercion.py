@@ -12,7 +12,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from roboco.services.metrics import _as_hours
+from robofleet.services.metrics import _as_hours
 
 
 def test_as_hours_coerces_decimal_to_float() -> None:

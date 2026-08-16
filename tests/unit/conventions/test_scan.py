@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from roboco.conventions.scan import derive_from_scan, render_yaml
-from roboco.foundation.policy.conventions.models import ConventionsStandard
+from robofleet.conventions.scan import derive_from_scan, render_yaml
+from robofleet.foundation.policy.conventions.models import ConventionsStandard
 
 if TYPE_CHECKING:
     from pathlib import Path

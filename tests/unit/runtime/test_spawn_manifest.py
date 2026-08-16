@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.spawn_manifest import SpawnInputs, build_for_role, write_manifest
+from robofleet.runtime.spawn_manifest import SpawnInputs, build_for_role, write_manifest
 
 
 class TestBuildForRole:

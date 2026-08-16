@@ -23,9 +23,12 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, patch
 
-from roboco.runtime.orchestrator import _is_held_ceo_source, _is_non_dev_dispatch_source
-from roboco.services.heartbeat_mutex import HeartbeatMutex
-from roboco.services.video_post_service import (
+from robofleet.runtime.orchestrator import (
+    _is_held_ceo_source,
+    _is_non_dev_dispatch_source,
+)
+from robofleet.services.heartbeat_mutex import HeartbeatMutex
+from robofleet.services.video_post_service import (
     TikTokPoster,
     TikTokUploadResult,
     XVideoPoster,
@@ -51,9 +54,9 @@ def _seed_video_agents(stack: E2EStack) -> None:
     against the same stack), mirroring
     ``test_feature_spotlight._seed_system_and_secretary``.
     """
-    from roboco.db.tables import AgentTable
-    from roboco.foundation import identity as _foundation
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable
+    from robofleet.foundation import identity as _foundation
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     async def _run(session: AsyncSession) -> None:
         for agent_uuid, slug, role, team in (
@@ -106,11 +109,11 @@ def _seed_completed_authoring_task(stack: E2EStack, project_id: Any) -> UUID:
     setup — see ``arcs.seed_hierarchy``); the render/approve/gate wiring
     under test doesn't depend on how the authoring task got here.
     """
-    from roboco.foundation import identity as _foundation
-    from roboco.foundation.policy.content import markers as _markers
-    from roboco.models import Team
-    from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-    from roboco.services.task import VIDEO_SOURCE
+    from robofleet.foundation import identity as _foundation
+    from robofleet.foundation.policy.content import markers as _markers
+    from robofleet.models import Team
+    from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+    from robofleet.services.task import VIDEO_SOURCE
 
     draft: dict[str, Any] = {
         "occasion": "e2e pipeline test",
@@ -167,7 +170,7 @@ def _render_completed_task(task_id: UUID) -> None:
     resolves via ``get_db_context``, which the e2e stack's patched
     ``settings.database_*`` already route at this stack's own DB, so no
     session needs to be handed in."""
-    from roboco.runtime.orchestrator import AgentOrchestrator
+    from robofleet.runtime.orchestrator import AgentOrchestrator
 
     workspace = SimpleNamespace(
         ensure_read_clone=AsyncMock(return_value=Path("/fake-clone"))
@@ -177,11 +180,11 @@ def _render_completed_task(task_id: UUID) -> None:
     async def _run() -> None:
         with (
             patch(
-                "roboco.services.video_renderer_client.get_video_renderer",
+                "robofleet.services.video_renderer_client.get_video_renderer",
                 _FakeRenderer,
             ),
             patch(
-                "roboco.services.workspace.get_workspace_service",
+                "robofleet.services.workspace.get_workspace_service",
                 lambda _db: workspace,
             ),
         ):
@@ -193,7 +196,7 @@ def _render_completed_task(task_id: UUID) -> None:
 def _task_dict(stack: E2EStack, task_id: UUID) -> dict[str, Any]:
     """The (source, confirmed_by_human) shape a dispatcher reads off a task
     — real committed values, not a hand-crafted stand-in."""
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -215,8 +218,8 @@ def _find_video_post_draft(stack: E2EStack, source_task_id: UUID) -> dict[str, A
     ``source_task_id`` — located via the marker's own back-reference
     (``_originate_video_post`` stamps ``source_task_id``), robust against any
     other video_post rows in this session-scoped shared test DB."""
-    from roboco.foundation.policy.content import markers as _markers
-    from roboco.services.task import get_task_service
+    from robofleet.foundation.policy.content import markers as _markers
+    from robofleet.services.task import get_task_service
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
         drafts = await get_task_service(session).list_open_video_post_drafts()
@@ -273,7 +276,7 @@ _LOCKED = (
 
 
 def _approve(stack: E2EStack, draft_id: UUID) -> dict[str, Any]:
-    from roboco.services.video_post_service import get_video_post_service
+    from robofleet.services.video_post_service import get_video_post_service
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
         svc = get_video_post_service(
@@ -301,7 +304,7 @@ def test_video_pipeline_render_and_approve(e2e_stack: E2EStack) -> None:
     # (api/v1/do) but missing from do_server's _TOOLS/_REGISTERED_TOOLS is
     # silently uncallable over MCP no matter what the gateway layers say.
     dev = ScriptedAgent(stack, company.dev_id, "be-dev-1", "developer")
-    do_module = dev._module("roboco.mcp.do_server")
+    do_module = dev._module("robofleet.mcp.do_server")
     assert "propose_video" in do_module._TOOLS, (
         "propose_video missing from do_server._TOOLS — no role could ever "
         "call it over MCP"

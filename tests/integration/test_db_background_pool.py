@@ -1,4 +1,4 @@
-"""The background pool (roboco.db.base), a genuinely separate engine.
+"""The background pool (robofleet.db.base), a genuinely separate engine.
 
 Covers item 3 of the DB-pool split: a second create_async_engine/
 async_sessionmaker pair reserved for the orchestrator's background engine
@@ -24,8 +24,8 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.db.base import (
+from robofleet.config import settings
+from robofleet.db.base import (
     _BackgroundDbHolder,
     _DbHolder,
     close_db,
@@ -33,9 +33,9 @@ from roboco.db.base import (
     get_engine,
     get_session_factory,
 )
-from roboco.db.tables import AgentTable
-from roboco.models.base import AgentRole, AgentStatus
-from roboco.services.notification_delivery import defer_after_commit
+from robofleet.db.tables import AgentTable
+from robofleet.models.base import AgentRole, AgentStatus
+from robofleet.services.notification_delivery import defer_after_commit
 from sqlalchemy import select
 
 if TYPE_CHECKING:
@@ -80,7 +80,7 @@ def test_background_pool_is_a_separate_engine_from_primary() -> None:
     _DbHolder.engine = None
     _BackgroundDbHolder.engine = None
     engines = [MagicMock(), MagicMock()]
-    with patch("roboco.db.base.create_async_engine", side_effect=engines) as ce:
+    with patch("robofleet.db.base.create_async_engine", side_effect=engines) as ce:
         primary = get_engine("primary")
         background = get_engine("background")
     assert primary is engines[0]
@@ -100,7 +100,7 @@ def test_background_pool_sized_from_its_own_settings(
     monkeypatch.setattr(settings, "database_background_max_overflow", 4)
     _DbHolder.engine = None
     _BackgroundDbHolder.engine = None
-    with patch("roboco.db.base.create_async_engine", return_value=MagicMock()) as ce:
+    with patch("robofleet.db.base.create_async_engine", return_value=MagicMock()) as ce:
         get_engine("primary")
         get_engine("background")
     primary_kwargs = ce.call_args_list[0].kwargs
@@ -114,7 +114,7 @@ def test_background_pool_sized_from_its_own_settings(
 def test_background_pool_caches_independently_of_primary() -> None:
     _DbHolder.engine = None
     _BackgroundDbHolder.engine = None
-    with patch("roboco.db.base.create_async_engine", return_value=MagicMock()) as ce:
+    with patch("robofleet.db.base.create_async_engine", return_value=MagicMock()) as ce:
         get_engine("primary")
         get_engine("primary")
         get_engine("background")
@@ -130,7 +130,7 @@ def test_background_pool_rebinds_on_a_different_event_loop() -> None:
     _BackgroundDbHolder.session_factory = None
     _BackgroundDbHolder.loop = None
     engines = [MagicMock(), MagicMock()]
-    with patch("roboco.db.base.create_async_engine", side_effect=engines):
+    with patch("robofleet.db.base.create_async_engine", side_effect=engines):
 
         async def _grab() -> object:
             return get_engine("background")
@@ -148,8 +148,8 @@ def test_get_session_factory_background_pool_creates_and_caches() -> None:
     _BackgroundDbHolder.session_factory = None
     fake_factories = [MagicMock(), MagicMock()]
     with (
-        patch("roboco.db.base.create_async_engine", return_value=MagicMock()),
-        patch("roboco.db.base.async_sessionmaker", side_effect=fake_factories) as sm,
+        patch("robofleet.db.base.create_async_engine", return_value=MagicMock()),
+        patch("robofleet.db.base.async_sessionmaker", side_effect=fake_factories) as sm,
     ):
         primary_factory = get_session_factory("primary")
         background_factory = get_session_factory("background")
@@ -174,7 +174,9 @@ async def test_get_db_context_background_routes_to_background_session_factory() 
             return None
 
     fake_factory = MagicMock(return_value=_Cm())
-    with patch("roboco.db.base.get_session_factory", return_value=fake_factory) as gsf:
+    with patch(
+        "robofleet.db.base.get_session_factory", return_value=fake_factory
+    ) as gsf:
         async with get_db_context(pool="background") as s:
             assert s is fake_session
     gsf.assert_called_once_with("background")

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from roboco.foundation.identity import Team
-from roboco.foundation.policy.pr_labels import (
+from robofleet.foundation.identity import Team
+from robofleet.foundation.policy.pr_labels import (
     CONVENTIONS_PR_LABELS,
     derive_pr_labels,
 )

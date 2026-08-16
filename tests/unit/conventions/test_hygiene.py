@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from roboco.conventions.hygiene import check_hygiene
-from roboco.foundation.policy.conventions.models import ConventionsStandard, Rule
+from robofleet.conventions.hygiene import check_hygiene
+from robofleet.foundation.policy.conventions.models import ConventionsStandard, Rule
 
 _STD = ConventionsStandard()
 

@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.services.task import PEST_CONTROL_SOURCE
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.services.task import PEST_CONTROL_SOURCE
 
 
 def _make_orch() -> AgentOrchestrator:
@@ -209,7 +209,7 @@ async def test_pest_control_evidence_context_survives_db_failure() -> None:
     """A DB hiccup gathering evidence degrades to '' — never raises."""
     orch = _make_orch()
     with patch(
-        "roboco.services.pest_control_engine.get_pest_control_engine",
+        "robofleet.services.pest_control_engine.get_pest_control_engine",
         side_effect=RuntimeError("db down"),
     ):
         result = await orch._pest_control_evidence_context()

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.merge_chain import (
+from robofleet.services.gateway.merge_chain import (
     branch_depth,
     parent_branch_for,
     resolve_parent_branch,

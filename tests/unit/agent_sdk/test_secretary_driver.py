@@ -1,4 +1,4 @@
-"""roboco.agent_sdk.secretary_driver — the backend-calling tool helpers."""
+"""robofleet.agent_sdk.secretary_driver — the backend-calling tool helpers."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 import httpx
 import pytest
-from roboco.agent_sdk import secretary_driver as sd
+from robofleet.agent_sdk import secretary_driver as sd
 
 Handler = Callable[[httpx.Request], httpx.Response]
 

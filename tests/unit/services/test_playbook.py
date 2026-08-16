@@ -15,10 +15,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.models.base import PlaybookStatus
-from roboco.services.optimal_brain.indexes.base import IngestResult
-from roboco.services.playbook import PlaybookService
+from robofleet.config import settings
+from robofleet.models.base import PlaybookStatus
+from robofleet.services.optimal_brain.indexes.base import IngestResult
+from robofleet.services.playbook import PlaybookService
 
 
 def _approved_playbook(*, indexed_ok: bool = False) -> Any:
@@ -66,7 +66,7 @@ async def test_reconcile_reindexes_unindexed_approved(
     )
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
     ):
@@ -108,7 +108,7 @@ async def test_reconcile_rolls_back_on_index_exception(
     optimal.index_playbook = AsyncMock(side_effect=RuntimeError("ollama still down"))
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
     ):
@@ -139,7 +139,7 @@ async def test_index_approved_failure_does_not_stamp_indexed_ok(
     )
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
     ):
@@ -165,7 +165,7 @@ async def test_index_approved_exception_does_not_stamp_indexed_ok(
     optimal.index_playbook = AsyncMock(side_effect=RuntimeError("embedder crashed"))
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
     ):
@@ -192,7 +192,7 @@ async def test_index_approved_success_stamps_indexed_ok(
     )
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
     ):

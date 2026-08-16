@@ -11,9 +11,9 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.config import Settings
-from roboco.db import base as db_base
-from roboco.infra import cloudsql
+from robofleet.config import Settings
+from robofleet.db import base as db_base
+from robofleet.infra import cloudsql
 
 
 @pytest.fixture

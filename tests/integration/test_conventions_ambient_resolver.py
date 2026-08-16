@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from roboco.agents.factories._base import conventions_ambient_layer
-from roboco.config import settings
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.models import AgentRole, AgentStatus, Team
+from robofleet.agents.factories._base import conventions_ambient_layer
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.models import AgentRole, AgentStatus, Team
 
 if TYPE_CHECKING:
     import pytest

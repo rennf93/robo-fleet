@@ -5,8 +5,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from roboco.foundation.policy import communications
-from roboco.services.gateway import content_actions
+from robofleet.foundation.policy import communications
+from robofleet.services.gateway import content_actions
 
 
 def test_content_actions_notify_allowed_roles_matches_foundation() -> None:
@@ -29,7 +29,7 @@ def test_content_actions_valid_priorities_matches_foundation() -> None:
 def test_notification_delivery_uses_ack_required_table() -> None:
     """All NotificationTable() construction sites must source `requires_ack`
     from ACK_REQUIRED_BY_TYPE, not from a hand-set boolean literal."""
-    src = Path("roboco/services/notification_delivery.py").read_text()
+    src = Path("robofleet/services/notification_delivery.py").read_text()
     tree = ast.parse(src)
 
     offenders: list[str] = []

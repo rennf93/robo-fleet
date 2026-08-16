@@ -14,12 +14,12 @@ import pytest_asyncio
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context
-from roboco.api.routes.optimal import check_staleness
-from roboco.api.routes.optimal import router as optimal_router
-from roboco.models import AgentRole, Team
-from roboco.models.optimal import IndexType, SearchResult
-from roboco.models.permissions import AgentContext
+from robofleet.api.deps import get_agent_context
+from robofleet.api.routes.optimal import check_staleness
+from robofleet.api.routes.optimal import router as optimal_router
+from robofleet.models import AgentRole, Team
+from robofleet.models.optimal import IndexType, SearchResult
+from robofleet.models.permissions import AgentContext
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -111,7 +111,7 @@ async def test_index_code_forbidden_envelope_remediate(
 
 @pytest.mark.asyncio
 async def test_index_code_success(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.index_code = AsyncMock(return_value=3)
         mock_get.return_value = mock_service
@@ -138,7 +138,7 @@ async def test_index_docs_forbidden(dev_optimal_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_index_docs_success(optimal_client: AsyncClient) -> None:
     _DOCS_INDEXED = 5
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.index_documentation = AsyncMock(return_value=_DOCS_INDEXED)
         mock_get.return_value = mock_service
@@ -168,7 +168,7 @@ async def test_search_invalid_index_type(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_search_success(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.search = AsyncMock(return_value=[_search_result()])
         mock_get.return_value = mock_service
@@ -183,7 +183,7 @@ async def test_search_success(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_search_with_index_types(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.search = AsyncMock(return_value=[])
         mock_get.return_value = mock_service
@@ -197,7 +197,7 @@ async def test_search_with_index_types(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_find_similar(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.search = AsyncMock(return_value=[_search_result()])
         mock_get.return_value = mock_service
@@ -232,7 +232,7 @@ async def test_rag_query_success(optimal_client: AsyncClient) -> None:
         search_stats={"docs": 1},
         search_errors=None,
     )
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.query = AsyncMock(return_value=rag_response)
         mock_get.return_value = mock_service
@@ -246,7 +246,7 @@ async def test_rag_query_success(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_rag_query_runtime_error(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.query = AsyncMock(side_effect=RuntimeError("not init"))
         mock_get.return_value = mock_service
@@ -260,7 +260,7 @@ async def test_rag_query_runtime_error(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_rag_query_unexpected_error(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.query = AsyncMock(side_effect=ValueError("oops"))
         mock_get.return_value = mock_service
@@ -284,7 +284,7 @@ async def test_rag_context_invalid_index_type(optimal_client: AsyncClient) -> No
 
 @pytest.mark.asyncio
 async def test_rag_context_success(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.search = AsyncMock(return_value=[_search_result()])
         mock_get.return_value = mock_service
@@ -309,7 +309,7 @@ async def test_get_stats_forbidden(dev_optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_get_stats_success(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.get_all_index_stats = AsyncMock(
             return_value={"initialized": True, "indexes": {}}
@@ -337,7 +337,7 @@ async def test_get_single_stats_invalid_type(optimal_client: AsyncClient) -> Non
 
 @pytest.mark.asyncio
 async def test_get_single_stats_success(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.is_index_registered = MagicMock(return_value=True)
         mock_service.get_index_stats = AsyncMock(
@@ -361,7 +361,7 @@ async def test_get_single_stats_deprecated_index_returns_404(
 ) -> None:
     """A valid-but-unregistered index type (e.g. deprecated `code`) returns 404,
     not a 500 leaked from _get_plugin's missing-plugin RuntimeError."""
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.is_index_registered = MagicMock(return_value=False)
         mock_get.return_value = mock_service
@@ -374,7 +374,7 @@ async def test_check_staleness_via_http(optimal_client: AsyncClient) -> None:
     """`/stats/staleness` is now declared before `/stats/{index_type}`, so it
     routes correctly to `check_staleness` instead of being matched as
     `index_type=staleness` (which would 400 as invalid IndexType)."""
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.check_index_staleness = AsyncMock(
             return_value={"stale": False, "indexes": {}}
@@ -396,7 +396,7 @@ async def test_check_staleness_helper_authorized() -> None:
     fake_perm = MagicMock()
     fake_perm.can_perform_kb_action.return_value = True
     with patch(
-        "roboco.api.routes.optimal.get_optimal_service",
+        "robofleet.api.routes.optimal.get_optimal_service",
         AsyncMock(
             return_value=AsyncMock(
                 check_index_staleness=AsyncMock(return_value={"stale": False})
@@ -431,7 +431,7 @@ async def test_check_staleness_helper_unauthorized() -> None:
 
 @pytest.mark.asyncio
 async def test_health_check(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.check_health = AsyncMock(
             return_value=(True, True, True, {"version": "1"})
@@ -463,7 +463,7 @@ async def test_clear_index_invalid_type(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_clear_index_success(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.is_index_registered = MagicMock(return_value=True)
         mock_service.clear_index = AsyncMock(return_value=None)
@@ -503,7 +503,7 @@ async def test_list_documents_success(optimal_client: AsyncClient) -> None:
             "extra_data": {},
         }
     ]
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.list_indexed_documents = AsyncMock(return_value=(docs, 1))
         mock_get.return_value = mock_service
@@ -537,7 +537,7 @@ async def test_refresh_index_invalid_type(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_refresh_index_with_sources(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.is_index_registered = MagicMock(return_value=True)
         mock_service.refresh_index = AsyncMock(return_value=None)
@@ -553,7 +553,7 @@ async def test_refresh_index_with_sources(optimal_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_refresh_index_empty_sources(optimal_client: AsyncClient) -> None:
     """Empty sources -> service.get_indexed_sources_for is called."""
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.is_index_registered = MagicMock(return_value=True)
         mock_service.get_indexed_sources_for = AsyncMock(return_value=["x.md"])
@@ -579,7 +579,7 @@ async def test_reindex_all_forbidden(dev_optimal_client: AsyncClient) -> None:
 async def test_reindex_all_success(optimal_client: AsyncClient) -> None:
     report = MagicMock()
     report.to_dict = MagicMock(return_value={"summary": "done"})
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service._auto_index_on_startup = AsyncMock(return_value=report)
         mock_get.return_value = mock_service
@@ -594,7 +594,7 @@ async def test_reindex_all_success(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_create_prompt_template(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = MagicMock()
         mock_service.create_prompt_template = MagicMock(
             return_value={
@@ -623,7 +623,7 @@ async def test_create_prompt_template(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_list_prompt_templates(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = MagicMock()
         mock_service.list_prompt_templates = MagicMock(return_value=[])
 
@@ -642,7 +642,7 @@ async def test_list_prompt_templates(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_mentor_ask_init_failure(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_mentor_service") as mock_mentor:
+    with patch("robofleet.api.routes.optimal.get_mentor_service") as mock_mentor:
         mock_mentor.side_effect = RuntimeError("boom")
         response = await optimal_client.post(
             "/api/optimal/mentor/ask",
@@ -668,8 +668,8 @@ async def test_mentor_ask_success(optimal_client: AsyncClient) -> None:
         )
     )
     with (
-        patch("roboco.api.routes.optimal.get_mentor_service") as mock_mentor,
-        patch("roboco.api.routes.optimal.get_optimal_service") as mock_get,
+        patch("robofleet.api.routes.optimal.get_mentor_service") as mock_mentor,
+        patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get,
     ):
         mock_mentor.return_value = mentor
         mock_get.return_value = AsyncMock()
@@ -688,7 +688,7 @@ async def test_mentor_ask_success(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_search_errors_success(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.search_errors = AsyncMock(
             return_value=[_search_result(IndexType.ERRORS)]
@@ -704,7 +704,7 @@ async def test_search_errors_success(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_record_error(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.index_error = AsyncMock(return_value=None)
         mock_get.return_value = mock_service
@@ -737,7 +737,7 @@ async def test_check_decision_with_objects(optimal_client: AsyncClient) -> None:
             context="ctx",
         ),
     ]
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.check_decision = AsyncMock(return_value=decisions)
         mock_get.return_value = mock_service
@@ -753,7 +753,7 @@ async def test_check_decision_with_objects(optimal_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_check_decision_with_dicts(optimal_client: AsyncClient) -> None:
     decisions = [{"topic": "x", "decision": "Y"}]
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.check_decision = AsyncMock(return_value=decisions)
         mock_get.return_value = mock_service
@@ -767,7 +767,7 @@ async def test_check_decision_with_dicts(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_check_decision_empty(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.check_decision = AsyncMock(return_value=[])
         mock_get.return_value = mock_service
@@ -782,7 +782,7 @@ async def test_check_decision_empty(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_record_decision(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.index_decision = AsyncMock(return_value=None)
         mock_get.return_value = mock_service
@@ -805,7 +805,7 @@ async def test_record_decision(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_get_standards(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.get_standards = AsyncMock(
             return_value=[_search_result(IndexType.STANDARDS)]
@@ -834,8 +834,8 @@ async def test_validate_action_python(optimal_client: AsyncClient) -> None:
         )
     )
     with (
-        patch("roboco.api.routes.optimal.get_validator_service") as mock_validator,
-        patch("roboco.api.routes.optimal.get_optimal_service") as mock_optimal,
+        patch("robofleet.api.routes.optimal.get_validator_service") as mock_validator,
+        patch("robofleet.api.routes.optimal.get_optimal_service") as mock_optimal,
     ):
         mock_validator.return_value = validator
         mock_optimal.return_value = AsyncMock()
@@ -879,8 +879,8 @@ async def test_validate_action_typescript(optimal_client: AsyncClient) -> None:
         )
     )
     with (
-        patch("roboco.api.routes.optimal.get_validator_service") as mock_validator,
-        patch("roboco.api.routes.optimal.get_optimal_service") as mock_optimal,
+        patch("robofleet.api.routes.optimal.get_validator_service") as mock_validator,
+        patch("robofleet.api.routes.optimal.get_optimal_service") as mock_optimal,
     ):
         mock_validator.return_value = validator
         mock_optimal.return_value = AsyncMock()
@@ -914,8 +914,8 @@ async def test_review_code(optimal_client: AsyncClient) -> None:
         )
     )
     with (
-        patch("roboco.api.routes.optimal.get_reviewer_service") as mock_rev,
-        patch("roboco.api.routes.optimal.get_optimal_service") as mock_optimal,
+        patch("robofleet.api.routes.optimal.get_reviewer_service") as mock_rev,
+        patch("robofleet.api.routes.optimal.get_optimal_service") as mock_optimal,
     ):
         mock_rev.return_value = reviewer
         mock_optimal.return_value = AsyncMock()
@@ -954,7 +954,7 @@ async def test_estimate_tokens(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_record_learning(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.record_learning = AsyncMock(return_value="learn-1")
         mock_get.return_value = mock_service
@@ -972,7 +972,7 @@ async def test_record_learning(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_search_learnings(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.search_learnings = AsyncMock(
             return_value=[_search_result(IndexType.LEARNINGS)]
@@ -993,7 +993,7 @@ async def test_search_learnings(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_search_timeout(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.search = AsyncMock(side_effect=TimeoutError("timeout"))
         mock_get.return_value = mock_service
@@ -1007,7 +1007,7 @@ async def test_search_timeout(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_rag_query_timeout(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.query = AsyncMock(side_effect=TimeoutError("timeout"))
         mock_get.return_value = mock_service
@@ -1021,7 +1021,7 @@ async def test_rag_query_timeout(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_rag_context_timeout(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.search = AsyncMock(side_effect=TimeoutError("timeout"))
         mock_get.return_value = mock_service
@@ -1035,7 +1035,7 @@ async def test_rag_context_timeout(optimal_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_reindex_all_timeout(optimal_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.optimal.get_optimal_service") as mock_get:
+    with patch("robofleet.api.routes.optimal.get_optimal_service") as mock_get:
         mock_service = AsyncMock()
         mock_service._auto_index_on_startup = AsyncMock(
             side_effect=TimeoutError("timeout")
@@ -1061,7 +1061,7 @@ async def test_get_proactive_context(optimal_client: AsyncClient) -> None:
             summary="all good",
         )
     )
-    with patch("roboco.services.proactive.get_proactive_service") as mock_get:
+    with patch("robofleet.services.proactive.get_proactive_service") as mock_get:
         mock_get.return_value = proactive
         response = await optimal_client.post(
             "/api/optimal/context/proactive",

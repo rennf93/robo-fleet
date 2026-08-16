@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from roboco.foundation.identity import CELL_TEAMS, Team
+from robofleet.foundation.identity import CELL_TEAMS, Team
 
 
 def test_cell_teams_is_exactly_the_three_cells() -> None:

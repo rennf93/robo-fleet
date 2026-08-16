@@ -9,8 +9,8 @@ from __future__ import annotations
 import time
 
 import pytest
-from roboco.runtime import sandbox as sandbox_module
-from roboco.runtime.sandbox import SandboxProvisioner, SandboxProvisionError
+from robofleet.runtime import sandbox as sandbox_module
+from robofleet.runtime.sandbox import SandboxProvisioner, SandboxProvisionError
 
 _NETWORK = "roboco_default"
 _PG_PORT = 5432
@@ -126,7 +126,7 @@ async def test_provision_labels_are_correct() -> None:
     label_indices = [i for i, a in enumerate(run_call) if a == "--label"]
     labels = [run_call[i + 1] for i in label_indices]
     assert sandbox_module.SANDBOX_LABEL in labels
-    assert "roboco.sandbox.owner=roboco-agent-dev-2" in labels
+    assert "robofleet.sandbox.owner=roboco-agent-dev-2" in labels
 
 
 @pytest.mark.asyncio

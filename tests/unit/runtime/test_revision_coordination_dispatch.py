@@ -12,8 +12,8 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import roboco.runtime.orchestrator as orch_mod
-from roboco.runtime.orchestrator import AgentOrchestrator
+import robofleet.runtime.orchestrator as orch_mod
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _orch(

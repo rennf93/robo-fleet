@@ -18,7 +18,7 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     AuditLogTable,
     BoardProgramCycleTable,
@@ -26,20 +26,20 @@ from roboco.db.tables import (
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import (
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
     Team,
 )
-from roboco.models.base import TaskNature as TN
-from roboco.models.base import TaskStatus as TS
-from roboco.models.base import TaskType as TT
-from roboco.services import board_programs as bp_module
-from roboco.services.scales_service import ScalesService, get_scales_service
-from roboco.services.task import (
+from robofleet.models.base import TaskNature as TN
+from robofleet.models.base import TaskStatus as TS
+from robofleet.models.base import TaskType as TT
+from robofleet.services import board_programs as bp_module
+from robofleet.services.scales_service import ScalesService, get_scales_service
+from robofleet.services.task import (
     CORONER_SOURCE,
     PEST_CONTROL_SOURCE,
     ROADMAP_SOURCE,

@@ -3,7 +3,7 @@
 Originally tried to UPDATE agents.skills (a JSON column), but the agents
 table never had a `skills` column — only `capabilities` (ARRAY(String)).
 The intended substitution (`qa_review` -> `code_review`) was already done
-in `roboco/agents_config.py` via direct edit. This migration is preserved
+in `robofleet/agents_config.py` via direct edit. This migration is preserved
 as a no-op so any database stamped at this revision keeps a valid chain
 position.
 

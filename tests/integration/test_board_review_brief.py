@@ -9,19 +9,19 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.tasks import router as tasks_router
-from roboco.db.tables import (
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.tasks import router as tasks_router
+from robofleet.db.tables import (
     AgentTable,
     JournalEntryTable,
     JournalTable,
     ProjectTable,
     TaskTable,
 )
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import JournalEntryType, TaskNature, TaskStatus, TaskType
-from roboco.models.permissions import AgentContext
-from roboco.services.journal import JournalService
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import JournalEntryType, TaskNature, TaskStatus, TaskType
+from robofleet.models.permissions import AgentContext
+from robofleet.services.journal import JournalService
 
 _HDR_PM = {"X-Agent-ID": str(uuid4()), "X-Agent-Role": "main_pm"}
 

@@ -9,7 +9,7 @@ Exit codes:
   1 — drift (the enum types exist but their labels differ from foundation).
       An Alembic migration must be written to align postgres with foundation.
 
-Reads DB connection from roboco.config. Skip semantics live IN the script
+Reads DB connection from robofleet.config. Skip semantics live IN the script
 (exit 0) so the Makefile gate can't mask a real drift exit as "skipped".
 """
 
@@ -19,8 +19,8 @@ import asyncio
 import sys
 
 import asyncpg
-from roboco.config import settings
-from roboco.foundation import identity
+from robofleet.config import settings
+from robofleet.foundation import identity
 
 
 async def fetch_enum_values(conn: asyncpg.Connection, enum_name: str) -> set[str]:

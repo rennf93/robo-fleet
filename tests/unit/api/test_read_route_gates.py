@@ -15,14 +15,14 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.agents_config import issue_panel_token
-from roboco.api import deps as _deps
-from roboco.api.routes.a2a import router as a2a_router
-from roboco.api.routes.agents import router as agents_router
-from roboco.api.routes.kanban import router as kanban_router
-from roboco.api.routes.system import router as system_router
-from roboco.api.routes.usage import router as usage_router
-from roboco.db.base import get_db
+from robofleet.agents_config import issue_panel_token
+from robofleet.api import deps as _deps
+from robofleet.api.routes.a2a import router as a2a_router
+from robofleet.api.routes.agents import router as agents_router
+from robofleet.api.routes.kanban import router as kanban_router
+from robofleet.api.routes.system import router as system_router
+from robofleet.api.routes.usage import router as usage_router
+from robofleet.db.base import get_db
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -51,19 +51,19 @@ async def gated_client(
 
     # Stub the per-route services so the gate is the only variable.
     monkeypatch.setattr(
-        "roboco.api.routes.agents.get_agent_service",
+        "robofleet.api.routes.agents.get_agent_service",
         lambda _db: MagicMock(list_agents=AsyncMock(return_value=[])),
     )
     monkeypatch.setattr(
-        "roboco.api.routes.kanban.get_kanban_service",
+        "robofleet.api.routes.kanban.get_kanban_service",
         lambda _db: MagicMock(get_dev_board=AsyncMock(return_value={})),
     )
     monkeypatch.setattr(
-        "roboco.api.routes.usage.get_usage_service",
+        "robofleet.api.routes.usage.get_usage_service",
         lambda _db: MagicMock(summary=AsyncMock(return_value={})),
     )
     monkeypatch.setattr(
-        "roboco.api.routes.system.RateLimitStateTracker.list_rate_limited_providers",
+        "robofleet.api.routes.system.RateLimitStateTracker.list_rate_limited_providers",
         AsyncMock(return_value={}),
     )
     async with AsyncClient(
@@ -149,11 +149,11 @@ async def test_a2a_discovery_endpoints_stay_ungated(
     monkeypatch.setattr(_deps.settings, "cloud_auth_enabled", True)
     with (
         patch(
-            "roboco.api.routes.a2a.A2AService.discover_agents",
+            "robofleet.api.routes.a2a.A2AService.discover_agents",
             new=AsyncMock(return_value=[]),
         ),
         patch(
-            "roboco.api.routes.a2a.A2AService.build_agent_card",
+            "robofleet.api.routes.a2a.A2AService.build_agent_card",
             new=AsyncMock(return_value=None),
         ),
     ):

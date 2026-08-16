@@ -27,8 +27,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec_module
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.foundation.policy import lifecycle as spec_module
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 from structlog.testing import capture_logs
 
 SHA_OLD = "aaaa1111bbbb2222cccc3333dddd4444eeee5555"

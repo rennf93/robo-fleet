@@ -13,7 +13,7 @@ Pieces (all REAL except GitHub and the LLM):
   (``settings.github_api_base_url`` points at it). PR state lives in memory;
   merges perform REAL git merges (squash included) on the bare origin, so
   downstream git logic (cherry checks, freshness, branch sync) sees reality.
-- Agents: ``ScriptedAgent`` reloads the REAL ``roboco.mcp.flow_server`` /
+- Agents: ``ScriptedAgent`` reloads the REAL ``robofleet.mcp.flow_server`` /
   ``do_server`` modules with that agent's env (id, role, role-scoped
   manifest built from the real ``role_config``) and calls the REAL tool
   functions, which POST to the in-process API over loopback HTTP.
@@ -52,7 +52,7 @@ if TYPE_CHECKING:
         """Structural stand-in for the one ``pytest.TempPathFactory`` method
         ``build_e2e_stack`` uses. pytest's real fixture value already
         satisfies this shape, so it needs no adapter — but it lets
-        ``roboco/eval/runner.py`` (an offline CLI, not a pytest session) drive
+        ``robofleet/eval/runner.py`` (an offline CLI, not a pytest session) drive
         this same stack-building machinery with a plain temp-dir factory
         instead of constructing a real ``pytest.Config``."""
 
@@ -338,22 +338,22 @@ def _make_admin_clone(root: Path, origin: Path) -> Path:
 
 
 def _build_app(gh: _FakeGitHub) -> FastAPI:
-    from roboco.api.middleware import setup_middleware
-    from roboco.api.routes.dashboard import router as dashboard_router
-    from roboco.api.routes.health import router as health_router
-    from roboco.api.routes.notifications import router as notifications_router
-    from roboco.api.routes.orchestrator import router as orchestrator_router
-    from roboco.api.routes.settings import router as settings_router
-    from roboco.api.routes.tasks import router as tasks_router
-    from roboco.api.routes.v1 import do as do_module
-    from roboco.api.routes.v1 import flow_auditor as fa
-    from roboco.api.routes.v1 import flow_board as fb
-    from roboco.api.routes.v1 import flow_cell_pm as fcp
-    from roboco.api.routes.v1 import flow_dev as fd
-    from roboco.api.routes.v1 import flow_doc as fdoc
-    from roboco.api.routes.v1 import flow_main_pm as fmp
-    from roboco.api.routes.v1 import flow_pr_reviewer as fpr
-    from roboco.api.routes.v1 import flow_qa as fq
+    from robofleet.api.middleware import setup_middleware
+    from robofleet.api.routes.dashboard import router as dashboard_router
+    from robofleet.api.routes.health import router as health_router
+    from robofleet.api.routes.notifications import router as notifications_router
+    from robofleet.api.routes.orchestrator import router as orchestrator_router
+    from robofleet.api.routes.settings import router as settings_router
+    from robofleet.api.routes.tasks import router as tasks_router
+    from robofleet.api.routes.v1 import do as do_module
+    from robofleet.api.routes.v1 import flow_auditor as fa
+    from robofleet.api.routes.v1 import flow_board as fb
+    from robofleet.api.routes.v1 import flow_cell_pm as fcp
+    from robofleet.api.routes.v1 import flow_dev as fd
+    from robofleet.api.routes.v1 import flow_doc as fdoc
+    from robofleet.api.routes.v1 import flow_main_pm as fmp
+    from robofleet.api.routes.v1 import flow_pr_reviewer as fpr
+    from robofleet.api.routes.v1 import flow_qa as fq
 
     app = FastAPI(title="roboco-e2e-smoke")
     setup_middleware(app)
@@ -384,11 +384,11 @@ def build_e2e_stack(
 
     ``tmp_path_factory`` only needs ``.mktemp()`` (see ``TmpPathFactory``
     above) — pytest's real fixture satisfies it structurally, and
-    ``roboco/eval/runner.py`` drives this same function with a plain
+    ``robofleet/eval/runner.py`` drives this same function with a plain
     non-pytest factory to reuse this stack outside a test session.
     """
-    from roboco.config import settings
-    from roboco.db import base as db_base
+    from robofleet.config import settings
+    from robofleet.db import base as db_base
 
     mp = pytest.MonkeyPatch()
     root = tmp_path_factory.mktemp("e2e")
@@ -484,7 +484,7 @@ class ScriptedAgent:
         self._manifest_path.write_text(json.dumps(self._manifest()))
 
     def _manifest(self) -> dict[str, Any]:
-        from roboco.services.gateway.role_config import get_role_config
+        from robofleet.services.gateway.role_config import get_role_config
 
         cfg = get_role_config(self.role)
         return {
@@ -530,13 +530,13 @@ class ScriptedAgent:
         return module
 
     def flow(self, verb: str, /, **kwargs: Any) -> dict[str, Any]:
-        result: dict[str, Any] = getattr(self._module("roboco.mcp.flow_server"), verb)(
-            **kwargs
-        )
+        result: dict[str, Any] = getattr(
+            self._module("robofleet.mcp.flow_server"), verb
+        )(**kwargs)
         return result
 
     def do(self, tool: str, /, **kwargs: Any) -> dict[str, Any]:
-        result: dict[str, Any] = getattr(self._module("roboco.mcp.do_server"), tool)(
+        result: dict[str, Any] = getattr(self._module("robofleet.mcp.do_server"), tool)(
             **kwargs
         )
         return result

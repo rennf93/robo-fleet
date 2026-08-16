@@ -1,4 +1,4 @@
-"""roboco.api.routes.secretary_live — live-bridge endpoints (mocked deps)."""
+"""robofleet.api.routes.secretary_live — live-bridge endpoints (mocked deps)."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
-from roboco.api.routes import secretary_live as sl
-from roboco.api.schemas.secretary_live import (
+from robofleet.api.routes import secretary_live as sl
+from robofleet.api.schemas.secretary_live import (
     AgentEvent,
     LiveMessageRequest,
     StartSecretaryRequest,

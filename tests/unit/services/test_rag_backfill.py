@@ -30,15 +30,15 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, JournalEntryTable, JournalTable
-from roboco.models.base import AgentRole, AgentStatus, JournalEntryType, Team
-from roboco.services import rag_index_failures as rif
+from robofleet.db.tables import AgentTable, JournalEntryTable, JournalTable
+from robofleet.models.base import AgentRole, AgentStatus, JournalEntryType, Team
+from robofleet.services import rag_index_failures as rif
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 if TYPE_CHECKING:
-    from roboco.models.optimal import IndexJournalEntryParams
-    from roboco.services.optimal_brain.indexes.learnings import RecordLearningParams
+    from robofleet.models.optimal import IndexJournalEntryParams
+    from robofleet.services.optimal_brain.indexes.learnings import RecordLearningParams
 
 # Journals floor is 40, learnings floor is 80 (see optimal_brain/indexes/base.py).
 _LONG_CONTENT = "x" * 90  # clears both floors

@@ -18,8 +18,8 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings as cfg
-from roboco.db.tables import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import (
     AgentSpawnSessionTable,
     AgentTable,
     BoardProgramCycleTable,
@@ -29,8 +29,8 @@ from roboco.db.tables import (
     TaskReviewFindingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.models.base import (
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -38,9 +38,9 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.models.base import TaskStatus as TS
-from roboco.services.sentinel_engine import SentinelEngine
-from roboco.services.task import (
+from robofleet.models.base import TaskStatus as TS
+from robofleet.services.sentinel_engine import SentinelEngine
+from robofleet.services.task import (
     PERISCOPE_SOURCE,
     PEST_CONTROL_SOURCE,
     ROADMAP_SOURCE,
@@ -293,7 +293,7 @@ async def test_evidence_context_renders_waived_trend(
             origin="qa",
             round=1,
             author_slug="qa-1",
-            file="roboco/services/task.py",
+            file="robofleet/services/task.py",
             line=10,
             severity="minor",
             expected="x",
@@ -322,7 +322,7 @@ async def test_evidence_context_renders_open_findings_by_severity(
             origin="qa",
             round=1,
             author_slug="qa-1",
-            file="roboco/services/task.py",
+            file="robofleet/services/task.py",
             line=10,
             severity="blocker",
             expected="x",
@@ -351,7 +351,7 @@ async def test_evidence_context_renders_conventions_hotspots(
             id=uuid4(),
             project_id=project.id,
             task_id=None,
-            file="roboco/api/routes/x.py",
+            file="robofleet/api/routes/x.py",
             line=5,
             rule="thin_routes",
             level="block",

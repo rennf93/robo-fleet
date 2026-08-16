@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
-from roboco.services.git import GitService, _git_ownership_scope
+from robofleet.services.git import GitService, _git_ownership_scope
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -141,12 +141,14 @@ async def test_read_only_op_skips_chown_entirely(
     """A read-only op must never call either repair function."""
     (tmp_path / ".git").mkdir()
     monkeypatch.setattr(
-        "roboco.services.git.subprocess.run", lambda *_a, **_k: _ok(["status"])
+        "robofleet.services.git.subprocess.run", lambda *_a, **_k: _ok(["status"])
     )
     full_repair = MagicMock()
     git_repair = MagicMock()
-    monkeypatch.setattr("roboco.services.workspace._ensure_agent_owned", full_repair)
-    monkeypatch.setattr("roboco.services.workspace._ensure_git_dir_owned", git_repair)
+    monkeypatch.setattr("robofleet.services.workspace._ensure_agent_owned", full_repair)
+    monkeypatch.setattr(
+        "robofleet.services.workspace._ensure_git_dir_owned", git_repair
+    )
 
     await _svc()._run_git(tmp_path, ["status", "--porcelain"])
 
@@ -161,12 +163,14 @@ async def test_git_scoped_op_calls_git_repair_not_full_repair(
     """add/commit/fetch/push call the .git-only repair, never the full walk."""
     (tmp_path / ".git").mkdir()
     monkeypatch.setattr(
-        "roboco.services.git.subprocess.run", lambda *_a, **_k: _ok(["commit"])
+        "robofleet.services.git.subprocess.run", lambda *_a, **_k: _ok(["commit"])
     )
     full_repair = MagicMock()
     git_repair = MagicMock()
-    monkeypatch.setattr("roboco.services.workspace._ensure_agent_owned", full_repair)
-    monkeypatch.setattr("roboco.services.workspace._ensure_git_dir_owned", git_repair)
+    monkeypatch.setattr("robofleet.services.workspace._ensure_agent_owned", full_repair)
+    monkeypatch.setattr(
+        "robofleet.services.workspace._ensure_git_dir_owned", git_repair
+    )
 
     await _svc()._run_git(tmp_path, ["commit", "-m", "msg"])
 
@@ -181,12 +185,14 @@ async def test_full_scope_op_calls_full_repair_not_git_repair(
     """checkout/reset/rebase/pull keep the unchanged full-workspace repair."""
     (tmp_path / ".git").mkdir()
     monkeypatch.setattr(
-        "roboco.services.git.subprocess.run", lambda *_a, **_k: _ok(["checkout"])
+        "robofleet.services.git.subprocess.run", lambda *_a, **_k: _ok(["checkout"])
     )
     full_repair = MagicMock()
     git_repair = MagicMock()
-    monkeypatch.setattr("roboco.services.workspace._ensure_agent_owned", full_repair)
-    monkeypatch.setattr("roboco.services.workspace._ensure_git_dir_owned", git_repair)
+    monkeypatch.setattr("robofleet.services.workspace._ensure_agent_owned", full_repair)
+    monkeypatch.setattr(
+        "robofleet.services.workspace._ensure_git_dir_owned", git_repair
+    )
 
     await _svc()._run_git(tmp_path, ["checkout", "some-branch"])
 
@@ -203,10 +209,12 @@ async def test_read_only_op_does_not_invalidate_owned_marker(
     it here would force a needless full walk on the very next call."""
     (tmp_path / ".git").mkdir()
     monkeypatch.setattr(
-        "roboco.services.git.subprocess.run", lambda *_a, **_k: _ok(["status"])
+        "robofleet.services.git.subprocess.run", lambda *_a, **_k: _ok(["status"])
     )
     invalidate = MagicMock()
-    monkeypatch.setattr("roboco.services.workspace.invalidate_owned_marker", invalidate)
+    monkeypatch.setattr(
+        "robofleet.services.workspace.invalidate_owned_marker", invalidate
+    )
 
     await _svc()._run_git(tmp_path, ["status", "--porcelain"])
 
@@ -229,12 +237,14 @@ async def test_git_scoped_op_invalidates_owned_marker_before_running(
         order.append("subprocess.run")
         return _ok(["commit"])
 
-    monkeypatch.setattr("roboco.services.git.subprocess.run", _run_subprocess)
+    monkeypatch.setattr("robofleet.services.git.subprocess.run", _run_subprocess)
     monkeypatch.setattr(
-        "roboco.services.workspace.invalidate_owned_marker",
+        "robofleet.services.workspace.invalidate_owned_marker",
         lambda _ws: order.append("invalidate_owned_marker"),
     )
-    monkeypatch.setattr("roboco.services.workspace._ensure_git_dir_owned", MagicMock())
+    monkeypatch.setattr(
+        "robofleet.services.workspace._ensure_git_dir_owned", MagicMock()
+    )
 
     await _svc()._run_git(tmp_path, ["commit", "-m", "msg"])
 
@@ -249,11 +259,13 @@ async def test_full_scope_op_invalidates_owned_marker(
     too — the marker invalidation isn't scoped to `.git`-only writes."""
     (tmp_path / ".git").mkdir()
     monkeypatch.setattr(
-        "roboco.services.git.subprocess.run", lambda *_a, **_k: _ok(["checkout"])
+        "robofleet.services.git.subprocess.run", lambda *_a, **_k: _ok(["checkout"])
     )
     invalidate = MagicMock()
-    monkeypatch.setattr("roboco.services.workspace.invalidate_owned_marker", invalidate)
-    monkeypatch.setattr("roboco.services.workspace._ensure_agent_owned", MagicMock())
+    monkeypatch.setattr(
+        "robofleet.services.workspace.invalidate_owned_marker", invalidate
+    )
+    monkeypatch.setattr("robofleet.services.workspace._ensure_agent_owned", MagicMock())
 
     await _svc()._run_git(tmp_path, ["checkout", "some-branch"])
 
@@ -284,7 +296,7 @@ def _record_touched(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         touched.append(entry)
         return 0
 
-    monkeypatch.setattr("roboco.services.workspace._own_and_grant_rw", _record)
+    monkeypatch.setattr("robofleet.services.workspace._own_and_grant_rw", _record)
     return touched
 
 
@@ -297,7 +309,7 @@ async def test_git_scoped_repair_targets_clone_git_for_plain_clone(
     (clone / ".git" / "objects").mkdir(parents=True)
     (clone / ".git" / "config").write_text("[core]\n")
     monkeypatch.setattr(
-        "roboco.services.git.subprocess.run", lambda *_a, **_k: _ok(["push"])
+        "robofleet.services.git.subprocess.run", lambda *_a, **_k: _ok(["push"])
     )
 
     await _svc()._run_git(clone, ["push", "-u", "origin", "branch"])
@@ -325,7 +337,7 @@ async def test_git_scoped_repair_targets_shared_clone_git_for_worktree(
     )
 
     monkeypatch.setattr(
-        "roboco.services.git.subprocess.run", lambda *_a, **_k: _ok(["commit"])
+        "robofleet.services.git.subprocess.run", lambda *_a, **_k: _ok(["commit"])
     )
 
     await _svc()._run_git(worktree, ["commit", "-m", "msg"])

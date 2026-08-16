@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from roboco.enforcement.task_lifecycle import (
+from robofleet.enforcement.task_lifecycle import (
     GitContext,
     GitRequirementError,
     can_agent_transition,
@@ -16,8 +16,8 @@ from roboco.enforcement.task_lifecycle import (
     validate_git_requirements,
     validate_task_transition,
 )
-from roboco.exceptions import TaskLifecycleError
-from roboco.foundation.policy.lifecycle import Status
+from robofleet.exceptions import TaskLifecycleError
+from robofleet.foundation.policy.lifecycle import Status
 
 # ---------------------------------------------------------------------------
 # validate_task_transition

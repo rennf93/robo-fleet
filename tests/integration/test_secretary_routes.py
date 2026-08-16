@@ -1,4 +1,4 @@
-"""roboco.api.routes.secretary — role gates + directive flow (direct-call style)."""
+"""robofleet.api.routes.secretary — role gates + directive flow (direct-call style)."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from roboco.api.routes import secretary as sec_route
-from roboco.api.schemas.secretary import DirectiveDecision, DirectiveSubmit
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
-from roboco.services.base import ConflictError
+from robofleet.api.routes import secretary as sec_route
+from robofleet.api.schemas.secretary import DirectiveDecision, DirectiveSubmit
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
+from robofleet.services.base import ConflictError
 
 _ROW = object()
 _DIRECTIVE_DICT: dict[str, Any] = {
@@ -182,7 +182,9 @@ async def test_search_tasks_returns_compact_rows(
     row.priority = 2
     task_svc = MagicMock()
     task_svc.search_tasks = AsyncMock(return_value=[row])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _db: task_svc)
+    monkeypatch.setattr(
+        "robofleet.services.task.get_task_service", lambda _db: task_svc
+    )
     out = await sec_route.search_tasks(_db(), _agent(AgentRole.SECRETARY), q="greeting")
     assert out == [
         {

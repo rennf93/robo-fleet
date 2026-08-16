@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 from pydantic import ValidationError
-from roboco.api.schemas.v1.flow import DelegateRequest
-from roboco.models.base import Complexity
+from robofleet.api.schemas.v1.flow import DelegateRequest
+from robofleet.models.base import Complexity
 
 # Minimal valid payload for DelegateRequest — only the required fields.
 # estimated_complexity is varied per test.

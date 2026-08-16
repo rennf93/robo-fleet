@@ -4,8 +4,8 @@ which stay code/process-focused)."""
 
 from __future__ import annotations
 
-from roboco.models.optimal import IndexType
-from roboco.services.optimal_brain.mentor import MentorService
+from robofleet.models.optimal import IndexType
+from robofleet.services.optimal_brain.mentor import MentorService
 
 
 def test_default_domain_includes_vault_notes() -> None:

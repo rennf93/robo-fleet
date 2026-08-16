@@ -26,8 +26,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.services.forge import RepoRef
-from roboco.services.git import GitService
+from robofleet.services.forge import RepoRef
+from robofleet.services.git import GitService
 
 
 def _service() -> GitService:

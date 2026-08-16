@@ -24,11 +24,11 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.agents_config import issue_panel_token
-from roboco.api import deps
-from roboco.api.routes.prompter_live import router as prompter_live_router
-from roboco.db.base import get_db
-from roboco.services import prompter_live
+from robofleet.agents_config import issue_panel_token
+from robofleet.api import deps
+from robofleet.api.routes.prompter_live import router as prompter_live_router
+from robofleet.db.base import get_db
+from robofleet.services import prompter_live
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

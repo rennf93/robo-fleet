@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.runtime.orchestrator import (
+from robofleet.runtime.orchestrator import (
     _PROMPT_FINDINGS_CAP,
     AgentOrchestrator,
 )
@@ -36,7 +36,7 @@ class _Row:
     def __init__(
         self,
         *,
-        file: str | None = "roboco/services/task.py",
+        file: str | None = "robofleet/services/task.py",
         line: int | None = 42,
         expected: str = "raises ValueError",
         actual: str = "swallows the error",
@@ -58,9 +58,9 @@ def _patch_findings_repo(rows: list[_Row]) -> tuple[Any, Any]:
     repo = AsyncMock()
     repo.list_for_task = AsyncMock(return_value=rows)
     return (
-        patch("roboco.db.base.get_db_context", _fake_ctx),
+        patch("robofleet.db.base.get_db_context", _fake_ctx),
         patch(
-            "roboco.services.repositories.review_findings.ReviewFindingsRepository",
+            "robofleet.services.repositories.review_findings.ReviewFindingsRepository",
             return_value=repo,
         ),
     )
@@ -79,7 +79,7 @@ async def test_renders_file_line_expected_actual_fix() -> None:
     with db_ctx, repo_ctx:
         block = await orch._open_findings_prompt_block(str(uuid4()))
 
-    assert "roboco/services/task.py:42" in block
+    assert "robofleet/services/task.py:42" in block
     assert "raises ValueError" in block
     assert "swallows the error" in block
     assert "add the raise" in block
@@ -97,7 +97,7 @@ async def test_empty_ledger_returns_empty_string() -> None:
 @pytest.mark.asyncio
 async def test_no_task_id_returns_empty_string_without_db() -> None:
     orch = _orch()
-    with patch("roboco.db.base.get_db_context") as ctx:
+    with patch("robofleet.db.base.get_db_context") as ctx:
         assert await orch._open_findings_prompt_block("") == ""
     ctx.assert_not_called()
 
@@ -118,7 +118,7 @@ async def test_caps_at_ten_with_overflow_line() -> None:
 @pytest.mark.asyncio
 async def test_db_error_fails_open_to_empty_string() -> None:
     orch = _orch()
-    with patch("roboco.db.base.get_db_context", side_effect=RuntimeError("db down")):
+    with patch("robofleet.db.base.get_db_context", side_effect=RuntimeError("db down")):
         assert await orch._open_findings_prompt_block(str(uuid4())) == ""
 
 
@@ -158,7 +158,7 @@ async def test_non_revision_prompt_never_touches_db() -> None:
     """EXECUTING (in_progress) must not pay for a findings-ledger fetch."""
     orch = _orch()
     task = _task(status="in_progress")
-    with patch("roboco.db.base.get_db_context") as ctx:
+    with patch("robofleet.db.base.get_db_context") as ctx:
         prompt = await orch._build_dev_prompt(task)
     ctx.assert_not_called()
     assert "IN PROGRESS" in prompt
@@ -235,7 +235,7 @@ async def test_get_prompt_for_agent_fetches_bounced_block_for_needs_revision_pm(
 @pytest.mark.asyncio
 async def test_revision_bounced_block_skips_fetch_when_not_needs_revision() -> None:
     orch = _orch()
-    with patch("roboco.db.base.get_db_context") as ctx:
+    with patch("robofleet.db.base.get_db_context") as ctx:
         block = await orch._revision_bounced_block(_task(status="in_progress"))
     assert block == ""
     ctx.assert_not_called()

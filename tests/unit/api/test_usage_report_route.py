@@ -22,8 +22,8 @@ from uuid import UUID
 import pytest
 from fastapi import FastAPI, status
 from httpx import ASGITransport, AsyncClient
-from roboco.api.routes.v1 import usage as usage_v1_module
-from roboco.db.base import get_db_committed
+from robofleet.api.routes.v1 import usage as usage_v1_module
+from robofleet.db.base import get_db_committed
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable

@@ -11,8 +11,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.agents.factories._base import compose_prompt
-from roboco.models.base import AgentRole, Team
+from robofleet.agents.factories._base import compose_prompt
+from robofleet.models.base import AgentRole, Team
 
 if TYPE_CHECKING:
     from pathlib import Path

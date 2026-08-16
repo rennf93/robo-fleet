@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from roboco.foundation.identity import Role
-from roboco.foundation.policy.lifecycle import intents_for_role
+from robofleet.foundation.identity import Role
+from robofleet.foundation.policy.lifecycle import intents_for_role
 
 if TYPE_CHECKING:
     import types
@@ -49,7 +49,7 @@ def flow_module_auditor(
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://test-orchestrator:8000")
     monkeypatch.setenv("ROBOCO_SDK_URL", "http://test-sdk:9000")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest_path))
-    import roboco.mcp.flow_server as srv
+    import robofleet.mcp.flow_server as srv
 
     importlib.reload(srv)
     return srv

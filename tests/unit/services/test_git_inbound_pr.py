@@ -13,7 +13,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services.git import _CI_RUN_WINDOW, GitService
+from robofleet.services.git import _CI_RUN_WINDOW, GitService
 
 _PR = 7
 
@@ -48,7 +48,7 @@ def _patch_project() -> Any:
     fake.get_by_slug = AsyncMock(
         return_value=MagicMock(git_url="https://github.com/acme/repo.git")
     )
-    return patch("roboco.services.git.get_project_service", return_value=fake)
+    return patch("robofleet.services.git.get_project_service", return_value=fake)
 
 
 def _pr(*, number: int, head_full: str, login: str, assoc: str) -> dict[str, Any]:
@@ -81,7 +81,7 @@ async def test_list_open_prs_normalizes_and_flags_fork() -> None:
     client = _client(_resp(200, json_payload=payload))
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await svc.list_open_prs("roboco")
     assert len(out) == 2  # noqa: PLR2004
@@ -131,7 +131,7 @@ async def test_list_open_prs_flags_owner_authored_pr() -> None:
     client = _client(_resp(200, json_payload=payload))
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await svc.list_open_prs("roboco")
     assert out[0]["author_is_owner"] is True
@@ -151,7 +151,7 @@ async def test_list_open_prs_empty_on_github_error() -> None:
     client = _client(_resp(403, text="forbidden"))
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         assert await svc.list_open_prs("roboco") == []
 
@@ -168,7 +168,7 @@ async def test_get_pr_diff_returns_diff_text() -> None:
     client = _client(_resp(200, text=diff))
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await svc.get_pr_diff("roboco", _PR)
     assert out == diff
@@ -191,7 +191,7 @@ async def test_get_pr_diff_empty_on_non_2xx() -> None:
     client = _client(_resp(404, text="not found"))
     with (
         _patch_project(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         assert await svc.get_pr_diff("roboco", _PR) == ""
 
@@ -208,7 +208,7 @@ def _patch_project_ci() -> Any:
             git_url="https://github.com/acme/repo.git", default_branch="master"
         )
     )
-    return patch("roboco.services.git.get_project_service", return_value=fake)
+    return patch("robofleet.services.git.get_project_service", return_value=fake)
 
 
 def _run(
@@ -230,7 +230,7 @@ async def test_get_latest_ci_conclusion_normalizes_and_requests_correctly() -> N
     client = _client(_resp(200, json_payload={"workflow_runs": [_run("failure")]}))
     with (
         _patch_project_ci(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await svc.get_latest_ci_conclusion("roboco")
     assert out == {
@@ -265,7 +265,7 @@ async def test_get_latest_ci_conclusion_none_on_github_error() -> None:
     client = _client(_resp(403, text="forbidden"))
     with (
         _patch_project_ci(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         assert await svc.get_latest_ci_conclusion("roboco") is None
 
@@ -277,7 +277,7 @@ async def test_get_latest_ci_conclusion_none_when_no_runs() -> None:
     client = _client(_resp(200, json_payload={"workflow_runs": []}))
     with (
         _patch_project_ci(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         assert await svc.get_latest_ci_conclusion("roboco") is None
 
@@ -289,7 +289,7 @@ async def test_get_latest_ci_conclusion_scopes_to_workflow() -> None:
     client = _client(_resp(200, json_payload={"workflow_runs": [_run("success")]}))
     with (
         _patch_project_ci(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await svc.get_latest_ci_conclusion("roboco", workflow="ci.yml")
     assert out is not None
@@ -305,7 +305,7 @@ async def test_get_latest_ci_conclusion_requests_a_window() -> None:
     client = _client(_resp(200, json_payload={"workflow_runs": [_run("failure")]}))
     with (
         _patch_project_ci(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         await svc.get_latest_ci_conclusion("roboco", workflow="ci.yml")
     assert client.get.await_args.kwargs["params"]["per_page"] == _CI_RUN_WINDOW
@@ -327,7 +327,7 @@ async def test_get_latest_ci_conclusion_red_head_not_masked_by_older_green() -> 
     client = _client(_resp(200, json_payload=payload))
     with (
         _patch_project_ci(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await svc.get_latest_ci_conclusion("roboco", workflow="ci.yml")
     assert out is not None
@@ -348,7 +348,7 @@ async def test_get_latest_ci_conclusion_green_rerun_supersedes_failure() -> None
     client = _client(_resp(200, json_payload=payload))
     with (
         _patch_project_ci(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
         out = await svc.get_latest_ci_conclusion("roboco", workflow="ci.yml")
     assert out is not None
@@ -366,8 +366,8 @@ async def test_get_latest_ci_conclusion_retries_transient_5xx() -> None:
     client.get = AsyncMock(side_effect=[_resp(503, text="busy"), ok])
     with (
         _patch_project_ci(),
-        patch("roboco.services.git.httpx.AsyncClient", return_value=client),
-        patch("roboco.services.git.asyncio.sleep", AsyncMock()),
+        patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
+        patch("robofleet.services.git.asyncio.sleep", AsyncMock()),
     ):
         out = await svc.get_latest_ci_conclusion("roboco", workflow="ci.yml")
     assert out is not None

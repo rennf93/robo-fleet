@@ -97,7 +97,7 @@ def test_blocks_uv_run_python_importing_flow_server() -> None:
     """The exact smoke-12 bypass: uv run python -c importing the flow server."""
     assert (
         _run(
-            'uv run python3 -c "from roboco.mcp.flow_server import open_pr; '
+            'uv run python3 -c "from robofleet.mcp.flow_server import open_pr; '
             "open_pr(task_id='x')\""
         )
         == _DENIED
@@ -105,7 +105,9 @@ def test_blocks_uv_run_python_importing_flow_server() -> None:
 
 
 def test_blocks_plain_python_c_import_roboco() -> None:
-    assert _run('python3 -c "import roboco.services.gateway as g; g.foo()"') == _DENIED
+    assert (
+        _run('python3 -c "import robofleet.services.gateway as g; g.foo()"') == _DENIED
+    )
 
 
 def test_blocks_python_heredoc_importing_roboco() -> None:
@@ -113,7 +115,7 @@ def test_blocks_python_heredoc_importing_roboco() -> None:
     cmd = (
         "uv run python3 << 'EOF'\n"
         "import os\n"
-        "from roboco.mcp.do_server import commit\n"
+        "from robofleet.mcp.do_server import commit\n"
         "commit(message='x')\n"
         "EOF"
     )
@@ -121,12 +123,12 @@ def test_blocks_python_heredoc_importing_roboco() -> None:
 
 
 def test_blocks_python_m_roboco_module() -> None:
-    assert _run("python -m roboco.mcp.flow_server") == _DENIED
-    assert _run("uv run -m roboco.services.gateway") == _DENIED
+    assert _run("python -m robofleet.mcp.flow_server") == _DENIED
+    assert _run("uv run -m robofleet.services.gateway") == _DENIED
 
 
 def test_blocks_poetry_run_python_import_roboco() -> None:
-    assert _run('poetry run python -c "from roboco.runtime import x"') == _DENIED
+    assert _run('poetry run python -c "from robofleet.runtime import x"') == _DENIED
 
 
 def test_blocks_setting_roboco_agent_id_inline() -> None:
@@ -147,14 +149,14 @@ def test_blocks_export_roboco_agent_id() -> None:
 
 
 def test_blocks_os_environ_roboco_agent_id_in_python() -> None:
-    """The smoke-12 form: os.environ['ROBOCO_AGENT_ID']=... then import roboco.
+    """The smoke-12 form: os.environ['ROBOCO_AGENT_ID']=... then import robofleet.
 
     Caught by the import-bypass rule (references roboco import) even
     independent of the identity rule."""
     cmd = (
         'uv run python3 -c "import os; '
         "os.environ['ROBOCO_AGENT_ID']='00000000-0000-0000-0001-000000000001'; "
-        "from roboco.mcp.flow_server import open_pr; open_pr(task_id='x')\""
+        "from robofleet.mcp.flow_server import open_pr; open_pr(task_id='x')\""
     )
     assert _run(cmd) == _DENIED
 
@@ -168,11 +170,11 @@ def test_allows_legitimate_python_without_roboco() -> None:
 def test_allows_reading_roboco_source_with_cat() -> None:
     """Reading source files for context (cat/grep) is fine — the block is
     specifically on *executing* roboco internals, not viewing them."""
-    assert _run("cat roboco/services/gateway/choreographer/_impl.py") == _ALLOWED
+    assert _run("cat robofleet/services/gateway/choreographer/_impl.py") == _ALLOWED
 
 
 def test_allows_grep_for_roboco_symbol() -> None:
-    assert _run("grep -rn 'import roboco' tests/") == _ALLOWED
+    assert _run("grep -rn 'import robofleet' tests/") == _ALLOWED
 
 
 # ---------------------------------------------------------------------------
@@ -477,7 +479,7 @@ def test_allows_uv_sync_for_app_named_workspace_project(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 # Claude Code lockdown: the host's ~/.claude (and ~/.claude.json) is the
 # shared OAuth credential store bind-mounted read-write into every agent
-# container (roboco/runtime/orchestrator.py::_build_mount_args). No role's
+# container (robofleet/runtime/orchestrator.py::_build_mount_args). No role's
 # job requires reading it, so treat .credentials.json / .claude.json like
 # the existing .netrc / .git-credentials credential files.
 # ---------------------------------------------------------------------------

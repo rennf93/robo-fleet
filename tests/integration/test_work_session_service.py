@@ -7,20 +7,20 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable, WorkSessionTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.work_session import (
+from robofleet.models.work_session import (
     WorkSessionCreate,
     WorkSessionStatus,
     WorkSessionUpdate,
 )
-from roboco.services.base import ConflictError, NotFoundError, ValidationError
-from roboco.services.work_session import WorkSessionService
+from robofleet.services.base import ConflictError, NotFoundError, ValidationError
+from robofleet.services.work_session import WorkSessionService
 from sqlalchemy.exc import IntegrityError
 
 if TYPE_CHECKING:

@@ -6,7 +6,7 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
-from roboco.llm.providers import gemini_cli_usage as gu
+from robofleet.llm.providers import gemini_cli_usage as gu
 
 if TYPE_CHECKING:
     from pathlib import Path

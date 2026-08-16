@@ -1,6 +1,6 @@
 """Task complexity threads into `_resolve_agent_route` -> `resolve_for_agent`.
 
-Cost-tiered routing (roboco/services/llm.py) reads a task's
+Cost-tiered routing (robofleet/services/llm.py) reads a task's
 `estimated_complexity` to try a compound ROLE(":"complexity) row before
 falling to the plain ROLE row. The orchestrator owns the one indexed Task
 lookup and threads the lowercase complexity string through. This is the pure
@@ -14,11 +14,11 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import roboco.db.base as db_base
-import roboco.services.llm as llm_module
-from roboco.models.base import Complexity, ModelProvider
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.services.llm import AgentRoute
+import robofleet.db.base as db_base
+import robofleet.services.llm as llm_module
+from robofleet.models.base import Complexity, ModelProvider
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.services.llm import AgentRoute
 
 # Sentinel route the mocked resolve_for_agent returns — a real AgentRoute
 # instance (not a bare string) so `result is _SENTINEL_ROUTE` type-checks

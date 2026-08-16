@@ -8,7 +8,7 @@ per-agent rework scorecard can attribute the rejection.
 
 from __future__ import annotations
 
-from roboco.services.task import TaskService
+from robofleet.services.task import TaskService
 
 
 def test_generic_transition_emits_only_status_event() -> None:

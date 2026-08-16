@@ -1,7 +1,7 @@
 """assemble_task_note_data threads the revision-findings ledger.
 
 Fetched via ``task_service.session`` rather than a new threaded parameter —
-see ``roboco/services/vault_assembly.py`` ``_resolve_findings`` for why (every
+see ``robofleet/services/vault_assembly.py`` ``_resolve_findings`` for why (every
 real caller already carries a real session; only some unit-test stubs don't,
 and those must degrade to empty rather than crash).
 """
@@ -14,8 +14,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.services.vault_assembly import assemble_task_note_data
-from roboco.services.vault_writer import VaultWriter
+from robofleet.services.vault_assembly import assemble_task_note_data
+from robofleet.services.vault_writer import VaultWriter
 
 
 def _task(**overrides: Any) -> SimpleNamespace:
@@ -43,7 +43,7 @@ def _finding_row(**overrides: Any) -> SimpleNamespace:
     base: dict[str, Any] = {
         "id": uuid4(),
         "severity": "major",
-        "file": "roboco/services/task.py",
+        "file": "robofleet/services/task.py",
         "line": 42,
         "expected": "x",
         "actual": "y",
@@ -65,7 +65,7 @@ async def test_assemble_threads_findings_via_task_service_session() -> None:
     repo = MagicMock()
     repo.list_for_task = AsyncMock(return_value=[_finding_row()])
     with patch(
-        "roboco.services.vault_assembly.ReviewFindingsRepository",
+        "robofleet.services.vault_assembly.ReviewFindingsRepository",
         return_value=repo,
     ):
         data = await assemble_task_note_data(task_service, project_service, _task())
@@ -74,7 +74,7 @@ async def test_assemble_threads_findings_via_task_service_session() -> None:
     row = data.findings[0]
     assert (row.severity, row.file, row.fix, row.status, row.round) == (
         "major",
-        "roboco/services/task.py",
+        "robofleet/services/task.py",
         "do z",
         "open",
         1,
@@ -105,7 +105,7 @@ async def test_assemble_fails_open_when_findings_fetch_raises(tmp_path: Any) -> 
     repo = MagicMock()
     repo.list_for_task = AsyncMock(side_effect=RuntimeError("db down"))
     with patch(
-        "roboco.services.vault_assembly.ReviewFindingsRepository",
+        "robofleet.services.vault_assembly.ReviewFindingsRepository",
         return_value=repo,
     ):
         data = await assemble_task_note_data(task_service, project_service, _task())

@@ -16,9 +16,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.choreographer._impl import Choreographer as _Impl
-from roboco.services.gateway.envelope import Envelope
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer._impl import Choreographer as _Impl
+from robofleet.services.gateway.envelope import Envelope
 
 # --------------------------------------------------------------------------- #
 # _free_text_soup

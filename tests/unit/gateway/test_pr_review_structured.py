@@ -6,9 +6,9 @@ canonical GitHub comment from them and rejects malformed findings.
 
 from __future__ import annotations
 
-from roboco.foundation.policy.content import PrReviewContent
-from roboco.services.gateway.choreographer.pr_review import PRReviewerMixin
-from roboco.services.gateway.envelope import Envelope
+from robofleet.foundation.policy.content import PrReviewContent
+from robofleet.services.gateway.choreographer.pr_review import PRReviewerMixin
+from robofleet.services.gateway.envelope import Envelope
 
 _build = PRReviewerMixin._build_pr_review_content
 
@@ -18,7 +18,7 @@ def test_valid_findings_build_pr_review_content() -> None:
         "The 422 path is unguarded.",
         [
             {
-                "file": "roboco/services/git.py",
+                "file": "robofleet/services/git.py",
                 "line": 42,
                 "severity": "blocker",
                 "expected": "retry as COMMENT",
@@ -31,7 +31,7 @@ def test_valid_findings_build_pr_review_content() -> None:
     assert content.verdict.value == "changes_requested"
     md = content.render_markdown()
     assert "## Findings" in md
-    assert "`roboco/services/git.py`" in md
+    assert "`robofleet/services/git.py`" in md
     assert "blocker" in md
 
 

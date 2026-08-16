@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 from unittest import mock
 
-from roboco.config import Settings
-from roboco.services.settings import FEATURE_FLAGS
+from robofleet.config import Settings
+from robofleet.services.settings import FEATURE_FLAGS
 
 
 def test_db_network_isolated_false_by_default() -> None:

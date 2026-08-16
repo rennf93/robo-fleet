@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 @pytest.mark.asyncio

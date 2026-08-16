@@ -23,8 +23,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec_module
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.foundation.policy import lifecycle as spec_module
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 def _make_choreographer() -> Choreographer:

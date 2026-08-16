@@ -14,11 +14,11 @@ from unittest.mock import patch
 from uuid import UUID
 
 import pytest
-from roboco.runtime.orchestrator import (
+from robofleet.runtime.orchestrator import (
     SECRETARY_AGENT_ID,
     AgentOrchestrator,
 )
-from roboco.services import prompter_live
+from robofleet.services import prompter_live
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -87,10 +87,10 @@ def _wire_secretary_spawn_mocks(
     # patch them at their source so the spec construction doesn't touch crypto /
     # the real agent table.
     monkeypatch.setattr(
-        "roboco.agents_config.issue_agent_token", lambda *_a, **_k: "tok"
+        "robofleet.agents_config.issue_agent_token", lambda *_a, **_k: "tok"
     )
     monkeypatch.setattr(
-        "roboco.foundation.identity.AGENTS",
+        "robofleet.foundation.identity.AGENTS",
         {
             SECRETARY_AGENT_ID: SimpleNamespace(
                 uuid=UUID("00000000-0000-0000-0000-000000000001"),
@@ -168,7 +168,7 @@ async def test_secretary_spawn_adds_compose_labels_before_image(
         return ["--label", f"com.docker.compose.service={service}"]
 
     monkeypatch.setattr(
-        "roboco.runtime.orchestrator.compose_label_args", _fake_label_args
+        "robofleet.runtime.orchestrator.compose_label_args", _fake_label_args
     )
 
     await orch.spawn_secretary_session("sess-labels", initial_message=None)
@@ -200,7 +200,7 @@ async def test_secretary_spawn_omits_compose_labels_outside_compose(
     async def _no_labels(_service: str) -> list[str]:
         return []
 
-    monkeypatch.setattr("roboco.runtime.orchestrator.compose_label_args", _no_labels)
+    monkeypatch.setattr("robofleet.runtime.orchestrator.compose_label_args", _no_labels)
 
     await orch.spawn_secretary_session("sess-no-labels", initial_message=None)
 

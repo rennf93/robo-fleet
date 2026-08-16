@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.services import minio_client
+from robofleet.config import settings as cfg
+from robofleet.services import minio_client
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

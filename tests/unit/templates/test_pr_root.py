@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roboco.templates.git.pr_root import (
+from robofleet.templates.git.pr_root import (
     CommitInfo,
     RootPRContext,
     SubtaskInfo,

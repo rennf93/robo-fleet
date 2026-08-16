@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.services.permissions import has_privileged_access, is_pm_role
+from robofleet.db.tables import AgentTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.services.permissions import has_privileged_access, is_pm_role
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

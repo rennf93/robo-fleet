@@ -11,8 +11,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.models.optimal import IndexType, SearchOutcome
-from roboco.services.optimal import OptimalService
+from robofleet.models.optimal import IndexType, SearchOutcome
+from robofleet.services.optimal import OptimalService
 
 
 def _fake_plugin(index_type: IndexType) -> MagicMock:

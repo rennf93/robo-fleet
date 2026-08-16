@@ -20,16 +20,16 @@ import jwt as _jwt
 import pytest
 from fastapi import FastAPI, HTTPException, Response
 from fastapi_users.password import PasswordHelper
-from roboco.agents_config import CEO_AGENT_ID, issue_agent_token
-from roboco.api import websocket as ws_module
-from roboco.api.auth import revocation
-from roboco.api.auth.backend import SESSION_COOKIE_NAME, get_jwt_strategy
-from roboco.api.auth.routes import auth_status, mount_cloud_auth
-from roboco.api.auth.seed import ensure_seed_user
-from roboco.api.deps import _slide_session_cookie, get_agent_context
-from roboco.config import settings
-from roboco.db.tables import UserTable
-from roboco.models import AgentRole
+from robofleet.agents_config import CEO_AGENT_ID, issue_agent_token
+from robofleet.api import websocket as ws_module
+from robofleet.api.auth import revocation
+from robofleet.api.auth.backend import SESSION_COOKIE_NAME, get_jwt_strategy
+from robofleet.api.auth.routes import auth_status, mount_cloud_auth
+from robofleet.api.auth.seed import ensure_seed_user
+from robofleet.api.deps import _slide_session_cookie, get_agent_context
+from robofleet.config import settings
+from robofleet.db.tables import UserTable
+from robofleet.models import AgentRole
 from sqlalchemy import select
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ async def test_off_mode_ceo_header_spoof_still_works(
     monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "false")
     aid = UUID(CEO_AGENT_ID)
     with patch(
-        "roboco.api.deps.resolve_agent_identity",
+        "robofleet.api.deps.resolve_agent_identity",
         new=AsyncMock(return_value=(aid, "ceo")),
     ):
         ctx = await get_agent_context(
@@ -85,7 +85,7 @@ async def test_off_mode_developer_header_trust_unchanged(
     monkeypatch.setenv("ROBOCO_AGENT_AUTH_REQUIRED", "false")
     aid = uuid4()
     with patch(
-        "roboco.api.deps.resolve_agent_identity",
+        "robofleet.api.deps.resolve_agent_identity",
         new=AsyncMock(return_value=(aid, "be-dev-1")),
     ):
         ctx = await get_agent_context(
@@ -188,7 +188,7 @@ async def test_on_mode_agent_hmac_still_works(
     aid = uuid4()
     token = issue_agent_token(str(aid), "developer", "backend")
     with patch(
-        "roboco.api.deps.resolve_agent_identity",
+        "robofleet.api.deps.resolve_agent_identity",
         new=AsyncMock(return_value=(aid, "be-dev-1")),
     ):
         ctx = await get_agent_context(
@@ -481,7 +481,7 @@ _MIN_JTI_LEN = 16  # uuid4().hex is 32 chars; floor guards against truncation
 
 def _make_user() -> UserTable:
     return UserTable(
-        email="ceo@roboco.test",
+        email="ceo@robofleet.test",
         hashed_password=_password_helper.hash("x"),
         is_active=True,
         is_superuser=True,
@@ -547,7 +547,7 @@ async def test_read_token_rejects_revoked_jti(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(settings, "cloud_auth_enabled", True)
     user = UserTable(
         id=uuid4(),
-        email="ceo@roboco.test",
+        email="ceo@robofleet.test",
         hashed_password=_password_helper.hash("pw"),
     )
     token = await get_jwt_strategy().write_token(user)
@@ -566,7 +566,7 @@ async def test_read_token_accepts_unrevoked_jti(
     monkeypatch.setattr(settings, "cloud_auth_enabled", True)
     user = UserTable(
         id=uuid4(),
-        email="ceo@roboco.test",
+        email="ceo@robofleet.test",
         hashed_password=_password_helper.hash("pw"),
     )
     token = await get_jwt_strategy().write_token(user)

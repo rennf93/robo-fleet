@@ -12,15 +12,15 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-import roboco.api.routes.maintenance_pause as maintenance_pause_routes
+import robofleet.api.routes.maintenance_pause as maintenance_pause_routes
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.maintenance_pause import router as maintenance_pause_router
-from roboco.db.tables import SystemSettingTable
-from roboco.foundation.policy.maintenance_pause import PauseScope
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.maintenance_pause import router as maintenance_pause_router
+from robofleet.db.tables import SystemSettingTable
+from robofleet.foundation.policy.maintenance_pause import PauseScope
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
 from sqlalchemy import delete
 
 if TYPE_CHECKING:

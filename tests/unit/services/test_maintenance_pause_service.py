@@ -6,9 +6,12 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-import roboco.services.maintenance_pause as mp_module
-from roboco.foundation.policy.maintenance_pause import DEFAULT_PAUSE_HOURS, PauseScope
-from roboco.services.maintenance_pause import (
+import robofleet.services.maintenance_pause as mp_module
+from robofleet.foundation.policy.maintenance_pause import (
+    DEFAULT_PAUSE_HOURS,
+    PauseScope,
+)
+from robofleet.services.maintenance_pause import (
     MaintenancePauseError,
     get_maintenance_pause_service,
     is_paused,

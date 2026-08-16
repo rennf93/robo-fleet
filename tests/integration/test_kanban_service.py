@@ -9,15 +9,15 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     Complexity,
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.services.kanban import KanbanService, get_kanban_service
+from robofleet.services.kanban import KanbanService, get_kanban_service
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -283,7 +283,7 @@ async def test_card_handles_null_dependency_ids_and_commits(
     protected differently. `dependency_ids` is ARRAY — Postgres has no
     NULL-but-not-NULL representation for it, so the NOT NULL constraint
     genuinely blocks a real DB write and a NULL can only arise in-memory.
-    `commits` is JSON — before `JSON(none_as_null=True)` (roboco/db/tables.py)
+    `commits` is JSON — before `JSON(none_as_null=True)` (robofleet/db/tables.py)
     a Python None bound to it as the JSON scalar `null`, which SATISFIES NOT
     NULL while still reading back as Python None (exactly how the production
     row that crashed `add_progress` got written); now `none_as_null=True`

@@ -1,4 +1,4 @@
-"""Tests for roboco.agent.adk_entry: ADK runner loop, usage report, exit codes."""
+"""Tests for robofleet.agent.adk_entry: ADK runner loop, usage report, exit codes."""
 
 from __future__ import annotations
 
@@ -41,10 +41,10 @@ def _setup_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
     monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "UNSIGNED")
     monkeypatch.setenv("ROBOCO_INITIAL_PROMPT", "do the work")
-    monkeypatch.setattr("roboco.agent.adk_entry.build_gateway_tools", lambda: [])
-    monkeypatch.setattr("roboco.agent.adk_entry.build_git_tools", lambda: [])
+    monkeypatch.setattr("robofleet.agent.adk_entry.build_gateway_tools", lambda: [])
+    monkeypatch.setattr("robofleet.agent.adk_entry.build_git_tools", lambda: [])
     monkeypatch.setattr(
-        "roboco.agent.adk_entry.InMemorySessionService", _FakeSessionService
+        "robofleet.agent.adk_entry.InMemorySessionService", _FakeSessionService
     )
 
 
@@ -81,7 +81,7 @@ async def test_main_runs_and_reports_usage(
             runs.append({"user_id": user_id, "session_id": session_id})
             yield _FakeEvent()
 
-    monkeypatch.setattr("roboco.agent.adk_entry.Runner", _FakeRunner)
+    monkeypatch.setattr("robofleet.agent.adk_entry.Runner", _FakeRunner)
     posted: dict[str, Any] = {}
 
     async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
@@ -90,7 +90,7 @@ async def test_main_runs_and_reports_usage(
         return httpx.Response(200, json={"status": "ok"})
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-    from roboco.agent.adk_entry import main
+    from robofleet.agent.adk_entry import main
 
     rc = await main()
     assert rc == 0
@@ -124,9 +124,9 @@ async def test_main_resource_exhausted_returns_75(
             yield None
             raise ResourceExhausted("quota exceeded")
 
-    monkeypatch.setattr("roboco.agent.adk_entry.Runner", _FakeRunner)
+    monkeypatch.setattr("robofleet.agent.adk_entry.Runner", _FakeRunner)
     monkeypatch.setattr(httpx.AsyncClient, "post", _fake_post_ok)
-    from roboco.agent.adk_entry import main
+    from robofleet.agent.adk_entry import main
 
     rc = await main()
     assert rc == 75
@@ -149,9 +149,9 @@ async def test_main_unauthenticated_returns_78(
             yield None
             raise Unauthenticated("bad token")
 
-    monkeypatch.setattr("roboco.agent.adk_entry.Runner", _FakeRunner)
+    monkeypatch.setattr("robofleet.agent.adk_entry.Runner", _FakeRunner)
     monkeypatch.setattr(httpx.AsyncClient, "post", _fake_post_ok)
-    from roboco.agent.adk_entry import main
+    from robofleet.agent.adk_entry import main
 
     rc = await main()
     assert rc == 78
@@ -171,9 +171,9 @@ async def test_main_propagates_unknown_exception(
             yield None
             raise RuntimeError("boom")
 
-    monkeypatch.setattr("roboco.agent.adk_entry.Runner", _FakeRunner)
+    monkeypatch.setattr("robofleet.agent.adk_entry.Runner", _FakeRunner)
     monkeypatch.setattr(httpx.AsyncClient, "post", _fake_post_ok)
-    from roboco.agent.adk_entry import main
+    from robofleet.agent.adk_entry import main
 
     with pytest.raises(RuntimeError, match="boom"):
         await main()

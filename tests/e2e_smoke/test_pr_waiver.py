@@ -34,7 +34,7 @@ def _set_task_status_directly(stack: E2EStack, task_id: Any, status: Any) -> Non
     documents "a real dependency edge ... not a direct status write" as the
     shared-module contract, so a general-purpose lifecycle bypass has no
     business living there."""
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> None:
@@ -58,7 +58,7 @@ def test_zero_commit_cell_task_completes_without_pr(e2e_stack: E2EStack) -> None
     # incident hit; the leaf-level zero-diff resolution mechanism is out of
     # scope here (the existing open_pr dev steer), so the terminal state is
     # set directly, standing in for whatever out-of-band action produces it.
-    from roboco.models.base import TaskStatus
+    from robofleet.models.base import TaskStatus
 
     _set_task_status_directly(stack, h["child_id"], TaskStatus.COMPLETED)
 

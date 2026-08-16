@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from roboco.foundation.identity import Role
-from roboco.foundation.policy.batch import (
+from robofleet.foundation.identity import Role
+from robofleet.foundation.policy.batch import (
     is_batch_root_subtask,
     is_batch_umbrella,
     is_branchless_coordination,
@@ -14,7 +14,7 @@ from roboco.foundation.policy.batch import (
     main_pm_cannot_own_code,
     pm_cannot_own_code,
 )
-from roboco.models.base import TaskType, Team
+from robofleet.models.base import TaskType, Team
 
 
 def test_umbrella_is_batch_id_set_and_top_level() -> None:

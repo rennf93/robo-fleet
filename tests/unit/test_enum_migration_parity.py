@@ -1,6 +1,6 @@
 """Guard: every ORM enum value must be produced by the migration chain.
 
-StrEnum values get added to the ORM (roboco/models/base.py) freely, but a value
+StrEnum values get added to the ORM (robofleet/models/base.py) freely, but a value
 with no corresponding `ALTER TYPE ... ADD VALUE` migration breaks at runtime on
 any DB whose enum type predates it — `invalid input value for enum
 notificationtype: "a2a_request"`. Alembic autogenerate does NOT detect added
@@ -15,7 +15,7 @@ import re
 import subprocess
 import sys
 
-from roboco.db.tables import Base  # registers every ORM enum
+from robofleet.db.tables import Base  # registers every ORM enum
 
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
 

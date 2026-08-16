@@ -1,7 +1,7 @@
 """Kimi per-provider spawn concurrency cap.
 
 Every Kimi container shares ONE OAuth refresh-token chain (a host-mounted,
-read-write ``~/.kimi-code`` — see ``roboco.llm.providers.kimi``'s module
+read-write ``~/.kimi-code`` — see ``robofleet.llm.providers.kimi``'s module
 docstring). Moonshot rotates refresh tokens with a short reuse-grace: two
 containers refreshing near-simultaneously fork the chain, and a later
 redemption of a stale ancestor triggers family revocation — fleet-wide Kimi
@@ -23,10 +23,10 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.config import settings
-from roboco.models.runtime import AgentInstance
-from roboco.runtime import orchestrator as orch_module
-from roboco.runtime.orchestrator import AgentConfig, AgentOrchestrator, AgentState
+from robofleet.config import settings
+from robofleet.models.runtime import AgentInstance
+from robofleet.runtime import orchestrator as orch_module
+from robofleet.runtime.orchestrator import AgentConfig, AgentOrchestrator, AgentState
 
 
 def _make_orchestrator() -> AgentOrchestrator:

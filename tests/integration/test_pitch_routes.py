@@ -1,4 +1,4 @@
-"""roboco.api.routes.pitch — role gates + decision flow (direct-call style)."""
+"""robofleet.api.routes.pitch — role gates + decision flow (direct-call style)."""
 
 from __future__ import annotations
 
@@ -9,13 +9,13 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from roboco.api.routes import pitch as pitch_route
-from roboco.api.schemas.pitch import PitchCreateRequest, PitchDecision
-from roboco.db.tables import PitchTable
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
-from roboco.services.base import ConflictError
-from roboco.services.github_provisioning import ProvisioningDisabledError
+from robofleet.api.routes import pitch as pitch_route
+from robofleet.api.schemas.pitch import PitchCreateRequest, PitchDecision
+from robofleet.db.tables import PitchTable
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
+from robofleet.services.base import ConflictError
+from robofleet.services.github_provisioning import ProvisioningDisabledError
 
 
 def _agent(role: AgentRole) -> AgentContext:

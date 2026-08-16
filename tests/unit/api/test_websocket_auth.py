@@ -13,8 +13,8 @@ from uuid import uuid4
 
 import pytest
 from fastapi import WebSocketDisconnect, status
-from roboco.agents_config import CEO_AGENT_ID, issue_agent_token
-from roboco.api.websocket import (
+from robofleet.agents_config import CEO_AGENT_ID, issue_agent_token
+from robofleet.api.websocket import (
     agent_stream,
     notification_stream,
     system_stream,
@@ -50,7 +50,7 @@ async def test_notification_stream_rejects_missing_token_when_required(
     ws = _mock_ws(headers={}, query={})
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(
-            "roboco.api.websocket.validate_agent_exists",
+            "robofleet.api.websocket.validate_agent_exists",
             AsyncMock(return_value=True),
         )
         await notification_stream(ws, agent_id)
@@ -70,7 +70,7 @@ async def test_notification_stream_rejects_forged_token_even_in_dev(
     ws = _mock_ws(headers={"x-agent-token": "forged-not-a-real-hmac"}, query={})
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(
-            "roboco.api.websocket.validate_agent_exists",
+            "robofleet.api.websocket.validate_agent_exists",
             AsyncMock(return_value=True),
         )
         await notification_stream(ws, agent_id)
@@ -91,7 +91,7 @@ async def test_notification_stream_accepts_valid_panel_token(
     ws = _mock_ws(headers={"x-agent-token": token}, query={})
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(
-            "roboco.api.websocket.validate_agent_exists",
+            "robofleet.api.websocket.validate_agent_exists",
             AsyncMock(return_value=True),
         )
         await notification_stream(ws, agent_id)
@@ -111,7 +111,7 @@ async def test_agent_stream_rejects_missing_token_when_required(
     ws = _mock_ws(headers={}, query={"viewer_id": str(viewer_id)})
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(
-            "roboco.api.websocket.validate_agent_exists",
+            "robofleet.api.websocket.validate_agent_exists",
             AsyncMock(return_value=True),
         )
         await agent_stream(ws, target_id)

@@ -10,7 +10,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.services.release_proposal import ReleaseProposalService
+from robofleet.services.release_proposal import ReleaseProposalService
 
 
 @pytest.mark.asyncio
@@ -19,7 +19,7 @@ async def test_draft_dogfood_walk_calls_engine_seam() -> None:
     fake_engine.open_program_cycle = AsyncMock(return_value=None)
 
     with patch(
-        "roboco.services.board_programs.get_board_program_engine",
+        "robofleet.services.board_programs.get_board_program_engine",
         return_value=fake_engine,
     ):
         await ReleaseProposalService(MagicMock())._draft_dogfood_walk()
@@ -33,7 +33,7 @@ async def test_draft_dogfood_walk_swallows_engine_exception() -> None:
     the release already published; a walk-trigger failure can't un-publish
     it."""
     with patch(
-        "roboco.services.board_programs.get_board_program_engine",
+        "robofleet.services.board_programs.get_board_program_engine",
         side_effect=RuntimeError("dogfood boom"),
     ):
         await ReleaseProposalService(MagicMock())._draft_dogfood_walk()

@@ -15,12 +15,12 @@ from types import SimpleNamespace
 from typing import Any, cast
 from uuid import uuid4
 
-from roboco.foundation.policy.lifecycle import (
+from robofleet.foundation.policy.lifecycle import (
     Context,
     Role,
     can_invoke_intent,
 )
-from roboco.models.base import TaskStatus
+from robofleet.models.base import TaskStatus
 
 
 def _task(**overrides: Any) -> Any:

@@ -10,7 +10,7 @@ only the compound-command case the globs miss, and there
 
 from __future__ import annotations
 
-from roboco.llm.providers.grok_cli_config import _RAW_PM_DENY, _deny_rules
+from robofleet.llm.providers.grok_cli_config import _RAW_PM_DENY, _deny_rules
 
 
 def test_raw_pm_deny_rules_present() -> None:

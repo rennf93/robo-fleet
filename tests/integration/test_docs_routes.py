@@ -12,13 +12,13 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.docs import router as docs_router
-from roboco.db.tables import AgentTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.permissions import AgentContext
-from roboco.models.task import DocRef
-from roboco.services.base import NotFoundError, UnauthorizedError, ValidationError
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.docs import router as docs_router
+from robofleet.db.tables import AgentTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.permissions import AgentContext
+from robofleet.models.task import DocRef
+from robofleet.services.base import NotFoundError, UnauthorizedError, ValidationError
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator
@@ -74,7 +74,7 @@ _HDR = {"X-Agent-ID": str(uuid4()), "X-Agent-Role": "documenter"}
 @pytest.mark.asyncio
 async def test_write_doc_validation_error(docs_client: AsyncClient) -> None:
     """Service raises ValidationError → 400."""
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.write_doc = AsyncMock(side_effect=ValidationError("bad input"))
         mock_get.return_value = mock_service
@@ -99,7 +99,7 @@ async def test_write_doc_user_facing_refused_is_400_not_422(
     """doc_type='user_facing' is a recognized DocType enum member, so Pydantic
     accepts it at the HTTP boundary (no 422) and the service's actionable
     refusal (400 with roboco-website guidance) is what the agent sees."""
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.write_doc = AsyncMock(
             side_effect=ValidationError("...roboco-website project...")
@@ -122,7 +122,7 @@ async def test_write_doc_user_facing_refused_is_400_not_422(
 @pytest.mark.asyncio
 async def test_write_doc_unauthorized(docs_client: AsyncClient) -> None:
     """Service raises UnauthorizedError → 403."""
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.write_doc = AsyncMock(side_effect=UnauthorizedError("not allowed"))
         mock_get.return_value = mock_service
@@ -150,7 +150,7 @@ async def test_write_doc_unauthorized_envelope_remediate(
     route must surface it as the gateway Envelope contract — error +
     non-null remediate — not a bare {"detail": ...} HTTPException body.
     """
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.write_doc = AsyncMock(side_effect=UnauthorizedError("write_doc"))
         mock_get.return_value = mock_service
@@ -176,7 +176,7 @@ async def test_write_doc_unauthorized_envelope_remediate(
 @pytest.mark.asyncio
 async def test_write_doc_not_found(docs_client: AsyncClient) -> None:
     """Service raises NotFoundError → 404."""
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.write_doc = AsyncMock(side_effect=NotFoundError("not found"))
         mock_get.return_value = mock_service
@@ -205,7 +205,7 @@ async def test_write_doc_success(docs_client: AsyncClient) -> None:
         created_by="be-doc-1",
         created_at="2026-01-01T00:00:00Z",
     )
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.write_doc = AsyncMock(
             return_value=("backend/api/test.md", doc_ref, False)
@@ -236,7 +236,7 @@ async def test_write_doc_update_path(docs_client: AsyncClient) -> None:
         doc_type="api",
         version="2",
     )
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.write_doc = AsyncMock(
             return_value=("backend/api/test.md", doc_ref, True)
@@ -259,7 +259,7 @@ async def test_write_doc_update_path(docs_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_read_doc_validation(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.read_doc = AsyncMock(side_effect=ValidationError("bad path"))
         mock_get.return_value = mock_service
@@ -272,7 +272,7 @@ async def test_read_doc_validation(docs_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_read_doc_unauthorized(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.read_doc = AsyncMock(side_effect=UnauthorizedError("denied"))
         mock_get.return_value = mock_service
@@ -284,7 +284,7 @@ async def test_read_doc_unauthorized(docs_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_read_doc_not_found(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.read_doc = AsyncMock(side_effect=NotFoundError("missing"))
         mock_get.return_value = mock_service
@@ -296,7 +296,7 @@ async def test_read_doc_not_found(docs_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_read_doc_success(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.read_doc = AsyncMock(return_value=("# Hello", 7))
         mock_get.return_value = mock_service
@@ -310,7 +310,7 @@ async def test_read_doc_success(docs_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_list_docs_unauthorized(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.list_docs = AsyncMock(side_effect=UnauthorizedError("nope"))
         mock_get.return_value = mock_service
@@ -320,7 +320,7 @@ async def test_list_docs_unauthorized(docs_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_list_docs_not_found(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.list_docs = AsyncMock(side_effect=NotFoundError("none"))
         mock_get.return_value = mock_service
@@ -330,18 +330,18 @@ async def test_list_docs_not_found(docs_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_list_docs_success(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.list_docs = AsyncMock(return_value=[])
         mock_get.return_value = mock_service
-        with patch("roboco.api.routes.docs.get_agent_team", return_value="backend"):
+        with patch("robofleet.api.routes.docs.get_agent_team", return_value="backend"):
             response = await docs_client.get("/api/docs/list", headers=_HDR)
     assert response.status_code == HTTPStatus.OK
 
 
 @pytest.mark.asyncio
 async def test_delete_doc_validation(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.delete_doc = AsyncMock(side_effect=ValidationError("bad"))
         mock_get.return_value = mock_service
@@ -351,7 +351,7 @@ async def test_delete_doc_validation(docs_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_delete_doc_unauthorized(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.delete_doc = AsyncMock(side_effect=UnauthorizedError("nope"))
         mock_get.return_value = mock_service
@@ -361,7 +361,7 @@ async def test_delete_doc_unauthorized(docs_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_delete_doc_not_found(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.delete_doc = AsyncMock(side_effect=NotFoundError("missing"))
         mock_get.return_value = mock_service
@@ -371,7 +371,7 @@ async def test_delete_doc_not_found(docs_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_delete_doc_success(docs_client: AsyncClient) -> None:
-    with patch("roboco.api.routes.docs.get_docs_service") as mock_get:
+    with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.delete_doc = AsyncMock(return_value=None)
         mock_get.return_value = mock_service

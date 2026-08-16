@@ -6,7 +6,7 @@ Real DB (ProjectTable/TaskTable/AgentTable) so the terminal-only + env-ladder
 selection runs for real; the two external-I/O boundaries are mocked so the
 test never makes a real GitHub API call or runs a real git subprocess:
 ``_delete_remote_branch_best_effort`` (network) and
-``roboco.services.git.get_workspace_service`` (local clone/subprocess).
+``robofleet.services.git.get_workspace_service`` (local clone/subprocess).
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     TaskNature,
@@ -26,7 +26,7 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.services.git import GitService
+from robofleet.services.git import GitService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -77,7 +77,9 @@ async def cleanup_setup(
         return_value=f"/data/workspaces/{project.slug}/backend/{agent.slug}"
     )
     ws_svc.delete_local_branch = AsyncMock()
-    monkeypatch.setattr("roboco.services.git.get_workspace_service", lambda _s: ws_svc)
+    monkeypatch.setattr(
+        "robofleet.services.git.get_workspace_service", lambda _s: ws_svc
+    )
 
     yield {
         "svc": svc,

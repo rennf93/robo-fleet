@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.gateway.content_actions import (
+from robofleet.services.gateway.content_actions import (
     ContentActions,
     ContentActionsDeps,
 )

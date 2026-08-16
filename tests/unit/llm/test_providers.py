@@ -17,7 +17,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.llm.providers import (
+from robofleet.llm.providers import (
     ClaudeCodeProvider,
     CodexCliProvider,
     GrokCliProvider,
@@ -27,15 +27,17 @@ from roboco.llm.providers import (
     ProviderRegistry,
     SpawnResult,
 )
-from roboco.models.base import ModelProvider
-from roboco.models.runtime import OrchestratorAgentConfig
+from robofleet.models.base import ModelProvider
+from robofleet.models.runtime import OrchestratorAgentConfig
 
 
 @pytest.fixture(autouse=True)
 def _isolate_grok_auth(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Point GROK_AUTH_HOST_PATH at a fresh tmp dir so tests never mount the real
     ~/.grok. Tests that exercise the auth mount create ``auth.json`` themselves."""
-    monkeypatch.setattr("roboco.llm.providers.grok.GROK_AUTH_HOST_PATH", str(tmp_path))
+    monkeypatch.setattr(
+        "robofleet.llm.providers.grok.GROK_AUTH_HOST_PATH", str(tmp_path)
+    )
     return tmp_path
 
 
@@ -44,7 +46,7 @@ def _isolate_codex_auth(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path
     """Point CODEX_AUTH_HOST_PATH at a fresh tmp dir (parity with grok above)."""
     codex_dir = tmp_path / "codex-auth"
     monkeypatch.setattr(
-        "roboco.llm.providers.codex.CODEX_AUTH_HOST_PATH", str(codex_dir)
+        "robofleet.llm.providers.codex.CODEX_AUTH_HOST_PATH", str(codex_dir)
     )
     return codex_dir
 
@@ -53,7 +55,9 @@ def _isolate_codex_auth(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path
 def _isolate_kimi_auth(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Point KIMI_AUTH_HOST_PATH at a fresh tmp dir (parity with codex above)."""
     kimi_dir = tmp_path / "kimi-auth"
-    monkeypatch.setattr("roboco.llm.providers.kimi.KIMI_AUTH_HOST_PATH", str(kimi_dir))
+    monkeypatch.setattr(
+        "robofleet.llm.providers.kimi.KIMI_AUTH_HOST_PATH", str(kimi_dir)
+    )
     return kimi_dir
 
 
@@ -278,7 +282,7 @@ async def test_grok_spawn_adds_compose_labels_before_image(
         return ["--label", f"com.docker.compose.service={service}"]
 
     monkeypatch.setattr(
-        "roboco.llm.providers.grok.compose_label_args", _fake_label_args
+        "robofleet.llm.providers.grok.compose_label_args", _fake_label_args
     )
     host = _FakeHost()
     provider = GrokCliProvider(host, image="roboco-agent-grok:test")
@@ -330,7 +334,7 @@ async def test_grok_spawn_warns_when_auth_absent(
     and the remediation (``grok login`` on the host). Without it the container
     silently started and only failed later at the entrypoint ``--check``.
     """
-    caplog.set_level("WARNING", logger="roboco.llm.providers.grok")
+    caplog.set_level("WARNING", logger="robofleet.llm.providers.grok")
     host = _FakeHost()
     provider = GrokCliProvider(host)
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())):
@@ -456,7 +460,7 @@ async def test_codex_spawn_adds_compose_labels_before_image(
         return ["--label", f"com.docker.compose.service={service}"]
 
     monkeypatch.setattr(
-        "roboco.llm.providers.codex.compose_label_args", _fake_label_args
+        "robofleet.llm.providers.codex.compose_label_args", _fake_label_args
     )
     host = _FakeHost()
     provider = CodexCliProvider(host, image="roboco-agent-codex:test")
@@ -504,7 +508,7 @@ async def test_codex_spawn_omits_auth_mount_when_absent() -> None:
 async def test_codex_spawn_warns_when_auth_absent(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    caplog.set_level("WARNING", logger="roboco.llm.providers.codex")
+    caplog.set_level("WARNING", logger="robofleet.llm.providers.codex")
     host = _FakeHost()
     provider = CodexCliProvider(host)
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())):
@@ -629,7 +633,7 @@ async def test_kimi_spawn_adds_compose_labels_before_image(
         return ["--label", f"com.docker.compose.service={service}"]
 
     monkeypatch.setattr(
-        "roboco.llm.providers.kimi.compose_label_args", _fake_label_args
+        "robofleet.llm.providers.kimi.compose_label_args", _fake_label_args
     )
     host = _FakeHost()
     provider = KimiCliProvider(host, image="roboco-agent-kimi:test")
@@ -678,7 +682,7 @@ async def test_kimi_spawn_omits_auth_mount_when_absent() -> None:
 async def test_kimi_spawn_warns_when_auth_absent(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    caplog.set_level("WARNING", logger="roboco.llm.providers.kimi")
+    caplog.set_level("WARNING", logger="robofleet.llm.providers.kimi")
     host = _FakeHost()
     provider = KimiCliProvider(host)
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())):

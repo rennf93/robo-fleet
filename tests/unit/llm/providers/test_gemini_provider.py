@@ -15,14 +15,14 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from roboco.config import settings
-from roboco.llm.providers import GeminiCliProvider, ProviderError, SpawnResult
-from roboco.llm.providers import gemini as gemini_module
-from roboco.models.runtime import OrchestratorAgentConfig
+from robofleet.config import settings
+from robofleet.llm.providers import GeminiCliProvider, ProviderError, SpawnResult
+from robofleet.llm.providers import gemini as gemini_module
+from robofleet.models.runtime import OrchestratorAgentConfig
 
 
 def test_gemini_cli_model_is_a_real_settings_field() -> None:
-    # Parity with codex_cli_model (roboco.config.Settings.codex_cli_model) —
+    # Parity with codex_cli_model (robofleet.config.Settings.codex_cli_model) —
     # gemini.py reads settings.gemini_cli_model, not a raw os.environ.get.
     assert settings.gemini_cli_model == gemini_module._GEMINI_CLI_MODEL
     assert settings.gemini_cli_model == "gemini-2.5-pro"
@@ -34,7 +34,7 @@ def _isolate_gemini_auth(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
     real ~/.gemini. Tests that exercise the auth mount create oauth_creds.json
     themselves."""
     monkeypatch.setattr(
-        "roboco.llm.providers.gemini.GEMINI_AUTH_HOST_PATH", str(tmp_path)
+        "robofleet.llm.providers.gemini.GEMINI_AUTH_HOST_PATH", str(tmp_path)
     )
     return tmp_path
 
@@ -201,7 +201,7 @@ async def test_gemini_spawn_adds_compose_labels_before_image(
         return ["--label", f"com.docker.compose.service={service}"]
 
     monkeypatch.setattr(
-        "roboco.llm.providers.gemini.compose_label_args", _fake_label_args
+        "robofleet.llm.providers.gemini.compose_label_args", _fake_label_args
     )
     host = _FakeHost()
     provider = GeminiCliProvider(host, image="roboco-agent-gemini:test")
@@ -250,7 +250,7 @@ async def test_gemini_spawn_warns_when_auth_absent(
     """A missing host oauth_creds.json must not be silent — the spawn is doomed
     to exit 41, so the operator gets a spawn-time WARNING naming the missing
     file and the remediation."""
-    caplog.set_level("WARNING", logger="roboco.llm.providers.gemini")
+    caplog.set_level("WARNING", logger="robofleet.llm.providers.gemini")
     host = _FakeHost()
     provider = GeminiCliProvider(host)
     with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=_proc())):

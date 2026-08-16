@@ -5,7 +5,7 @@ reject the nil UUID before touching the DB so callers cannot generate
 ``/conversations//messages`` traffic from a placeholder ID.
 
 The MCP-layer URL-builder test that used to live here was tied to
-``roboco.mcp.a2a_server._handle_send_chat_message`` — that module was
+``robofleet.mcp.a2a_server._handle_send_chat_message`` — that module was
 deleted as part of the gateway cutover, so the test was dropped along
 with it. Agent A2A traffic now flows through ``mcp__roboco-do__*`` and
 is exercised by the gateway-tool integration tests.
@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
-from roboco.services.a2a import A2AService
+from robofleet.services.a2a import A2AService
 
 NIL_UUID = UUID("00000000-0000-0000-0000-000000000000")
 

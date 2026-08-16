@@ -13,9 +13,9 @@ from uuid import uuid4
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from roboco.api.deps import get_content_actions
-from roboco.api.routes.v1.do import router
-from roboco.services.gateway.content_actions import ContentActions
+from robofleet.api.deps import get_content_actions
+from robofleet.api.routes.v1.do import router
+from robofleet.services.gateway.content_actions import ContentActions
 
 _HTTP_200 = 200
 _HTTP_422 = 422

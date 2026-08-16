@@ -1,7 +1,7 @@
 """CODEX 429/auth parking: same exit-code convention as grok, scoped to
 ModelProvider.OPENAI so a numeric-code collision with another provider's crash
 can never mis-park (see ``_CODEX_RATE_LIMIT_EXIT_CODE`` / ``_CODEX_AUTH_EXIT_CODE``
-in ``roboco.runtime.orchestrator``).
+in ``robofleet.runtime.orchestrator``).
 """
 
 from __future__ import annotations
@@ -9,8 +9,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.models.runtime import AgentInstance
-from roboco.runtime.orchestrator import (
+from robofleet.models.runtime import AgentInstance
+from robofleet.runtime.orchestrator import (
     _CODEX_AUTH_EXIT_CODE,
     _CODEX_RATE_LIMIT_EXIT_CODE,
     AgentOrchestrator,

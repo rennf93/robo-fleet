@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import WebSocketDisconnect
-from roboco.api.websocket import (
+from robofleet.api.websocket import (
     ConnectionManager,
     agent_stream,
     notification_stream,
@@ -53,7 +53,7 @@ async def test_system_stream_disconnects_on_non_disconnect_exception() -> None:
     assert ws in mgr.system_connections
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("roboco.api.websocket.manager", mgr)
+        mp.setattr("robofleet.api.websocket.manager", mgr)
         with pytest.raises(RuntimeError):
             await system_stream(ws)
 
@@ -68,7 +68,7 @@ async def test_system_stream_disconnects_on_cancelled_error() -> None:
     await mgr.connect_system(ws)
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("roboco.api.websocket.manager", mgr)
+        mp.setattr("robofleet.api.websocket.manager", mgr)
         with pytest.raises(asyncio.CancelledError):
             await system_stream(ws)
 
@@ -88,9 +88,9 @@ async def test_notification_stream_disconnects_on_non_disconnect_exception(
     mgr = ConnectionManager()
     ws = _mock_ws_for_receive(RuntimeError("transport reset"))
     monkeypatch.setattr(
-        "roboco.api.websocket.validate_agent_exists", AsyncMock(return_value=True)
+        "robofleet.api.websocket.validate_agent_exists", AsyncMock(return_value=True)
     )
-    monkeypatch.setattr("roboco.api.websocket.manager", mgr)
+    monkeypatch.setattr("robofleet.api.websocket.manager", mgr)
 
     with pytest.raises(RuntimeError):
         await notification_stream(ws, agent_id)
@@ -114,9 +114,9 @@ async def test_agent_stream_disconnects_on_non_disconnect_exception(
     ws = _mock_ws_for_receive(RuntimeError("anyio closed"))
     ws.query_params = {"viewer_id": str(viewer_id)}
     monkeypatch.setattr(
-        "roboco.api.websocket.validate_agent_exists", AsyncMock(return_value=True)
+        "robofleet.api.websocket.validate_agent_exists", AsyncMock(return_value=True)
     )
-    monkeypatch.setattr("roboco.api.websocket.manager", mgr)
+    monkeypatch.setattr("robofleet.api.websocket.manager", mgr)
 
     with pytest.raises(RuntimeError):
         await agent_stream(ws, target_id)
@@ -133,7 +133,7 @@ async def test_system_stream_clean_disconnect_still_works() -> None:
     await mgr.connect_system(ws)
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("roboco.api.websocket.manager", mgr)
+        mp.setattr("robofleet.api.websocket.manager", mgr)
         await system_stream(ws)
 
     assert ws not in mgr.system_connections

@@ -14,9 +14,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import TaskTable
-from roboco.models.base import TaskStatus
-from roboco.services.task import TaskService, supersede_marker_line
+from robofleet.db.tables import TaskTable
+from robofleet.models.base import TaskStatus
+from robofleet.services.task import TaskService, supersede_marker_line
 
 _VALUE = "pr=5 review=abc"
 _LANDED_PR = 42  # the replacement PR number a landed descendant carries

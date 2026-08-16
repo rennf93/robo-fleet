@@ -11,9 +11,9 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from roboco.models.optimal import IndexType, SearchResult
-from roboco.services.gateway.evidence_builder import shape_memory_query
-from roboco.services.gateway.evidence_repo import EvidenceRepo
+from robofleet.models.optimal import IndexType, SearchResult
+from robofleet.services.gateway.evidence_builder import shape_memory_query
+from robofleet.services.gateway.evidence_repo import EvidenceRepo
 
 _FLOOR = 0.6
 _HIGH = 0.9
@@ -50,7 +50,7 @@ async def test_similar_memory_applies_floor_and_shapes(
         return_value=[_result(_HIGH, IndexType.PLAYBOOKS), _result(_LOW)]
     )
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
     out = await EvidenceRepo(MagicMock()).similar_memory(
@@ -70,7 +70,7 @@ async def test_similar_memory_labels_vault_notes(
     optimal = MagicMock()
     optimal.search = AsyncMock(return_value=[_result(_HIGH, IndexType.VAULT_NOTES)])
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
     out = await EvidenceRepo(MagicMock()).similar_memory(
@@ -89,7 +89,7 @@ async def test_similar_memory_queries_vault_notes_index(
     optimal = MagicMock()
     optimal.search = AsyncMock(return_value=[])
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
     await EvidenceRepo(MagicMock()).similar_memory(query="q", top_k=3, min_score=_FLOOR)
@@ -104,7 +104,7 @@ async def test_similar_memory_caps_at_top_k(
     optimal = MagicMock()
     optimal.search = AsyncMock(return_value=[_result(_HIGH) for _ in range(5)])
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
     out = await EvidenceRepo(MagicMock()).similar_memory(
@@ -119,7 +119,7 @@ async def test_similar_memory_error_status_on_rag_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(side_effect=RuntimeError("rag down")),
     )
     out = await EvidenceRepo(MagicMock()).similar_memory(
@@ -135,7 +135,7 @@ async def test_similar_memory_empty_status_when_search_yields_nothing(
     optimal = MagicMock()
     optimal.search = AsyncMock(return_value=[])
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
     out = await EvidenceRepo(MagicMock()).similar_memory(
@@ -151,7 +151,7 @@ async def test_similar_memory_below_floor_status_when_all_under_floor(
     optimal = MagicMock()
     optimal.search = AsyncMock(return_value=[_result(_LOW), _result(_LOW)])
     monkeypatch.setattr(
-        "roboco.services.optimal.get_optimal_service",
+        "robofleet.services.optimal.get_optimal_service",
         AsyncMock(return_value=optimal),
     )
     out = await EvidenceRepo(MagicMock()).similar_memory(

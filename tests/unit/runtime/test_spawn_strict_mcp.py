@@ -14,9 +14,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from roboco.config import settings
-from roboco.models.runtime import OrchestratorAgentConfig, SpawnGitContext
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.models.runtime import OrchestratorAgentConfig, SpawnGitContext
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _MAX_FLAG_ADJACENCY = 3
 
@@ -39,7 +39,7 @@ def _build_image_args(config: OrchestratorAgentConfig) -> list[str]:
     """Invoke _append_image_and_claude_args against an empty cmd."""
     cmd: list[str] = []
     with patch(
-        "roboco.runtime.orchestrator._resolve_agent_cli_model",
+        "robofleet.runtime.orchestrator._resolve_agent_cli_model",
         return_value="claude-sonnet-5",
     ):
         AgentOrchestrator._append_image_and_claude_args(cmd, config, None)

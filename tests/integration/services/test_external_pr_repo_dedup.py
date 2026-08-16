@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, Team
-from roboco.services.task import get_task_service
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, Team
+from robofleet.services.task import get_task_service
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

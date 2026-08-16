@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.services.task import TaskService, extract_required_cells
+from robofleet.services.task import TaskService, extract_required_cells
 
 
 def _task(required_cells: list[str] | None = None) -> SimpleNamespace:

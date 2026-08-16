@@ -5,9 +5,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from roboco.foundation.policy.content import markers
-from roboco.services.gateway.choreographer import Choreographer
-from roboco.services.gateway.evidence_builder import build_evidence_for_task
+from robofleet.foundation.policy.content import markers
+from robofleet.services.gateway.choreographer import Choreographer
+from robofleet.services.gateway.evidence_builder import build_evidence_for_task
 
 
 def _stub_task() -> MagicMock:

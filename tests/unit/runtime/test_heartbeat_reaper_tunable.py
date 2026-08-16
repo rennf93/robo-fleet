@@ -19,8 +19,8 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _EXPECTED_DEFAULT_REAP_SECONDS = 600
 

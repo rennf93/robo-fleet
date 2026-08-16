@@ -11,7 +11,7 @@ import json
 from typing import Any
 
 import pytest
-from roboco.mcp import secretary_server
+from robofleet.mcp import secretary_server
 
 
 @pytest.mark.asyncio

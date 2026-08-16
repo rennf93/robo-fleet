@@ -1,4 +1,4 @@
-"""Unit tests for the eval bench's scorer math (roboco/eval/runner.py).
+"""Unit tests for the eval bench's scorer math (robofleet/eval/runner.py).
 
 Pure dataclass/aggregate-property tests — no DB, no network, no asyncio.
 `_build_judge_prompt` and `BenchJudge`'s score-parsing regex are covered too
@@ -8,8 +8,8 @@ since both are pure string logic with no I/O.
 from __future__ import annotations
 
 import pytest
-from roboco.eval.fixtures import FIXTURES
-from roboco.eval.runner import (
+from robofleet.eval.fixtures import FIXTURES
+from robofleet.eval.runner import (
     _JUDGE_SCORE_RE,
     CohortResult,
     DeterministicMetrics,
@@ -18,7 +18,7 @@ from roboco.eval.runner import (
     OrchestratorStageSpawner,
     _build_judge_prompt,
 )
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 _EXPECTED_TOTAL_TOKENS = 180
 _HALF_PASS_RATE = 0.5

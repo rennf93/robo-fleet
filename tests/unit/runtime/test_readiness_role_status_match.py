@@ -10,7 +10,7 @@ layered behind the _check_health fix.
 
 from __future__ import annotations
 
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def test_qa_on_needs_revision_blocked() -> None:

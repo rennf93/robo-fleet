@@ -10,10 +10,10 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_db
-from roboco.api.routes.agents import router as agents_router
-from roboco.db.tables import AgentTable
-from roboco.models import AgentRole, AgentStatus, Team
+from robofleet.api.deps import get_db
+from robofleet.api.routes.agents import router as agents_router
+from robofleet.db.tables import AgentTable
+from robofleet.models import AgentRole, AgentStatus, Team
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator

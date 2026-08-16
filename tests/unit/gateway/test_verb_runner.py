@@ -14,9 +14,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec
-from roboco.foundation.policy.content import markers
-from roboco.services.gateway.choreographer._verb_runner import (
+from robofleet.foundation.policy import lifecycle as spec
+from robofleet.foundation.policy.content import markers
+from robofleet.services.gateway.choreographer._verb_runner import (
     VerbRunner,
 )
 

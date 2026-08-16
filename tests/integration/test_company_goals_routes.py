@@ -10,11 +10,11 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
-from roboco.api.routes.company_goals import get_company_goals, update_company_goals
-from roboco.api.schemas.company_goals import CompanyGoalsUpdate
-from roboco.db.tables import CompanyGoalsTable
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
+from robofleet.api.routes.company_goals import get_company_goals, update_company_goals
+from robofleet.api.schemas.company_goals import CompanyGoalsUpdate
+from robofleet.db.tables import CompanyGoalsTable
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
 from sqlalchemy import delete
 
 if TYPE_CHECKING:

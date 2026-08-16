@@ -15,8 +15,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import uuid4
 
-from roboco.foundation.identity import Role
-from roboco.foundation.policy.lifecycle import Context, can_invoke_intent
+from robofleet.foundation.identity import Role
+from robofleet.foundation.policy.lifecycle import Context, can_invoke_intent
 
 
 @dataclass

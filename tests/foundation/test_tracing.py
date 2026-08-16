@@ -5,7 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-from roboco.foundation.policy import tracing
+from robofleet.foundation.policy import tracing
 
 
 def test_requirement_enum_has_canonical_values() -> None:

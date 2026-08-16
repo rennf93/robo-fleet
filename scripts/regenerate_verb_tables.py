@@ -13,9 +13,9 @@ Usage:
     uv run python scripts/regenerate_verb_tables.py
 
 The script reads from:
-    - ``roboco.services.gateway.role_config.ROLE_CONFIGS`` for role -> verb list
-    - ``roboco.api.schemas.v1.flow`` for flow verb body schemas
-    - ``roboco.api.schemas.v1.do`` for content tool body schemas
+    - ``robofleet.services.gateway.role_config.ROLE_CONFIGS`` for role -> verb list
+    - ``robofleet.api.schemas.v1.flow`` for flow verb body schemas
+    - ``robofleet.api.schemas.v1.do`` for content tool body schemas
 """
 
 from __future__ import annotations
@@ -25,9 +25,9 @@ from pathlib import Path
 from typing import Any, get_args, get_origin
 
 from pydantic import BaseModel
-from roboco.api.schemas.v1 import do as do_schemas
-from roboco.api.schemas.v1 import flow as flow_schemas
-from roboco.services.gateway.role_config import ROLE_CONFIGS
+from robofleet.api.schemas.v1 import do as do_schemas
+from robofleet.api.schemas.v1 import flow as flow_schemas
+from robofleet.services.gateway.role_config import ROLE_CONFIGS
 
 _OUT_DIR = Path(__file__).resolve().parents[1] / "agents/prompts/_generated"
 _OUT = _OUT_DIR / "verbs.md"

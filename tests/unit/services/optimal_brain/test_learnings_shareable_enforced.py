@@ -10,9 +10,9 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.models.optimal import IndexType
-from roboco.services.optimal_brain.indexes.learnings import LearningsIndexPlugin
-from roboco.services.optimal_brain.text_chunker import Citation
+from robofleet.models.optimal import IndexType
+from robofleet.services.optimal_brain.indexes.learnings import LearningsIndexPlugin
+from robofleet.services.optimal_brain.text_chunker import Citation
 
 
 def _plugin(store: Any) -> LearningsIndexPlugin:

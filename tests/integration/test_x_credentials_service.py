@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import XCredentialsTable
-from roboco.services.x_credentials import (
+from robofleet.db.tables import XCredentialsTable
+from robofleet.services.x_credentials import (
     XCredentialsService,
     XCredentialsValidationError,
     get_x_credentials_service,

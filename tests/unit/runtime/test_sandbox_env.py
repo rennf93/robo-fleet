@@ -13,8 +13,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.models.runtime import OrchestratorAgentConfig
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.models.runtime import OrchestratorAgentConfig
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
 def _config(
@@ -138,7 +138,7 @@ async def test_spawn_container_adds_compose_labels_before_image_args(
         return ["--label", f"com.docker.compose.service={service}"]
 
     monkeypatch.setattr(
-        "roboco.runtime.orchestrator.compose_label_args", _fake_label_args
+        "robofleet.runtime.orchestrator.compose_label_args", _fake_label_args
     )
     exec_mock = AsyncMock(return_value=_fake_proc())
     monkeypatch.setattr(asyncio, "create_subprocess_exec", exec_mock)
@@ -162,7 +162,7 @@ async def test_spawn_container_omits_compose_labels_outside_compose(
     async def _no_labels(_service: str) -> list[str]:
         return []
 
-    monkeypatch.setattr("roboco.runtime.orchestrator.compose_label_args", _no_labels)
+    monkeypatch.setattr("robofleet.runtime.orchestrator.compose_label_args", _no_labels)
     exec_mock = AsyncMock(return_value=_fake_proc())
     monkeypatch.setattr(asyncio, "create_subprocess_exec", exec_mock)
 

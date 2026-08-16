@@ -18,11 +18,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.foundation.policy.communications import ACK_REQUIRED_BY_TYPE
-from roboco.models import NotificationPriority, NotificationType
-from roboco.models.notification import CreateNotificationParams
-from roboco.services.notification import (
+from robofleet.config import settings
+from robofleet.foundation.policy.communications import ACK_REQUIRED_BY_TYPE
+from robofleet.models import NotificationPriority, NotificationType
+from robofleet.models.notification import CreateNotificationParams
+from robofleet.services.notification import (
     NotificationService,
     _resolve_agent_uuid,
 )
@@ -126,11 +126,11 @@ class _PatchDbContext:
         delivery_mock.deliver = AsyncMock(return_value=None)
         self._patches: list[Any] = [
             patch(
-                "roboco.services.notification.get_db_context",
+                "robofleet.services.notification.get_db_context",
                 lambda: _fake_ctx(db),
             ),
             patch(
-                "roboco.services.notification_delivery.get_notification_delivery_service",
+                "robofleet.services.notification_delivery.get_notification_delivery_service",
                 lambda _db: delivery_mock,
             ),
         ]
@@ -474,7 +474,7 @@ async def test_ack_required_notification_expires_at_disabled_by_zero_ttl(
     aid = uuid4()
     db = _FakeDb(agent_uuid=aid)
     with (
-        patch("roboco.services.notification.settings.notification_ack_ttl_hours", 0),
+        patch("robofleet.services.notification.settings.notification_ack_ttl_hours", 0),
         _patch_db_context(db),
     ):
         await svc.send_blocker_notification(
@@ -659,7 +659,7 @@ async def test_spawn_cap_trips_on_different_keys_both_reach_ceo(
     with (
         _patch_db_context(db),
         patch(
-            "roboco.services.notification.duplicate_unacked_notification_exists",
+            "robofleet.services.notification.duplicate_unacked_notification_exists",
             dedup,
         ),
     ):
@@ -693,7 +693,7 @@ async def test_spawn_cap_notification_sets_bypass_purpose_dedup(
     with (
         _patch_db_context(db),
         patch(
-            "roboco.services.notification.duplicate_unacked_notification_exists",
+            "robofleet.services.notification.duplicate_unacked_notification_exists",
             dedup,
         ),
     ):
@@ -721,7 +721,7 @@ async def test_other_callers_purpose_dedup_still_suppresses_duplicates(
     with (
         _patch_db_context(db),
         patch(
-            "roboco.services.notification.duplicate_unacked_notification_exists",
+            "robofleet.services.notification.duplicate_unacked_notification_exists",
             dedup,
         ),
     ):

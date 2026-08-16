@@ -23,9 +23,9 @@ import pytest
 from fastapi import FastAPI
 from guard.adapters import StarletteGuardRequest
 from guard_core.utils import extract_client_ip
-from roboco import security
-from roboco.config import settings
-from roboco.security import (
+from robofleet import security
+from robofleet.config import settings
+from robofleet.security import (
     ClientIpResolutionMiddleware,
     resolve_forwarded_client_ip,
 )

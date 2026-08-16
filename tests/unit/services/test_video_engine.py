@@ -14,16 +14,16 @@ from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import AgentRole, AgentStatus, Complexity, Team
-from roboco.models.base import TaskStatus as TS
-from roboco.services import video_engine as video_engine_module
-from roboco.services.company_goals import get_company_goals_service
-from roboco.services.heartbeat_mutex import HeartbeatLockUnavailable
-from roboco.services.task import VIDEO_POST_SOURCE, VIDEO_SOURCE, get_task_service
+from robofleet.config import settings as cfg
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import AgentRole, AgentStatus, Complexity, Team
+from robofleet.models.base import TaskStatus as TS
+from robofleet.services import video_engine as video_engine_module
+from robofleet.services.company_goals import get_company_goals_service
+from robofleet.services.heartbeat_mutex import HeartbeatLockUnavailable
+from robofleet.services.task import VIDEO_POST_SOURCE, VIDEO_SOURCE, get_task_service
 from sqlalchemy import delete, select
 
 if TYPE_CHECKING:
@@ -590,7 +590,7 @@ async def test_originate_video_post_sends_telegram_push(
     _enable(monkeypatch)
     notify = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.NotificationDeliveryService."
+        "robofleet.services.notification_delivery.NotificationDeliveryService."
         "notify_ceo_of_queue_item",
         notify,
     )
@@ -629,7 +629,7 @@ async def test_originate_video_post_survives_telegram_push_failure(
     await _seed(db_session)
     _enable(monkeypatch)
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.NotificationDeliveryService."
+        "robofleet.services.notification_delivery.NotificationDeliveryService."
         "notify_ceo_of_queue_item",
         AsyncMock(side_effect=RuntimeError("boom")),
     )

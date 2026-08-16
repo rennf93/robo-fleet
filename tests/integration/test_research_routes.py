@@ -1,4 +1,4 @@
-"""roboco.api.routes.research — role gate, quota, and error mapping.
+"""robofleet.api.routes.research — role gate, quota, and error mapping.
 
 Calls the route coroutines directly with a constructed AgentContext (the same
 style as test_company_goals_routes) so no app/DB wiring is needed; the service
@@ -12,19 +12,19 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from roboco.api.routes import research as research_route
-from roboco.api.schemas.research import FetchRequest, SearchRequest
-from roboco.api.utils import research as research_utils
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
-from roboco.services.research import (
+from robofleet.api.routes import research as research_route
+from robofleet.api.schemas.research import FetchRequest, SearchRequest
+from robofleet.api.utils import research as research_utils
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
+from robofleet.services.research import (
     FetchOutcome,
     ResearchError,
     ResearchUnsupportedError,
     SearchHit,
     SearchOutcome,
 )
-from roboco.services.research_quota import QuotaStatus
+from robofleet.services.research_quota import QuotaStatus
 
 
 def _agent(role: AgentRole) -> AgentContext:

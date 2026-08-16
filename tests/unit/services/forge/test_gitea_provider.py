@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 import pytest
-from roboco.services.forge.base import RepoRef
-from roboco.services.forge.gitea import GiteaProvider, ShapedResponse
+from robofleet.services.forge.base import RepoRef
+from robofleet.services.forge.gitea import GiteaProvider, ShapedResponse
 
 if TYPE_CHECKING:
     from collections.abc import Callable

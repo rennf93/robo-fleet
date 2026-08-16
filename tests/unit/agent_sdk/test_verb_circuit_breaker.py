@@ -18,14 +18,14 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
-import roboco.agent_sdk.server as srv
+import robofleet.agent_sdk.server as srv
 from fastapi.testclient import TestClient
-from roboco.foundation.policy.agent_loop import (
+from robofleet.foundation.policy.agent_loop import (
     VERB_RETRY_LIMITS,
     absolute_retry_limit_for,
     retry_limit_for,
 )
-from roboco.services.gateway.envelope import Envelope
+from robofleet.services.gateway.envelope import Envelope
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -164,7 +164,7 @@ def test_window_drops_entries_older_than_60s() -> None:
     base = 1000.0
     initial = 3
     after_jump = 1
-    with patch("roboco.agent_sdk.server.time.monotonic") as mock_time:
+    with patch("robofleet.agent_sdk.server.time.monotonic") as mock_time:
         mock_time.return_value = base
         for _ in range(initial):
             srv._record_verb_attempt("i_am_done", "task-A")
@@ -181,7 +181,7 @@ def test_window_keeps_entries_within_60s() -> None:
     """Attempts within the window survive — only ones past 60s drop."""
     base = 1000.0
     expected = 2
-    with patch("roboco.agent_sdk.server.time.monotonic") as mock_time:
+    with patch("robofleet.agent_sdk.server.time.monotonic") as mock_time:
         mock_time.return_value = base
         srv._record_verb_attempt("i_am_done", "task-A")
 
@@ -200,7 +200,7 @@ def test_count_prunes_on_read_without_recording() -> None:
     callers (e.g. _check_verb_circuit) rely on this.
     """
     base = 1000.0
-    with patch("roboco.agent_sdk.server.time.monotonic") as mock_time:
+    with patch("robofleet.agent_sdk.server.time.monotonic") as mock_time:
         mock_time.return_value = base
         srv._record_verb_attempt("i_am_done", "task-A")
         srv._record_verb_attempt("i_am_done", "task-A")
@@ -483,7 +483,7 @@ def test_absolute_counter_never_prunes_with_time() -> None:
     """Unlike the windowed deque, a huge time jump does not reset the count."""
     base = 1000.0
     expected = 2
-    with patch("roboco.agent_sdk.server.time.monotonic") as mock_time:
+    with patch("robofleet.agent_sdk.server.time.monotonic") as mock_time:
         mock_time.return_value = base
         srv._record_verb_attempt_absolute("i_am_done", "task-A")
         mock_time.return_value = base + 10_000.0  # far past any sliding window
@@ -499,7 +499,7 @@ def test_slow_drip_never_trips_window_but_trips_absolute_cap() -> None:
     cap = absolute_retry_limit_for("i_am_done")
     assert cap is not None
     base = 1000.0
-    with patch("roboco.agent_sdk.server.time.monotonic") as mock_time:
+    with patch("robofleet.agent_sdk.server.time.monotonic") as mock_time:
         for i in range(cap):
             mock_time.return_value = base + i * 200.0  # always > 60s apart
             srv._record_verb_attempt("i_am_done", "task-A")
@@ -560,7 +560,7 @@ def test_verb_attempted_endpoint_trips_absolute_cap_on_slow_drip() -> None:
     cap = absolute_retry_limit_for("i_am_done")
     assert cap is not None
     last_body: dict[str, object] | None = None
-    with patch("roboco.agent_sdk.server.time.monotonic") as mock_time:
+    with patch("robofleet.agent_sdk.server.time.monotonic") as mock_time:
         for i in range(cap):
             mock_time.return_value = 1000.0 + i * 200.0
             resp = client.post(

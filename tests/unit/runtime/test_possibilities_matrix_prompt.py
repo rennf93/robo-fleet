@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.runtime.orchestrator import AgentOrchestrator
+from robofleet.config import settings
+from robofleet.runtime.orchestrator import AgentOrchestrator
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -52,9 +52,9 @@ def _no_findings_db() -> tuple[Any, Any]:
     repo = AsyncMock()
     repo.list_for_task = AsyncMock(return_value=[])
     return (
-        patch("roboco.db.base.get_db_context", _fake_ctx),
+        patch("robofleet.db.base.get_db_context", _fake_ctx),
         patch(
-            "roboco.services.repositories.review_findings.ReviewFindingsRepository",
+            "robofleet.services.repositories.review_findings.ReviewFindingsRepository",
             return_value=repo,
         ),
     )

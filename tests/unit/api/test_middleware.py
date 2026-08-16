@@ -15,15 +15,15 @@ import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, field_validator
-from roboco.api.middleware import (
+from robofleet.api.middleware import (
     DbCommitMiddleware,
     _uuid_field_remediation,
     get_status_code,
     setup_middleware,
 )
-from roboco.config import settings
-from roboco.db.base import _discard_on_cancel
-from roboco.exceptions import (
+from robofleet.config import settings
+from robofleet.db.base import _discard_on_cancel
+from robofleet.exceptions import (
     AuthenticationError,
     InvalidStateError,
     NotFoundError,
@@ -31,16 +31,16 @@ from roboco.exceptions import (
     RobocoError,
     ValidationError,
 )
-from roboco.services.base import (
+from robofleet.services.base import (
     ConflictError as ServiceConflictError,
 )
-from roboco.services.base import (
+from robofleet.services.base import (
     NotFoundError as ServiceNotFoundError,
 )
-from roboco.services.base import (
+from robofleet.services.base import (
     UnauthorizedError as ServiceUnauthorizedError,
 )
-from roboco.services.base import (
+from robofleet.services.base import (
     ValidationError as ServiceValidationError,
 )
 from structlog.testing import capture_logs
@@ -104,7 +104,7 @@ def _make_app() -> FastAPI:
     async def _he() -> Any:
         raise HTTPException(status_code=403, detail="nope")
 
-    # service-layer errors (parallel hierarchy from roboco.services.base)
+    # service-layer errors (parallel hierarchy from robofleet.services.base)
     @app.get("/svc-notfound")
     async def _svc_nf() -> Any:
         raise ServiceNotFoundError("Channel", "main-pm")
@@ -159,7 +159,7 @@ def test_http_exception_handler_returns_standardized_format() -> None:
     assert "error" in body
 
 
-# `roboco.services.base.ServiceError` is a parallel exception hierarchy
+# `robofleet.services.base.ServiceError` is a parallel exception hierarchy
 # (it does NOT inherit from RobocoError), so a separate handler maps it
 # to clean 4xx codes instead of letting the generic 500 handler eat it.
 
@@ -514,7 +514,7 @@ class _OrderedSession:
 async def _fake_get_db(request: Request) -> Any:
     """Module-level get_db-style dependency: stash the session on
     request.state, yield, commit post-yield as the fallback — the exact
-    shape ``roboco.db.base.get_db`` uses and ``DbCommitMiddleware`` targets.
+    shape ``robofleet.db.base.get_db`` uses and ``DbCommitMiddleware`` targets.
 
     Reads its order-list/fail-flag from ``request.app.state`` rather than a
     closure: ``Annotated[Any, Depends(...)]`` is stringified by this file's
@@ -707,7 +707,7 @@ class _SlowButFinishingCommitSession:
 
 async def _fake_get_db_cancel_safe(request: Request) -> Any:
     """get_db-style dependency wired to the real ``_discard_on_cancel``
-    helper (``roboco.db.base``) so this test exercises the actual fix, not a
+    helper (``robofleet.db.base``) so this test exercises the actual fix, not a
     re-implementation of it."""
     order: list[str] = request.app.state.db_commit_order
     session = _CancelableCommitSession(order)

@@ -11,7 +11,7 @@ the v0.18.0 feature-spotlight work.
 import importlib
 
 import pytest
-from roboco.services.gateway.role_config import ROLE_CONFIGS
+from robofleet.services.gateway.role_config import ROLE_CONFIGS
 
 
 def test_every_granted_do_tool_is_registered(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -24,7 +24,7 @@ def test_every_granted_do_tool_is_registered(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setenv("ROBOCO_SDK_URL", "http://test-sdk:9000")
     monkeypatch.setenv("ROBOCO_ALLOW_FULL_TOOLSET", "1")
 
-    from roboco.mcp import do_server
+    from robofleet.mcp import do_server
 
     importlib.reload(do_server)
 

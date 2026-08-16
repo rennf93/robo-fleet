@@ -26,7 +26,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from roboco.services.git import GitService
+from robofleet.services.git import GitService
 
 _BRANCH = "feature/frontend/root--cell"
 _ORIGIN = f"origin/{_BRANCH}"

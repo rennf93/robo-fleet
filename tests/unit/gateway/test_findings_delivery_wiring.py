@@ -20,9 +20,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec_module
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
-from roboco.services.gateway.choreographer import findings as findings_lib
+from robofleet.foundation.policy import lifecycle as spec_module
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.gateway.choreographer import findings as findings_lib
 
 _EXPECTED_TWO = 2
 
@@ -73,7 +73,7 @@ def _row(**over: Any) -> SimpleNamespace:
         "origin": "qa",
         "status": "addressed",
         "severity": "major",
-        "file": "roboco/services/task.py",
+        "file": "robofleet/services/task.py",
         "line": 10,
         "expected": "raises",
         "actual": "swallows",
@@ -145,7 +145,7 @@ async def test_claim_review_evidence_carries_prior_findings(
             "origin": "qa",
             "status": "open",
             "severity": "major",
-            "file": "roboco/services/task.py",
+            "file": "robofleet/services/task.py",
             "line": 10,
             "expected": "raises",
             "actual": "round 2 issue",

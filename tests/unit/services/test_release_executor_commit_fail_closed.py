@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from roboco.services.release_executor import _GitReleaseOps, _ReleaseContext
+from robofleet.services.release_executor import _GitReleaseOps, _ReleaseContext
 
 
 def _ctx() -> _ReleaseContext:

@@ -12,14 +12,19 @@ from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.db.tables import AgentTable, NotificationTable
-from roboco.events import Event, EventType
-from roboco.models import AgentRole, AgentStatus, NotificationPriority, NotificationType
-from roboco.models.base import Team
-from roboco.services.notification_delivery import get_notification_delivery_service
-from roboco.services.telegram_client import TelegramSendResult
-from roboco.services.telegram_credentials import TelegramCredentialsData
+from robofleet.config import settings
+from robofleet.db.tables import AgentTable, NotificationTable
+from robofleet.events import Event, EventType
+from robofleet.models import (
+    AgentRole,
+    AgentStatus,
+    NotificationPriority,
+    NotificationType,
+)
+from robofleet.models.base import Team
+from robofleet.services.notification_delivery import get_notification_delivery_service
+from robofleet.services.telegram_client import TelegramSendResult
+from robofleet.services.telegram_credentials import TelegramCredentialsData
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -127,7 +132,7 @@ async def test_deliver_does_not_publish_before_commit(
     only schedules; the event fires on commit."""
     bus = _RecordingBus()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_event_bus", lambda: bus
+        "robofleet.services.notification_delivery.get_event_bus", lambda: bus
     )
 
     notif_id, _ = await _seed_agents_and_notification(db_session, recipients=2)
@@ -145,7 +150,7 @@ async def test_deliver_publishes_after_commit(
     """Commit drains the deferred publish — one event per recipient."""
     bus = _RecordingBus()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_event_bus", lambda: bus
+        "robofleet.services.notification_delivery.get_event_bus", lambda: bus
     )
 
     recipient_count = 2
@@ -172,7 +177,7 @@ async def test_deliver_rollback_drops_phantom(
     event for a row that never became durable."""
     bus = _RecordingBus()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_event_bus", lambda: bus
+        "robofleet.services.notification_delivery.get_event_bus", lambda: bus
     )
 
     notif_id, _ = await _seed_agents_and_notification(db_session, recipients=1)
@@ -196,7 +201,7 @@ async def test_acknowledge_does_not_publish_before_commit(
     only schedules via the outbox; the event fires on commit, not at call time."""
     bus = _RecordingBus()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_event_bus", lambda: bus
+        "robofleet.services.notification_delivery.get_event_bus", lambda: bus
     )
 
     notif_id, notif = await _seed_agents_and_notification(db_session, recipients=1)
@@ -215,7 +220,7 @@ async def test_acknowledge_publishes_after_commit(
     """Commit drains the deferred ACK publish — exactly one NOTIFICATION_ACKED."""
     bus = _RecordingBus()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_event_bus", lambda: bus
+        "robofleet.services.notification_delivery.get_event_bus", lambda: bus
     )
 
     notif_id, notif = await _seed_agents_and_notification(db_session, recipients=1)
@@ -242,7 +247,7 @@ async def test_acknowledge_rollback_drops_phantom(
     ACK event for an acknowledgement that never became durable."""
     bus = _RecordingBus()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.get_event_bus", lambda: bus
+        "robofleet.services.notification_delivery.get_event_bus", lambda: bus
     )
 
     notif_id, notif = await _seed_agents_and_notification(db_session, recipients=1)
@@ -277,7 +282,7 @@ async def test_notify_telegram_send_deferred_to_after_commit(
             return creds
 
     monkeypatch.setattr(
-        "roboco.services.telegram_credentials.get_telegram_credentials_service",
+        "robofleet.services.telegram_credentials.get_telegram_credentials_service",
         lambda _session: _FakeCredsService(),
     )
 
@@ -301,7 +306,7 @@ async def test_notify_telegram_send_deferred_to_after_commit(
             pass
 
     monkeypatch.setattr(
-        "roboco.services.telegram_client.build_telegram_client",
+        "robofleet.services.telegram_client.build_telegram_client",
         lambda _creds, **_kwargs: _FakeTelegramClient(),
     )
 
@@ -334,7 +339,7 @@ async def test_notify_ceo_of_queue_item_deferred_escaped_and_keyboarded(
             return creds
 
     monkeypatch.setattr(
-        "roboco.services.telegram_credentials.get_telegram_credentials_service",
+        "robofleet.services.telegram_credentials.get_telegram_credentials_service",
         lambda _session: _FakeCredsService(),
     )
 
@@ -358,7 +363,7 @@ async def test_notify_ceo_of_queue_item_deferred_escaped_and_keyboarded(
             pass
 
     monkeypatch.setattr(
-        "roboco.services.telegram_client.build_telegram_client",
+        "robofleet.services.telegram_client.build_telegram_client",
         lambda _creds, **_kwargs: _FakeTelegramClient(),
     )
 
@@ -399,7 +404,7 @@ async def test_notify_telegram_rollback_drops_send(
             return creds
 
     monkeypatch.setattr(
-        "roboco.services.telegram_credentials.get_telegram_credentials_service",
+        "robofleet.services.telegram_credentials.get_telegram_credentials_service",
         lambda _session: _FakeCredsService(),
     )
 
@@ -423,7 +428,7 @@ async def test_notify_telegram_rollback_drops_send(
             pass
 
     monkeypatch.setattr(
-        "roboco.services.telegram_client.build_telegram_client",
+        "robofleet.services.telegram_client.build_telegram_client",
         lambda _creds, **_kwargs: _FakeTelegramClient(),
     )
 

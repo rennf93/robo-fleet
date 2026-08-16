@@ -10,9 +10,9 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-from roboco.models.optimal import IndexType
-from roboco.services.optimal_brain.indexes.base import IndexConfig
-from roboco.services.optimal_brain.indexes.vault_notes import VaultNotesIndexPlugin
+from robofleet.models.optimal import IndexType
+from robofleet.services.optimal_brain.indexes.base import IndexConfig
+from robofleet.services.optimal_brain.indexes.vault_notes import VaultNotesIndexPlugin
 
 
 def _plugin() -> VaultNotesIndexPlugin:

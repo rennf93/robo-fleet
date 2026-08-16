@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from roboco.config import settings as cfg
-from roboco.db.tables import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import (
     AgentSpawnSessionTable,
     AgentTable,
     NotificationTable,
@@ -27,9 +27,9 @@ from roboco.db.tables import (
     XSeenFeatureTable,
     XSeenMentionTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.content import markers
-from roboco.models.base import (
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -37,10 +37,10 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.models.base import TaskStatus as TS
-from roboco.services import x_engine as x_engine_module
-from roboco.services.company_goals import get_company_goals_service
-from roboco.services.task import (
+from robofleet.models.base import TaskStatus as TS
+from robofleet.services import x_engine as x_engine_module
+from robofleet.services.company_goals import get_company_goals_service
+from robofleet.services.task import (
     MEGAPHONE_SOURCE,
     X_CAMPAIGN_SOURCE,
     X_EDITORIAL_SOURCE,
@@ -51,7 +51,7 @@ from roboco.services.task import (
     TaskCreateRequest,
     get_task_service,
 )
-from roboco.services.x_client import MAX_TWEET_CHARS, XClient, XMention, XPostResult
+from robofleet.services.x_client import MAX_TWEET_CHARS, XClient, XMention, XPostResult
 from sqlalchemy import select
 
 if TYPE_CHECKING:
@@ -290,7 +290,7 @@ async def test_originate_post_sends_telegram_push(
     _mock_local_model(monkeypatch, "RoboCo just shipped a great new feature!")
     notify = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.NotificationDeliveryService."
+        "robofleet.services.notification_delivery.NotificationDeliveryService."
         "notify_ceo_of_queue_item",
         notify,
     )
@@ -321,7 +321,7 @@ async def test_originate_post_survives_telegram_push_failure(
     _enable(monkeypatch)
     _mock_local_model(monkeypatch, "shipped!")
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.NotificationDeliveryService."
+        "robofleet.services.notification_delivery.NotificationDeliveryService."
         "notify_ceo_of_queue_item",
         AsyncMock(side_effect=RuntimeError("boom")),
     )
@@ -1154,7 +1154,7 @@ async def test_materialize_editorial_post_reuses_the_same_notify_path_as_x_post(
     exploration = await _make_megaphone_exploration(db_session)
     notify = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.notification_delivery.NotificationDeliveryService."
+        "robofleet.services.notification_delivery.NotificationDeliveryService."
         "notify_ceo_of_queue_item",
         notify,
     )
@@ -1289,7 +1289,7 @@ async def test_materialize_barfly_reply_sends_telegram_push(
     engine = x_engine_module.XEngine(db_session, client=_FakeClient())
     notify = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.x_engine.get_notification_delivery_service",
+        "robofleet.services.x_engine.get_notification_delivery_service",
         lambda _s: MagicMock(notify_ceo_of_queue_item=notify),
     )
 

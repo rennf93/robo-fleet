@@ -20,20 +20,20 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api import deps
-from roboco.api.deps import get_agent_context
-from roboco.api.routes.prompter_live import router
-from roboco.db.base import get_db
-from roboco.db.tables import (
+from robofleet.api import deps
+from robofleet.api.deps import get_agent_context
+from robofleet.api.routes.prompter_live import router
+from robofleet.db.base import get_db
+from robofleet.db.tables import (
     ProjectTable,
     PrompterMessageTable,
     TaskDraftTable,
     TaskTable,
 )
-from roboco.models.base import AgentRole, TaskStatus, Team
-from roboco.services import prompter_live
-from roboco.services.base import ValidationError
-from roboco.services.permissions import AgentContext
+from robofleet.models.base import AgentRole, TaskStatus, Team
+from robofleet.services import prompter_live
+from robofleet.services.base import ValidationError
+from robofleet.services.permissions import AgentContext
 from sqlalchemy import select
 
 from tests.unit.services.test_prompter import (
@@ -406,7 +406,7 @@ async def test_start_project_scope_resolves_slug(start_client: dict) -> None:
     fake_svc = SimpleNamespace(
         get=lambda _pid: _async_return(SimpleNamespace(slug="roboco"))
     )
-    with patch("roboco.services.project.get_project_service", lambda _db: fake_svc):
+    with patch("robofleet.services.project.get_project_service", lambda _db: fake_svc):
         resp = await client.post(
             "/api/prompter/live/start", json={"project_id": str(project_id)}
         )
@@ -419,7 +419,7 @@ async def test_start_project_scope_resolves_slug(start_client: dict) -> None:
 async def test_start_unknown_project_404(start_client: dict) -> None:
     client = start_client["client"]
     fake_svc = SimpleNamespace(get=lambda _pid: _async_return(None))
-    with patch("roboco.services.project.get_project_service", lambda _db: fake_svc):
+    with patch("robofleet.services.project.get_project_service", lambda _db: fake_svc):
         resp = await client.post(
             "/api/prompter/live/start", json={"project_id": str(uuid4())}
         )
@@ -508,7 +508,7 @@ async def test_confirm_creates_task_and_reaps(confirm_client: dict) -> None:
             consumed_calls.append(args)
 
     with patch(
-        "roboco.api.routes.prompter_live.get_prompter_service",
+        "robofleet.api.routes.prompter_live.get_prompter_service",
         lambda _db: _FakeService(),
     ):
         resp = await client.post(
@@ -551,7 +551,7 @@ async def test_confirm_validation_error_is_translated_and_not_reaped(
             raise ValidationError(message="bad draft", field="title")
 
     with patch(
-        "roboco.api.routes.prompter_live.get_prompter_service",
+        "robofleet.api.routes.prompter_live.get_prompter_service",
         lambda _db: _FakeService(),
     ):
         resp = await client.post(
@@ -604,7 +604,7 @@ async def test_confirm_batch_main_pm_route_creates_and_reaps(
             return None
 
     with patch(
-        "roboco.api.routes.prompter_live.get_prompter_service",
+        "robofleet.api.routes.prompter_live.get_prompter_service",
         lambda _db: _FakeService(),
     ):
         resp = await client.post(
@@ -638,7 +638,7 @@ async def test_confirm_batch_board_route_parks_session(confirm_client: dict) -> 
     body = _batch_body()
     body["route"] = "board"
     with patch(
-        "roboco.api.routes.prompter_live.get_prompter_service",
+        "robofleet.api.routes.prompter_live.get_prompter_service",
         lambda _db: _FakeService(),
     ):
         resp = await client.post("/api/prompter/live/s1/confirm-batch", json=body)
@@ -675,7 +675,7 @@ async def test_confirm_batch_redraft_always_reaps(confirm_client: dict) -> None:
     body["route"] = "board"
     body["task_id"] = str(task_id)
     with patch(
-        "roboco.api.routes.prompter_live.get_prompter_service",
+        "robofleet.api.routes.prompter_live.get_prompter_service",
         lambda _db: _FakeService(),
     ):
         resp = await client.post("/api/prompter/live/s1/confirm-batch", json=body)
@@ -693,7 +693,7 @@ async def test_confirm_batch_validation_error_not_reaped(confirm_client: dict) -
             raise ValidationError(message="bad batch", field="drafts")
 
     with patch(
-        "roboco.api.routes.prompter_live.get_prompter_service",
+        "robofleet.api.routes.prompter_live.get_prompter_service",
         lambda _db: _FakeService(),
     ):
         resp = await client.post(
@@ -725,7 +725,7 @@ async def test_preview_batch_returns_waves_and_does_not_reap(
             return {"waves": [[0, 1]], "warnings": []}
 
     with patch(
-        "roboco.api.routes.prompter_live.get_prompter_service",
+        "robofleet.api.routes.prompter_live.get_prompter_service",
         lambda _db: _FakeService(),
     ):
         resp = await client.post(
@@ -925,7 +925,9 @@ async def test_search_tasks_returns_compact_rows_for_alive_session(
 
     task_svc = MagicMock()
     task_svc.search_tasks = AsyncMock(return_value=[_row()])
-    monkeypatch.setattr("roboco.services.task.get_task_service", lambda _db: task_svc)
+    monkeypatch.setattr(
+        "robofleet.services.task.get_task_service", lambda _db: task_svc
+    )
 
     resp = await client.get("/api/prompter/live/s1/search-tasks", params={"q": "login"})
 

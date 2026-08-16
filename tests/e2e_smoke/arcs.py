@@ -39,9 +39,9 @@ def seed_company(stack: E2EStack) -> Company:
     if "company" in _COMPANY_CACHE:
         return _COMPANY_CACHE["company"]
 
-    from roboco.db.tables import AgentTable
-    from roboco.foundation import identity as _foundation
-    from roboco.models import AgentRole, AgentStatus, Team
+    from robofleet.db.tables import AgentTable
+    from robofleet.foundation import identity as _foundation
+    from robofleet.models import AgentRole, AgentStatus, Team
 
     out = Company()
 
@@ -99,9 +99,9 @@ def seed_company(stack: E2EStack) -> Company:
 
 def seed_project(stack: E2EStack, company: Company) -> tuple[Any, str]:
     """Seed a project rooted at the shared bare origin; unique slug per test."""
-    from roboco.db.tables import ProjectTable
-    from roboco.models import Team
-    from roboco.utils.crypto import encrypt_token
+    from robofleet.db.tables import ProjectTable
+    from robofleet.models import Team
+    from robofleet.utils.crypto import encrypt_token
 
     slug = f"e2e-proj-{uuid4().hex[:6]}"
     holder: dict[str, Any] = {}
@@ -129,9 +129,9 @@ def seed_project(stack: E2EStack, company: Company) -> tuple[Any, str]:
 
 def seed_task(stack: E2EStack, **overrides: Any) -> Any:
     """Seed one task row; caller passes the fields that matter."""
-    from roboco.db.tables import TaskTable
-    from roboco.models import Team
-    from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
+    from robofleet.db.tables import TaskTable
+    from robofleet.models import Team
+    from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
 
     fields: dict[str, Any] = {
         "id": uuid4(),
@@ -154,7 +154,7 @@ def seed_task(stack: E2EStack, **overrides: Any) -> Any:
 
 
 def task_state(stack: E2EStack, task_id: Any) -> dict[str, Any]:
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> dict[str, Any]:
@@ -176,7 +176,7 @@ def task_state(stack: E2EStack, task_id: Any) -> dict[str, Any]:
 def open_finding_ids(stack: E2EStack, task_id: Any) -> list[str]:
     """Open revision-findings ledger row ids for a task — the ids a scripted
     PM/dev must resolve before FINDINGS_ADDRESSED lets it resubmit."""
-    from roboco.db.tables import TaskReviewFindingTable
+    from robofleet.db.tables import TaskReviewFindingTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> list[str]:
@@ -232,7 +232,7 @@ def dispatcher_assign(stack: E2EStack, task_id: Any, agent_id: Any) -> None:
     """Mirror the dispatcher's claim-for-PM lane (_dispatch_pm_review_work):
     pr_pass clears ownership by design and the orchestrator re-claims the
     task for the owning PM before spawning it."""
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> None:
@@ -249,7 +249,7 @@ def set_branch_name(stack: E2EStack, task_id: Any, branch_name: str) -> None:
     """Directly set a task's ``branch_name`` — a data field, not a lifecycle
     transition (mirrors ``dispatcher_assign``'s style: standing in for a
     system-side effect the real claim path would otherwise perform)."""
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> None:
@@ -264,7 +264,7 @@ def set_branch_name(stack: E2EStack, task_id: Any, branch_name: str) -> None:
 def wire_dependency(stack: E2EStack, dependent_id: Any, depends_on_id: Any) -> None:
     """Wire a real dependency edge the same way production sequencing does
     (``TaskService.add_dependency``) — not a direct status write."""
-    from roboco.services.task import get_task_service
+    from robofleet.services.task import get_task_service
 
     async def _run(session: AsyncSession) -> None:
         await get_task_service(session).add_dependency(dependent_id, depends_on_id)
@@ -474,7 +474,7 @@ def dev_arc(
 
 
 def _criteria_text(stack: E2EStack, task_id: Any) -> str:
-    from roboco.db.tables import TaskTable
+    from robofleet.db.tables import TaskTable
     from sqlalchemy import select
 
     async def _run(session: AsyncSession) -> list[str]:
@@ -507,7 +507,7 @@ def qa_arc(stack: E2EStack, company: Company, task_id: Any) -> None:
     )
 
     async def _crits(session: AsyncSession) -> list[str]:
-        from roboco.db.tables import TaskTable
+        from robofleet.db.tables import TaskTable
         from sqlalchemy import select
 
         row = (
@@ -571,8 +571,8 @@ def seed_hierarchy(
     Branch names follow the real convention (the task-short-id chain); the
     PM planning/delegation lane is a later scenario's subject.
     """
-    from roboco.models import Team
-    from roboco.models.base import TaskStatus, TaskType
+    from robofleet.models import Team
+    from robofleet.models.base import TaskStatus, TaskType
 
     root_id = uuid4()
     cell_id = uuid4()
@@ -653,7 +653,7 @@ def seed_cell_and_dev(
     for a caller that owns its own root (e.g. a MegaTask root-subtask whose
     root is claimed/seeded separately from this cell). ``root`` carries
     ``root_id`` / ``root_branch`` (the shape :func:`seed_hierarchy` returns)."""
-    from roboco.models.base import TaskStatus, TaskType
+    from robofleet.models.base import TaskStatus, TaskType
 
     root_id, root_branch = root["root_id"], root["root_branch"]
     cell_id = uuid4()

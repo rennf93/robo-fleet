@@ -25,7 +25,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from roboco.services.gateway.rate_limit_tracker import RateLimitStateTracker
+from robofleet.services.gateway.rate_limit_tracker import RateLimitStateTracker
 
 
 def _make_redis_mock(initial_store: dict[str, Any] | None = None) -> AsyncMock:

@@ -7,8 +7,8 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from roboco.db.tables import AgentRole, AgentStatus, AgentTable
-from roboco.services.settings import (
+from robofleet.db.tables import AgentRole, AgentStatus, AgentTable
+from robofleet.services.settings import (
     SettingValidationError,
     get_settings_service,
     validate_setting,

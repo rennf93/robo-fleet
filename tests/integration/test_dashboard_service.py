@@ -11,19 +11,19 @@ from uuid import uuid4 as _u
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import (
+from robofleet.db.tables import (
     AgentTable,
     ProjectTable,
     TaskTable,
 )
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.dashboard import CreateFlagParams
-from roboco.services.dashboard import (
+from robofleet.models.dashboard import CreateFlagParams
+from robofleet.services.dashboard import (
     DashboardService,
     _DashboardStorageHolder,
     get_dashboard_service,

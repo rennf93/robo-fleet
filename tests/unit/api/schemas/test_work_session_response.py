@@ -16,13 +16,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from roboco.api.schemas.work_session import (
+from robofleet.api.schemas.work_session import (
     WorkSessionResponse,
     session_to_response,
     session_to_summary,
 )
-from roboco.db.tables import WorkSessionTable
-from roboco.models.work_session import WorkSessionStatus
+from robofleet.db.tables import WorkSessionTable
+from robofleet.models.work_session import WorkSessionStatus
 
 
 def _make_session(agent_id: UUID | None) -> WorkSessionTable:

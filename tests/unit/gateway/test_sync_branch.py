@@ -28,8 +28,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.services.base import ValidationError
-from roboco.services.gateway.choreographer import Choreographer, ChoreographerDeps
+from robofleet.services.base import ValidationError
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 
 
 def _make_deps(**overrides: object) -> ChoreographerDeps:
@@ -87,7 +87,7 @@ async def test_sync_branch_rebases_and_returns_evidence() -> None:
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c.sync_branch(aid, tid)
@@ -120,7 +120,7 @@ async def test_sync_branch_conflicts_aborts_and_steers_to_resolve() -> None:
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c.sync_branch(aid, tid)
@@ -152,7 +152,7 @@ async def test_sync_branch_diverged_steers_to_i_am_blocked() -> None:
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c.sync_branch(aid, tid)
@@ -187,7 +187,7 @@ async def test_sync_branch_diverged_with_stash_pop_conflict_notes_preserved_stas
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c.sync_branch(aid, tid, stash=True)
@@ -268,7 +268,7 @@ async def test_sync_branch_refuses_master_base_with_branch_bearing_parent() -> N
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value="master"),
     ):
         env = await c.sync_branch(aid, tid)
@@ -295,7 +295,7 @@ async def test_sync_branch_allows_master_base_for_standalone_task() -> None:
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value="master"),
     ):
         env = await c.sync_branch(aid, tid)
@@ -324,7 +324,7 @@ async def test_sync_branch_allows_master_base_for_branchless_parent_child() -> N
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value="master"),
     ):
         env = await c.sync_branch(aid, tid)
@@ -349,7 +349,7 @@ async def test_sync_branch_refuses_master_base_when_parent_row_missing() -> None
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value="master"),
     ):
         env = await c.sync_branch(aid, tid)
@@ -372,7 +372,7 @@ async def test_sync_branch_refuses_injection_ref_unconditionally() -> None:
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value="-evil-ref"),
     ):
         env = await c.sync_branch(aid, tid)
@@ -395,7 +395,7 @@ async def test_sync_branch_git_failure_steers_to_i_am_blocked() -> None:
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c.sync_branch(aid, tid)
@@ -425,7 +425,7 @@ async def test_sync_branch_protected_head_refusal_steers_to_i_am_blocked() -> No
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c.sync_branch(aid, tid)
@@ -450,7 +450,7 @@ async def test_sync_branch_passes_stash_flag_through() -> None:
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c.sync_branch(aid, tid, stash=True)
@@ -479,7 +479,7 @@ async def test_sync_branch_dirty_workspace_failure_steers_to_stash_or_commit() -
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c.sync_branch(aid, tid)
@@ -508,7 +508,7 @@ async def test_sync_branch_conflicts_with_stash_preserved_notes_it_in_next() -> 
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c.sync_branch(aid, tid, stash=True)
@@ -537,7 +537,7 @@ async def test_sync_branch_stash_pop_conflict_notes_preserved_stash() -> None:
     c = Choreographer(deps)
 
     with patch(
-        "roboco.services.gateway.choreographer._impl.resolve_parent_branch",
+        "robofleet.services.gateway.choreographer._impl.resolve_parent_branch",
         new=AsyncMock(return_value=_BASE),
     ):
         env = await c.sync_branch(aid, tid, stash=True)

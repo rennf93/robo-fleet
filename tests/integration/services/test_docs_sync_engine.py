@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.services.docs_sync_engine import DocsSyncEngine
+from robofleet.config import settings
+from robofleet.services.docs_sync_engine import DocsSyncEngine
 
 
 def _project(project_id: Any, slug: str, git_url: str) -> SimpleNamespace:
@@ -37,17 +37,17 @@ def _make_engine(project_svc: Any, task_svc: Any) -> tuple[DocsSyncEngine, list[
     engine = DocsSyncEngine(session)
     patchers = [
         patch(
-            "roboco.services.docs_sync_engine.get_project_service",
+            "robofleet.services.docs_sync_engine.get_project_service",
             return_value=project_svc,
         ),
         patch(
-            "roboco.services.docs_sync_engine.get_task_service",
+            "robofleet.services.docs_sync_engine.get_task_service",
             return_value=task_svc,
         ),
         # session is a bare MagicMock: is_paused's real settings-store read
         # would raise on it and fail closed (treats as paused).
         patch(
-            "roboco.services.maintenance_pause.is_paused",
+            "robofleet.services.maintenance_pause.is_paused",
             AsyncMock(return_value=False),
         ),
     ]
@@ -190,7 +190,7 @@ async def test_missing_project_warns_and_returns_none(
 
     engine, patchers = _make_engine(project_svc, task_svc)
     try:
-        with caplog.at_level("WARNING", logger="roboco.services.docs_sync_engine"):
+        with caplog.at_level("WARNING", logger="robofleet.services.docs_sync_engine"):
             result = await engine.originate_docs_update(version="0.23.0", changelog="x")
     finally:
         for p in patchers:

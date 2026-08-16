@@ -10,12 +10,12 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import roboco.services.self_heal_engine as _self_heal_mod
-from roboco.foundation import identity as _foundation
-from roboco.models.base import TaskStatus, TaskType
-from roboco.runtime.orchestrator import AgentOrchestrator
-from roboco.services.self_heal_engine import RegressionObservation, SelfHealEngine
-from roboco.services.task import (
+import robofleet.services.self_heal_engine as _self_heal_mod
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import TaskStatus, TaskType
+from robofleet.runtime.orchestrator import AgentOrchestrator
+from robofleet.services.self_heal_engine import RegressionObservation, SelfHealEngine
+from robofleet.services.task import (
     SELF_HEAL_SOURCE,
     TaskCreateRequest,
     TaskService,
@@ -205,13 +205,14 @@ async def test_approve_and_start_lifts_the_ceo_hold(
     agent_svc = MagicMock()
     agent_svc.get_by_slug = AsyncMock(return_value=main_pm)
     monkeypatch.setattr(
-        "roboco.services.agent.get_agent_service",
+        "robofleet.services.agent.get_agent_service",
         MagicMock(return_value=agent_svc),
     )
     monkeypatch.setattr(svc, "_activate_batch_root_subtasks", AsyncMock())
     monkeypatch.setattr(svc, "_emit_task_event", AsyncMock())
     monkeypatch.setattr(
-        "roboco.services.task.main_pm_cannot_own_code", lambda *_args, **_kwargs: False
+        "robofleet.services.task.main_pm_cannot_own_code",
+        lambda *_args, **_kwargs: False,
     )
 
     await svc.approve_and_start(_foundation.AGENTS["main-pm"].uuid, notes=None)

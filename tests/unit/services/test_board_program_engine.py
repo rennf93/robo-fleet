@@ -14,8 +14,8 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings as cfg
-from roboco.db.tables import (
+from robofleet.config import settings as cfg
+from robofleet.db.tables import (
     AgentTable,
     AuditLogTable,
     BoardProgramCycleTable,
@@ -23,15 +23,15 @@ from roboco.db.tables import (
     SystemSettingTable,
     TaskTable,
 )
-from roboco.foundation import identity as _foundation
-from roboco.foundation.policy.board_programs import (
+from robofleet.foundation import identity as _foundation
+from robofleet.foundation.policy.board_programs import (
     PROGRAMS,
     WEEK_SECONDS,
     BoardProgram,
     TriggerKind,
 )
-from roboco.foundation.policy.content import markers
-from roboco.models.base import (
+from robofleet.foundation.policy.content import markers
+from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     Complexity,
@@ -39,13 +39,16 @@ from roboco.models.base import (
     TaskType,
     Team,
 )
-from roboco.models.base import (
+from robofleet.models.base import (
     TaskStatus as TS,
 )
-from roboco.services import board_programs as bp_module
-from roboco.services.board_programs import BoardProgramEngine
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
-from roboco.services.task import (
+from robofleet.services import board_programs as bp_module
+from robofleet.services.board_programs import BoardProgramEngine
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
+from robofleet.services.task import (
     BARFLY_SOURCE,
     CORONER_SOURCE,
     DOGFOOD_SOURCE,
@@ -888,7 +891,7 @@ async def test_open_program_cycle_originates_dogfood_for_real(
     db_session: AsyncSession,
 ) -> None:
     """Unlike Coroner's never-firing stub, Dogfood registers a REAL
-    originator (``roboco.services.board_programs._originate_dogfood``) — a
+    originator (``robofleet.services.board_programs._originate_dogfood``) — a
     CEO "run now" (and the release-publish hook, which calls the exact same
     ``open_program_cycle`` path) must actually open a cycle when armed and
     an opted-in project exists."""

@@ -2,7 +2,7 @@
 
 Anti-regression for the SQLAlchemy enum-naming binding. Without the
 `_PG_ENUM_NAME_OVERRIDES["Role"] = "agentrole"` entry in
-`roboco/db/tables.py`, SQLAlchemy infers the postgres type name from the
+`robofleet/db/tables.py`, SQLAlchemy infers the postgres type name from the
 Python class name (`Role` → `role`), producing the `operator does not
 exist: agentrole = role` regression smoke run 2 hit.
 
@@ -35,7 +35,7 @@ async def test_agents_role_uses_agentrole_type(db_session: AsyncSession) -> None
     assert row[0] == "agentrole", (
         f"agents.role typed as {row[0]!r}, expected 'agentrole' — "
         f"the SQLAlchemy enum binding is missing the name='agentrole' "
-        f"override in roboco/db/tables.py::_PG_ENUM_NAME_OVERRIDES"
+        f"override in robofleet/db/tables.py::_PG_ENUM_NAME_OVERRIDES"
     )
 
 
@@ -54,5 +54,5 @@ async def test_no_stray_role_enum_type_exists(db_session: AsyncSession) -> None:
     assert "role" not in typenames, (
         "stray 'role' enum type exists — Base.metadata.create_all "
         "produced both 'role' and 'agentrole'. Check "
-        "roboco/db/tables.py::_str_enum for missing name= override."
+        "robofleet/db/tables.py::_str_enum for missing name= override."
     )

@@ -9,7 +9,7 @@ import json
 import time
 from typing import TYPE_CHECKING
 
-from roboco.llm.providers import kimi_cli_usage as ku
+from robofleet.llm.providers import kimi_cli_usage as ku
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -259,6 +259,6 @@ def test_main_warns_when_run_log_env_missing(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     monkeypatch.delenv("ROBOCO_KIMI_RUN_LOG", raising=False)
-    with caplog.at_level("WARNING", logger="roboco.llm.providers.kimi_cli_usage"):
+    with caplog.at_level("WARNING", logger="robofleet.llm.providers.kimi_cli_usage"):
         assert ku.main() == 0
     assert any("ROBOCO_KIMI_RUN_LOG" in r.message for r in caplog.records)

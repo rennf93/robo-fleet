@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 import pytest
-from roboco.mcp import intake_server
+from robofleet.mcp import intake_server
 
 
 def _client(handler: Any) -> httpx.AsyncClient:

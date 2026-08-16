@@ -13,7 +13,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from roboco.services.release_readiness import (
+from robofleet.services.release_readiness import (
     CommitInfo,
     ReleaseReadinessReport,
     ReleaseRepoSnapshot,
@@ -86,9 +86,9 @@ def test_missed_version_ref_is_a_gap() -> None:
 
 
 def test_bump_plan_is_the_canonical_set() -> None:
-    snap = _snap(canonical_bump_files=["pyproject.toml", "roboco/__init__.py"])
+    snap = _snap(canonical_bump_files=["pyproject.toml", "robofleet/__init__.py"])
     report = assess(snap, today=_TODAY)
-    assert report.version_bump_plan == ["pyproject.toml", "roboco/__init__.py"]
+    assert report.version_bump_plan == ["pyproject.toml", "robofleet/__init__.py"]
 
 
 def test_stale_agent_count_is_docs_drift_gap() -> None:

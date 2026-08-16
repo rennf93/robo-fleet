@@ -15,16 +15,16 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProductTable, ProjectTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import Complexity, TaskNature, TaskStatus, TaskType
-from roboco.models.product import ProductCellMapping
-from roboco.models.task import TaskCreateRequest
-from roboco.services.gateway.choreographer._impl import (
+from robofleet.db.tables import AgentTable, ProductTable, ProjectTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import Complexity, TaskNature, TaskStatus, TaskType
+from robofleet.models.product import ProductCellMapping
+from robofleet.models.task import TaskCreateRequest
+from robofleet.services.gateway.choreographer._impl import (
     Choreographer,
     ChoreographerDeps,
 )
-from roboco.services.task import TaskService
+from robofleet.services.task import TaskService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

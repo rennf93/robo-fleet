@@ -25,10 +25,10 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import roboco.runtime.orchestrator as orch_mod
-from roboco.foundation.identity import Role, role_for_slug
-from roboco.runtime.orchestrator import AgentOrchestrator, AgentReadinessError
-from roboco.seeds.initial_data import AGENT_UUIDS
+import robofleet.runtime.orchestrator as orch_mod
+from robofleet.foundation.identity import Role, role_for_slug
+from robofleet.runtime.orchestrator import AgentOrchestrator, AgentReadinessError
+from robofleet.seeds.initial_data import AGENT_UUIDS
 
 
 def _orch() -> Any:

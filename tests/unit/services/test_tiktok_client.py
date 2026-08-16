@@ -15,16 +15,16 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
-from roboco.services.tiktok_client import (
+from robofleet.services.tiktok_client import (
     LiveTikTokPoster,
     build_tiktok_poster,
     plan_chunk_ranges,
 )
-from roboco.services.tiktok_credentials import (
+from robofleet.services.tiktok_credentials import (
     TikTokCredentialsData,
     get_tiktok_credentials_service,
 )
-from roboco.services.video_post_service import NullTikTokPoster
+from robofleet.services.video_post_service import NullTikTokPoster
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -124,9 +124,9 @@ async def _no_sleep(_seconds: float) -> None:
 async def test_upload_to_inbox_full_sequence_with_asymmetric_last_chunk(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, db_session: AsyncSession
 ) -> None:
-    monkeypatch.setattr("roboco.services.tiktok_client._CHUNK_SIZE_BYTES", 4)
-    monkeypatch.setattr("roboco.services.tiktok_client._MAX_FINAL_CHUNK_BYTES", 8)
-    monkeypatch.setattr("roboco.services.tiktok_client.asyncio.sleep", _no_sleep)
+    monkeypatch.setattr("robofleet.services.tiktok_client._CHUNK_SIZE_BYTES", 4)
+    monkeypatch.setattr("robofleet.services.tiktok_client._MAX_FINAL_CHUNK_BYTES", 8)
+    monkeypatch.setattr("robofleet.services.tiktok_client.asyncio.sleep", _no_sleep)
 
     put_ranges: list[str] = []
     status_calls = {"count": 0}
@@ -187,7 +187,7 @@ async def test_upload_to_inbox_full_sequence_with_asymmetric_last_chunk(
 async def test_upload_publish_failed_status_is_graceful(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, db_session: AsyncSession
 ) -> None:
-    monkeypatch.setattr("roboco.services.tiktok_client.asyncio.sleep", _no_sleep)
+    monkeypatch.setattr("robofleet.services.tiktok_client.asyncio.sleep", _no_sleep)
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -230,7 +230,7 @@ async def test_upload_refreshes_and_persists_rotated_token_on_401(
     factory = async_sessionmaker(
         bind=engine, class_=AsyncSession, expire_on_commit=False
     )
-    monkeypatch.setattr("roboco.db.base.get_session_factory", lambda: factory)
+    monkeypatch.setattr("robofleet.db.base.get_session_factory", lambda: factory)
 
     async with factory() as setup:
         await get_tiktok_credentials_service(setup).set_credentials(
@@ -298,7 +298,7 @@ async def test_refresh_falls_back_to_current_refresh_token_when_response_omits_i
     factory = async_sessionmaker(
         bind=engine, class_=AsyncSession, expire_on_commit=False
     )
-    monkeypatch.setattr("roboco.db.base.get_session_factory", lambda: factory)
+    monkeypatch.setattr("robofleet.db.base.get_session_factory", lambda: factory)
 
     async with factory() as setup:
         await get_tiktok_credentials_service(setup).set_credentials(
@@ -358,7 +358,7 @@ async def test_refresh_commits_rotated_tokens_independently_of_caller_session(
     factory = async_sessionmaker(
         bind=engine, class_=AsyncSession, expire_on_commit=False
     )
-    monkeypatch.setattr("roboco.db.base.get_session_factory", lambda: factory)
+    monkeypatch.setattr("robofleet.db.base.get_session_factory", lambda: factory)
 
     # Seed the singleton row with refresh_token="OLD" and commit so the fresh
     # session opened inside _refresh can see it.

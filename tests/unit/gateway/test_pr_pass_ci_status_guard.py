@@ -23,8 +23,8 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec_module
-from roboco.services.gateway.choreographer import (
+from robofleet.foundation.policy import lifecycle as spec_module
+from robofleet.services.gateway.choreographer import (
     Choreographer,
     ChoreographerDeps,
     pr_review,
@@ -161,7 +161,7 @@ async def test_pr_pass_still_blocked_on_in_scope_codeql_failure() -> None:
     intends_to_touch still blocks — the scope gate only excuses genuinely
     out-of-bounds findings."""
     reviewer_id = uuid4()
-    t_before = _t(intends_to_touch=["roboco/services/foo.py"])
+    t_before = _t(intends_to_touch=["robofleet/services/foo.py"])
     c = _make_choreographer()
     _stub_gate_path(c, reviewer_id=reviewer_id, t_before=t_before, t_after=None)
     c.git.get_pr_ci_status = AsyncMock(

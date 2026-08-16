@@ -19,11 +19,11 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.github_app import router as github_app_router
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
-from roboco.services.github_app_auth import (
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.github_app import router as github_app_router
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
+from robofleet.services.github_app_auth import (
     GitHubAppAPIError,
     GitHubAppNotConfiguredError,
     Installation,
@@ -140,7 +140,7 @@ async def test_clear_credentials_clears_token_cache(ceo_client: AsyncClient) -> 
     """Deleting the App credentials must drop any cached installation
     token — otherwise a revoked/replaced App keeps serving a stale token
     until the cache entry's own expiry."""
-    with patch("roboco.api.routes.github_app.clear_token_cache") as mock_clear:
+    with patch("robofleet.api.routes.github_app.clear_token_cache") as mock_clear:
         resp = await ceo_client.delete("/api/github-app/credentials")
     assert resp.status_code == HTTPStatus.OK
     mock_clear.assert_called_once()
@@ -149,7 +149,7 @@ async def test_clear_credentials_clears_token_cache(ceo_client: AsyncClient) -> 
 @pytest.mark.asyncio
 async def test_installations_not_configured_is_409(ceo_client: AsyncClient) -> None:
     with patch(
-        "roboco.api.routes.github_app.list_installations",
+        "robofleet.api.routes.github_app.list_installations",
         AsyncMock(side_effect=GitHubAppNotConfiguredError("nope")),
     ):
         resp = await ceo_client.get("/api/github-app/installations")
@@ -159,7 +159,7 @@ async def test_installations_not_configured_is_409(ceo_client: AsyncClient) -> N
 @pytest.mark.asyncio
 async def test_installations_upstream_error_is_502(ceo_client: AsyncClient) -> None:
     with patch(
-        "roboco.api.routes.github_app.list_installations",
+        "robofleet.api.routes.github_app.list_installations",
         AsyncMock(side_effect=GitHubAppAPIError("boom")),
     ):
         resp = await ceo_client.get("/api/github-app/installations")
@@ -169,7 +169,7 @@ async def test_installations_upstream_error_is_502(ceo_client: AsyncClient) -> N
 @pytest.mark.asyncio
 async def test_installations_returns_list(ceo_client: AsyncClient) -> None:
     with patch(
-        "roboco.api.routes.github_app.list_installations",
+        "robofleet.api.routes.github_app.list_installations",
         AsyncMock(return_value=[Installation(id=1, account_login="acme")]),
     ):
         resp = await ceo_client.get("/api/github-app/installations")
@@ -187,7 +187,7 @@ async def test_installation_repositories_returns_list(ceo_client: AsyncClient) -
         )
     ]
     with patch(
-        "roboco.api.routes.github_app.list_installation_repositories",
+        "robofleet.api.routes.github_app.list_installation_repositories",
         AsyncMock(return_value=repos),
     ):
         resp = await ceo_client.get("/api/github-app/installations/1/repositories")

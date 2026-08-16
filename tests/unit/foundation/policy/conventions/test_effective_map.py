@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from roboco.foundation.policy.conventions.effective_map import effective_map
-from roboco.foundation.policy.conventions.models import (
+from robofleet.foundation.policy.conventions.effective_map import effective_map
+from robofleet.foundation.policy.conventions.models import (
     ConventionsStandard,
     CustomRule,
     Module,

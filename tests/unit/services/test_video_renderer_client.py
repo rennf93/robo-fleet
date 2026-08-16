@@ -8,9 +8,9 @@ from pathlib import Path
 
 import httpx
 import pytest
-from roboco.config import settings as cfg
-from roboco.services import minio_client
-from roboco.services.video_renderer_client import (
+from robofleet.config import settings as cfg
+from robofleet.services import minio_client
+from robofleet.services.video_renderer_client import (
     NullVideoRenderer,
     VideoRenderer,
     VideoRendererError,

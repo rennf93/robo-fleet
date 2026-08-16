@@ -15,14 +15,14 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-from roboco.config import settings as cfg
-from roboco.db.tables import AgentTable, ProjectTable
-from roboco.foundation import identity as _foundation
-from roboco.models.base import AgentRole, AgentStatus, TaskStatus, Team
-from roboco.services.notification import NotificationService
-from roboco.services.self_heal_engine import SelfHealEngine
-from roboco.services.task import TaskService, get_task_service
-from roboco.services.telemetry import TelemetrySample
+from robofleet.config import settings as cfg
+from robofleet.db.tables import AgentTable, ProjectTable
+from robofleet.foundation import identity as _foundation
+from robofleet.models.base import AgentRole, AgentStatus, TaskStatus, Team
+from robofleet.services.notification import NotificationService
+from robofleet.services.self_heal_engine import SelfHealEngine
+from robofleet.services.task import TaskService, get_task_service
+from robofleet.services.telemetry import TelemetrySample
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 if TYPE_CHECKING:

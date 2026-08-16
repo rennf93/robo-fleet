@@ -1,4 +1,4 @@
-"""Tests for roboco.agent.git_tools: git + file FunctionTools over the worktree."""
+"""Tests for robofleet.agent.git_tools: git + file FunctionTools over the worktree."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.mark.asyncio
 async def test_read_file_round_trip(worktree: Path) -> None:
-    from roboco.agent.git_tools import read_file, write_file
+    from robofleet.agent.git_tools import read_file, write_file
 
     res = await write_file("sub/notes.txt", "hello world")
     assert res["status"] == "ok"
@@ -46,7 +46,7 @@ async def test_read_file_round_trip(worktree: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_read_file_rejects_traversal(worktree: Path) -> None:
-    from roboco.agent.git_tools import read_file
+    from robofleet.agent.git_tools import read_file
 
     (worktree.parent / "secret.txt").write_text("secret")
     res = await read_file("../secret.txt")
@@ -56,7 +56,7 @@ async def test_read_file_rejects_traversal(worktree: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_write_file_rejects_traversal(worktree: Path) -> None:
-    from roboco.agent.git_tools import write_file
+    from robofleet.agent.git_tools import write_file
 
     res = await write_file("../escaped.txt", "x")
     assert res["status"] == "error"
@@ -64,7 +64,7 @@ async def test_write_file_rejects_traversal(worktree: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_git_commit_creates_commit(worktree: Path) -> None:
-    from roboco.agent.git_tools import git_commit, write_file
+    from robofleet.agent.git_tools import git_commit, write_file
 
     await write_file("a.txt", "a")
     res = await git_commit("first commit")
@@ -80,7 +80,7 @@ async def test_git_commit_creates_commit(worktree: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_git_status_returns_porcelain(worktree: Path) -> None:
-    from roboco.agent.git_tools import git_status, write_file
+    from robofleet.agent.git_tools import git_status, write_file
 
     await write_file("uncommitted.txt", "u")
     res = await git_status()
@@ -92,7 +92,7 @@ def test_build_git_tools_returns_functiontools(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("ROBOCO_WORKSPACE_DIR", str(tmp_path))
-    from roboco.agent.git_tools import build_git_tools
+    from robofleet.agent.git_tools import build_git_tools
 
     tools = build_git_tools()
     assert len(tools) >= 5
@@ -108,7 +108,7 @@ async def test_git_push_missing_token_errors_clean(
 ) -> None:
     """git_push without a token returns an error envelope, does not hang."""
     monkeypatch.delenv("ROBOCO_GIT_TOKEN", raising=False)
-    from roboco.agent.git_tools import git_push
+    from robofleet.agent.git_tools import git_push
 
     res = await git_push(remote="origin", branch="HEAD")
     assert res["status"] == "error"
@@ -123,7 +123,7 @@ def test_worktree_falls_back_to_cwd_when_env_unset(
     env var (docker only sets cwd via -w, Cloud Run sets working_dir)."""
     monkeypatch.delenv("ROBOCO_WORKSPACE_DIR", raising=False)
     monkeypatch.chdir(tmp_path)
-    from roboco.agent.git_tools import _worktree
+    from robofleet.agent.git_tools import _worktree
 
     assert _worktree() == tmp_path.resolve()
 
@@ -137,7 +137,7 @@ async def test_read_file_works_via_cwd_fallback(
     monkeypatch.delenv("ROBOCO_WORKSPACE_DIR", raising=False)
     monkeypatch.chdir(tmp_path)
     (tmp_path / "notes.txt").write_text("hello via cwd")
-    from roboco.agent.git_tools import read_file
+    from robofleet.agent.git_tools import read_file
 
     res = await read_file("notes.txt")
     assert res["status"] == "ok"
@@ -153,6 +153,6 @@ def test_worktree_env_var_wins_over_cwd_when_set(
     explicit.mkdir()
     monkeypatch.setenv("ROBOCO_WORKSPACE_DIR", str(explicit))
     monkeypatch.chdir(tmp_path)
-    from roboco.agent.git_tools import _worktree
+    from robofleet.agent.git_tools import _worktree
 
     assert _worktree() == explicit.resolve()

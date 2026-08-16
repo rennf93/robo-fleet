@@ -9,7 +9,7 @@ switches every agent to the pre-built ``{registry}/roboco-agent-*[:tag]``.
 from __future__ import annotations
 
 import pytest
-from roboco.runtime import orchestrator as orch
+from robofleet.runtime import orchestrator as orch
 
 
 @pytest.mark.parametrize(

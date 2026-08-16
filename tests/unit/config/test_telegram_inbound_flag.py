@@ -7,8 +7,8 @@ import os
 from unittest import mock
 
 import pytest
-from roboco.config import Settings
-from roboco.services.settings import (
+from robofleet.config import Settings
+from robofleet.services.settings import (
     FEATURE_FLAGS,
     SettingValidationError,
     validate_setting,

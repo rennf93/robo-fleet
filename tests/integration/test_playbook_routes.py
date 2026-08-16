@@ -10,13 +10,13 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.playbooks import router as playbooks_router
-from roboco.db.tables import PlaybookTable
-from roboco.models import AgentRole
-from roboco.models.permissions import AgentContext
-from roboco.models.playbook import PlaybookCreate
-from roboco.services.playbook import PlaybookService
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.playbooks import router as playbooks_router
+from robofleet.db.tables import PlaybookTable
+from robofleet.models import AgentRole
+from robofleet.models.permissions import AgentContext
+from robofleet.models.playbook import PlaybookCreate
+from robofleet.services.playbook import PlaybookService
 from sqlalchemy import select as _select
 
 if TYPE_CHECKING:

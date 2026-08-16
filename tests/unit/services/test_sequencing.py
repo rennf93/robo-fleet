@@ -13,11 +13,11 @@ from dataclasses import dataclass, field
 from uuid import uuid4
 
 import pytest
-from roboco.foundation.policy.sequencing.models import (
+from robofleet.foundation.policy.sequencing.models import (
     DraftSurface,
     SequencingError,
 )
-from roboco.services.sequencing import (
+from robofleet.services.sequencing import (
     SequencingService,
     by_osmosis_tail_dev_tasks,
     cell_task_wave_chain_depends_on,

@@ -20,18 +20,18 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from roboco.db.tables import AgentTable, ProjectTable, WorkSessionTable
-from roboco.models import AgentRole, AgentStatus, Team
-from roboco.models.base import (
+from robofleet.db.tables import AgentTable, ProjectTable, WorkSessionTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import (
     Complexity,
     TaskNature,
     TaskStatus,
     TaskType,
 )
-from roboco.models.task import TaskCreateRequest
-from roboco.models.work_session import WorkSessionStatus
-from roboco.services.learning import LearningScope
-from roboco.services.task import (
+from robofleet.models.task import TaskCreateRequest
+from robofleet.models.work_session import WorkSessionStatus
+from robofleet.services.learning import LearningScope
+from robofleet.services.task import (
     TaskService,
     _CompletionSnapshot,
 )
@@ -332,7 +332,7 @@ async def test_extract_completion_learnings_calls_record(
         return fake_learning_svc
 
     monkeypatch.setattr(
-        "roboco.services.learning.get_learning_service",
+        "robofleet.services.learning.get_learning_service",
         _get_learning_service,
     )
     await svc._extract_completion_learnings(task, task_setup["agent_id"])
@@ -350,7 +350,7 @@ async def test_extract_completion_learnings_swallows_errors(
     async def _bad() -> None:
         raise RuntimeError("boom")
 
-    monkeypatch.setattr("roboco.services.learning.get_learning_service", _bad)
+    monkeypatch.setattr("robofleet.services.learning.get_learning_service", _bad)
     # Should not raise
     await svc._extract_completion_learnings(task, task_setup["agent_id"])
 
@@ -371,7 +371,7 @@ async def test_index_code_changes_with_files(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     commits = [{"files": ["a.py", "b.py"]}, {"files": ["a.py"]}]
     await svc._index_code_changes_background(uuid4(), commits, "roboco")
     fake_optimal.index_code.assert_awaited_once()
@@ -388,7 +388,7 @@ async def test_index_code_changes_with_no_files(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     # Empty list of files
     await svc._index_code_changes_background(uuid4(), [], "roboco")
     fake_optimal.index_code.assert_not_awaited()
@@ -403,7 +403,7 @@ async def test_index_code_changes_swallows_errors(
     async def _bad() -> None:
         raise RuntimeError("optimal down")
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _bad)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _bad)
     # Should not raise
     await svc._index_code_changes_background(uuid4(), [{"files": ["a.py"]}], "p")
 
@@ -433,7 +433,7 @@ async def test_index_decisions_with_notes_calls_index(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     notes = "We decided to refactor the auth flow. Reasoning: it was buggy."
     await svc._index_decisions_background(
         uuid4(), "title", Team.BACKEND, notes, uuid4()
@@ -450,7 +450,7 @@ async def test_index_decisions_swallows_errors(
     async def _bad() -> None:
         raise RuntimeError("oops")
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _bad)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _bad)
     # Should not raise
     await svc._index_decisions_background(
         uuid4(),
@@ -477,7 +477,7 @@ async def test_index_docs_with_paths_calls_index(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     docs = [{"path": "doc1.md"}, {"path": "doc2.md"}]
     task_id = uuid4()
     await svc._index_docs_background(task_id, docs)
@@ -502,7 +502,7 @@ async def test_index_docs_swallows_errors(
     async def _bad() -> None:
         raise RuntimeError("oops")
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _bad)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _bad)
     # Should not raise
     await svc._index_docs_background(uuid4(), [{"path": "x.md"}])
 
@@ -517,7 +517,7 @@ async def test_capture_workspace_docs_lands_missing_doc(
     """A doc that lives only in the agent's clone is read out of the branch and
     written under DOCS_BASE_PATH so the indexer can see it."""
     svc = task_setup["svc"]
-    monkeypatch.setattr("roboco.services.docs.DOCS_BASE_PATH", tmp_path)
+    monkeypatch.setattr("robofleet.services.docs.DOCS_BASE_PATH", tmp_path)
     task = await svc.create(_req(task_setup))
     task.branch_name = "feature/backend/abc"
     task.assigned_to = task_setup["agent_id"]
@@ -525,7 +525,7 @@ async def test_capture_workspace_docs_lands_missing_doc(
 
     fake_git = MagicMock()
     fake_git.read_file_at_branch = AsyncMock(return_value="# Guide\ncontent\n")
-    monkeypatch.setattr("roboco.services.git.get_git_service", lambda _s: fake_git)
+    monkeypatch.setattr("robofleet.services.git.get_git_service", lambda _s: fake_git)
 
     await svc._capture_workspace_docs(
         task.id, [{"path": "guide.md"}], task_setup["agent_id"]
@@ -545,7 +545,7 @@ async def test_capture_workspace_docs_skips_doc_already_on_server(
     """A doc already under DOCS_BASE_PATH (written via roboco_docs_write) is not
     re-fetched from the branch."""
     svc = task_setup["svc"]
-    monkeypatch.setattr("roboco.services.docs.DOCS_BASE_PATH", tmp_path)
+    monkeypatch.setattr("robofleet.services.docs.DOCS_BASE_PATH", tmp_path)
     (tmp_path / "api.md").write_text("already here", encoding="utf-8")
     task = await svc.create(_req(task_setup))
     task.branch_name = "feature/backend/abc"
@@ -554,7 +554,7 @@ async def test_capture_workspace_docs_skips_doc_already_on_server(
 
     fake_git = MagicMock()
     fake_git.read_file_at_branch = AsyncMock(return_value="should not be used")
-    monkeypatch.setattr("roboco.services.git.get_git_service", lambda _s: fake_git)
+    monkeypatch.setattr("robofleet.services.git.get_git_service", lambda _s: fake_git)
 
     await svc._capture_workspace_docs(
         task.id, [{"path": "api.md"}], task_setup["agent_id"]
@@ -580,7 +580,7 @@ async def test_index_qa_review_calls_record_review(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     dev_id = uuid4()
     await svc._index_qa_review_background(
         uuid4(),
@@ -601,7 +601,7 @@ async def test_index_qa_review_swallows_errors(
     async def _bad() -> None:
         raise RuntimeError("oops")
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _bad)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _bad)
     await svc._index_qa_review_background(
         uuid4(), None, passed=False, qa_notes="x", qa_agent_id=None
     )
@@ -618,7 +618,7 @@ async def test_index_qa_errors_calls_index_error(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     await svc._index_qa_errors_background(
         uuid4(),
         "task title",
@@ -637,7 +637,7 @@ async def test_index_qa_errors_swallows_errors(
     async def _bad() -> None:
         raise RuntimeError("oops")
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _bad)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _bad)
     await svc._index_qa_errors_background(uuid4(), "t", Team.BACKEND, "notes")
 
 
@@ -657,7 +657,7 @@ async def test_index_blocker_calls_index_error(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     await svc._index_blocker_background(
         uuid4(),
         Team.BACKEND,
@@ -680,7 +680,7 @@ async def test_index_blocker_swallows_errors(
     async def _bad() -> None:
         raise RuntimeError("oops")
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _bad)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _bad)
     await svc._index_blocker_background(uuid4(), Team.BACKEND, {})
 
 
@@ -700,7 +700,7 @@ async def test_index_lifecycle_event_calls_index_journal(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     await svc._index_lifecycle_event_background(
         uuid4(),
         "block",
@@ -722,7 +722,7 @@ async def test_index_lifecycle_event_no_team(
     async def _get_optimal() -> Any:
         return fake_optimal
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     await svc._index_lifecycle_event_background(
         uuid4(), "cancel", "title", task_team=None
     )
@@ -738,7 +738,7 @@ async def test_index_lifecycle_event_swallows_errors(
     async def _bad() -> None:
         raise RuntimeError("oops")
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _bad)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _bad)
     await svc._index_lifecycle_event_background(
         uuid4(), "cancel", "title", task_team=None
     )
@@ -783,7 +783,7 @@ async def test_close_work_session_for_task_calls_close(
     fake_ws_svc = MagicMock()
     fake_ws_svc.close = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.work_session.get_work_session_service",
+        "robofleet.services.work_session.get_work_session_service",
         lambda _s: fake_ws_svc,
     )
     await svc._close_work_session_for_task(task, reason="completed")
@@ -848,7 +848,7 @@ async def test_delete_task_branch_swallows_git_errors(
 
     fake_git = MagicMock()
     fake_git.delete_task_branch = AsyncMock(side_effect=RuntimeError("git fail"))
-    monkeypatch.setattr("roboco.services.git.get_git_service", lambda _s: fake_git)
+    monkeypatch.setattr("robofleet.services.git.get_git_service", lambda _s: fake_git)
     # Should not raise
     await svc._delete_task_branch_best_effort(task)
 
@@ -892,7 +892,7 @@ async def test_abandon_work_session_for_task_invokes_abandon(
     fake_ws = MagicMock()
     fake_ws.abandon = AsyncMock()
     monkeypatch.setattr(
-        "roboco.services.work_session.get_work_session_service",
+        "robofleet.services.work_session.get_work_session_service",
         lambda _s: fake_ws,
     )
     await svc._abandon_work_session_for_task(task, reason="cancelled")
@@ -907,7 +907,7 @@ async def test_abandon_work_session_best_effort_swallows_errors(
     fake_ws = MagicMock()
     fake_ws.abandon = AsyncMock(side_effect=RuntimeError("ws fail"))
     monkeypatch.setattr(
-        "roboco.services.work_session.WorkSessionService",
+        "robofleet.services.work_session.WorkSessionService",
         lambda _s: fake_ws,
     )
     # Should not raise
@@ -945,8 +945,10 @@ async def test_trigger_completion_hooks_with_commits_and_notes(
     async def _get_learning() -> Any:
         return fake_learning
 
-    monkeypatch.setattr("roboco.services.optimal.get_optimal_service", _get_optimal)
-    monkeypatch.setattr("roboco.services.learning.get_learning_service", _get_learning)
+    monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
+    monkeypatch.setattr(
+        "robofleet.services.learning.get_learning_service", _get_learning
+    )
     # Just runs all 3 hook spawners
     await svc._trigger_completion_hooks(task, task_setup["agent_id"])
 

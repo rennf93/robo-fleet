@@ -13,7 +13,7 @@ import json
 from typing import Any
 from unittest.mock import AsyncMock
 
-from roboco.services.gateway.rate_limit_tracker import RateLimitStateTracker
+from robofleet.services.gateway.rate_limit_tracker import RateLimitStateTracker
 
 # ---------------------------------------------------------------------------
 # Helpers

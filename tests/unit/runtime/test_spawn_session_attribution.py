@@ -9,7 +9,7 @@ spawn recorder so the warning fires only for the genuine signal.
 
 from __future__ import annotations
 
-from roboco.runtime.orchestrator import is_unattributed_delivery_spawn
+from robofleet.runtime.orchestrator import is_unattributed_delivery_spawn
 
 
 def test_developer_spawn_without_task_is_unattributed() -> None:

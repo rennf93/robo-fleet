@@ -15,7 +15,7 @@ set -euo pipefail
 # `python -m` resolves the INSTALLED roboco package: dev/doc/qa agents run at
 # their workspace-clone cwd, whose own roboco/ dir would shadow it on the
 # sys.path front (the same ModuleNotFound lesson the grok entrypoint documents).
-( cd /app && python -m roboco.llm.providers.codex_cli_config )
+( cd /app && python -m robofleet.llm.providers.codex_cli_config )
 
 CODEX_ARGS_FILE="${ROBOCO_CODEX_ARGS_FILE:-/tmp/roboco-codex-args}"
 mapfile -t CODEX_ARGS < "$CODEX_ARGS_FILE"
@@ -27,7 +27,7 @@ CODEX_PROMPT_FILE="${ROBOCO_CODEX_PROMPT_FILE:-/tmp/roboco-codex-prompt.txt}"
 # combined prompt file the render step above wrote. Screens the RAW task
 # prompt only (the composed role blueprint folded into that file is already
 # trusted), same scope as the grok guard call. Run from /app too.
-if ! ( cd /app && python -m roboco.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
+if ! ( cd /app && python -m robofleet.agent_sdk.prompt_guard "${ROBOCO_INITIAL_PROMPT:-}" ); then
   echo "Refusing to run: task prompt matched a prompt-injection pattern." >&2
   exit 1
 fi
@@ -49,7 +49,7 @@ fi
 # the image's own ~/.codex. `rm -f` first in case the image baked a stub.
 rm -f /home/agent/.codex/auth.json
 ln -s /home/agent/.codex-auth-ro/auth.json /home/agent/.codex/auth.json
-if ! ( cd /app && python -m roboco.llm.providers.codex_auth --check ); then
+if ! ( cd /app && python -m robofleet.llm.providers.codex_auth --check ); then
   echo "[codex] auth token missing or expired — refusing to run. Refresh" \
     "~/.codex/auth.json (orchestrator auto-refresh or 'codex login' on the" \
     "host)." >&2
@@ -87,7 +87,7 @@ set -e
 # never fails the run. Run from /app for the same module-resolution reason as
 # the render above.
 ( cd /app && ROBOCO_CODEX_RUN_LOG="$RUN_LOG" \
-    python -m roboco.llm.providers.codex_cli_usage ) || true
+    python -m robofleet.llm.providers.codex_cli_usage ) || true
 
 # Codex has NO exit-code taxonomy — every failure exits 1, so a rate-limit or
 # an expired-mid-run auth failure looks identical to any other error at the
@@ -105,7 +105,7 @@ set -e
 #   - auth failure (an expired/rotated token discovered mid-run, past the
 #     --check backstop above) -> exit 78 (EX_CONFIG): parked the same way as a
 #     pre-run auth miss.
-SNIFF="$( (cd /app && python -m roboco.llm.providers.codex_cli_sniff "$RUN_LOG" "$ERR_LOG") 2>/dev/null || true)"
+SNIFF="$( (cd /app && python -m robofleet.llm.providers.codex_cli_sniff "$RUN_LOG" "$ERR_LOG") 2>/dev/null || true)"
 if [ "$SNIFF" = "rate_limit" ]; then
   echo "[codex] rate-limited — exiting 75 so the orchestrator parks the" \
     "provider; the task is retried when the limit lifts." >&2

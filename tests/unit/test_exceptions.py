@@ -1,4 +1,4 @@
-"""roboco.exceptions coverage — every concrete exception's __init__ path.
+"""robofleet.exceptions coverage — every concrete exception's __init__ path.
 
 Exercises every `__init__` branch (with and without optional `details`)
 and verifies `to_dict` shape on the base class. Pure construction tests —
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from roboco.exceptions import (
+from robofleet.exceptions import (
     AgentError,
     AuthenticationError,
     DatabaseError,

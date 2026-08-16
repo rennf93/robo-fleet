@@ -6,12 +6,12 @@ import json
 
 import httpx
 import pytest
-from roboco.services.telegram_client import (
+from robofleet.services.telegram_client import (
     LiveTelegramClient,
     NullTelegramClient,
     build_telegram_client,
 )
-from roboco.services.telegram_credentials import TelegramCredentialsData
+from robofleet.services.telegram_credentials import TelegramCredentialsData
 
 _CREDS = TelegramCredentialsData(bot_token="123456:ABC", chat_id="987654321")
 

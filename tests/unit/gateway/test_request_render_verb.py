@@ -17,10 +17,13 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.foundation.policy.content import markers
-from roboco.services.gateway.content_actions import ContentActions, ContentActionsDeps
-from roboco.services.video_renderer_client import VideoRendererError
+from robofleet.config import settings
+from robofleet.foundation.policy.content import markers
+from robofleet.services.gateway.content_actions import (
+    ContentActions,
+    ContentActionsDeps,
+)
+from robofleet.services.video_renderer_client import VideoRendererError
 
 
 def _make_actions(
@@ -74,7 +77,7 @@ def _stub_project(
     project_service = MagicMock()
     project_service.get = AsyncMock(return_value=project)
     monkeypatch.setattr(
-        "roboco.services.project.get_project_service", lambda _s: project_service
+        "robofleet.services.project.get_project_service", lambda _s: project_service
     )
     return project
 
@@ -92,7 +95,7 @@ def _stub_renderer(
     else:
         renderer.render_frames = AsyncMock(return_value=(frames_tar_gz, duration))
     monkeypatch.setattr(
-        "roboco.services.video_renderer_client.get_video_renderer",
+        "robofleet.services.video_renderer_client.get_video_renderer",
         lambda: renderer,
     )
     return renderer

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from roboco.foundation.identity import Team
-from roboco.foundation.policy.content.models import TaskDescription, WorkUnit
+from robofleet.foundation.identity import Team
+from robofleet.foundation.policy.content.models import TaskDescription, WorkUnit
 
 
 def _desc(**overrides: Any) -> TaskDescription:

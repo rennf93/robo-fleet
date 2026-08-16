@@ -21,9 +21,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from roboco.config import settings
-from roboco.models.base import PlaybookStatus
-from roboco.services.playbook import PlaybookService
+from robofleet.config import settings
+from robofleet.models.base import PlaybookStatus
+from robofleet.services.playbook import PlaybookService
 
 
 def _mock_playbook(
@@ -67,7 +67,7 @@ async def test_archive_archives_but_does_not_deindex_inline(
     optimal.unindex_playbook = AsyncMock(return_value=None)
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
     ):
@@ -92,7 +92,7 @@ async def test_unindex_playbook_deindexes_approved_playbook(
     optimal.unindex_playbook = AsyncMock(return_value=None)
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
     ):
@@ -116,7 +116,7 @@ async def test_unindex_playbook_skips_when_org_memory_disabled(
     optimal.unindex_playbook = AsyncMock(return_value=None)
     with (
         patch(
-            "roboco.services.optimal.get_optimal_service",
+            "robofleet.services.optimal.get_optimal_service",
             AsyncMock(return_value=optimal),
         ),
     ):

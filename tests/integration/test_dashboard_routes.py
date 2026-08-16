@@ -12,20 +12,20 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from roboco.api.deps import get_agent_context, get_db
-from roboco.api.routes.dashboard import get_main_pm_kanban
-from roboco.api.routes.dashboard import router as dashboard_router
-from roboco.db.tables import AgentTable, ProjectTable, TaskTable
-from roboco.models import AgentRole, AgentStatus
-from roboco.models.base import (
+from robofleet.api.deps import get_agent_context, get_db
+from robofleet.api.routes.dashboard import get_main_pm_kanban
+from robofleet.api.routes.dashboard import router as dashboard_router
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models import AgentRole, AgentStatus
+from robofleet.models.base import (
     Complexity,
     TaskNature,
     TaskStatus,
     TaskType,
     Team,
 )
-from roboco.models.permissions import AgentContext
-from roboco.services.dashboard import reset_storage
+from robofleet.models.permissions import AgentContext
+from robofleet.services.dashboard import reset_storage
 from sqlalchemy import select
 
 if TYPE_CHECKING:

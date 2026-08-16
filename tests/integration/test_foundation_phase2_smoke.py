@@ -7,10 +7,12 @@ import importlib
 from pathlib import Path
 
 import pytest
-from roboco.foundation.policy import lifecycle as spec
-from roboco.foundation.policy import tracing
+from robofleet.foundation.policy import lifecycle as spec
+from robofleet.foundation.policy import tracing
 
-_GATEWAY_DIR = Path(__file__).resolve().parents[2] / "roboco" / "services" / "gateway"
+_GATEWAY_DIR = (
+    Path(__file__).resolve().parents[2] / "robofleet" / "services" / "gateway"
+)
 
 
 def _enclosing_function(tree: ast.AST, lineno: int) -> str | None:
@@ -65,7 +67,7 @@ def test_no_inline_has_decision_for_task_remains_in_choreographer() -> None:
 
 def test_tracing_gate_module_removed() -> None:
     with pytest.raises(ModuleNotFoundError):
-        importlib.import_module("roboco.services.gateway.tracing_gate")
+        importlib.import_module("robofleet.services.gateway.tracing_gate")
 
 
 def test_every_intent_verb_has_tracing_decision() -> None:

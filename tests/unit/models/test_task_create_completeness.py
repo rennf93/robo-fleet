@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
-from roboco.models.task import TaskCreate
+from robofleet.models.task import TaskCreate
 
 
 def _ok_payload() -> dict:

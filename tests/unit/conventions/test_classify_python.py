@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from roboco.conventions.classify_python import classify_definitions
+from robofleet.conventions.classify_python import classify_definitions
 
 
 def test_pydantic_model_is_classified_model() -> None:

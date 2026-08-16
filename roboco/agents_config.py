@@ -34,6 +34,7 @@ import time
 from dataclasses import dataclass
 from typing import Final
 
+from roboco.config import settings
 from roboco.foundation import identity as _foundation
 from roboco.foundation.policy import communications as _comms
 from roboco.models.base import NotificationPriority, NotificationType
@@ -45,10 +46,34 @@ from roboco.seeds.initial_data import AGENT_UUIDS, CEO_AGENT_ID
 #   python -c 'import secrets; print(secrets.token_hex(32))'
 _AUTH_SECRET_ENV: Final[str] = "ROBOCO_AGENT_AUTH_SECRET"
 
+# Process-wide cache of the Secret Manager auth secret; fetched once since
+# the secret is stable for the process lifetime and a GCP round-trip per
+# token verify would rate-limit and add latency to every gateway call.
+# Uses a one-slot dict so the cached value (incl. "") is mutable without a
+# ``global`` statement.
+_auth_secret_cache: dict[str, str] = {}
+
 
 def _auth_secret() -> bytes | None:
-    """Return the HMAC secret bytes, or None when unset."""
-    v = os.environ.get(_AUTH_SECRET_ENV, "")
+    """Return the HMAC secret bytes, or None when unset.
+
+    When ``settings.gcp_project_id`` is armed (the GCP arming signal; the
+    ``gcp_secret_manager_prefix`` field defaults to ``roboco`` and is only a
+    naming prefix, not an on/off switch) the secret is read from Secret
+    Manager (``{prefix}-agent-auth-secret``) once per process; otherwise the
+    env var path is unchanged.
+    """
+    if settings.gcp_project_id:
+        if "v" not in _auth_secret_cache:
+            from roboco.infra.secretmanager import access_secret
+
+            try:
+                _auth_secret_cache["v"] = access_secret("agent-auth-secret") or ""
+            except Exception:
+                _auth_secret_cache["v"] = ""
+        v = _auth_secret_cache.get("v", "")
+    else:
+        v = os.environ.get(_AUTH_SECRET_ENV, "")
     return v.encode("utf-8") if v else None
 
 

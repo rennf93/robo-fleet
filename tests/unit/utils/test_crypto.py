@@ -83,6 +83,7 @@ def test_get_fernet_raises_when_key_unset() -> None:
         pytest.raises(EncryptionError, match="ROBOCO_ENCRYPTION_KEY"),
     ):
         mock_settings.encryption_key = ""
+        mock_settings.gcp_project_id = ""
         _get_fernet()
 
 

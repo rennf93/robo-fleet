@@ -22,17 +22,32 @@ def _get_fernet() -> Fernet:
     """
     Get Fernet instance with master encryption key.
 
+    When ``settings.gcp_project_id`` is armed (the GCP arming signal) and the
+    env Field is empty, the key is read from Secret Manager
+    (``{prefix}-fernet-key``); otherwise the env ``encryption_key`` Field is
+    used as before.
+
     Raises:
         EncryptionError: If encryption key is not configured
     """
-    if not settings.encryption_key:
+    key = settings.encryption_key
+    if not key and settings.gcp_project_id:
+        from roboco.infra.secretmanager import access_secret
+
+        try:
+            key = access_secret("fernet-key")
+        except Exception as e:
+            raise EncryptionError(
+                f"Failed to read fernet-key from Secret Manager: {e}"
+            ) from e
+    if not key:
         raise EncryptionError(
             "ROBOCO_ENCRYPTION_KEY is not configured. "
             "Generate one with: python -c 'from cryptography.fernet "
             "import Fernet; print(Fernet.generate_key().decode())'"
         )
     try:
-        return Fernet(settings.encryption_key.encode())
+        return Fernet(key.encode())
     except Exception as e:
         raise EncryptionError(f"Invalid encryption key format: {e}") from e
 
@@ -101,7 +116,7 @@ def decrypt_token(encrypted: str) -> str:
 
 def is_encryption_configured() -> bool:
     """Check if encryption is properly configured."""
-    if not settings.encryption_key:
+    if not settings.encryption_key and not settings.gcp_project_id:
         return False
     try:
         _get_fernet()

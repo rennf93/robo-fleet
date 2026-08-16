@@ -7,14 +7,12 @@ a local file at ``gs://{bucket}/renders/{basename}`` and returns the URI.
 
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import MagicMock
 
-import pytest
 from roboco.infra import gcs_storage
 
 
-def test_upload_calls_blob_upload_from_filename(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_upload_calls_blob_upload_from_filename(tmp_path) -> None:
     local = tmp_path / "render.mp4"
     local.write_bytes(b"data")
 
@@ -32,7 +30,7 @@ def test_upload_calls_blob_upload_from_filename(tmp_path, monkeypatch: pytest.Mo
     assert uri == "gs://my-bucket/renders/render.mp4"
 
 
-def test_download_calls_blob_download_to_filename(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_download_calls_blob_download_to_filename(tmp_path) -> None:
     fake_blob = MagicMock()
     fake_bucket = MagicMock()
     fake_bucket.blob.return_value = fake_blob
@@ -47,7 +45,7 @@ def test_download_calls_blob_download_to_filename(tmp_path, monkeypatch: pytest.
     fake_blob.download_to_filename.assert_called_once_with(str(dest))
 
 
-def test_presigned_url_calls_generate_signed_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_presigned_url_calls_generate_signed_url() -> None:
     fake_blob = MagicMock()
     fake_blob.generate_signed_url.return_value = "https://signed.example/x"
     fake_bucket = MagicMock()
@@ -82,7 +80,7 @@ def test_upload_render_uploads_to_renders_prefix(tmp_path) -> None:
 
 def test_gcs_storage_imports_clean() -> None:
     """Bare import never requires creds; client is lazy."""
-    from roboco.infra.gcs_storage import GcsStorage  # noqa: F401
+    from roboco.infra.gcs_storage import GcsStorage
 
     store = GcsStorage.__new__(GcsStorage)
     assert store is not None

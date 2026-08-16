@@ -16,7 +16,13 @@ from typing import Literal
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import Field, ValidationInfo, computed_field, field_validator, model_validator
+from pydantic import (
+    Field,
+    ValidationInfo,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -210,9 +216,13 @@ class Settings(BaseSettings):
     gcp_cloudsql_instance: str = Field(
         default="", description="Cloud SQL instance connection name (proj:region:inst)."
     )
-    gcp_memorystore_host: str = Field(default="", description="Memorystore for Redis host.")
+    gcp_memorystore_host: str = Field(
+        default="", description="Memorystore for Redis host."
+    )
     gcp_memorystore_port: int = Field(default=6379)
-    gcp_memorystore_tls: bool = Field(default=True, description="Use TLS to Memorystore.")
+    gcp_memorystore_tls: bool = Field(
+        default=True, description="Use TLS to Memorystore."
+    )
     gcp_filestore_share: str = Field(
         default="", description="Filestore NFS share path mounted as workspaces root."
     )

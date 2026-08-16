@@ -41,9 +41,7 @@ async def test_stop_routes_through_provider_when_registered() -> None:
     orch_obj._instances = {"be-dev-1": inst}
     orch_obj._provider_for_instance = MagicMock(return_value=fake_provider)
 
-    await AgentOrchestrator.stop_agent(
-        orch_obj, "be-dev-1", release_claim=False
-    )
+    await AgentOrchestrator.stop_agent(orch_obj, "be-dev-1", release_claim=False)
 
     fake_provider.stop.assert_awaited_once()
     # The docker stop/kill path runs asyncio.create_subprocess_exec("docker", ...)
@@ -60,9 +58,7 @@ async def test_provider_for_instance_returns_none_for_docker() -> None:
     orch_obj._instances = {"be-dev-1": inst}
     orch_obj._provider_for = MagicMock(return_value=None)
 
-    assert (
-        AgentOrchestrator._provider_for_instance(orch_obj, "be-dev-1") is None
-    )
+    assert AgentOrchestrator._provider_for_instance(orch_obj, "be-dev-1") is None
 
 
 @pytest.mark.asyncio

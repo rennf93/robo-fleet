@@ -125,7 +125,8 @@ class CloudRunJobsProvider(AgentProvider):
         client = _executions_client()
         try:
             exe = await asyncio.to_thread(
-                client.get_execution, request=run_v2.GetExecutionRequest(name=instance_id)
+                client.get_execution,
+                request=run_v2.GetExecutionRequest(name=instance_id),
             )
             # Cloud Run v2 has no ExecutionStatus enum; an execution is alive
             # while completion_time is unset.

@@ -1652,6 +1652,20 @@ class Settings(BaseSettings):
         default="/data/workspaces",
         description="Root directory for all agent workspaces",
     )
+
+    @model_validator(mode="after")
+    def _apply_filestore_workspaces_root(self) -> "Settings":
+        """When ``gcp_filestore_share`` is armed it overrides workspaces_root.
+
+        Filestore NFS share path IS the workspaces root when GCP is armed;
+        the plain ``/data/workspaces`` default (or env override) is unchanged
+        when the GCP field is empty. ``WorkspaceService.ensure_workspace``
+        already does plain git clones on the path; NFS just needs the mount
+        present at deploy time (no code change there).
+        """
+        if self.gcp_filestore_share:
+            self.workspaces_root = self.gcp_filestore_share
+        return self
     workspace_auto_clone: bool = Field(
         default=True,
         description="Automatically clone repos when workspace is first accessed",

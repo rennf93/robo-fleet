@@ -69,3 +69,22 @@ def test_redis_url_uses_memorystore_host_over_redis_host(
 
     s = Settings()
     assert s.redis_url.startswith("rediss://:secret@memorystore.example:")
+
+
+# --- Task 4.5: Filestore workspaces root ---
+
+
+def test_workspaces_root_uses_filestore_when_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    """gcp_filestore_share overrides workspaces_root when set."""
+    monkeypatch.setenv("ROBOCO_GCP_FILESTORE_SHARE", "/mnt/fileshare/workspaces")
+
+    s = Settings()
+    assert s.workspaces_root == "/mnt/fileshare/workspaces"
+
+
+def test_workspaces_root_default_when_filestore_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Default /data/workspaces when gcp_filestore_share is empty."""
+    monkeypatch.delenv("ROBOCO_GCP_FILESTORE_SHARE", raising=False)
+
+    s = Settings()
+    assert s.workspaces_root == "/data/workspaces"

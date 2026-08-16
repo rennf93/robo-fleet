@@ -509,9 +509,9 @@ services:
       # Database (use container name, not localhost)
       ROBOFLEET_DATABASE_HOST: robofleet-postgres
       ROBOFLEET_DATABASE_PORT: 5432
-      ROBOFLEET_DATABASE_USER: roboco
-      ROBOFLEET_DATABASE_PASSWORD: roboco
-      ROBOFLEET_DATABASE_NAME: roboco
+      ROBOFLEET_DATABASE_USER: robofleet
+      ROBOFLEET_DATABASE_PASSWORD: robofleet
+      ROBOFLEET_DATABASE_NAME: robofleet
       # Redis (use container name)
       ROBOFLEET_REDIS_HOST: robofleet-redis
       ROBOFLEET_REDIS_PORT: 6379

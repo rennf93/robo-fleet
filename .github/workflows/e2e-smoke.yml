@@ -58,13 +58,13 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: roboco
-          POSTGRES_PASSWORD: roboco
-          POSTGRES_DB: roboco
+          POSTGRES_USER: robofleet
+          POSTGRES_PASSWORD: robofleet
+          POSTGRES_DB: robofleet
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U roboco"
+          --health-cmd "pg_isready -U robofleet"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -72,14 +72,14 @@ jobs:
     env:
       ROBOFLEET_DATABASE_HOST: localhost
       ROBOFLEET_DATABASE_PORT: '5432'
-      ROBOFLEET_DATABASE_USER: roboco
-      ROBOFLEET_DATABASE_PASSWORD: roboco
-      ROBOFLEET_DATABASE_NAME: roboco
+      ROBOFLEET_DATABASE_USER: robofleet
+      ROBOFLEET_DATABASE_PASSWORD: robofleet
+      ROBOFLEET_DATABASE_NAME: robofleet
       ROBOFLEET_ENCRYPTION_KEY: 'yp3Awiv0zmxpRa6Gi9Y9hJbi4pZ2FXHRNr4EI6-Gx9U='
       ROBOFLEET_TEST_DB_HOST: localhost
       ROBOFLEET_TEST_DB_PORT: '5432'
-      ROBOFLEET_TEST_DB_USER: roboco
-      ROBOFLEET_TEST_DB_PASSWORD: roboco
+      ROBOFLEET_TEST_DB_USER: robofleet
+      ROBOFLEET_TEST_DB_PASSWORD: robofleet
       ROBOFLEET_TEST_DB_ADMIN_DB: postgres
 
     steps:

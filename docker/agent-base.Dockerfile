@@ -28,7 +28,7 @@ ENV UV_HTTP_TIMEOUT=300 \
 COPY pyproject.toml uv.lock README.md /app/
 RUN uv sync --frozen --no-dev --no-install-project
 
-COPY roboco /app/roboco
+COPY robofleet /app/robofleet
 RUN uv sync --frozen --no-dev
 
 # ---- Runner -----------------------------------------------------------------
@@ -70,7 +70,7 @@ WORKDIR /app
 # change doesn't bust the much larger .venv layer's cache.
 COPY --from=builder --chown=agent:agent /app/.venv /app/.venv
 COPY --from=builder --chown=agent:agent /app/pyproject.toml /app/uv.lock /app/README.md /app/
-COPY --from=builder --chown=agent:agent /app/roboco /app/roboco
+COPY --from=builder --chown=agent:agent /app/robofleet /app/robofleet
 
 # Hook scripts: 0755 so the `agent` user (not root) can read+execute them.
 # SessionStart hook runs these as agent; stricter perms break the hook with

@@ -32,7 +32,7 @@ COPY pyproject.toml uv.lock README.md /app/
 RUN uv sync --frozen --no-dev --no-install-project
 
 # Project layer
-COPY roboco /app/roboco
+COPY robofleet /app/robofleet
 COPY agents /app/agents
 COPY docs /app/docs
 COPY alembic.ini /app/
@@ -77,7 +77,7 @@ WORKDIR /app
 # change doesn't bust the much larger .venv layer's cache.
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/pyproject.toml /app/uv.lock /app/README.md /app/
-COPY --from=builder /app/roboco /app/roboco
+COPY --from=builder /app/robofleet /app/robofleet
 COPY --from=builder /app/agents /app/agents
 COPY --from=builder /app/docs /app/docs
 COPY --from=builder /app/alembic.ini /app/
@@ -108,5 +108,5 @@ ENV PATH="/app/.venv/bin:$PATH" \
 EXPOSE 8000
 
 # Smart dispatcher spawns agents on-demand. Override with --spawn to pre-start.
-ENTRYPOINT ["python", "-m", "roboco.cli"]
+ENTRYPOINT ["python", "-m", "robofleet.cli"]
 CMD []

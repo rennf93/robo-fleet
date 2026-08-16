@@ -34,7 +34,7 @@ ENV UV_HTTP_TIMEOUT=300 \
 COPY pyproject.toml uv.lock README.md /app/
 RUN uv sync --frozen --no-dev --no-install-project
 
-COPY roboco /app/roboco
+COPY robofleet /app/robofleet
 RUN uv sync --frozen --no-dev
 
 # Non-root user + git safe.directory (worktrees arrive owned by the
@@ -47,4 +47,4 @@ USER agent
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 
-ENTRYPOINT ["python", "-m", "roboco.agent.adk_entry"]
+ENTRYPOINT ["python", "-m", "robofleet.agent.adk_entry"]

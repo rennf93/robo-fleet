@@ -77,7 +77,8 @@ async def git_commit(message: str) -> dict[str, Any]:
     res = _git(["commit", "-m", message])
     if res.returncode != 0:
         return _err(res.stderr.strip() or res.stdout.strip())
-    return _ok(sha=res.stdout.splitlines()[0] if res.stdout else "")
+    sha_res = _git(["rev-parse", "HEAD"])
+    return _ok(sha=sha_res.stdout.strip())
 
 
 async def git_status() -> dict[str, Any]:

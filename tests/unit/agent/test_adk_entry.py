@@ -1,4 +1,4 @@
-"""Tests for roboco.agent.adk_entry — ADK runner loop, usage report, exit codes."""
+"""Tests for roboco.agent.adk_entry: ADK runner loop, usage report, exit codes."""
 
 from __future__ import annotations
 

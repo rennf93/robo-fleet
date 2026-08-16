@@ -1,4 +1,4 @@
-"""Tests for roboco.agent.git_tools — git + file FunctionTools over the worktree."""
+"""Tests for roboco.agent.git_tools: git + file FunctionTools over the worktree."""
 
 from __future__ import annotations
 

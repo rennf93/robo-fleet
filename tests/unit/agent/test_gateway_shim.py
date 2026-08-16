@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 import httpx
 import pytest
 
 
 @pytest.mark.asyncio
-async def test_flow_tool_posts_to_role_segment(monkeypatch, tmp_path):
+async def test_flow_tool_posts_to_role_segment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     manifest = tmp_path / "manifest.json"
     manifest.write_text(
         '{"flow_tools": ["give_me_work", "i_am_done"], "do_tools": ["commit"]}'
@@ -17,9 +22,9 @@ async def test_flow_tool_posts_to_role_segment(monkeypatch, tmp_path):
     monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
     monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "tok")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
-    captured: dict = {}
+    captured: dict[str, Any] = {}
 
-    async def fake_post(self, url, **kw):
+    async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
         captured["url"] = url
         captured["headers"] = kw.get("headers", {})
         return httpx.Response(200, json={"status": "ok", "next": "i_will_work_on"})
@@ -37,16 +42,18 @@ async def test_flow_tool_posts_to_role_segment(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_board_role_uses_board_segment(monkeypatch, tmp_path):
+async def test_board_role_uses_board_segment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     manifest = tmp_path / "manifest.json"
     manifest.write_text('{"flow_tools": ["triage"], "do_tools": []}')
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://orch:8000")
     monkeypatch.setenv("ROBOCO_AGENT_ID", "22222222-2222-2222-2222-222222222222")
     monkeypatch.setenv("ROBOCO_AGENT_ROLE", "product_owner")
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
-    captured: dict = {}
+    captured: dict[str, Any] = {}
 
-    async def fake_post(self, url, **kw):
+    async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
         captured["url"] = url
         return httpx.Response(200, json={"status": "ok"})
 
@@ -58,7 +65,9 @@ async def test_board_role_uses_board_segment(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_intent_to_public_remap_pass_review(monkeypatch, tmp_path):
+async def test_intent_to_public_remap_pass_review(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """QA pass_review/fail_review map to public /pass and /fail routes."""
     manifest = tmp_path / "manifest.json"
     manifest.write_text(
@@ -70,7 +79,7 @@ async def test_intent_to_public_remap_pass_review(monkeypatch, tmp_path):
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
     captured: list[str] = []
 
-    async def fake_post(self, url, **kw):
+    async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
         captured.append(url)
         return httpx.Response(200, json={"status": "ok"})
 
@@ -86,7 +95,9 @@ async def test_intent_to_public_remap_pass_review(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_unsigned_token_omitted(monkeypatch, tmp_path):
+async def test_unsigned_token_omitted(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     manifest = tmp_path / "manifest.json"
     manifest.write_text('{"flow_tools": ["give_me_work"], "do_tools": []}')
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://orch:8000")
@@ -95,9 +106,9 @@ async def test_unsigned_token_omitted(monkeypatch, tmp_path):
     monkeypatch.setenv("ROBOCO_AGENT_TOKEN", "UNSIGNED")
     monkeypatch.delenv("ROBOCO_AGENT_TEAM", raising=False)
     monkeypatch.setenv("ROBOCO_TOOL_MANIFEST_PATH", str(manifest))
-    captured: dict = {}
+    captured: dict[str, Any] = {}
 
-    async def fake_post(self, url, **kw):
+    async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
         captured["headers"] = kw.get("headers", {})
         return httpx.Response(200, json={"status": "ok"})
 
@@ -109,14 +120,16 @@ async def test_unsigned_token_omitted(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_call_do_posts_to_do_route(monkeypatch, tmp_path):
+async def test_call_do_posts_to_do_route(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setenv("ROBOCO_ORCHESTRATOR_URL", "http://orch:8000")
     monkeypatch.setenv("ROBOCO_AGENT_ID", "55555555-5555-5555-5555-555555555555")
     monkeypatch.setenv("ROBOCO_AGENT_ROLE", "developer")
     monkeypatch.delenv("ROBOCO_AGENT_TOKEN", raising=False)
-    captured: dict = {}
+    captured: dict[str, Any] = {}
 
-    async def fake_post(self, url, **kw):
+    async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
         captured["url"] = url
         captured["headers"] = kw.get("headers", {})
         return httpx.Response(200, json={"status": "ok"})
@@ -129,7 +142,9 @@ async def test_call_do_posts_to_do_route(monkeypatch, tmp_path):
     assert "X-Agent-Token" not in captured["headers"]
 
 
-def test_build_gateway_tools_wraps_manifest(monkeypatch, tmp_path):
+def test_build_gateway_tools_wraps_manifest(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """build_gateway_tools returns one FunctionTool per manifest entry."""
     manifest = tmp_path / "manifest.json"
     manifest.write_text('{"flow_tools": ["give_me_work"], "do_tools": ["commit"]}')

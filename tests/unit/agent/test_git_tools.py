@@ -34,7 +34,7 @@ def worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.mark.asyncio
-async def test_read_file_round_trip(worktree: Path):
+async def test_read_file_round_trip(worktree: Path) -> None:
     from roboco.agent.git_tools import read_file, write_file
 
     res = await write_file("sub/notes.txt", "hello world")
@@ -45,7 +45,7 @@ async def test_read_file_round_trip(worktree: Path):
 
 
 @pytest.mark.asyncio
-async def test_read_file_rejects_traversal(worktree: Path):
+async def test_read_file_rejects_traversal(worktree: Path) -> None:
     from roboco.agent.git_tools import read_file
 
     (worktree.parent / "secret.txt").write_text("secret")
@@ -55,7 +55,7 @@ async def test_read_file_rejects_traversal(worktree: Path):
 
 
 @pytest.mark.asyncio
-async def test_write_file_rejects_traversal(worktree: Path):
+async def test_write_file_rejects_traversal(worktree: Path) -> None:
     from roboco.agent.git_tools import write_file
 
     res = await write_file("../escaped.txt", "x")
@@ -63,7 +63,7 @@ async def test_write_file_rejects_traversal(worktree: Path):
 
 
 @pytest.mark.asyncio
-async def test_git_commit_creates_commit(worktree: Path):
+async def test_git_commit_creates_commit(worktree: Path) -> None:
     from roboco.agent.git_tools import git_commit, write_file
 
     await write_file("a.txt", "a")
@@ -79,7 +79,7 @@ async def test_git_commit_creates_commit(worktree: Path):
 
 
 @pytest.mark.asyncio
-async def test_git_status_returns_porcelain(worktree: Path):
+async def test_git_status_returns_porcelain(worktree: Path) -> None:
     from roboco.agent.git_tools import git_status, write_file
 
     await write_file("uncommitted.txt", "u")
@@ -88,7 +88,9 @@ async def test_git_status_returns_porcelain(worktree: Path):
     assert "uncommitted.txt" in res["status_text"]
 
 
-def test_build_git_tools_returns_functiontools(monkeypatch, tmp_path):
+def test_build_git_tools_returns_functiontools(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setenv("ROBOCO_WORKSPACE_DIR", str(tmp_path))
     from roboco.agent.git_tools import build_git_tools
 
@@ -101,7 +103,9 @@ def test_build_git_tools_returns_functiontools(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_git_push_missing_token_errors_clean(worktree: Path, monkeypatch):
+async def test_git_push_missing_token_errors_clean(
+    worktree: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """git_push without a token returns an error envelope, does not hang."""
     monkeypatch.delenv("ROBOCO_GIT_TOKEN", raising=False)
     from roboco.agent.git_tools import git_push

@@ -19,7 +19,6 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from google.cloud import run_v2
-from google.protobuf.duration_pb2 import Duration
 
 from roboco.config import settings
 from roboco.llm.providers.base import AgentProvider, ProviderError, SpawnResult
@@ -62,9 +61,9 @@ async def _upload_manifest(path: Path | None, agent_id: str) -> str | None:
     """
     if path is None or not path.exists() or not settings.gcp_gcs_bucket:
         return None
-    from google.cloud import storage
+    import google.cloud.storage
 
-    bucket = storage.Client().bucket(settings.gcp_gcs_bucket)
+    bucket = google.cloud.storage.Client().bucket(settings.gcp_gcs_bucket)
     blob = bucket.blob(f"manifests/{agent_id}.json")
     await asyncio.to_thread(blob.upload_from_filename, str(path))
     return f"gs://{settings.gcp_gcs_bucket}/manifests/{agent_id}.json"
@@ -99,7 +98,7 @@ class CloudRunJobsProvider(AgentProvider):
             )
         template = run_v2.TaskTemplate(
             containers=[run_v2.Container(image=self._image, env=env_vars)],
-            timeout=Duration(seconds=_JOB_TIMEOUT_SECONDS),
+            timeout={"seconds": _JOB_TIMEOUT_SECONDS},
         )
         job = run_v2.Job(template=run_v2.ExecutionTemplate(template=template))
         # Idempotent create-or-update: create first, fall back to update if the

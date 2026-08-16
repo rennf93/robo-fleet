@@ -3752,9 +3752,12 @@ class AgentOrchestrator:
         / self-hosted); the caller then runs the existing docker path unchanged.
         """
         inst = self._instances.get(agent_id)
-        if inst is None or getattr(inst, "config", None) is None:
+        if inst is None:
             return None
-        return self._provider_for(inst.config.provider_type)
+        cfg = getattr(inst, "config", None)
+        if cfg is None:
+            return None
+        return self._provider_for(cfg.provider_type)
 
     def _provider_for(self, provider_type: str) -> "AgentProvider | None":
         """Resolve a dedicated provider for a route's ``provider_type`` string.

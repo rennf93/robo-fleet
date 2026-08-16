@@ -29,7 +29,9 @@ async def test_spawn_submits_job_execution(monkeypatch: pytest.MonkeyPatch) -> N
     assert result.instance_id.startswith("projects/")
     assert result.agent_state == "active"
     assert result.extra["model"] == "gemini-3.5-flash"
-    assert result.extra["job"].endswith("/jobs/roboco-agent-be-dev-1")
+    job = result.extra["job"]
+    assert isinstance(job, str)
+    assert job.endswith("/jobs/roboco-agent-be-dev-1")
     fake_client.create_job.assert_called_once()
     fake_client.run_job.assert_called_once()
     # manifest path unset -> no ROBOCO_TOOL_MANIFEST_PATH env on the job

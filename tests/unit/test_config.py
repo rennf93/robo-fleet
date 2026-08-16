@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pytest
+
 # Default MemoryStore port; matches config.Settings.gcp_memorystore_port.
 DEFAULT_MEMORYSTORE_PORT = 6379
 
 
-def test_local_llm_base_url_allow_external(monkeypatch):
+def test_local_llm_base_url_allow_external(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(
         "ROBOCO_LOCAL_LLM_BASE_URL", "https://us-central1-aiplatform.googleapis.com/v1"
     )
@@ -17,7 +22,7 @@ def test_local_llm_base_url_allow_external(monkeypatch):
     assert s.local_llm_base_url == "https://us-central1-aiplatform.googleapis.com/v1"
 
 
-def test_gcp_settings_defaults(monkeypatch):
+def test_gcp_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ROBOCO_GCP_PROJECT_ID", "my-proj")
     monkeypatch.setenv("ROBOCO_GCP_REGION", "europe-west1")
     from roboco.config import Settings

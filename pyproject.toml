@@ -322,6 +322,7 @@ module = [
     "sse_starlette.*",
     "asyncpg.*",
     "claude_agent_sdk.*",  # third-party SDK, ships no type stubs
+    "google.cloud.*",  # namespace pkg, storage submodule ships no py.typed at root
 ]
 ignore_missing_imports = true
 

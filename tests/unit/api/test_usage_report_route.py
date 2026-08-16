@@ -26,7 +26,7 @@ from roboco.api.routes.v1 import usage as usage_v1_module
 from roboco.db.base import get_db_committed
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable
 
 _AGENT_UUID = UUID("00000000-0000-0000-0000-000000000001")
 _AGENT_SLUG = "be-dev-1"
@@ -59,7 +59,7 @@ def _make_fake_db(session_id: UUID | None) -> MagicMock:
     return db
 
 
-def _override_db_factory(db: MagicMock):
+def _override_db_factory(db: MagicMock) -> Callable[[], AsyncIterator[MagicMock]]:
     async def _override() -> AsyncIterator[MagicMock]:
         yield db
 

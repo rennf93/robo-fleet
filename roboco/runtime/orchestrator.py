@@ -3749,7 +3749,7 @@ class AgentOrchestrator:
         registered under ``agent_id`` and routes through its ``config.provider_type``.
         Returns ``None`` when the instance is missing, has no config, or the
         route's provider_type has no dedicated backend (ANTHROPIC / Ollama Cloud
-        / self-hosted) — the caller then runs the existing docker path unchanged.
+        / self-hosted); the caller then runs the existing docker path unchanged.
         """
         inst = self._instances.get(agent_id)
         if inst is None or getattr(inst, "config", None) is None:

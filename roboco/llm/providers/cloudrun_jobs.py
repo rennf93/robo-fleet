@@ -16,7 +16,6 @@ orchestrator itself never touches GCS.
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from google.cloud import run_v2
@@ -26,6 +25,8 @@ from roboco.config import settings
 from roboco.llm.providers.base import AgentProvider, ProviderError, SpawnResult
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from roboco.models.runtime import OrchestratorAgentConfig as AgentConfig
 
 # Model id ADK agents run on Cloud Run. The orchestrator does not pin a CLI

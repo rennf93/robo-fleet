@@ -278,6 +278,12 @@ select = [
 # rationale as test_optimal_grounding.py above (a fixed fixture/diff/notes
 # stand-in body has nothing to do with those args).
 "tests/e2e_smoke/test_eval_bench.py" = ["ARG002"]
+# CloudRunJobsProvider.stop/remove override AgentProvider but can't use
+# `graceful` (Cloud Run cancel is unconditional) or `instance_id` in remove
+# (executions self-clean; the Job is reused across spawns). Renaming would
+# break the orchestrator's `provider.stop(id, graceful=graceful)` keyword
+# call, same kwarg-compat rationale as the test stubs above.
+"roboco/llm/providers/cloudrun_jobs.py" = ["ARG002"]
 # Collision-builder test helpers mirror the builder's many keyword inputs
 # (parent/project/intends/migration/shared/sequence) — bundling them would
 # hurt readability more than the arg count hurts.

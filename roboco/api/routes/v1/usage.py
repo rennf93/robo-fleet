@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Header
 from sqlalchemy import select, update
 
 from roboco.api.deps import DbSession

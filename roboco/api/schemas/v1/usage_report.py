@@ -22,9 +22,21 @@ class UsageReportRequest(BaseModel):
     with the same values is an idempotent no-op.
     """
 
-    turns: int = Field(default=0, description="LLM iterations (unique assistant messages)")
-    tool_calls: int = Field(default=0, description="Tool invocations accumulated this session")
-    tokens_input: int = Field(default=0, description="Total input tokens accumulated this session")
-    tokens_output: int = Field(default=0, description="Total output tokens accumulated this session")
-    tokens_cache_read: int = Field(default=0, description="Total cache-read tokens this session")
-    tokens_cache_write: int = Field(default=0, description="Total cache-write tokens this session")
+    turns: int = Field(
+        default=0, description="LLM iterations (unique assistant messages)"
+    )
+    tool_calls: int = Field(
+        default=0, description="Tool invocations accumulated this session"
+    )
+    tokens_input: int = Field(
+        default=0, description="Total input tokens accumulated this session"
+    )
+    tokens_output: int = Field(
+        default=0, description="Total output tokens accumulated this session"
+    )
+    tokens_cache_read: int = Field(
+        default=0, description="Total cache-read tokens this session"
+    )
+    tokens_cache_write: int = Field(
+        default=0, description="Total cache-write tokens this session"
+    )

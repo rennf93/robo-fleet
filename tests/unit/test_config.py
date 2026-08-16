@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Default MemoryStore port; matches config.Settings.gcp_memorystore_port.
+DEFAULT_MEMORYSTORE_PORT = 6379
+
 
 def test_local_llm_base_url_allow_external(monkeypatch):
     monkeypatch.setenv(
@@ -22,4 +25,4 @@ def test_gcp_settings_defaults(monkeypatch):
     s = Settings()
     assert s.gcp_project_id == "my-proj"
     assert s.gcp_region == "europe-west1"
-    assert s.gcp_memorystore_port == 6379
+    assert s.gcp_memorystore_port == DEFAULT_MEMORYSTORE_PORT

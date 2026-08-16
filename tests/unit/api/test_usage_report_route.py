@@ -20,9 +20,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from httpx import ASGITransport, AsyncClient
-
 from roboco.api.routes.v1 import usage as usage_v1_module
 from roboco.db.base import get_db_committed
 
@@ -32,6 +31,8 @@ if TYPE_CHECKING:
 _AGENT_UUID = UUID("00000000-0000-0000-0000-000000000001")
 _AGENT_SLUG = "be-dev-1"
 _SESSION_ID = UUID("00000000-0000-0000-0000-000000000aaa")
+# SELECT (open session) then UPDATE (six columns) => two execute calls.
+_EXPECTED_EXECUTE_CALLS = 2
 
 _BODY = {
     "turns": 3,
@@ -83,11 +84,11 @@ async def test_usage_report_persists_tokens() -> None:
                 json=_BODY,
                 headers={"X-Agent-ID": str(_AGENT_UUID), "X-Agent-Role": "developer"},
             )
-    assert resp.status_code == 200
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == {"status": "ok", "matched": True}
     # SELECT (open session) then UPDATE (six columns) => two execute calls,
     # plus one commit. The UPDATE statement is the second execute call.
-    assert db.execute.await_count == 2
+    assert db.execute.await_count == _EXPECTED_EXECUTE_CALLS
     update_stmt = db.execute.await_args_list[1].args[0]
     # Compile the UPDATE to SQL and confirm every body field is present —
     # avoids brittle introspection of SQLAlchemy's internal values map.
@@ -123,7 +124,7 @@ async def test_usage_report_missing_session_returns_matched_false() -> None:
                 json=_BODY,
                 headers={"X-Agent-ID": str(_AGENT_UUID), "X-Agent-Role": "developer"},
             )
-    assert resp.status_code == 200
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == {"status": "ok", "matched": False}
     # No open row => no UPDATE, no commit.
     assert db.execute.await_count == 1
@@ -148,6 +149,6 @@ async def test_usage_report_unresolved_agent_returns_matched_false() -> None:
                 json=_BODY,
                 headers={"X-Agent-ID": str(_AGENT_UUID), "X-Agent-Role": "developer"},
             )
-    assert resp.status_code == 200
+    assert resp.status_code == status.HTTP_200_OK
     assert resp.json() == {"status": "ok", "matched": False}
     db.execute.assert_not_awaited()

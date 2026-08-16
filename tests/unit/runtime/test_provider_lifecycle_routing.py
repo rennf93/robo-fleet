@@ -13,6 +13,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from roboco.models.runtime import OrchestratorAgentState as State
 from roboco.runtime.orchestrator import AgentOrchestrator
 
 
@@ -77,8 +78,6 @@ async def test_check_health_routes_through_provider() -> None:
     orch_obj._provider_for_instance = MagicMock(return_value=fake_provider)
     # Make the state membership check pass: _check_health tests
     # `instance.state not in (AgentState.ACTIVE, AgentState.WAITING_SHORT)`.
-    from roboco.models.runtime import OrchestratorAgentState as State
-
     inst.state = State.ACTIVE
     # If the docker path ran, this would raise (no asyncio patch). It must not.
     await AgentOrchestrator._check_health(orch_obj)

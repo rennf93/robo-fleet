@@ -3,12 +3,11 @@
 from unittest.mock import MagicMock
 
 import pytest
+from roboco.llm.providers import cloudrun_jobs as mod
 
 
 @pytest.mark.asyncio
 async def test_spawn_submits_job_execution(monkeypatch: pytest.MonkeyPatch) -> None:
-    from roboco.llm.providers import cloudrun_jobs as mod
-
     fake_client = MagicMock()
     fake_op = MagicMock()
     fake_op.name = "projects/p/locations/e/jobs/roboco-agent-x/executions/abc123"

@@ -285,8 +285,12 @@ select = [
 # `graceful` (Cloud Run cancel is unconditional) or `instance_id` in remove
 # (executions self-clean; the Job is reused across spawns). Renaming would
 # break the orchestrator's `provider.stop(id, graceful=graceful)` keyword
-# call, same kwarg-compat rationale as the test stubs above.
-"roboco/llm/providers/cloudrun_jobs.py" = ["ARG002"]
+# call, same kwarg-compat rationale as the test stubs above. PLC0415:
+# _upload_manifest lazy-imports google.cloud.storage (a heavy optional dep)
+# behind a config/bucket guard, so environments without GCS configured never
+# pay the import cost, the same intentional-lazy-import sanction applied to
+# roboco/services/*.py.
+"roboco/llm/providers/cloudrun_jobs.py" = ["ARG002", "PLC0415"]
 # Collision-builder test helpers mirror the builder's many keyword inputs
 # (parent/project/intends/migration/shared/sequence) — bundling them would
 # hurt readability more than the arg count hurts.

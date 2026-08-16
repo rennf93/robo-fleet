@@ -69,6 +69,7 @@ from roboco.api.routes.v1 import flow_doc as flow_doc_module
 from roboco.api.routes.v1 import flow_main_pm as flow_main_pm_module
 from roboco.api.routes.v1 import flow_pr_reviewer as flow_pr_reviewer_module
 from roboco.api.routes.v1 import flow_qa as flow_qa_module
+from roboco.api.routes.v1 import usage as usage_v1_module
 from roboco.api.routes.video import router as video_router
 from roboco.api.routes.video import tiktok_router
 from roboco.api.routes.work_session import router as work_session_router
@@ -331,6 +332,7 @@ def _mount_v1_routers(app: FastAPI) -> None:
     app.include_router(flow_board_module.router)
     app.include_router(flow_auditor_module.router)
     app.include_router(flow_pr_reviewer_module.router)
+    app.include_router(usage_v1_module.router)
     app.include_router(do_module.router)
 
 

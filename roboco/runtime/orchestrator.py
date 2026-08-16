@@ -7088,6 +7088,15 @@ class AgentOrchestrator:
         from roboco.models.base import ModelProvider
 
         provider = self.get_provider_for_agent(agent_id)
+        # Provider-backed (Cloud Run Job) agents have no :9000 SDK server and
+        # no usage.json; their final counts were POSTed to /api/v1/usage/report
+        # and SET on the open spawn-session row. Read them back here so finalize
+        # stamps ended_at + cost without overwriting the pushed counts with zeros.
+        if provider == ModelProvider.ADK_CLOUD_RUN.value:
+            counts = await self._cloudrun_session_counts(agent_id)
+            if counts is not None:
+                return counts[:4]
+            return (0, 0, 0, 0)
         # One-shot CLIs (no SDK server / Claude transcript) each read their own
         # captured usage.json — collapsed into a lookup (mirrors
         # _resolve_active_tokens's usage_json_readers) so a fourth such
@@ -7103,6 +7112,60 @@ class AgentOrchestrator:
         if read_usage_json is not None:
             return read_usage_json(agent_id)
         return await self._resolve_final_token_usage_from_sdk(agent_id)
+
+    async def _cloudrun_session_counts(
+        self, agent_id: str
+    ) -> tuple[int, int, int, int, int, int] | None:
+        """Read the six cumulative counts for a Cloud Run Job agent from its
+        open spawn-session row (written by ``POST /api/v1/usage/report``).
+
+        Returns ``(tokens_input, tokens_output, tokens_cache_read,
+        tokens_cache_write, turns, tool_calls)`` or None when no open row
+        exists or the read fails. Best-effort: a failure degrades to None,
+        never blocks finalize.
+        """
+        try:
+            from sqlalchemy import select
+
+            from roboco.db.base import get_session_factory
+            from roboco.db.tables import AgentSpawnSessionTable
+
+            session_factory = get_session_factory()
+            async with session_factory() as db:
+                result = await db.execute(
+                    select(
+                        AgentSpawnSessionTable.tokens_input,
+                        AgentSpawnSessionTable.tokens_output,
+                        AgentSpawnSessionTable.tokens_cache_read,
+                        AgentSpawnSessionTable.tokens_cache_write,
+                        AgentSpawnSessionTable.turns,
+                        AgentSpawnSessionTable.tool_calls,
+                    )
+                    .where(
+                        AgentSpawnSessionTable.agent_slug == agent_id,
+                        AgentSpawnSessionTable.ended_at.is_(None),
+                    )
+                    .order_by(AgentSpawnSessionTable.started_at.desc())
+                    .limit(1)
+                )
+                row = result.one_or_none()
+                if row is None:
+                    return None
+                return (
+                    int(row[0]),
+                    int(row[1]),
+                    int(row[2]),
+                    int(row[3]),
+                    int(row[4]),
+                    int(row[5]),
+                )
+        except Exception as exc:
+            logger.debug(
+                "Cloud Run session counts read failed",
+                agent_id=agent_id,
+                error=str(exc),
+            )
+            return None
 
     async def _resolve_final_token_usage_from_sdk(
         self, agent_id: str
@@ -7162,6 +7225,14 @@ class AgentOrchestrator:
             return (self._codex_usage_turns(agent_id), 0)
         if provider == ModelProvider.KIMI.value:
             return (self._kimi_usage_turns(agent_id), 0)
+        # Provider-backed (Cloud Run Job): turns/tool_calls were POSTed to
+        # /api/v1/usage/report and SET on the open spawn-session row. Read them
+        # back here so finalize does not overwrite the pushed values with zeros.
+        if provider == ModelProvider.ADK_CLOUD_RUN.value:
+            counts = await self._cloudrun_session_counts(agent_id)
+            if counts is not None:
+                return (counts[4], counts[5])
+            return (0, 0)
 
         turns = tool_calls = 0
         sdk_url = f"http://roboco-agent-{agent_id}:{SDK_PORT}/usage/status"

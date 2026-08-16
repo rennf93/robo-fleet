@@ -211,6 +211,21 @@ class VideoRenderer:
                     key=path.name,
                     error=str(exc),
                 )
+        if settings.gcp_gcs_bucket:
+            # GCS durable copy, same posture as MinIO: local disk stays the
+            # source of truth, a failed PUT never fails the render. The agent
+            # log dump is handled by the agent's own Cloud Logging sink, so
+            # this is render-only.
+            try:
+                from roboco.infra.gcs_storage import upload_render
+
+                upload_render(str(path), settings.gcp_gcs_bucket)
+            except Exception as exc:  # durable copy, never fatal to the render
+                log.warning(
+                    "gcs put failed; render kept on local disk",
+                    key=path.name,
+                    error=str(exc),
+                )
         return str(path)
 
 

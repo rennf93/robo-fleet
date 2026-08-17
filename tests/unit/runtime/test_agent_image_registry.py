@@ -22,20 +22,20 @@ from robofleet.runtime.orchestrator import INTAKE_AGENT_ID, SECRETARY_AGENT_ID
     ("registry", "tag", "bare", "expected"),
     [
         # Default: no registry, no tag -> bare name unchanged (local build).
-        ("", "", "robofleet-agent-prompter", "robofleet-agent-prompter"),
+        ("", "", "robofleet-agent-gemini-prompter", "robofleet-agent-gemini-prompter"),
         # Registry only -> qualified, implicit :latest.
         (
             "ghcr.io/rennf93",
             "",
-            "robofleet-agent-prompter",
-            "ghcr.io/rennf93/robofleet-agent-prompter",
+            "robofleet-agent-gemini-prompter",
+            "ghcr.io/rennf93/robofleet-agent-gemini-prompter",
         ),
         # Trailing slash on the registry is tolerated.
         (
             "ghcr.io/rennf93/",
             "latest",
-            "robofleet-agent-prompter",
-            "ghcr.io/rennf93/robofleet-agent-prompter:latest",
+            "robofleet-agent-gemini-prompter",
+            "ghcr.io/rennf93/robofleet-agent-gemini-prompter:latest",
         ),
         # Docker Hub namespace + pinned version.
         (
@@ -45,7 +45,12 @@ from robofleet.runtime.orchestrator import INTAKE_AGENT_ID, SECRETARY_AGENT_ID
             "docker.io/renzof93/robofleet-agent-base:0.5.0",
         ),
         # Tag without registry is still applied (edge case, valid).
-        ("", "latest", "robofleet-agent-secretary", "robofleet-agent-secretary:latest"),
+        (
+            "",
+            "latest",
+            "robofleet-agent-gemini-secretary",
+            "robofleet-agent-gemini-secretary:latest",
+        ),
     ],
 )
 def test_qualify_agent_image(
@@ -67,9 +72,11 @@ def test_get_agent_image_local_default(monkeypatch: pytest.MonkeyPatch) -> None:
     # docker spawn path was stripped; ADK is the delivery spawn path).
     assert orch.get_agent_image("be-dev-1") == "robofleet-agent-base"
     assert orch.get_agent_image("pr-reviewer-1") == "robofleet-agent-base"
-    # Interactive persistent containers keep their named images.
-    assert orch.get_agent_image(INTAKE_AGENT_ID) == "robofleet-agent-prompter"
-    assert orch.get_agent_image(SECRETARY_AGENT_ID) == "robofleet-agent-secretary"
+    # Interactive persistent containers keep their named images (Gemini/ADK).
+    assert orch.get_agent_image(INTAKE_AGENT_ID) == "robofleet-agent-gemini-prompter"
+    assert (
+        orch.get_agent_image(SECRETARY_AGENT_ID) == "robofleet-agent-gemini-secretary"
+    )
     # A genuinely unknown agent id also falls back to the base image.
     assert orch.get_agent_image("nope-not-real") == "robofleet-agent-base"
 
@@ -79,11 +86,11 @@ def test_get_agent_image_registry_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(orch.settings, "agent_image_tag", "0.5.0")
     assert (
         orch.get_agent_image(INTAKE_AGENT_ID)
-        == "ghcr.io/rennf93/robofleet-agent-prompter:0.5.0"
+        == "ghcr.io/rennf93/robofleet-agent-gemini-prompter:0.5.0"
     )
     assert (
         orch.get_agent_image(SECRETARY_AGENT_ID)
-        == "ghcr.io/rennf93/robofleet-agent-secretary:0.5.0"
+        == "ghcr.io/rennf93/robofleet-agent-gemini-secretary:0.5.0"
     )
     # Delivery slugs fall back to the qualified base image in registry mode.
     assert (

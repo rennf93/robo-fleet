@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 def _spec() -> _SecretaryRunSpec:
     return _SecretaryRunSpec(
         container_name=f"robofleet-agent-{SECRETARY_AGENT_ID}",
-        image="robofleet-agent-secretary",
+        image="robofleet-agent-gemini-secretary",
         hosts={"claude": "/h/.claude", "prompt": "/h/p.md"},
         session_id="sid123",
         cwd="/app",
@@ -39,7 +39,7 @@ def _spec() -> _SecretaryRunSpec:
 
 def test_build_secretary_run_cmd_wires_token_and_session() -> None:
     cmd = AgentOrchestrator._build_secretary_run_cmd(_spec())
-    assert cmd[-1] == "robofleet-agent-secretary"  # image is last
+    assert cmd[-1] == "robofleet-agent-gemini-secretary"  # image is last
     assert "ROBOFLEET_AGENT_TOKEN=tok-1" in cmd
     assert "ROBOFLEET_AGENT_ID=uuid-1" in cmd
     assert "ROBOFLEET_AGENT_ROLE=secretary" in cmd

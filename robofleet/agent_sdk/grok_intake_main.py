@@ -1,15 +1,15 @@
-"""Container entrypoint for the GROK intake (prompter) agent — grok CLI.
+"""Container entrypoint for the GROK intake (prompter) agent - grok CLI.
 
-The Grok analogue of ``intake_main``: the same in-container ``POST /turn``
+The Grok analogue of ``gemini_intake_main``: the same in-container ``POST /turn``
 receiver and the same relay sink to ``/api/prompter/live/{id}/events``, but the
 held-open session is a :class:`GrokCliSession` (per-turn headless ``grok -p``,
-resuming one session id) instead of a ``ClaudeSDKClient``. ``~/.grok/config.toml``
-is rendered first to wire the intake agent's two action tools — ``propose_draft``
-(one task) and ``propose_batch`` (a sequenced MegaTask of several tasks) — as the
-``robofleet-intake`` MCP server. Intake is a human-only interviewer with no gateway
-verbs; its only MCP server is ``robofleet-intake``. The ``IntakeDriver``
-loop, message source, and relay are reused unchanged — only the
-``SessionFactory`` differs.
+resuming one session id) instead of a Gemini/ADK ``GeminiChatSession``.
+``~/.grok/config.toml`` is rendered first to wire the intake agent's two action
+tools - ``propose_draft`` (one task) and ``propose_batch`` (a sequenced MegaTask
+of several tasks) - as the ``robofleet-intake`` MCP server. Intake is a
+human-only interviewer with no gateway verbs; its only MCP server is
+``robofleet-intake``. The ``IntakeDriver`` loop, message source, and relay are
+reused unchanged - only the ``SessionFactory`` differs.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ import structlog
 
 from robofleet.agent_sdk.grok_cli_session import GrokCliSession
 from robofleet.agent_sdk.intake_driver import IntakeDriver
-from robofleet.agent_sdk.intake_main import (
+from robofleet.agent_sdk.interactive_transport import (
     build_receiver,
     make_message_source,
     make_relay_sink,

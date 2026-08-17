@@ -1,9 +1,10 @@
 """Interactive intake/secretary builders fork a GROK route onto the grok CLI.
 
-A GROK route swaps the Claude SDK-driver image for the grok-CLI prompter/secretary
+A GROK route swaps the Gemini/ADK prompter/secretary image for the grok-CLI
 image and the ANTHROPIC_* env for the subscription auth mount + the per-agent
-usage mount (no metered xAI key, no permission env — the driver computes the grok
-permission flags). Every other provider keeps the Claude path's ANTHROPIC_*.
+usage mount (no metered xAI key, no permission env - the driver computes the
+grok permission flags). Every other provider keeps the Gemini/ADK image and
+the ANTHROPIC_* legacy fallback env.
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ def _intake_spec(
         container_name="robofleet-agent-intake-1",
         image=GROK_PROMPTER_IMAGE
         if provider_type == "grok"
-        else "robofleet-agent-prompter",
+        else "robofleet-agent-gemini-prompter",
         hosts=_HOSTS,
         session_id="sess-1",
         cwd="/data/workspace",
@@ -94,7 +95,7 @@ def test_intake_anthropic_keeps_anthropic_env() -> None:
     assert "ANTHROPIC_AUTH_TOKEN=sk-ant" in cmd
     assert not any(c.startswith("XAI_") for c in cmd)
     assert not any(c.startswith("ROBOFLEET_GROK_USAGE_FILE") for c in cmd)
-    assert cmd[-1] == "robofleet-agent-prompter"
+    assert cmd[-1] == "robofleet-agent-gemini-prompter"
 
 
 def test_secretary_grok_uses_grok_cli_env_and_keeps_hmac() -> None:

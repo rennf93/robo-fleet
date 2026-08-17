@@ -1,14 +1,14 @@
-"""Container entrypoint for the GROK Secretary agent — grok CLI.
+"""Container entrypoint for the GROK Secretary agent - grok CLI.
 
-The Grok analogue of ``secretary_main``: the same in-container ``POST /turn``
-receiver and the same relay sink to ``/api/secretary/live/{id}/events``, but the
-held-open session is a :class:`GrokCliSession` (per-turn headless ``grok -p``,
-resuming one session id) rather than a ``ClaudeSDKClient``. ``~/.grok/config.toml``
-is rendered first to wire the Secretary's CEO-authority tools (read_company_state
+The Grok analogue of ``gemini_secretary_main``: the same in-container
+``POST /turn`` receiver and the same relay sink to
+``/api/secretary/live/{id}/events``, but the held-open session is a
+:class:`GrokCliSession` (per-turn headless ``grok -p``, resuming one session id)
+rather than a Gemini/ADK ``GeminiChatSession``. ``~/.grok/config.toml`` is
+rendered first to wire the Secretary's CEO-authority tools (read_company_state
 / read_task / search_tasks / submit_directive) as the ``robofleet-secretary`` MCP
-server, which
-calls ``/api/secretary/*`` with the container's HMAC agent token — the same auth
-the one-shot Grok path uses.
+server, which calls ``/api/secretary/*`` with the container's HMAC agent token -
+the same auth the one-shot Grok path uses.
 """
 
 from __future__ import annotations
@@ -23,8 +23,11 @@ import structlog
 
 from robofleet.agent_sdk.grok_cli_session import GrokCliSession
 from robofleet.agent_sdk.intake_driver import IntakeDriver
-from robofleet.agent_sdk.intake_main import build_receiver, make_message_source
-from robofleet.agent_sdk.secretary_main import make_relay_sink
+from robofleet.agent_sdk.interactive_transport import (
+    build_receiver,
+    make_message_source,
+    make_relay_sink,
+)
 from robofleet.llm.providers.grok_cli_config import (
     GROK_CONFIG_PATH,
     render_config_toml,
@@ -110,7 +113,7 @@ async def main() -> None:  # pragma: no cover - needs the live container + grok
     driver = IntakeDriver(
         session_factory,
         make_message_source(queue),
-        make_relay_sink(base_url, session_id, client),
+        make_relay_sink(base_url, session_id, client, kind="secretary"),
     )
 
     bind_host = os.environ.get("ROBOFLEET_SDK_BIND_HOST", ".".join(["0"] * 4))

@@ -337,7 +337,7 @@ _OVERLOAD_MARKERS_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 # The intake (prompter) agent: a single seeded, board-adjacent interviewer.
 # Unlike delivery agents it is never dispatched and runs ONE persistent
 # container at a time (single CEO → one live chat). See the INTAKE section
-# below and robofleet/agent_sdk/intake_main.py.
+# below and robofleet/agent_sdk/gemini_intake_main.py.
 INTAKE_AGENT_ID = "intake-1"
 
 # Ambient note telling the intake agent its cwd holds clones of every project in
@@ -352,27 +352,26 @@ _INTAKE_WORKSPACE_AMBIENT = (
 
 # The Secretary agent: a single seeded, persistent chief-of-staff container the
 # CEO chats with (like intake), but with gated CEO authority. One container at a
-# time. Seeded in identity.AGENTS; see robofleet/agent_sdk/secretary_main.py.
+# time. Seeded in identity.AGENTS; see robofleet/agent_sdk/gemini_secretary_main.py.
 SECRETARY_AGENT_ID = "secretary-1"
 
-# Codex (OPENAI), Gemini (GEMINI), and Kimi (KIMI) are V1 delivery-roles-only
-# (see robofleet.llm.providers.codex / .gemini / .kimi module docstrings) —
-# none supports the persistent interactive Intake/Secretary session (no
+# Codex (OPENAI) and Kimi (KIMI) are V1 delivery-roles-only - neither
+# supports the persistent interactive Intake/Secretary session (no
 # CLI-flag equivalent to grok's --disallowed-tools/deny, no
-# interactive-session driver image).
-# Unlike GROK (which has its own GROK_PROMPTER_IMAGE / GROK_SECRETARY_IMAGE),
-# routing any of these to Intake/Secretary would fall through to the plain
-# Claude SDK-driver image with a mismatched provider env instead of refusing —
-# so all three spawn paths reject it explicitly instead of silently misbehaving.
+# interactive-session driver image). GEMINI now has a Gemini/ADK interactive
+# twin (GEMINI_PROMPTER_IMAGE / GEMINI_SECRETARY_IMAGE) so it is supported.
+# Routing OPENAI or KIMI to Intake/Secretary would fall through to the
+# default Gemini ADK-driver image with a mismatched provider env instead of
+# refusing, so both spawn paths reject it explicitly instead of silently
+# misbehaving.
 # Mirrors robofleet.services.llm.INTERACTIVE_UNSUPPORTED_PROVIDERS (kept as a
 # literal here to avoid a runtime import cycle; parity is pinned by a test).
 # The resolver exempts interactive agents from GLOBAL/ROLE rows on these
-# providers (a fleet-wide mode switch keeps the chats on Anthropic); this
-# guard is the backstop for an EXPLICIT AGENT_SLUG pin, which is refused
+# providers (a fleet-wide mode switch keeps the chats on a supported provider);
+# this guard is the backstop for an EXPLICIT AGENT_SLUG pin, which is refused
 # loudly rather than silently overridden.
 _INTERACTIVE_UNSUPPORTED_PROVIDERS: tuple[ModelProvider, ...] = (
     ModelProvider.OPENAI,
-    ModelProvider.GEMINI,
     ModelProvider.KIMI,
 )
 
@@ -386,10 +385,10 @@ def _reject_interactive_unsupported_provider(
     cleanly on the live relay instead of the spawn silently misrouting."""
     if provider_type in _INTERACTIVE_UNSUPPORTED_PROVIDERS:
         raise RuntimeError(
-            f"{provider_type.value} is a delivery-roles-only provider (V1) — "
+            f"{provider_type.value} is a delivery-roles-only provider (V1) - "
             f"it cannot power the interactive {agent_id} session. Route "
-            f"{agent_id} to Anthropic, Grok, Ollama, or Self-Hosted instead "
-            "(Mix mode's per-agent picker)."
+            f"{agent_id} to Anthropic, Gemini, Grok, Ollama, or Self-Hosted "
+            "instead (Mix mode's per-agent picker)."
         )
 
 
@@ -399,12 +398,13 @@ def _reject_interactive_unsupported_provider(
 # slug falls through to AGENT_BASE_IMAGE via get_agent_image's .get default.
 # This map now holds only the interactive persistent-container images (intake
 # and secretary), which still run as local docker containers with their own
-# images.
+# images. The default interactive runtime is Gemini/ADK (the GCP port); GROK
+# routes override at the spawn site with the grok-CLI images.
 AGENT_IMAGES: dict[str, str] = {
-    # Intake — persistent Agent-SDK driver, not a one-shot `claude -p`.
-    INTAKE_AGENT_ID: "robofleet-agent-prompter",
-    # Secretary — persistent Agent-SDK driver with gated CEO authority.
-    SECRETARY_AGENT_ID: "robofleet-agent-secretary",
+    # Intake - persistent Gemini/ADK driver, not a one-shot delivery spawn.
+    INTAKE_AGENT_ID: "robofleet-agent-gemini-prompter",
+    # Secretary - persistent Gemini/ADK driver with gated CEO authority.
+    SECRETARY_AGENT_ID: "robofleet-agent-gemini-secretary",
 }
 
 
@@ -453,6 +453,17 @@ GROK_SECRETARY_IMAGE = "robofleet-agent-grok-secretary"
 _GROK_INTERACTIVE_DOCKERFILES = {
     GROK_PROMPTER_IMAGE: "agent-grok-prompter.Dockerfile",
     GROK_SECRETARY_IMAGE: "agent-grok-secretary.Dockerfile",
+}
+
+# Interactive Gemini/ADK images (persistent ADK conversation drivers) - selected
+# for the intake / secretary roles when their route resolves to GEMINI, and as
+# the default interactive image (the GCP port). Their dockerfiles build FROM
+# robofleet-agent-adk (google-adk + google-genai, no Claude CLI, no Node).
+GEMINI_PROMPTER_IMAGE = "robofleet-agent-gemini-prompter"
+GEMINI_SECRETARY_IMAGE = "robofleet-agent-gemini-secretary"
+_GEMINI_INTERACTIVE_DOCKERFILES = {
+    GEMINI_PROMPTER_IMAGE: "agent-gemini-prompter.Dockerfile",
+    GEMINI_SECRETARY_IMAGE: "agent-gemini-secretary.Dockerfile",
 }
 
 # A one-shot Grok container exits with this code (EX_TEMPFAIL) when the run hit
@@ -1698,13 +1709,12 @@ class AgentOrchestrator:
         if agent_id:
             bare = AGENT_IMAGES.get(agent_id, AGENT_BASE_IMAGE)
             if bare != AGENT_BASE_IMAGE:
-                # Map the bare image name to its dockerfile. Delivery images
-                # (dev/qa/doc/pm/ux/pr-reviewer) were removed (Leg D1); only the
-                # interactive persistent-container images remain here.
-                dockerfile_map = {
-                    "robofleet-agent-prompter": "agent-prompter.Dockerfile",
-                    "robofleet-agent-secretary": "agent-secretary.Dockerfile",
-                }
+                # Delivery images (dev/qa/doc/pm/ux/pr-reviewer) were removed
+                # (Leg D1); the interactive persistent-container images are
+                # ensured via _ensure_grok_interactive_image /
+                # _ensure_gemini_interactive_image at the spawn sites, so this
+                # map is intentionally empty (no fallback build here).
+                dockerfile_map: dict[str, str] = {}
                 dockerfile = dockerfile_map.get(bare)
                 if dockerfile:
                     await self._ensure_image_present(
@@ -1731,6 +1741,29 @@ class AgentOrchestrator:
             (AGENT_BASE_IMAGE, "agent-base.Dockerfile"),
             ("robofleet-agent-grok", "agent-grok.Dockerfile"),
             (image, _GROK_INTERACTIVE_DOCKERFILES[image]),
+        ]
+        for img, dockerfile in chain:
+            await self._ensure_image_present(
+                img, f"{docker_dir}/{dockerfile}", build_context
+            )
+
+    async def _ensure_gemini_interactive_image(self, image: str) -> None:
+        """Ensure a Gemini/ADK interactive image and its base chain exist.
+
+        The gemini-prompter / gemini-secretary images build FROM
+        robofleet-agent-adk, which builds FROM python:3.13-slim directly (it
+        does NOT chain through agent-base - it has its own uv-synced venv with
+        google-adk + google-genai). So the chain is adk -> interactive image.
+        """
+        if PROJECT_HOST_PATH:
+            build_context = PROJECT_HOST_PATH
+            docker_dir = f"{PROJECT_HOST_PATH}/docker"
+        else:
+            build_context = str(self.project_root)
+            docker_dir = str(self.project_root / "docker")
+        chain = [
+            ("robofleet-agent-adk", "agent-adk.Dockerfile"),
+            (image, _GEMINI_INTERACTIVE_DOCKERFILES[image]),
         ]
         for img, dockerfile in chain:
             await self._ensure_image_present(
@@ -5308,9 +5341,9 @@ class AgentOrchestrator:
     # INTAKE (PROMPTER) LIVE SESSION
     #
     # The intake agent is not task-driven and is never dispatched. It is a
-    # persistent Claude-Agent-SDK driver the CEO chats with live (the container
-    # entrypoint is robofleet.agent_sdk.intake_main). One fixed container —
-    # `intake-1`, the seeded board-adjacent interviewer — serves one live
+    # persistent Gemini/ADK driver the CEO chats with live (the container
+    # entrypoint is robofleet.agent_sdk.gemini_intake_main). One fixed container -
+    # `intake-1`, the seeded board-adjacent interviewer - serves one live
     # session at a time (single CEO; one-session-per-CEO).
     #
     # This spawn is a DELIBERATELY separate path from spawn_agent: no task, no
@@ -5494,14 +5527,15 @@ class AgentOrchestrator:
             )
 
             # GROK runs the interactive driver on its own grok-CLI prompter image;
-            # every other provider uses the Claude SDK-driver prompter image.
+            # GEMINI and the default both use the Gemini/ADK prompter image (the
+            # GCP port's default interactive runtime).
             is_grok = route.provider_type == ModelProvider.GROK
             image = GROK_PROMPTER_IMAGE if is_grok else get_agent_image(INTAKE_AGENT_ID)
             if is_grok:
                 await self._ensure_grok_interactive_image(image)
                 self._ensure_grok_usage_dir(INTAKE_AGENT_ID)
             else:
-                await self._ensure_agent_image(INTAKE_AGENT_ID)
+                await self._ensure_gemini_interactive_image(image)
             container_name = f"robofleet-agent-{INTAKE_AGENT_ID}"
             await self._remove_container(
                 container_name, stop_reason="pre_spawn_stale_clear"
@@ -5708,7 +5742,7 @@ class AgentOrchestrator:
                 await self._ensure_grok_interactive_image(image)
                 self._ensure_grok_usage_dir(SECRETARY_AGENT_ID)
             else:
-                await self._ensure_agent_image(SECRETARY_AGENT_ID)
+                await self._ensure_gemini_interactive_image(image)
             container_name = f"robofleet-agent-{SECRETARY_AGENT_ID}"
             await self._remove_container(
                 container_name, stop_reason="pre_spawn_stale_clear"
@@ -6061,9 +6095,11 @@ class AgentOrchestrator:
         metered xAI key is used, the per-agent data dir is mounted so the driver's
         per-turn usage capture lands a ``usage.json`` the finalizer reads back, and
         the per-role permissions / reasoning come from the grok flags the driver
-        computes (``grok_cli_config``) — not env. Every other provider uses the
-        Claude path's ``ANTHROPIC_*`` injection (or the mounted ``~/.claude``
-        default when the route carries no creds).
+        computes (``grok_cli_config``) - not env. GEMINI (and the default
+        interactive path) uses the Gemini/ADK image; ADK's google-genai Client
+        reads ``GEMINI_API_KEY`` from env, forwarded from
+        ``settings.gemini_api_key``. An explicit ANTHROPIC route keeps the
+        ``ANTHROPIC_*`` injection for backward compatibility.
         """
         from robofleet.llm.providers.grok import GrokCliProvider
         from robofleet.models.base import ModelProvider
@@ -6082,6 +6118,18 @@ class AgentOrchestrator:
                 ]
             )
             return
+        if spec.provider_type == ModelProvider.GEMINI.value:
+            if settings.gemini_api_key:
+                cmd.extend(["-e", f"GEMINI_API_KEY={settings.gemini_api_key}"])
+            cmd.extend(
+                ["-e", f"ROBOFLEET_AGENT_MODEL={spec.model or 'gemini-3.5-flash'}"]
+            )
+            return
+        # ponytail: the ANTHROPIC path is a legacy fallback; the GCP port's
+        # default interactive image is Gemini/ADK, so an explicit Anthropic route
+        # hits the Gemini image with ANTHROPIC_* env (would fail without
+        # GEMINI_API_KEY). Acceptable for the port scope; re-evaluate if
+        # Anthropic-interactive is needed post-port.
         if base_url:
             cmd.extend(["-e", f"ANTHROPIC_BASE_URL={base_url}"])
         if auth_token:

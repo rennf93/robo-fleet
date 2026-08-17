@@ -74,6 +74,7 @@ def _wire_secretary_spawn_mocks(
     )
     monkeypatch.setattr(orch, "_resolve_agent_route", _route)
     monkeypatch.setattr(orch, "_ensure_agent_image", _noop)
+    monkeypatch.setattr(orch, "_ensure_gemini_interactive_image", _noop)
     monkeypatch.setattr(orch, "_remove_container", _remove)
     monkeypatch.setattr(orch, "_run_container_cmd", _run)
     monkeypatch.setattr(

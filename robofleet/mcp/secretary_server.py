@@ -1,18 +1,18 @@
 """robofleet-secretary MCP server — the Secretary's CEO-authority tools.
 
-Parity with the Claude Secretary's SDK tools
-(:func:`robofleet.agent_sdk.secretary_driver.build_secretary_options`):
+Parity with the Secretary's tool surface across runtimes:
 ``read_company_state`` / ``read_task`` / ``search_tasks`` (reads) and
 ``submit_directive`` (acts).
 Each calls the backend ``/api/secretary/*`` routes with the container's HMAC
 agent token; the backend gate-list queues high-impact directive kinds for the
 CEO's confirmation and runs low-risk ones directly. The backend-calling logic is
-reused verbatim from ``secretary_driver`` (the SDK and grok paths share one
-HTTP seam), so this server only wraps those helpers as MCP tools.
+reused verbatim from ``secretary_driver`` (every runtime shares one HTTP seam),
+so this server only wraps those helpers as MCP tools.
 
-Wired into ``~/.grok/config.toml`` by ``grok_secretary_main``; the container
-provides ``ROBOFLEET_API_URL`` / ``ROBOFLEET_AGENT_ID`` / ``ROBOFLEET_AGENT_ROLE`` /
-``ROBOFLEET_AGENT_TOKEN`` (the same auth substrate the one-shot Grok path uses).
+Wired into ``~/.grok/config.toml`` by ``grok_secretary_main`` and into the ADK
+``McpToolset`` by ``gemini_secretary_main``; the container provides
+``ROBOFLEET_API_URL`` / ``ROBOFLEET_AGENT_ID`` / ``ROBOFLEET_AGENT_ROLE`` /
+``ROBOFLEET_AGENT_TOKEN`` (the same auth substrate every runtime uses).
 """
 
 from __future__ import annotations

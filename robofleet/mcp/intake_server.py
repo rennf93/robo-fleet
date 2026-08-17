@@ -1,7 +1,7 @@
 """robofleet-intake MCP server — the Intake interviewer's ``propose_draft`` and
 ``propose_batch`` (MegaTask) tools.
 
-The grok-CLI interactive intake agent calls ``propose_draft`` (one task) or
+The interactive intake agent calls ``propose_draft`` (one task) or
 ``propose_batch`` (a sequenced MegaTask of several tasks) once the spec is ready;
 this delivers it to the panel's reviewable card by POSTing it straight to the
 prompter-live relay (the same ``/api/prompter/live/{session}/events`` endpoint the
@@ -10,12 +10,14 @@ driver's relay sink uses).
 WHY IT POSTS DIRECTLY: grok's ``streaming-json`` output does not surface
 tool-call events (verified live — a tool runs but never appears in the stream),
 so :class:`~robofleet.agent_sdk.grok_cli_session.GrokCliSession` cannot intercept
-this call to emit a ``draft`` chunk. The tool POSTs the draft itself. (The Claude
-intake path differs: the Claude SDK exposes the tool-use block, so its driver
-intercepts it.)
+this call to emit a ``draft`` chunk. The tool POSTs the draft itself. The
+Gemini/ADK path (:class:`~robofleet.agent_sdk.gemini_chat_session.GeminiChatSession`)
+DOES surface tool-call events, but the MCP server already POSTs the draft, so the
+session emits a ``tool_use`` chunk (not a ``draft`` chunk) to avoid duplication.
 
-Wired into ``~/.grok/config.toml`` by ``grok_intake_main``; the container
-provides ``ROBOFLEET_API_URL`` + ``ROBOFLEET_PROMPTER_SESSION_ID``.
+Wired into ``~/.grok/config.toml`` by ``grok_intake_main`` and into the ADK
+``McpToolset`` by ``gemini_intake_main``; the container provides
+``ROBOFLEET_API_URL`` + ``ROBOFLEET_PROMPTER_SESSION_ID``.
 """
 
 from __future__ import annotations

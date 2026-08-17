@@ -10,7 +10,7 @@ import httpx
 import pytest
 from httpx import ASGITransport, AsyncClient
 from robofleet.agent_sdk.intake_driver import StreamChunk
-from robofleet.agent_sdk.intake_main import (
+from robofleet.agent_sdk.interactive_transport import (
     build_receiver,
     make_message_source,
     make_relay_sink,

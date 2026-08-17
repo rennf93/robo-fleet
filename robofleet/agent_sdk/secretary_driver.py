@@ -1,10 +1,9 @@
-"""Secretary agent driver — SDK options + the CEO-authority tools.
+"""Secretary agent driver — the CEO-authority tools (backend-calling helpers).
 
 The Secretary is a long-lived conversational agent like Intake; it reuses the
-generic chat machinery (``IntakeDriver``, ``SdkIntakeSession``, ``normalize``)
-and differs only in its tools. Where Intake has a single intercepted
-``propose_draft``, the Secretary has three tools that actually call the backend
-``/api/secretary/*`` routes on the CEO's behalf:
+generic chat machinery (``IntakeDriver``) and differs only in its tools. Where
+Intake has a single intercepted ``propose_draft``, the Secretary has four tools
+that actually call the backend ``/api/secretary/*`` routes on the CEO's behalf:
 
 * ``read_company_state`` / ``read_task`` / ``search_tasks`` — reads (always
   allowed); ``search_tasks`` resolves a task NAME to ids so a directive can
@@ -13,8 +12,8 @@ and differs only in its tools. Where Intake has a single intercepted
   for the CEO's confirmation and runs low-risk ones directly.
 
 The backend-calling logic lives in module-level helpers (``_do_*``) so it is
-unit-testable with ``httpx.MockTransport``; ``build_secretary_options`` only
-wraps them as SDK tools (the SDK construction itself is not gate-covered).
+unit-testable with ``httpx.MockTransport``. The ``secretary_server`` MCP server
+wraps them as tools for the Gemini/ADK and grok-CLI runtimes alike.
 """
 
 from __future__ import annotations
@@ -28,7 +27,6 @@ import httpx
 from robofleet.agents_config import get_agent_team
 
 _TIMEOUT = 30.0
-_SECRETARY_BASE_TOOLS: tuple[str, ...] = ("Read", "Grep", "Glob")
 
 
 def _api_base() -> str:
@@ -137,127 +135,5 @@ async def _do_submit_directive(
 
 
 def _text_result(data: dict[str, Any]) -> dict[str, Any]:
-    """Shape a backend result as an SDK tool text result."""
+    """Shape a backend result as a tool text result."""
     return {"content": [{"type": "text", "text": json.dumps(data)}]}
-
-
-def build_secretary_options(
-    *,
-    system_prompt: str,
-    cwd: str,
-    model: str | None = None,
-) -> Any:  # pragma: no cover - thin SDK construction
-    """Build locked-down ``ClaudeAgentOptions`` for the Secretary session.
-
-    Same isolation as Intake (``strict_mcp_config`` + ``setting_sources=[]`` +
-    a ``can_use_tool`` allowlist), but the MCP server exposes the Secretary's
-    read + directive tools, which call the backend.
-    """
-    from claude_agent_sdk import (
-        ClaudeAgentOptions,
-        PermissionResultAllow,
-        PermissionResultDeny,
-        create_sdk_mcp_server,
-        tool,
-    )
-
-    @tool(
-        "read_company_state",
-        "Read a compact snapshot of company state: the charter (goals), task "
-        "counts by status, pending pitches, and any directives awaiting the "
-        "CEO's confirmation.",
-        {},
-    )
-    async def _t_read_state(_args: dict[str, Any]) -> dict[str, Any]:
-        return _text_result(await _do_read_state())
-
-    @tool(
-        "read_task",
-        "Read one task's full detail by its id — content, notes, plan, "
-        "progress, and PR reference (Secretary FULL task access).",
-        {"task_id": str},
-    )
-    async def _t_read_task(args: dict[str, Any]) -> dict[str, Any]:
-        return _text_result(await _do_read_task(str(args["task_id"])))
-
-    @tool(
-        "search_tasks",
-        "Resolve a task NAME to concrete task ids. The CEO refers to tasks by "
-        "name; search a title/description substring (min 2 chars) to get "
-        "matching ids, then pass an id to read_task or to submit_directive's "
-        "control_task. Returns up to 20 matches.",
-        {"q": str},
-    )
-    async def _t_search(args: dict[str, Any]) -> dict[str, Any]:
-        return _text_result(await _do_search_tasks(str(args["q"])))
-
-    @tool(
-        "submit_directive",
-        "Act on the CEO's command. 'kind' is one of: relay_message "
-        "(payload: text), update_charter (payload: charter), "
-        "control_task (payload: task_id, action[start|cancel|override|edit], "
-        "status? for override, fields? for edit — edit accepts title/"
-        "description/acceptance_criteria/priority/team/estimated_complexity/"
-        "nature/assigned_to; assigned_to may be a UUID or an agent slug like "
-        '"be-dev-1"), approve_pitch (payload: pitch_id, notes?), announce '
-        "(payload: text). High-impact kinds (charter, control_task, "
-        "approve_pitch, announce) are queued for the CEO's explicit "
-        "confirmation; relay_message runs directly.",
-        {"kind": str, "payload": dict},
-    )
-    async def _t_submit(args: dict[str, Any]) -> dict[str, Any]:
-        return _text_result(
-            await _do_submit_directive(str(args["kind"]), dict(args.get("payload", {})))
-        )
-
-    server = create_sdk_mcp_server(
-        name="secretary",
-        version="1.0.0",
-        tools=[_t_read_state, _t_read_task, _t_search, _t_submit],
-    )
-
-    async def _gate(tool_name: str, _input: dict[str, Any], _ctx: Any) -> Any:
-        if tool_name in _SECRETARY_BASE_TOOLS or "secretary__" in tool_name:
-            return PermissionResultAllow()
-        if tool_name == "AskUserQuestion" or tool_name.endswith("AskUserQuestion"):
-            return PermissionResultDeny(
-                message=(
-                    "AskUserQuestion isn't available — just write your question "
-                    "as a normal chat message; the CEO reads every reply live."
-                )
-            )
-        if tool_name == "ExitPlanMode" or tool_name.endswith("ExitPlanMode"):
-            return PermissionResultDeny(
-                message="You don't use plan mode. Act via submit_directive."
-            )
-        return PermissionResultDeny(
-            message=(
-                f"{tool_name} is not available to the Secretary. Your tools are "
-                "Read, Grep, Glob, read_company_state, read_task, search_tasks, "
-                "and submit_directive."
-            )
-        )
-
-    return ClaudeAgentOptions(
-        system_prompt=system_prompt,
-        cwd=cwd,
-        mcp_servers={"secretary": server},
-        allowed_tools=[
-            *_SECRETARY_BASE_TOOLS,
-            "mcp__secretary__read_company_state",
-            "mcp__secretary__read_task",
-            "mcp__secretary__search_tasks",
-            "mcp__secretary__submit_directive",
-        ],
-        # Fleet-wide subagent ban: `Task` is a default-permitted built-in that an
-        # allowlist omission + permission_mode="dontAsk" do NOT remove, so an
-        # explicit disallow is the only claude-code-level block (see the intake
-        # driver for the full rationale).
-        disallowed_tools=["Task"],
-        model=model,
-        include_partial_messages=True,
-        permission_mode="dontAsk",
-        strict_mcp_config=True,
-        setting_sources=[],
-        can_use_tool=_gate,
-    )

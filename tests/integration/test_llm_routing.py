@@ -758,20 +758,22 @@ async def test_apply_mode_codex_end_to_end_reachable(llm_setup: dict) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("mode", ["codex", "gemini", "kimi"])
+@pytest.mark.parametrize("mode", ["codex", "kimi"])
 @pytest.mark.parametrize("interactive_slug", ["intake-1", "secretary-1"])
 async def test_interactive_agents_exempt_from_delivery_only_global_mode(
     llm_setup: dict, mode: str, interactive_slug: str
 ) -> None:
-    """A fleet-wide Codex/Gemini/Kimi mode must not capture Intake/Secretary —
-    they have no V1 support on those providers, so the resolver keeps them
-    on the legacy Anthropic path (the completeness-drill gap: previously
+    """A fleet-wide Codex/Kimi mode must not capture Intake/Secretary - they
+    have no V1 interactive support on those providers, so the resolver keeps
+    them on the legacy Anthropic path (the completeness-drill gap: previously
     they resolved to the unsupported provider and the spawn guard left both
-    chats refusing to start after a one-click mode switch)."""
+    chats refusing to start after a one-click mode switch). GEMINI is
+    interactive-capable (Gemini/ADK images), so a gemini mode DOES capture
+    the interactive agents."""
     svc = llm_setup["svc"]
     await svc.apply_mode(mode=mode)
 
-    # The mode still derives cleanly (single GLOBAL row — no extra pins).
+    # The mode still derives cleanly (single GLOBAL row - no extra pins).
     assert await svc.derive_mode() == mode
 
     route = await svc.resolve_for_agent(interactive_slug)

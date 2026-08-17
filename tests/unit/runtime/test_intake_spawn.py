@@ -1,7 +1,7 @@
 """The persistent intake (prompter) live-session spawn/reap path.
 
 The intake agent is not task-driven: ``spawn_intake_session`` launches a
-long-lived Agent-SDK driver container (image ENTRYPOINT, NOT ``claude -p``),
+long-lived Gemini/ADK driver container (image ENTRYPOINT, NOT a one-shot CLI),
 clones the chat scope's repo(s), and registers the live relay session. These
 tests cover the docker-command construction, scope resolution, and the
 spawn/reap orchestration with docker + clone mocked (no daemon, no NAS).
@@ -49,7 +49,7 @@ def _make_minimal_orchestrator() -> AgentOrchestrator:
 def _spec(**overrides: Any) -> _IntakeRunSpec:
     base: dict[str, Any] = {
         "container_name": "robofleet-agent-intake-1",
-        "image": "robofleet-agent-prompter",
+        "image": "robofleet-agent-gemini-prompter",
         "hosts": {
             "claude": "/home/runner/.claude",
             "prompt": "/data/prompts-generated/intake-1-prompt.md",
@@ -83,7 +83,7 @@ def _fresh_registry() -> Any:
 class TestBuildIntakeRunCmd:
     def test_image_is_last_and_no_claude_cli_args(self) -> None:
         cmd = AgentOrchestrator._build_intake_run_cmd(_spec())
-        assert cmd[-1] == "robofleet-agent-prompter"
+        assert cmd[-1] == "robofleet-agent-gemini-prompter"
         # The image ENTRYPOINT is the driver — none of the claude CLI flags
         # the task-driven path appends may appear here.
         for flag in (
@@ -752,6 +752,7 @@ def _wire_spawn_mocks(
     monkeypatch.setattr(orch, "_clone_intake_scope", _clone)
     monkeypatch.setattr(orch, "_resolve_agent_route", _route)
     monkeypatch.setattr(orch, "_ensure_agent_image", _noop)
+    monkeypatch.setattr(orch, "_ensure_gemini_interactive_image", _noop)
     monkeypatch.setattr(orch, "_remove_container", _noop)
     monkeypatch.setattr(orch, "_run_container_cmd", _run)
     monkeypatch.setattr(orch, "_fire_audit", lambda **_k: None)
@@ -1045,7 +1046,7 @@ class TestSpawnGuarded:
 
 class TestConcurrentSpawnSerialization:
     """Two concurrent intake starts must serialize — the intake agent id is a
-    single fixed id, so two ``docker run --name robofleet-agent-prompter`` calls and
+    single fixed id, so two ``docker run --name robofleet-agent-intake-1`` calls and
     two ``_instances[INTAKE_AGENT_ID]`` writes racing orphan a container + relay.
     The spawn body (reap-prior → clone → docker run → register) must run under
     a per-agent lock so the second start only begins once the first has fully

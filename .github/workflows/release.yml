@@ -104,16 +104,8 @@ jobs:
             [robofleet-panel]=docker/panel.Dockerfile
             [robofleet-video-renderer]=docker/video-renderer.Dockerfile
             [robofleet-sandbox-pg]=docker/sandbox-pg.Dockerfile
-            [robofleet-agent-pm]=docker/agent-pm.Dockerfile
-            [robofleet-agent-dev-be]=docker/agent-dev-be.Dockerfile
-            [robofleet-agent-dev-fe]=docker/agent-dev-fe.Dockerfile
-            [robofleet-agent-qa-be]=docker/agent-qa-be.Dockerfile
-            [robofleet-agent-qa-fe]=docker/agent-qa-fe.Dockerfile
-            [robofleet-agent-ux]=docker/agent-ux.Dockerfile
-            [robofleet-agent-doc]=docker/agent-doc.Dockerfile
             [robofleet-agent-prompter]=docker/agent-prompter.Dockerfile
             [robofleet-agent-secretary]=docker/agent-secretary.Dockerfile
-            [robofleet-agent-pr-reviewer]=docker/agent-pr-reviewer.Dockerfile
             [robofleet-agent-grok-prompter]=docker/agent-grok-prompter.Dockerfile
             [robofleet-agent-grok-secretary]=docker/agent-grok-secretary.Dockerfile
             [robofleet-agent-codex]=docker/agent-codex.Dockerfile

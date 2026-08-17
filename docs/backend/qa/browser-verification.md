@@ -136,5 +136,4 @@ Earlier versions of this doc argued that any orchestrator-level Playwright "allo
 ## Related documentation
 
 - **Identity prompts:** `agents/prompts/identities/fe-qa.md` and `ux-qa.md` contain the built-in browser verification guidance
-- **CI verification:** `.github/workflows/agent-image-smoke.yml` runs a real headless smoke test to verify the Playwright + chromium installation, the `playwright-mcp` binary, and a real panel-page screenshot on each image build
 - **Diff review:** Always start with code review; browser verification is a supplement, not a replacement

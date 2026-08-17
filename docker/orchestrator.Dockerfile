@@ -66,7 +66,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # deps (`pnpm install`) the same way uv handles Python cells. Without it the
 # dep-install step gracefully skips (WorkspaceService._run_dep_install catches
 # the missing-tool OSError) and the fe-dev re-installs per task. node/npm come
-# from the NodeSource layer above; pnpm matches how agent-dev-fe installs it.
+# from the NodeSource layer above; pnpm is the frontend cell's package manager.
 RUN npm install -g pnpm
 
 WORKDIR /app

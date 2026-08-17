@@ -18,16 +18,8 @@ This slice is the packaging, build, and runtime-tooling layer of RoboFleet: the 
 | robofleet/exceptions.py | Exception hierarchy (RobocoError base + NotFound/Validation/InvalidState/Permission/Auth/Task/TaskLifecycle/Agent/Notification/Service/Database/Git/MergeConflict/GitCommand/GitTimeout); includes TaskLifecycle transition hints and git-secret scrubbing | 497 |
 | docker/orchestrator.Dockerfile | Multi-stage build: uv venv builder (python:3.13-slim) + runner with docker-cli/git/make/node/npm/pnpm, ENTRYPOINT python -m robofleet.cli | 99 |
 | docker/agent-base.Dockerfile | Shared agent runtime: uv venv + Node 22 + @anthropic-ai/claude-code, agent user, hook scripts, safe.directory *, ENTRYPOINT claude | 108 |
-| docker/agent-pm.Dockerfile | PM agent — FROM robofleet-agent-base, no extra tools (MCP-only) | 11 |
-| docker/agent-dev-be.Dockerfile | Backend dev — adds postgresql-client + redis-tools on top of base | 18 |
-| docker/agent-dev-fe.Dockerfile | Frontend dev — adds Playwright system deps + pnpm + chromium browser | 37 |
-| docker/agent-qa-be.Dockerfile | Backend QA — adds postgresql-client on top of base | 18 |
-| docker/agent-qa-fe.Dockerfile | Frontend QA — pnpm + `chromium-headless-shell` (not full chromium, under `/app/.playwright`) + `@playwright/mcp` for browser-based verification, wrapped by `playwright-mcp-entrypoint.sh` | 36 |
-| docker/agent-ux.Dockerfile | UX/UI agent (shared by ux-dev + ux-qa) — FROM base + the same `chromium-headless-shell` + `@playwright/mcp` as agent-qa-fe (role-gated at registration, not image-gated, so ux-dev never sees the MCP server despite sharing the image) | 13 |
-| docker/agent-doc.Dockerfile | Documenter — FROM base, no extra tools | 12 |
 | docker/agent-prompter.Dockerfile | Intake (Prompter) — persistent Claude Agent SDK session, ENTRYPOINT python -m robofleet.agent_sdk.intake_main | 17 |
 | docker/agent-secretary.Dockerfile | Secretary — persistent Claude Agent SDK session with gated CEO-authority tools, ENTRYPOINT python -m robofleet.agent_sdk.secretary_main | 19 |
-| docker/agent-pr-reviewer.Dockerfile | PR Reviewer — FROM base, keeps claude entrypoint; read-only reviewer dispatched per review task | 16 |
 | docker/agent-grok.Dockerfile | Grok runtime — base + official grok CLI install (NO version pin since 2026-07-28, latest-at-build), ENTRYPOINT grok-cli-agent-entrypoint.sh | 48 |
 | docker/agent-grok-prompter.Dockerfile | Grok intake — FROM grok, ENTRYPOINT python -m robofleet.agent_sdk.grok_intake_main, EXPOSE 9000 | 23 |
 | docker/agent-grok-secretary.Dockerfile | Grok secretary — FROM grok, ENTRYPOINT python -m robofleet.agent_sdk.grok_secretary_main, EXPOSE 9000 | 23 |

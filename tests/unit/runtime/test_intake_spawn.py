@@ -118,18 +118,28 @@ class TestBuildIntakeRunCmd:
         )
         assert "/data/workspaces:/data/workspaces" in cmd
 
-    def test_anthropic_default_omits_provider_env(self) -> None:
+    def test_anthropic_default_omits_anthropic_env(self) -> None:
         cmd = AgentOrchestrator._build_intake_run_cmd(_spec())
         joined = " ".join(cmd)
+        # No Claude runtime left after D2 - ANTHROPIC_* is never injected.
         assert "ANTHROPIC_BASE_URL" not in joined
         assert "ANTHROPIC_AUTH_TOKEN" not in joined
+        # The non-grok path always injects the Gemini/ADK model env.
+        assert "ROBOFLEET_AGENT_MODEL=gemini-3.5-flash" in cmd
 
-    def test_non_anthropic_injects_provider_env(self) -> None:
+    def test_non_grok_injects_gemini_env_not_anthropic(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(settings, "gemini_api_key", "gem-key-123")
         cmd = AgentOrchestrator._build_intake_run_cmd(
             _spec(provider_base_url="http://ollama:11434/v1", provider_auth_token="tok")
         )
-        assert "ANTHROPIC_BASE_URL=http://ollama:11434/v1" in cmd
-        assert "ANTHROPIC_AUTH_TOKEN=tok" in cmd
+        joined = " ".join(cmd)
+        # Every non-grok route boots the Gemini/ADK driver, not a Claude one.
+        assert "GEMINI_API_KEY=gem-key-123" in cmd
+        assert "ROBOFLEET_AGENT_MODEL=gemini-3.5-flash" in cmd
+        assert "ANTHROPIC_BASE_URL" not in joined
+        assert "ANTHROPIC_AUTH_TOKEN" not in joined
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-"""Secretary agent driver — the CEO-authority tools (backend-calling helpers).
+"""Secretary agent driver - the CEO-authority tools (backend-calling helpers).
 
 The Secretary is a long-lived conversational agent like Intake; it reuses the
 generic chat machinery (``IntakeDriver``) and differs only in its tools. Where

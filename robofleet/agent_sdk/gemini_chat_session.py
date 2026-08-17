@@ -78,7 +78,11 @@ def _part_to_chunk(part: Any, text_acc: list[str]) -> StreamChunk | None:
     is_thought = bool(getattr(part, "thought", False))
     if isinstance(text, str) and text:
         text_acc.append(text)
-        return StreamChunk(kind="thinking", text=text) if is_thought else None
+        if is_thought:
+            return StreamChunk(kind="thinking", text=text)
+        # Live reply text: emit immediately so the panel SSE sees the turn as
+        # it generates, and still accumulate for the fenced-draft fallback.
+        return StreamChunk(kind="text", text=text)
     fc = getattr(part, "function_call", None)
     if fc is not None:
         name = getattr(fc, "name", "") or ""

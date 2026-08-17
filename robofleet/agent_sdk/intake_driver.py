@@ -1,4 +1,4 @@
-"""Intake agent driver — the normalized stream chunk + driver loop.
+"""Intake agent driver - the normalized stream chunk + driver loop.
 
 The intake (``prompter``) agent is an interactive session. The runtime-specific
 session (Gemini/ADK via ``GeminiChatSession``, grok CLI via ``GrokChatSession``)
@@ -178,8 +178,9 @@ class IntakeDriver:
     async def run(self) -> None:
         """Open the session and process human turns until shutdown.
 
-        One ``ClaudeSDKClient`` is held open across all turns (context persists
-        in-process). The loop ends when ``next_message`` returns ``None``.
+        One session (``GeminiChatSession`` / ``GrokChatSession``) is held open
+        across all turns (context persists in-process). The loop ends when
+        ``next_message`` returns ``None``.
         """
         async with self._session_factory() as session:
             self.log.info("Intake session opened")
@@ -205,9 +206,9 @@ class IntakeDriver:
         """
         # Prompt-injection guard at the input boundary (our own guard, runtime-
         # agnostic): deny a poisoned turn before the model ever sees it. Covers
-        # the Grok (grok-CLI) session and the Claude SDK session — the latter
-        # runs with setting_sources=[] and so never loads the bash UserPromptSubmit
-        # hook, so this is the only injection guard either interactive path has.
+        # the Grok (grok-CLI) session and the Gemini/ADK session - the latter
+        # runs with no shell hooks at all, so this is the only injection guard
+        # either interactive path has.
         injection = detect_injection(text)
         if injection is not None:
             self.log.warning("Intake turn denied: prompt-injection", reason=injection)

@@ -1,4 +1,4 @@
-"""robofleet.runtime.orchestrator — Secretary docker-run cmd + host paths (pure)."""
+"""robofleet.runtime.orchestrator - Secretary docker-run cmd + host paths (pure)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from robofleet.agents_config import (
     issue_agent_token,
     verify_agent_token,
 )
+from robofleet.config import settings
 from robofleet.foundation.identity import AGENTS
 from robofleet.runtime.orchestrator import (
     SECRETARY_AGENT_ID,
@@ -48,7 +49,10 @@ def test_build_secretary_run_cmd_wires_token_and_session() -> None:
     assert not any("/data/workspaces" in part for part in cmd)
 
 
-def test_build_secretary_run_cmd_adds_provider_env_when_set() -> None:
+def test_build_secretary_run_cmd_adds_gemini_env_not_anthropic(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "gemini_api_key", "gem-key-sec")
     spec = _spec()
     spec_with_provider = _SecretaryRunSpec(
         **{
@@ -58,8 +62,12 @@ def test_build_secretary_run_cmd_adds_provider_env_when_set() -> None:
         }
     )
     cmd = AgentOrchestrator._build_secretary_run_cmd(spec_with_provider)
-    assert "ANTHROPIC_BASE_URL=https://prov" in cmd
-    assert "ANTHROPIC_AUTH_TOKEN=ptok" in cmd
+    joined = " ".join(cmd)
+    # Non-grok route boots the Gemini/ADK driver, not a Claude one.
+    assert "GEMINI_API_KEY=gem-key-sec" in cmd
+    assert "ROBOFLEET_AGENT_MODEL=gemini-3.5-flash" in cmd
+    assert "ANTHROPIC_BASE_URL" not in joined
+    assert "ANTHROPIC_AUTH_TOKEN" not in joined
 
 
 def test_resolve_secretary_host_paths_has_claude_and_prompt() -> None:

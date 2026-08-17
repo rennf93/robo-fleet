@@ -1,16 +1,17 @@
 """Interactive intake/secretary builders fork a GROK route onto the grok CLI.
 
 A GROK route swaps the Gemini/ADK prompter/secretary image for the grok-CLI
-image and the ANTHROPIC_* env for the subscription auth mount + the per-agent
-usage mount (no metered xAI key, no permission env - the driver computes the
-grok permission flags). Every other provider keeps the Gemini/ADK image and
-the ANTHROPIC_* legacy fallback env.
+image and the GEMINI_API_KEY env for the subscription auth mount + the
+per-agent usage mount (no metered xAI key, no permission env - the driver
+computes the grok permission flags). Every other provider keeps the
+Gemini/ADK image and gets GEMINI_API_KEY + ROBOFLEET_AGENT_MODEL injected.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from robofleet.config import settings
 from robofleet.llm.providers import grok as grok_provider
 from robofleet.runtime.orchestrator import (
     GROK_PROMPTER_IMAGE,
@@ -36,11 +37,10 @@ _HOSTS: dict[str, str | None] = {
 def _intake_spec(
     provider_type: str, *, base_url: str | None, token: str | None
 ) -> _IntakeRunSpec:
+    is_grok = provider_type == "grok"
     return _IntakeRunSpec(
         container_name="robofleet-agent-intake-1",
-        image=GROK_PROMPTER_IMAGE
-        if provider_type == "grok"
-        else "robofleet-agent-gemini-prompter",
+        image=GROK_PROMPTER_IMAGE if is_grok else "robofleet-agent-gemini-prompter",
         hosts=_HOSTS,
         session_id="sess-1",
         cwd="/data/workspace",
@@ -49,7 +49,7 @@ def _intake_spec(
         provider_base_url=base_url,
         provider_auth_token=token,
         provider_type=provider_type,
-        model="grok-build",
+        model="grok-build" if is_grok else "",
     )
 
 
@@ -87,12 +87,20 @@ def test_intake_grok_mounts_subscription_auth_when_present(
     assert f"{grok_dir}:/home/agent/.grok-auth-ro:ro" in cmd
 
 
-def test_intake_anthropic_keeps_anthropic_env() -> None:
+def test_intake_anthropic_boots_gemini_driver_not_anthropic_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "gemini_api_key", "gem-key-anth")
     cmd = AgentOrchestrator._build_intake_run_cmd(
         _intake_spec("anthropic", base_url="https://api.anthropic.com", token="sk-ant")
     )
-    assert "ANTHROPIC_BASE_URL=https://api.anthropic.com" in cmd
-    assert "ANTHROPIC_AUTH_TOKEN=sk-ant" in cmd
+    joined = " ".join(cmd)
+    # After D2 the non-grok path always boots the Gemini/ADK driver, so the
+    # Anthropic creds are dead and GEMINI_API_KEY is injected instead.
+    assert "GEMINI_API_KEY=gem-key-anth" in cmd
+    assert "ROBOFLEET_AGENT_MODEL=gemini-3.5-flash" in cmd
+    assert "ANTHROPIC_BASE_URL" not in joined
+    assert "ANTHROPIC_AUTH_TOKEN" not in joined
     assert not any(c.startswith("XAI_") for c in cmd)
     assert not any(c.startswith("ROBOFLEET_GROK_USAGE_FILE") for c in cmd)
     assert cmd[-1] == "robofleet-agent-gemini-prompter"

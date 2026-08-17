@@ -122,11 +122,13 @@ class _FakeEvent:
         self.turn_complete = turn_complete
 
 
-def test_part_to_chunk_text_appends_to_acc() -> None:
+def test_part_to_chunk_text_emits_text_chunk_and_appends_to_acc() -> None:
     acc: list[str] = []
     chunk = _part_to_chunk(_FakePart(text="hello"), acc)
-    assert chunk is None  # plain text is accumulated, not emitted as a chunk
-    assert acc == ["hello"]
+    assert chunk is not None
+    assert chunk.kind == "text"
+    assert chunk.text == "hello"
+    assert acc == ["hello"]  # still accumulated for the fenced-draft fallback
 
 
 def test_part_to_chunk_thought_returns_thinking_chunk() -> None:
@@ -180,9 +182,30 @@ def test_event_to_chunks_text_and_turn_complete() -> None:
         turn_complete=True,
     )
     chunks = _event_to_chunks(event, acc)
-    # Text part accumulates but does not emit a chunk; turn_complete emits
-    # turn_end (no fenced draft in the text).
-    assert [c.kind for c in chunks] == ["turn_end"]
+    # Text part emits a live text chunk; turn_complete emits turn_end (no
+    # fenced draft in the text).
+    assert [c.kind for c in chunks] == ["text", "turn_end"]
+    assert chunks[0].text == "the reply"
+
+
+def test_normal_turn_yields_text_before_turn_end() -> None:
+    """A conversational turn (text, no draft fence, no tool) must surface at
+    least one ``text`` chunk before ``turn_end`` so the panel receives the reply.
+    """
+    acc: list[str] = []
+    events = [
+        _FakeEvent(content=_FakeContent([_FakePart(text="Hello, ")])),
+        _FakeEvent(
+            content=_FakeContent([_FakePart(text="what is up?")]),
+            turn_complete=True,
+        ),
+    ]
+    kinds: list[str] = []
+    for ev in events:
+        for chunk in _event_to_chunks(ev, acc):
+            kinds.append(chunk.kind)
+    assert "text" in kinds
+    assert kinds.index("text") < kinds.index("turn_end")
 
 
 def test_event_to_chunks_fenced_draft_on_turn_complete() -> None:
@@ -194,8 +217,10 @@ def test_event_to_chunks_fenced_draft_on_turn_complete() -> None:
         turn_complete=True,
     )
     chunks = _event_to_chunks(event, acc)
-    assert [c.kind for c in chunks] == ["draft", "turn_end"]
-    assert chunks[0].data["title"] == "Add metrics"
+    # The text part emits a text chunk (live reply), then turn_complete mines
+    # the fenced draft out of the accumulated text and emits draft + turn_end.
+    assert [c.kind for c in chunks] == ["text", "draft", "turn_end"]
+    assert chunks[1].data["title"] == "Add metrics"
 
 
 def test_event_to_chunks_tool_use_part() -> None:

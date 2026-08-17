@@ -6095,17 +6095,15 @@ class AgentOrchestrator:
         metered xAI key is used, the per-agent data dir is mounted so the driver's
         per-turn usage capture lands a ``usage.json`` the finalizer reads back, and
         the per-role permissions / reasoning come from the grok flags the driver
-        computes (``grok_cli_config``) - not env. GEMINI (and the default
-        interactive path) uses the Gemini/ADK image; ADK's google-genai Client
-        reads ``GEMINI_API_KEY`` from env, forwarded from
-        ``settings.gemini_api_key``. An explicit ANTHROPIC route keeps the
-        ``ANTHROPIC_*`` injection for backward compatibility.
+        computes (``grok_cli_config``) - not env. Every other route (GEMINI,
+        ANTHROPIC, OLLAMA_CLOUD, LOCAL, and the default) lands on the Gemini/ADK
+        interactive image after the GCP port, so all of them need
+        ``GEMINI_API_KEY`` + ``ROBOFLEET_AGENT_MODEL`` for the ADK Client to boot;
+        there is no Claude runtime left to consume ``ANTHROPIC_*`` env.
         """
         from robofleet.llm.providers.grok import GrokCliProvider
         from robofleet.models.base import ModelProvider
 
-        base_url = spec.provider_base_url
-        auth_token = spec.provider_auth_token
         if spec.provider_type == ModelProvider.GROK.value:
             GrokCliProvider._append_grok_auth_mount(cmd)
             GrokCliProvider._append_usage_mount(cmd, spec.hosts)
@@ -6118,28 +6116,17 @@ class AgentOrchestrator:
                 ]
             )
             return
-        if spec.provider_type == ModelProvider.GEMINI.value:
-            if settings.gemini_api_key:
-                cmd.extend(["-e", f"GEMINI_API_KEY={settings.gemini_api_key}"])
-            cmd.extend(
-                ["-e", f"ROBOFLEET_AGENT_MODEL={spec.model or 'gemini-3.5-flash'}"]
-            )
-            return
-        # ponytail: the ANTHROPIC path is a legacy fallback; the GCP port's
-        # default interactive image is Gemini/ADK, so an explicit Anthropic route
-        # hits the Gemini image with ANTHROPIC_* env (would fail without
-        # GEMINI_API_KEY). Acceptable for the port scope; re-evaluate if
-        # Anthropic-interactive is needed post-port.
-        if base_url:
-            cmd.extend(["-e", f"ANTHROPIC_BASE_URL={base_url}"])
-        if auth_token:
-            cmd.extend(["-e", f"ANTHROPIC_AUTH_TOKEN={auth_token}"])
+        # Every non-grok route boots the Gemini/ADK driver: GEMINI, ANTHROPIC,
+        # OLLAMA_CLOUD, LOCAL, and the provider-less default all need the key.
+        if settings.gemini_api_key:
+            cmd.extend(["-e", f"GEMINI_API_KEY={settings.gemini_api_key}"])
+        cmd.extend(["-e", f"ROBOFLEET_AGENT_MODEL={spec.model or 'gemini-3.5-flash'}"])
 
     @staticmethod
     def _build_intake_run_cmd(spec: _IntakeRunSpec) -> list[str]:
         """Compose the `docker run` argv for the persistent intake container.
 
-        No claude CLI args (the image ENTRYPOINT is the SDK driver), no
+        No CLI args (the image ENTRYPOINT is the Gemini/ADK or grok driver), no
         settings.json/hook mount (the driver owns port 9000), no MCP config.
         The driver reads ``/app/system-prompt.md`` and the env below.
         """
@@ -6175,8 +6162,8 @@ class AgentOrchestrator:
                 f"CLAUDE_CODE_SUBAGENT_MODEL={spec.cli_model}",
             ]
         )
-        # GROK mounts the subscription auth + usage dir; other providers use the
-        # ANTHROPIC_* injection or the mounted ~/.claude default.
+        # GROK mounts the subscription auth + usage dir; every other provider
+        # boots the Gemini/ADK driver and gets GEMINI_API_KEY injected.
         AgentOrchestrator._append_interactive_provider_env(cmd, spec)
         cmd.append(spec.image)
         return cmd

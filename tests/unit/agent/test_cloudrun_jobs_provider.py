@@ -136,6 +136,29 @@ async def test_spawn_env_identity_token_signed_over_uuid(
     assert env["ROBOFLEET_AGENT_MODEL"] == "gemini-3.5-flash"
     # No git context -> no ROBOFLEET_GIT_TOKEN.
     assert "ROBOFLEET_GIT_TOKEN" not in env
+    # No gemini_api_key set -> no GEMINI_API_KEY injected.
+    assert "GEMINI_API_KEY" not in env
+
+
+@pytest.mark.asyncio
+async def test_spawn_injects_gemini_api_key_when_set(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """ROBOFLEET_GEMINI_API_KEY is forwarded as GEMINI_API_KEY into the agent
+    Cloud Run Job so the ADK LlmAgent can authenticate to the Gemini API."""
+    monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("robofleet.config.settings.gemini_api_key", "AIza-fake-key")
+    _patch_identity(monkeypatch)
+    fake = _patch_client(monkeypatch)
+
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
+    await provider.spawn(_config(), initial_prompt="do the work")
+
+    assert fake.captured is not None
+    env = _env_map(fake.captured.job)
+    assert env["GEMINI_API_KEY"] == "AIza-fake-key"
 
 
 @pytest.mark.asyncio

@@ -228,6 +228,11 @@ class Settings(BaseSettings):
     # ==========================================================================
     gcp_project_id: str = Field(default="", description="Google Cloud project id.")
     gcp_region: str = Field(default="", description="Google Cloud region.")
+    gemini_api_key: str = Field(
+        default="",
+        description="Gemini API key forwarded into ADK agent Cloud Run Jobs as "
+        "GEMINI_API_KEY so the LlmAgent can authenticate to the Gemini API.",
+    )
     gcp_cloudsql_instance: str = Field(
         default="", description="Cloud SQL instance connection name (proj:region:inst)."
     )

@@ -77,6 +77,13 @@ _GLM_OUTPUT = 4.40
 _GLM_CACHE_READ = 0.26
 _GLM_CACHE_WRITE = 1.40
 
+# Gemini 3.5 Flash - the ADK agent runtime model on Cloud Run Jobs. Standard
+# per-token rates via the Gemini API (see pricing.py's table comment).
+_GEMINI35_INPUT = 1.50
+_GEMINI35_OUTPUT = 9.00
+_GEMINI35_CACHE_READ = 0.15
+_GEMINI35_CACHE_WRITE = 0.15
+
 # Moonshot Kimi — priced non-Anthropic (kimi-code CLI subscription, priced
 # here for cost attribution like grok-build/gpt-5.3-codex).
 _KIMI_K3_INPUT = 3.00
@@ -533,6 +540,63 @@ class TestGlmTier:
         tag suffix — a differently-tagged variant still resolves."""
         cost = calculate_cost("glm-5.2", tokens_input=_M, tokens_output=0)
         assert abs(cost - _GLM_INPUT) < _TOL
+
+
+# ---------------------------------------------------------------------------
+# Gemini 3.5 Flash tier (ADK agent runtime on Cloud Run Jobs - priced
+# non-Anthropic via the Gemini API; see pricing.py's table comment for source).
+# ---------------------------------------------------------------------------
+
+
+class TestGemini35FlashTier:
+    """gemini-3.5-flash pricing - the ADK agent runtime on Cloud Run Jobs."""
+
+    def test_input_only(self) -> None:
+        cost = calculate_cost("gemini-3.5-flash", tokens_input=_M, tokens_output=0)
+        assert abs(cost - _GEMINI35_INPUT) < _TOL
+
+    def test_output_only(self) -> None:
+        cost = calculate_cost("gemini-3.5-flash", tokens_input=0, tokens_output=_M)
+        assert abs(cost - _GEMINI35_OUTPUT) < _TOL
+
+    def test_cache_read_only(self) -> None:
+        cost = calculate_cost(
+            "gemini-3.5-flash",
+            tokens_input=0,
+            tokens_output=0,
+            tokens_cache_read=_M,
+        )
+        assert abs(cost - _GEMINI35_CACHE_READ) < _TOL
+
+    def test_all_token_types(self) -> None:
+        cost = calculate_cost(
+            "gemini-3.5-flash",
+            tokens_input=_M,
+            tokens_output=_M,
+            tokens_cache_read=_M,
+            tokens_cache_write=_M,
+        )
+        expected = (
+            _GEMINI35_INPUT
+            + _GEMINI35_OUTPUT
+            + _GEMINI35_CACHE_READ
+            + _GEMINI35_CACHE_WRITE
+        )
+        assert abs(cost - expected) < _TOL
+
+    def test_gemini35_is_not_treated_as_anthropic(self) -> None:
+        assert _is_anthropic_model("gemini-3.5-flash") is False
+        assert (
+            calculate_cost("gemini-3.5-flash", tokens_input=_M, tokens_output=0) > 0.0
+        )
+
+    def test_distinct_from_gemini_2_5_flash(self) -> None:
+        # "gemini-2.5-flash" is not a substring of "gemini-3.5-flash", so the
+        # two tiers must not collide - 3.5 costs strictly more per input token.
+        assert input_price_per_million("gemini-3.5-flash") == _GEMINI35_INPUT
+        assert input_price_per_million("gemini-3.5-flash") > input_price_per_million(
+            "gemini-2.5-flash"
+        )
 
 
 # ---------------------------------------------------------------------------

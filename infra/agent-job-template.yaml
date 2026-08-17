@@ -57,6 +57,11 @@ spec:
                   value: "__AGENT_ROLE__"
                 - name: ROBOFLEET_AGENT_MODEL
                   value: "gemini-3.5-flash"
+                # Gemini API key (forwarded by CloudRunJobsProvider from
+                # ROBOFLEET_GEMINI_API_KEY) so the ADK LlmAgent can authenticate
+                # to the Gemini API.
+                - name: GEMINI_API_KEY
+                  value: "__GEMINI_API_KEY__"
                 - name: ROBOFLEET_INITIAL_PROMPT
                   value: "__INITIAL_PROMPT__"
                 - name: ROBOFLEET_TOOL_MANIFEST_PATH

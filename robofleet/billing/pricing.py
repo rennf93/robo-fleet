@@ -94,6 +94,13 @@ _PRICING: list[tuple[str, float, float, float, float]] = [
     ("gemini-2.5-pro", 1.25, 10.00, 1.25, 1.25),
     ("gemini-2.5-flash-lite", 0.10, 0.40, 0.10, 0.10),
     ("gemini-2.5-flash", 0.30, 2.50, 0.30, 0.30),
+    # Gemini 3.5 Flash (GA May 2026) - the ADK agent runtime model on Cloud Run
+    # Jobs. Standard-tier per-token rates via the Gemini API (verified against
+    # ai.google.dev/gemini-api/docs/pricing): $1.50/1M in, $9.00/1M out
+    # (thinking tokens included), $0.15/1M cache-read. Cache-write falls back to
+    # the cache-read rate; the ADK entrypoint reports cache_write=0 so it is
+    # never multiplied.
+    ("gemini-3.5-flash", 1.50, 9.00, 0.15, 0.15),
     # Moonshot Kimi (K3 / K2.7 Code, via the kimi-code CLI subscription) —
     # priced non-Anthropic, same "attribute at the underlying per-token rate"
     # convention as grok-build/gpt-5.3-codex above. Rates per Moonshot's

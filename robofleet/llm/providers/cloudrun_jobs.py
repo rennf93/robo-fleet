@@ -182,6 +182,16 @@ class CloudRunJobsProvider(AgentProvider):
                 value=str(settings.flow_verb_slow_timeout_seconds),
             ),
         ]
+        # Gemini API key so the ADK LlmAgent can authenticate to the Gemini API.
+        # ADK's google-genai Client reads GEMINI_API_KEY from the environment;
+        # without it the agent Cloud Run Job cannot call the model. The
+        # orchestrator holds it as ROBOFLEET_GEMINI_API_KEY (a Cloud Run
+        # env-secret backed by Secret Manager secret robofleet-gemini-api-key)
+        # and forwards it here under the bare name genai expects.
+        if settings.gemini_api_key:
+            env_vars.append(
+                run_v2.EnvVar(name="GEMINI_API_KEY", value=settings.gemini_api_key)
+            )
         # The orchestrator writes the ADK tool manifest to config.mcp_config_path
         # (via _generate_adk_manifest); upload THAT to GCS, not the Claude-Code
         # settings.json (agent_settings_path, irrelevant for ADK). The entrypoint

@@ -14,7 +14,7 @@ Everything else (the org hierarchy, task lifecycle, gateway verbs, findings ledg
 
 ## Architecture diagram
 
-See `docs/architecture.mmd` (render to `docs/architecture.png` with `npx -y @mermaid-js/mermaid-cli -i docs/architecture.mmd -o docs/architecture.png` if a local mermaid CLI is available).
+See [`docs/architecture.png`](./docs/architecture.png) (rendered from `docs/architecture.mmd`; re-render with `npx -y @mermaid-js/mermaid-cli -i docs/architecture.mmd -o docs/architecture.png -t default -b white`).
 
 ## Prerequisites
 
@@ -98,6 +98,30 @@ The Fortified Enterprise Fleet track scores seven fleet properties; all already 
 ## Reproducibility
 
 This repository is licensed under AGPL-3.0 (see [`LICENSE`](./LICENSE)). A judge following the spin-up above, with a GCP project and the credit request approved, reaches a running stack. The live deploy (Cloud SQL, Memorystore, Cloud Run) costs GCP credits; the repo itself, the compliance test (`tests/compliance/test_hackathon_stack.py`), and the unit-test suite run anywhere with `uv sync` and a local Postgres.
+
+## Testing
+
+Two tiers, both judge-reproducible without a GCP project or credits.
+
+**Tier 1: the compliance proof (no infra).** The compliance test is the proof-the-stack-is-Google artifact (`tests/compliance/test_hackathon_stack.py`). It asserts the three mandatory All Things Agentic items and fails (not skips) if the dependency is missing: the agent model resolves to a `gemini-3.5-*` id, Google ADK's `Runner` is importable, and the Cloud SQL engine factory is wired. No database and no GCP project required:
+
+```bash
+uv sync
+uv run pytest tests/compliance/test_hackathon_stack.py -v
+```
+
+A live-GCP assertion in the same file skips unless `ROBOFLEET_GCP_E2E=1` is set, so it probes the deployed stack only when you point it at one.
+
+**Tier 2: the full suite (local Postgres).** The unit and integration suite covers the task lifecycle, the gateway verbs, the findings ledger, the sequencing bar, the conventions standard, and the GCP infra adapters (Cloud SQL, Memorystore, GCS, Secret Manager, Filestore). The DB-backed tests need a Postgres; `docker compose up -d postgres` brings up `pgvector/pgvector:pg16` on `localhost:15432` with user/password/database `robofleet`, which matches the test conftest defaults so no env vars are needed. The conftest provisions an ephemeral test database, enables pgvector, and builds the schema itself, so there is no `alembic upgrade` step:
+
+```bash
+uv sync
+docker compose up -d postgres      # pgvector Postgres on localhost:15432 (matches test defaults)
+uv run pytest                      # full suite
+make quality                       # the full gate: ruff + format + markdown + mypy + pytest + xenon
+```
+
+The GCP infra-adapter tests stub the real GCP calls (no project, no credits needed); only the live-GCP compliance assertion needs `ROBOFLEET_GCP_E2E=1` and a deployed stack.
 
 ## Development
 

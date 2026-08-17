@@ -1,4 +1,4 @@
-# RoboCo Control Panel Dockerfile
+# RoboFleet Control Panel Dockerfile
 # Multi-stage build for optimized production image.
 # Build context is the project root so the backend and panel share one
 # Dockerfile layout under docker/. Paths below are relative to project root.
@@ -59,7 +59,7 @@ RUN adduser --system --uid 1001 nextjs
 # Copy public assets. Must be chowned to the runtime user (nextjs) like the
 # standalone/static copies below — without it the assets stay root:root
 # rwxrwx--- and the non-root nextjs process gets EACCES serving them, so every
-# /public file (e.g. roboco-logo.png) 500s.
+# /public file (e.g. robofleet-logo.png) 500s.
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Copy standalone build

@@ -1,4 +1,4 @@
-"""Billing utilities for RoboCo.
+"""Billing utilities for RoboFleet.
 
 Provides token-cost calculation for Claude API models.
 """

@@ -1,6 +1,6 @@
 """``python -m robofleet.conventions check --root <dir> --files <a> <b> ...``.
 
-Builds the effective map from the repo's ``.roboco/conventions.yml`` overlaid
+Builds the effective map from the repo's ``.robofleet/conventions.yml`` overlaid
 on auto-derived defaults, runs the validator over the named files, and prints
 one JSON finding per line. Exit 0 when it ran (findings may be empty or
 present); exit 3 when it could not run (a broken config or a grammar failure),
@@ -23,7 +23,7 @@ from robofleet.foundation.policy.conventions.models import (
 from .runner import ValidatorCouldNotRun, run
 from .scan import derive_from_scan
 
-_CONVENTIONS_FILE = ".roboco/conventions.yml"
+_CONVENTIONS_FILE = ".robofleet/conventions.yml"
 _EXIT_COULD_NOT_RUN = 3
 
 

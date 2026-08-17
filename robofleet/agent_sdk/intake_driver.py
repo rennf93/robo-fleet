@@ -1,7 +1,7 @@
 """Intake agent driver — a long-lived Claude Code session the human chats with.
 
 The intake (``prompter``) agent is not a one-shot ``claude -p`` like every other
-RoboCo agent; it is an interactive session. This driver is the container's
+RoboFleet agent; it is an interactive session. This driver is the container's
 entrypoint: it opens ONE ``claude-agent-sdk`` ``ClaudeSDKClient`` (Claude Code
 held open), then loops — pull the human's next message, stream the agent's reply
 (token deltas, tool calls), wait for the next message — keeping conversation
@@ -34,7 +34,7 @@ logger = structlog.get_logger()
 # The intake agent emits the finished structured task draft as a fenced block
 # (see the prompter system prompt). The driver mines it from the complete reply
 # and surfaces it as one ``draft`` chunk for the panel's draft card.
-_DRAFT_FENCE = re.compile(r"```roboco-draft\s*\n(.*?)```", re.DOTALL)
+_DRAFT_FENCE = re.compile(r"```robofleet-draft\s*\n(.*?)```", re.DOTALL)
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +130,7 @@ def _coerce_spec_fields(
 
 
 def _extract_draft(text: str) -> dict[str, Any] | None:
-    """Parse a fenced ``roboco-draft`` JSON block out of the agent's reply.
+    """Parse a fenced ``robofleet-draft`` JSON block out of the agent's reply.
 
     A fallback to the ``propose_draft`` tool: returns the parsed object (a dict
     with a string ``title``) or ``None`` when no well-formed block is present.
@@ -253,7 +253,7 @@ def _blocks_to_chunks(
     The canonical draft signal is the agent calling the **``propose_draft``**
     tool — that ToolUseBlock becomes a single ``draft`` chunk. As a fallback (if
     the agent types the spec instead of calling the tool) the complete text is
-    also mined for a fenced ``roboco-draft`` block. thinking + other tool_use
+    also mined for a fenced ``robofleet-draft`` block. thinking + other tool_use
     (which do NOT arrive as deltas) are emitted as before.
     """
     chunks: list[StreamChunk] = []

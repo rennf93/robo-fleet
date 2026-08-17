@@ -6,7 +6,7 @@ import { Providers } from "@/components/app-providers";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "RoboCo Control Panel",
+  title: "RoboFleet Control Panel",
   description: "AI Agents Company - Control Panel",
 };
 

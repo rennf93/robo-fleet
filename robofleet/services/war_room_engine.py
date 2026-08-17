@@ -74,7 +74,7 @@ def _description_for(release_ref: dict[str, Any]) -> str:
     if release_ref:
         version = release_ref.get("version", "")
         return (
-            f"RoboCo v{version} just shipped. Design ONE campaign for it — an "
+            f"RoboFleet v{version} just shipped. Design ONE campaign for it — an "
             "ordered set of 2-6 posts (teaser, launch, follow-up, spotlight) "
             "with recommended publish_after timestamps — then author it via "
             "propose_campaign(). The release highlights are in your briefing."
@@ -170,8 +170,8 @@ class WarRoomEngine(BaseService):
             task_svc, cast("UUID", project.id), release_ref or {}
         )
 
-    async def _roboco_project(self) -> ProjectTable | None:
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+    async def _robofleet_project(self) -> ProjectTable | None:
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _project_or_default(self, project_id: UUID | None) -> ProjectTable | None:
@@ -179,7 +179,7 @@ class WarRoomEngine(BaseService):
         fallback — mirrors ``XEngine._project_or_default``."""
         if project_id is not None:
             return await get_project_service(self.session).get(project_id)
-        return await self._roboco_project()
+        return await self._robofleet_project()
 
     async def _originate(
         self, task_svc: TaskService, project_id: UUID, release_ref: dict[str, Any]

@@ -134,7 +134,7 @@ def test_readiness_still_branch_gates_code_task_in_progress() -> None:
         "be-dev-1",
         _task(
             project_id="r1",
-            project_slug="roboco",
+            project_slug="robo-fleet",
             status="in_progress",
             branch_name=None,
         ),

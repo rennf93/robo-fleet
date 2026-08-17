@@ -49,7 +49,7 @@ import pytest
 import pytest_asyncio
 from cryptography.fernet import Fernet
 from robofleet.config import settings as _settings
-from robofleet.db import tables as roboco_tables
+from robofleet.db import tables as robofleet_tables
 from robofleet.db.base import Base, close_db
 from robofleet.db.tables import (
     AgentTable,
@@ -184,8 +184,8 @@ _PG_AVAILABLE = _postgres_reachable()
 _warn_if_pg_unavailable(_PG_AVAILABLE, _TEST_DB_HOST, _TEST_DB_PORT)
 
 # Sanity-check imported tables registered themselves on Base.metadata. Tied to
-# `roboco_tables` so static analysis treats the import as load-bearing.
-if not hasattr(roboco_tables, "TaskTable"):
+# `robofleet_tables` so static analysis treats the import as load-bearing.
+if not hasattr(robofleet_tables, "TaskTable"):
     raise RuntimeError("robofleet.db.tables failed to register TaskTable on Base")
 
 
@@ -201,7 +201,7 @@ def _build_url(database: str) -> str:
 # ---------------------------------------------------------------------------
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def _test_database_url() -> AsyncIterator[str]:
-    """Create a fresh `roboco_test_<pid>_<rand>` DB, build the schema, yield URL.
+    """Create a fresh `robofleet_test_<pid>_<rand>` DB, build the schema, yield URL.
 
     Drops the database on teardown. Skips the entire test session if Postgres
     is unreachable.
@@ -213,7 +213,7 @@ async def _test_database_url() -> AsyncIterator[str]:
             allow_module_level=False,
         )
 
-    db_name = f"roboco_test_{os.getpid()}_{uuid4().hex[:8]}"
+    db_name = f"robofleet_test_{os.getpid()}_{uuid4().hex[:8]}"
 
     # 1. CREATE DATABASE on the admin connection.
     admin = await asyncpg.connect(

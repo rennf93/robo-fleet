@@ -24,8 +24,8 @@ class WriteDocInput(BaseModel):
         description=(
             "Type: api, qa, guide, readme, changelog, architecture, design. "
             "These are team-facing docs only — never published. Do NOT pass "
-            "'user_facing': it is refused (see roboco_docs_write's docstring) "
-            "in favor of a documentation task on the roboco-website project."
+            "'user_facing': it is refused (see robofleet_docs_write's docstring) "
+            "in favor of a documentation task on the robo-fleet-website project."
         ),
     )
     title: str = Field(

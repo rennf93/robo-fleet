@@ -99,8 +99,8 @@ jobs:
 
       - name: Configure git identity for the scripted agents
         run: |
-          git config --global user.name "roboco-e2e"
-          git config --global user.email "e2e@roboco.local"
+          git config --global user.name "robofleet-e2e"
+          git config --global user.email "e2e@robofleet.local"
 
       - name: Run the lifecycle smoke
         run: make e2e-smoke

@@ -45,7 +45,7 @@ depends_on = None
 
 
 # Members of the rebuilt taskstatus type, in canonical lifecycle order.
-# Matches `roboco.models.base.TaskStatus` minus `quarantined`.
+# Matches `robofleet.models.base.TaskStatus` minus `quarantined`.
 _NEW_TASKSTATUS_MEMBERS: tuple[str, ...] = (
     "backlog",
     "pending",

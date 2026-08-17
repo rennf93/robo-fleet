@@ -22,11 +22,11 @@ criterion.
 
 A drift item carries no ``project_slug`` the way a roadmap item does
 (Sentinel watches the org's own process — waivers, findings, conventions,
-budget, docs drift — not one repo). The target project resolves to RoboCo's
+budget, docs drift — not one repo). The target project resolves to RoboFleet's
 own project (``settings.self_heal_project_slug``, the same fallback
-``SentinelEngine._roboco_project`` already uses to anchor the exploration
-task itself) — drift in RoboCo's own delivery process is, definitionally,
-about RoboCo's own project.
+``SentinelEngine._robofleet_project`` already uses to anchor the exploration
+task itself) — drift in RoboFleet's own delivery process is, definitionally,
+about RoboFleet's own project.
 """
 
 from __future__ import annotations
@@ -190,7 +190,7 @@ class SentinelService(BaseService):
         self, item: dict[str, Any], *, created_by: UUID
     ) -> TaskTable:
         """Turn one approved drift item into a real Main-PM-owned root task,
-        anchored on the RoboCo project (see module docstring for why).
+        anchored on the RoboFleet project (see module docstring for why).
         ``team=Team.MAIN_PM`` (via ``BatchPlacement.team_override``), matching
         ``TaskService.approve_and_start`` — a process/quality drift item has no
         natural owning cell, so unlike ``RoadmapService._materialize`` there is
@@ -198,10 +198,10 @@ class SentinelService(BaseService):
         from robofleet.seeds.initial_data import AGENT_UUIDS
         from robofleet.services.prompter import BatchPlacement, get_prompter_service
 
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         if project is None or project.id is None:
             raise ValueError(
-                "the RoboCo project (settings.self_heal_project_slug) is not "
+                "the RoboFleet project (settings.self_heal_project_slug) is not "
                 "resolvable — cannot anchor a materialized task"
             )
         draft = {
@@ -230,12 +230,12 @@ class SentinelService(BaseService):
             placement=BatchPlacement(team_override=Team.MAIN_PM),
         )
 
-    async def _roboco_project(self) -> Any:
-        """Mirrors ``SentinelEngine._roboco_project`` exactly — the same
+    async def _robofleet_project(self) -> Any:
+        """Mirrors ``SentinelEngine._robofleet_project`` exactly — the same
         fallback anchor a Sentinel exploration task itself resolves against."""
         from robofleet.services.project import get_project_service
 
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _record_learn(

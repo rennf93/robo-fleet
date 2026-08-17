@@ -306,7 +306,7 @@ function KnowledgeBaseBrowserContent() {
         </div>
         <OfflineState
           title="Cannot Connect to Knowledge Base"
-          description="Start the RoboCo orchestrator to access the knowledge base."
+          description="Start the RoboFleet orchestrator to access the knowledge base."
           onRetry={() => void refresh()}
         />
       </div>

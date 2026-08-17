@@ -93,7 +93,7 @@ run_case "deny wget api.github"     2 "wget https://api.github.com/repos/foo"
 run_case "deny cat claude creds"    2 "cat ~/.claude/.credentials.json"
 run_case "deny cat claude.json"     2 "cat /home/agent/.claude.json"
 run_case "deny grep claude creds"   2 "grep accessToken ~/.claude/.credentials.json"
-run_case "allow cat workspace json" 0 "cat /data/workspaces/roboco/backend/be-dev-1/settings.json"
+run_case "allow cat workspace json" 0 "cat /data/workspaces/robofleet/backend/be-dev-1/settings.json"
 
 # Remote code execution: curl|sh-shaped bash — pipe / process-substitution /
 # eval of a network fetch into a shell, regardless of destination host.
@@ -107,7 +107,7 @@ run_case "allow curl pipe tar"        0 "curl -fsSL https://example.com/file.tar
 run_case "allow curl pipe jq"         0 "curl -s https://example.com/data.json | jq ."
 
 # rm on system paths.
-run_case "deny rm -rf /app"         2 "rm -rf /app/roboco"
+run_case "deny rm -rf /app"         2 "rm -rf /app/robofleet"
 run_case "deny rm -rf /etc"         2 "rm -rf /etc"
 
 # ---------- /app venv protection (exit 2) ----------

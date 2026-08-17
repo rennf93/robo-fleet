@@ -51,7 +51,7 @@ if TYPE_CHECKING:
 
 SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 SECRETARY_UUID = _foundation.AGENTS["secretary-1"].uuid
-SLUG = "roboco"
+SLUG = "robo-fleet"
 ONE = 1
 MIN_COMMITS = 8
 _VERSION = "0.13.0"
@@ -144,9 +144,9 @@ async def _seed(session: AsyncSession) -> None:
     await session.flush()
     session.add(
         ProjectTable(
-            name="RoboCo",
+            name="RoboFleet",
             slug=SLUG,
-            git_url="https://github.com/x/roboco.git",
+            git_url="https://github.com/x/robofleet.git",
             git_token_encrypted=encrypt_token("ghp_fake_test_token"),
             default_branch="master",
             protected_branches=["master"],

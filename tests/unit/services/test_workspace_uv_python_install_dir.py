@@ -41,7 +41,7 @@ def _service() -> WorkspaceService:
 
 
 def _make_workspace(tmp_path: Path) -> Path:
-    workspace = tmp_path / "roboco" / "backend" / "be-dev-1"
+    workspace = tmp_path / "robo-fleet" / "backend" / "be-dev-1"
     (workspace / ".git").mkdir(parents=True)
     return workspace
 
@@ -73,7 +73,7 @@ def test_uv_subprocess_env_clone_root_when_cwd_is_worktree(tmp_path: Path) -> No
     # pin UV_PYTHON_INSTALL_DIR at the clone root's .uv-python — not a phantom
     # <worktree>/.uv-python — so the managed CPython is found and not re-fetched
     # per worktree.
-    clone = tmp_path / "roboco" / "backend" / "be-dev-1"
+    clone = tmp_path / "robo-fleet" / "backend" / "be-dev-1"
     worktree = clone / ".worktrees" / "a3c40fe7"
     worktree.mkdir(parents=True)
 
@@ -87,7 +87,7 @@ def test_uv_subprocess_env_clone_root_unchanged_for_clone_itself(
 ) -> None:
     # Regression guard: when the CWD IS the clone root (no .worktrees segment),
     # behavior is byte-for-byte the pre-worktree path.
-    clone = tmp_path / "roboco" / "backend" / "be-dev-1"
+    clone = tmp_path / "robo-fleet" / "backend" / "be-dev-1"
     clone.mkdir(parents=True)
 
     env = _uv_subprocess_env(clone)

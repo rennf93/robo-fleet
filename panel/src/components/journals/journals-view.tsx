@@ -13,7 +13,7 @@ import { HelpTip } from "@/components/ui/help-tip";
 import { usePageRefresh } from "@/hooks";
 import { BookOpen, Search } from "lucide-react";
 
-const JOURNALS_STATE_KEY = "roboco-journals-state";
+const JOURNALS_STATE_KEY = "robofleet-journals-state";
 
 interface JournalsState {
   agent: string | null;

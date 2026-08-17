@@ -51,7 +51,7 @@ async def test_first_call_increments_and_sets_expiry(
     assert result.used == 1
     assert result.day == "2026-06-15"
     # expiry set exactly once, on the first increment
-    key = "roboco:research_quota:agent-1:2026-06-15"
+    key = "robofleet:research_quota:agent-1:2026-06-15"
     assert fake.expires[key] == _EXPIRY_SECONDS
 
 

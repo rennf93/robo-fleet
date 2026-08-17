@@ -82,7 +82,7 @@ def docs_denial_envelope(action: str, reason: str | None) -> Envelope:
     else:
         remediate = (
             f"role not permitted to {action} — ask a documenter or cell PM, "
-            "or use roboco_kb_search to find the document instead"
+            "or use robofleet_kb_search to find the document instead"
         )
     return Envelope.not_authorized(
         message=reason or f"not authorized: {action}",

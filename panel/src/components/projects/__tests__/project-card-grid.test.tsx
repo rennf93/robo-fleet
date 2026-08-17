@@ -28,9 +28,9 @@ import type { ProjectSummary } from "@/types";
 
 const project: ProjectSummary = {
   id: "p1",
-  name: "RoboCo Core",
-  slug: "roboco",
-  git_url: "https://github.com/rennf93/roboco.git",
+  name: "RoboFleet Core",
+  slug: "robo-fleet",
+  git_url: "https://github.com/rennf93/robo-fleet.git",
   assigned_cell: Team.BACKEND,
   is_active: true,
   has_workspace: true,
@@ -47,8 +47,8 @@ describe("ProjectCardGrid", () => {
 
   it("renders one card carrying the project's name, cell, tasks, token, status, and CI-watch badge", () => {
     render(<ProjectCardGrid projects={[project]} isLoading={false} />);
-    expect(screen.getByText("RoboCo Core")).toBeInTheDocument();
-    expect(screen.getByText("roboco")).toBeInTheDocument();
+    expect(screen.getByText("RoboFleet Core")).toBeInTheDocument();
+    expect(screen.getByText("robo-fleet")).toBeInTheDocument();
     expect(screen.getByText("Backend")).toBeInTheDocument();
     expect(screen.getByText("42 done")).toBeInTheDocument();
     expect(screen.getByText("1 blocked")).toBeInTheDocument();
@@ -89,7 +89,7 @@ describe("ProjectCardGrid", () => {
 
   it("clicking the project name opens the slim quick-edit dialog instead of navigating", () => {
     render(<ProjectCardGrid projects={[project]} isLoading={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "RoboCo Core" }));
+    fireEvent.click(screen.getByRole("button", { name: "RoboFleet Core" }));
     expect(mockPush).not.toHaveBeenCalled();
     expect(screen.getByTestId("quick-edit-dialog")).toHaveAttribute(
       "data-project-id",

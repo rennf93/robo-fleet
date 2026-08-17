@@ -35,8 +35,8 @@ def _orch() -> AgentOrchestrator:
         return AgentOrchestrator.__new__(AgentOrchestrator)
 
 
-_WS = "/data/workspaces/roboco-api/backend/be-dev-1"
-_CELL = "/data/workspaces/roboco-api/backend"
+_WS = "/data/workspaces/robofleet-api/backend/be-dev-1"
+_CELL = "/data/workspaces/robofleet-api/backend"
 
 _WRITER_ROLES = ("developer", "documenter", "product_owner", "head_marketing")
 _NON_WRITER_ROLES = ("qa", "cell_pm", "main_pm", "auditor")

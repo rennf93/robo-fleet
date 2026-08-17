@@ -155,8 +155,8 @@ async def test_originate_opens_task_held_for_ceo(
     obs = [
         RegressionObservation(
             fingerprint="fp1",
-            signal_name="ci:roboco",
-            repo_hint="roboco",
+            signal_name="ci:robo-fleet",
+            repo_hint="robo-fleet",
             summary="x",
             detail="d",
             raw_ref="r",

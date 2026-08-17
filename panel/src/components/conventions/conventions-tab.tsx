@@ -177,7 +177,7 @@ export function ConventionsTab({ projectId }: { projectId: string }) {
   const moduleBoundaries = (
     <Card className="lg:flex lg:flex-col">
       <CardHeader>
-        <HelpTip label="The effective map: auto-derived defaults from a scan of this repo, overlaid by any committed .roboco/conventions.yml. Editing here and saving writes it back as that committed file.">
+        <HelpTip label="The effective map: auto-derived defaults from a scan of this repo, overlaid by any committed .robofleet/conventions.yml. Editing here and saving writes it back as that committed file.">
           <CardTitle className="text-sm w-fit">Module boundaries</CardTitle>
         </HelpTip>
         <CardDescription>
@@ -198,7 +198,7 @@ export function ConventionsTab({ projectId }: { projectId: string }) {
               className="space-y-2 rounded-md border border-border p-3"
             >
               <div className="flex items-center gap-2">
-                <HelpTip label="Repo-relative directory this rule applies to (e.g. roboco/services)">
+                <HelpTip label="Repo-relative directory this rule applies to (e.g. robofleet/services)">
                   <Input
                     value={module.path}
                     placeholder="path/to/module"
@@ -490,7 +490,7 @@ export function ConventionsTab({ projectId }: { projectId: string }) {
               Conventions degraded — committed file unparseable
             </CardTitle>
             <CardDescription>
-              The committed <code>.roboco/conventions.yml</code> could not be
+              The committed <code>.robofleet/conventions.yml</code> could not be
               parsed; the effective map fell back to the last-good cache plus
               auto-derived defaults. Restore re-commits the last-good file.
             </CardDescription>
@@ -504,7 +504,7 @@ export function ConventionsTab({ projectId }: { projectId: string }) {
               Using auto-derived defaults
             </CardTitle>
             <CardDescription>
-              No <code>.roboco/conventions.yml</code> is committed yet. These
+              No <code>.robofleet/conventions.yml</code> is committed yet. These
               rules are auto-derived from the repository and are already
               enforced. Edit them below and Save to repo to make them canonical.
             </CardDescription>

@@ -199,7 +199,7 @@ class DocMixin(_Base):
         # The documenter's clone is separate from the dev's;
         # the task branch already exists (dev created it) so no checkout
         # ran in the doc's workspace. Put the doc on the task branch now
-        # so roboco_docs_write / commit don't fail BRANCH_MISMATCH.
+        # so robofleet_docs_write / commit don't fail BRANCH_MISMATCH.
         # Best-effort — a checkout hiccup must not fail the claim. Bounded
         # against the SAME shared LegBudget the evidence legs below use
         # (one budget per build), so this leg + diff + list_changed_files
@@ -217,7 +217,7 @@ class DocMixin(_Base):
                     leg="workspace checkout",
                     hint=(
                         "the diff below may reflect a stale worktree; "
-                        "re-run roboco_git_diff to confirm"
+                        "re-run robofleet_git_diff to confirm"
                     ),
                     task_id=task_id,
                     gaps=gaps,

@@ -169,7 +169,7 @@ def _patched_deps(
     merge_status: dict[str, Any] | Exception,
     parent_branch: str = "feature/main_pm/AAA",
 ) -> tuple[Any, Any, AsyncMock]:
-    project = MagicMock(slug="roboco-api")
+    project = MagicMock(slug="robofleet-api")
     proj_svc = MagicMock()
     proj_svc.get = AsyncMock(return_value=project)
     git_svc = MagicMock()

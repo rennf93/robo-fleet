@@ -67,7 +67,7 @@ def _enabled(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_enabled_opens_one_docs_update_task(_enabled: None) -> None:
     project_id = uuid4()
     project = _project(
-        project_id, "roboco-website", "https://github.com/x/roboco-website.git"
+        project_id, "robo-fleet-website", "https://github.com/x/robo-fleet-website.git"
     )
     created = _task(uuid4(), project_id, "0.23.0")
 
@@ -103,7 +103,7 @@ async def test_enabled_opens_one_docs_update_task(_enabled: None) -> None:
 async def test_same_version_is_deduped(_enabled: None) -> None:
     project_id = uuid4()
     project = _project(
-        project_id, "roboco-website", "https://github.com/x/roboco-website.git"
+        project_id, "robo-fleet-website", "https://github.com/x/robo-fleet-website.git"
     )
     open_task = _task(uuid4(), project_id, "0.23.0")
 
@@ -128,7 +128,7 @@ async def test_same_version_is_deduped(_enabled: None) -> None:
 async def test_different_versions_open_distinct_tasks(_enabled: None) -> None:
     project_id = uuid4()
     project = _project(
-        project_id, "roboco-website", "https://github.com/x/roboco-website.git"
+        project_id, "robo-fleet-website", "https://github.com/x/robo-fleet-website.git"
     )
     open_task = _task(uuid4(), project_id, "0.23.0")
     new_task = _task(uuid4(), project_id, "0.24.0")
@@ -197,7 +197,7 @@ async def test_missing_project_warns_and_returns_none(
             p.stop()
 
     assert result is None
-    assert "roboco-website" in caplog.text
+    assert "robo-fleet-website" in caplog.text
     assert "not registered" in caplog.text
     assert task_svc.create.await_count == 0
 
@@ -209,7 +209,7 @@ async def test_open_task_cap_is_enforced(
     monkeypatch.setattr(settings, "docs_sync_max_open_tasks", 1)
     project_id = uuid4()
     project = _project(
-        project_id, "roboco-website", "https://github.com/x/roboco-website.git"
+        project_id, "robo-fleet-website", "https://github.com/x/robo-fleet-website.git"
     )
     open_task = _task(uuid4(), project_id, "0.23.0")
 
@@ -238,7 +238,7 @@ async def test_per_cycle_cap_is_enforced(
     monkeypatch.setattr(settings, "docs_sync_max_per_cycle", 1)
     project_id = uuid4()
     project = _project(
-        project_id, "roboco-website", "https://github.com/x/roboco-website.git"
+        project_id, "robo-fleet-website", "https://github.com/x/robo-fleet-website.git"
     )
     first_task = _task(uuid4(), project_id, "0.23.0")
     second_task = _task(uuid4(), project_id, "0.24.0")

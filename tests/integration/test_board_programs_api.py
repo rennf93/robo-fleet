@@ -92,10 +92,10 @@ async def _arm_roadmap(session: AsyncSession, monkeypatch: pytest.MonkeyPatch) -
     registry existed) independently checks the legacy flag and no-ops
     without it, regardless of the registry-level settings-store override.
 
-    Also seeds the project ``RoadmapEngine._roboco_project`` resolves against
+    Also seeds the project ``RoadmapEngine._robofleet_project`` resolves against
     (a unique slug per call + a matching ``self_heal_project_slug`` override —
     ``db_session`` is a real, cross-test-persistent database within one
-    pytest run, so a fixed slug like "roboco-api" would collide the second
+    pytest run, so a fixed slug like "robofleet-api" would collide the second
     a sibling test also arms roadmap)."""
     monkeypatch.setattr(cfg, "roadmap_engine_enabled", True)
     key = "board_program.roadmap.enabled"
@@ -105,14 +105,14 @@ async def _arm_roadmap(session: AsyncSession, monkeypatch: pytest.MonkeyPatch) -
     else:
         existing.value = "true"
 
-    slug = f"roboco-api-{uuid4().hex[:8]}"
+    slug = f"robofleet-api-{uuid4().hex[:8]}"
     monkeypatch.setattr(cfg, "self_heal_project_slug", slug)
     session.add(
         ProjectTable(
             id=uuid4(),
-            name="RoboCo",
+            name="RoboFleet",
             slug=slug,
-            git_url="https://example.com/roboco.git",
+            git_url="https://example.com/robofleet.git",
             assigned_cell=Team.BACKEND,
             created_by=SYSTEM_UUID,
         )
@@ -124,7 +124,7 @@ async def _arm_war_room(session: AsyncSession, monkeypatch: pytest.MonkeyPatch) 
     """Arms war_room via its settings-store key (no legacy flag exists for
     it — ``program_armed``'s ``_legacy_enabled`` returns False for an
     unregistered legacy alias), seeds the project ``WarRoomEngine.
-    _roboco_project`` resolves against (mirrors ``_arm_roadmap``'s unique-
+    _robofleet_project`` resolves against (mirrors ``_arm_roadmap``'s unique-
     slug-per-call rationale), and seeds X credentials — ``WarRoomEngine``'s
     own creds gate would otherwise no-op every call, mirroring XEngine's
     release/spotlight guard."""
@@ -135,14 +135,14 @@ async def _arm_war_room(session: AsyncSession, monkeypatch: pytest.MonkeyPatch) 
     else:
         existing.value = "true"
 
-    slug = f"roboco-api-{uuid4().hex[:8]}"
+    slug = f"robofleet-api-{uuid4().hex[:8]}"
     monkeypatch.setattr(cfg, "self_heal_project_slug", slug)
     session.add(
         ProjectTable(
             id=uuid4(),
-            name="RoboCo",
+            name="RoboFleet",
             slug=slug,
-            git_url="https://example.com/roboco.git",
+            git_url="https://example.com/robofleet.git",
             assigned_cell=Team.BACKEND,
             created_by=SYSTEM_UUID,
         )

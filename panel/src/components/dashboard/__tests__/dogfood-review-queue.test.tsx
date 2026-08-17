@@ -22,7 +22,7 @@ const { listCycles, approveItem, rejectItem } = vi.hoisted(() => ({
               title: "Settings save button gives no feedback",
               description: "Clicking Save on the settings page shows nothing",
               acceptance_criteria: ["a toast confirms the save"],
-              project_slug: "roboco-api",
+              project_slug: "robofleet-api",
               team: "frontend",
               priority: 2,
               evidence:
@@ -34,11 +34,11 @@ const { listCycles, approveItem, rejectItem } = vi.hoisted(() => ({
               title: "Docs site 404 on /docs/board-programs",
               description: "The link in the panel points at a page that 404s",
               acceptance_criteria: ["link resolves or is removed"],
-              project_slug: "roboco-website",
+              project_slug: "robo-fleet-website",
               team: "frontend",
               priority: 3,
               evidence:
-                "Walked panel -> Business -> Board Programs -> clicked docs link -> 404 at docs.roboco.tech/docs/board-programs",
+                "Walked panel -> Business -> Board Programs -> clicked docs link -> 404 at docs.robo-fleet.tech/docs/board-programs",
               status: "proposed",
             },
           ],

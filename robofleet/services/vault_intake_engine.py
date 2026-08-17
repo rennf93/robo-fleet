@@ -1,4 +1,4 @@
-"""VaultIntakeEngine — vault notes tagged ``#roboco`` become board-review drafts.
+"""VaultIntakeEngine — vault notes tagged ``#robo-fleet`` become board-review drafts.
 
 The vexa-inspired input loop (V1 item 4). Detection/dedup mirrors the
 XEngine mentions poll; the draft itself takes the intake **board-review
@@ -25,7 +25,7 @@ the held-artifact pattern:
   containment for anything the screen doesn't catch.
 * **Dedup ledger.** ``vault_seen_notes`` keys on (vault-relative path,
   content hash) so an unchanged note is never reprocessed, but an edited one
-  is eligible again. The hash excludes RoboCo's own feedback callout so
+  is eligible again. The hash excludes RoboFleet's own feedback callout so
   appending it after processing does not itself trigger a reprocess.
 """
 
@@ -72,20 +72,20 @@ _AC_MAX_ITEM_CHARS = 200
 _TITLE_MAX_CHARS = 200
 _DEFAULT_AC = "CEO reviews and starts this drafted task"
 
-# A whole `#roboco` tag, not a prefix of a longer tag (`#robofleet/idea`) or word.
-_INLINE_TAG_RE = re.compile(r"(?<![\w/-])#roboco(?![\w/-])")
+# A whole `#robo-fleet` tag, not a prefix of a longer tag (`#robofleet/idea`) or word.
+_INLINE_TAG_RE = re.compile(r"(?<![\w/-])#robo-fleet(?![\w/-])")
 _HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
 _CHECKBOX_RE = re.compile(r"^\s*-\s*\[ \]\s*(.+?)\s*$", re.MULTILINE)
 
 
-def _has_roboco_tag(frontmatter: dict[str, Any], body: str) -> bool:
+def _has_robofleet_tag(frontmatter: dict[str, Any], body: str) -> bool:
     """True if frontmatter ``tags`` (list or scalar) or the body carries a
-    whole ``#roboco`` tag."""
+    whole ``#robo-fleet`` tag."""
     tags = frontmatter.get("tags")
     if isinstance(tags, str):
         tags = [tags]
     if isinstance(tags, list) and any(
-        str(t).strip().lstrip("#") == "roboco" for t in tags
+        str(t).strip().lstrip("#") == "robo-fleet" for t in tags
     ):
         return True
     return bool(_INLINE_TAG_RE.search(body))
@@ -167,14 +167,14 @@ def _parse_extraction(raw: str) -> _NoteExtraction | None:
 
 
 class VaultIntakeEngine(BaseService):
-    """Turn ``#roboco``-tagged vault notes into board-review intake drafts."""
+    """Turn ``#robo-fleet``-tagged vault notes into board-review intake drafts."""
 
     service_name = "vault_intake_engine"
 
     async def run_cycle(self) -> list[TaskTable]:
         """One intake pass: scan, dedup, extract, draft for board review.
         Empty list unless both the vault AND intake flags are on, the intake
-        dir exists, the open-draft cap isn't already reached, and the RoboCo
+        dir exists, the open-draft cap isn't already reached, and the RoboFleet
         project resolves."""
         if not (settings.obsidian_vault_enabled and settings.vault_intake_enabled):
             return []
@@ -186,16 +186,16 @@ class VaultIntakeEngine(BaseService):
         if open_count >= settings.vault_intake_max_open_drafts:
             self.log.info("vault-intake: open-draft cap reached; skipping cycle")
             return []
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         if project is None or project.id is None:
-            self.log.warning("vault-intake: RoboCo project not resolvable; skipping")
+            self.log.warning("vault-intake: RoboFleet project not resolvable; skipping")
             return []
         return await self._process_notes(
             sorted(intake_dir.glob("*.md")), cast("UUID", project.id), open_count
         )
 
-    async def _roboco_project(self) -> ProjectTable | None:
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+    async def _robofleet_project(self) -> ProjectTable | None:
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _process_notes(
@@ -227,7 +227,7 @@ class VaultIntakeEngine(BaseService):
     ) -> TaskTable | None:
         raw = note_path.read_text(encoding="utf-8")
         frontmatter, body = _split_frontmatter(raw)
-        if not _has_roboco_tag(frontmatter, body):
+        if not _has_robofleet_tag(frontmatter, body):
             return None
         rel_path = str(note_path.relative_to(Path(settings.vault_path)))
         content_hash = _content_hash(raw)
@@ -361,7 +361,9 @@ class VaultIntakeEngine(BaseService):
         try:
             id8 = str(task.id)[:8]
             date_str = datetime.now(UTC).strftime("%Y-%m-%d")
-            line = f"\n> [!info] RoboCo: drafted {task.title} ({id8}) on {date_str}\n"
+            line = (
+                f"\n> [!info] RoboFleet: drafted {task.title} ({id8}) on {date_str}\n"
+            )
             with note_path.open("a", encoding="utf-8") as fh:
                 fh.write(line)
         except OSError as exc:

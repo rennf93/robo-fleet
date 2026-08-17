@@ -1,5 +1,5 @@
 {
-  "name": "roboco-panel",
+  "name": "robofleet-panel",
   "version": "0.28.0",
   "private": true,
   "packageManager": "pnpm@11.10.0",

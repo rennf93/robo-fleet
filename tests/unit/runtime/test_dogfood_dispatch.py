@@ -191,17 +191,17 @@ def test_dogfood_prompt_names_browser_tools() -> None:
 def test_dogfood_prompt_injects_panel_url_for_self_project(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(settings, "self_heal_project_slug", "roboco-api")
+    monkeypatch.setattr(settings, "self_heal_project_slug", "robofleet-api")
     monkeypatch.setattr(settings, "panel_base_url", "https://panel.example.com")
     orch = _make_orch()
-    prompt = orch._build_dogfood_prompt(_dogfood_task(project_slug="roboco-api"))
+    prompt = orch._build_dogfood_prompt(_dogfood_task(project_slug="robofleet-api"))
     assert "https://panel.example.com" in prompt
 
 
 def test_dogfood_prompt_omits_panel_url_for_other_project(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(settings, "self_heal_project_slug", "roboco-api")
+    monkeypatch.setattr(settings, "self_heal_project_slug", "robofleet-api")
     monkeypatch.setattr(settings, "panel_base_url", "https://panel.example.com")
     orch = _make_orch()
     prompt = orch._build_dogfood_prompt(_dogfood_task(project_slug="some-other-repo"))

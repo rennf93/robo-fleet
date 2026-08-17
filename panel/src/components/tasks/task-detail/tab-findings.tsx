@@ -12,7 +12,7 @@ import { CodeSnippet } from "@/components/git/code-snippet";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 // Mirrors the server-side shape gate (Finding._file_repo_relative in
-// roboco/foundation/policy/content/models.py) — keep the character classes
+// robofleet/foundation/policy/content/models.py) — keep the character classes
 // in sync, knowing they deliberately diverge on non-ASCII: Python's \w is
 // unicode, JS's is ASCII, so a unicode path the server accepted renders
 // snippetless here (fail-open — the plain-text metadata still shows). A
@@ -53,7 +53,7 @@ const ORIGIN_LABEL: Record<string, string> = {
 };
 
 // Per-state description maps (task-status-badge.tsx idiom), local to the
-// findings-ledger domain (roboco/foundation/policy/conventions/findings.py).
+// findings-ledger domain (robofleet/foundation/policy/conventions/findings.py).
 const SEVERITY_DESCRIPTIONS: Record<string, string> = {
   blocker: "Must be fixed before this task can pass review.",
   major:

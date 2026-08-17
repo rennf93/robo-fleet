@@ -66,20 +66,20 @@ SYSTEM_PROMPT_PATH = Path(
 # file mechanism exists for Codex, so the blueprint travels IN the prompt).
 CODEX_PROMPT_PATH = Path(
     os.environ.get("ROBOFLEET_CODEX_PROMPT_FILE")
-    or Path(tempfile.gettempdir()) / "roboco-codex-prompt.txt"
+    or Path(tempfile.gettempdir()) / "robofleet-codex-prompt.txt"
 )
 # The entrypoint reads the computed per-role flags (one token per line) from
 # this file, mirroring grok_cli_config's GROK_ARGS_PATH handoff.
 CODEX_ARGS_PATH = Path(
     os.environ.get("ROBOFLEET_CODEX_ARGS_FILE")
-    or Path(tempfile.gettempdir()) / "roboco-codex-args"
+    or Path(tempfile.gettempdir()) / "robofleet-codex-args"
 )
 
 # The gateway pair MUST come up or the agent has no verb surface at all — set
 # required=true so a gateway-init failure fails the codex session fast instead
 # of silently running with no tools. Every other MCP server (git-readonly,
 # optimal, docs, playwright) is best-effort.
-_REQUIRED_MCP_SERVERS = frozenset({"roboco-flow", "roboco-do"})
+_REQUIRED_MCP_SERVERS = frozenset({"robofleet-flow", "robofleet-do"})
 
 # The CLI's default MCP startup timeout (10s) is too tight for a cold uv wheel
 # cache (first spawn after an image rebuild — see the identical rationale in
@@ -91,7 +91,7 @@ _REQUIRED_MCP_STARTUP_TIMEOUT_SEC = 30
 
 # Only `developer` gets a writable sandbox in Codex V1 — narrower than grok's
 # per-role `allows_write` (role_config says documenter also writes). Documenter
-# writes ride the roboco-docs MCP server (a network call, not a local sandboxed
+# writes ride the robofleet-docs MCP server (a network call, not a local sandboxed
 # file edit), so a read-only sandbox does not block its actual job; qa /
 # pr_reviewer / cell_pm / main_pm never write code either way. Loosen this set
 # if a role's real workflow needs local file writes under Codex.
@@ -150,8 +150,8 @@ def render_config_toml(mcp_config: dict[str, Any]) -> str:
 
     ``{"command": "uv", "args": [...], "env": {...}}`` becomes a
     ``[mcp_servers.<name>]`` table with the same fields, plus ``required =
-    true`` + ``startup_timeout_sec = 30`` for the gateway pair (``roboco-flow``
-    / ``roboco-do``) so a gateway-init failure fails the codex session fast
+    true`` + ``startup_timeout_sec = 30`` for the gateway pair (``robofleet-flow``
+    / ``robofleet-do``) so a gateway-init failure fails the codex session fast
     without tripping on a cold uv wheel cache (see
     ``_REQUIRED_MCP_STARTUP_TIMEOUT_SEC``). Always carries a top-level
     ``[agents]`` table disabling Codex's native subagents (fleet-wide ban,

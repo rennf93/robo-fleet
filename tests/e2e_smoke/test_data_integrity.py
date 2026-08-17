@@ -82,7 +82,7 @@ async def test_c3_deleted_journal_unindexed(e2e_stack: E2EStack) -> None:
     db_base._DbHolder.session_factory = None
 
     entry_id = uuid4()
-    source = f"roboco://journals/{entry_id}"
+    source = f"robofleet://journals/{entry_id}"
     source_hash = hashlib.sha256(source.encode()).hexdigest()
 
     # 1. Provision a real VectorStore for the JOURNALS index against the test

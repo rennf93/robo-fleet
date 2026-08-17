@@ -217,7 +217,7 @@ async def test_spawn_wires_git_token_from_project_pat(
 
     class _FakeProjectService:
         async def get_decrypted_token_by_slug(self, slug: str) -> str | None:
-            assert slug == "roboco"
+            assert slug == "robo-fleet"
             return "ghp_decrypted_pat"
 
     class _FakeDbContext:
@@ -240,7 +240,7 @@ async def test_spawn_wires_git_token_from_project_pat(
 
     provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(
-        _config(git_context=SpawnGitContext(project_slug="roboco")),
+        _config(git_context=SpawnGitContext(project_slug="robo-fleet")),
         initial_prompt="do the work",
     )
 
@@ -314,13 +314,13 @@ async def test_spawn_sets_working_dir_and_workspace_env_for_developer(
 
     provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(
-        _config(git_context=SpawnGitContext(project_slug="roboco")),
+        _config(git_context=SpawnGitContext(project_slug="robo-fleet")),
         initial_prompt="do the work",
     )
 
     assert fake.captured is not None
     container = fake.captured.job.template.template.containers[0]
-    expected = "/data/workspaces/roboco/backend/be-dev-1"
+    expected = "/data/workspaces/robo-fleet/backend/be-dev-1"
     assert container.working_dir == expected
     env = _env_map(fake.captured.job)
     assert env["ROBOFLEET_WORKSPACE_DIR"] == expected
@@ -354,7 +354,7 @@ async def test_spawn_omits_working_dir_and_workspace_env_for_qa(
 
     provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(
-        _config(git_context=SpawnGitContext(project_slug="roboco")),
+        _config(git_context=SpawnGitContext(project_slug="robo-fleet")),
         initial_prompt="do the work",
     )
 

@@ -19,7 +19,7 @@ from robofleet.services.heartbeat_mutex import (
     HeartbeatMutex,
 )
 
-_KEY = "roboco:test_mutex:abc"
+_KEY = "robofleet:test_mutex:abc"
 _MIN_RENEWS_AFTER_RECOVERY = 2  # the failed renew, then >=1 recovered one
 
 

@@ -68,7 +68,7 @@ from robofleet.services.task import get_task_service
 def test_parse_readiness_extracts_and_strips_tag() -> None:
     content = (
         "Here is my question about scope.\n\n"
-        '```roboco-meta\n{"covered": ["objective", "scope"], '
+        '```robofleet-meta\n{"covered": ["objective", "scope"], '
         '"ready": true, "scale": "multi"}\n```'
     )
     clean, tag = parse_readiness(content)
@@ -78,7 +78,7 @@ def test_parse_readiness_extracts_and_strips_tag() -> None:
     assert tag.scale == "multi"
     assert tag.covered == ["objective", "scope"]
     # The control block must not leak into the user-visible text.
-    assert "roboco-meta" not in clean
+    assert "robofleet-meta" not in clean
 
 
 def test_parse_readiness_absent_block_is_not_ready() -> None:
@@ -88,24 +88,24 @@ def test_parse_readiness_absent_block_is_not_ready() -> None:
 
 
 def test_parse_readiness_malformed_json_is_graceful() -> None:
-    content = "Reply text.\n```roboco-meta\n{not valid json]\n```"
+    content = "Reply text.\n```robofleet-meta\n{not valid json]\n```"
     clean, tag = parse_readiness(content)
-    assert "roboco-meta" not in clean
+    assert "robofleet-meta" not in clean
     assert clean == "Reply text."
     assert tag is None
 
 
 def test_parse_readiness_uses_last_block() -> None:
     content = (
-        '```roboco-meta\n{"ready": false, "scale": "single"}\n```\n'
+        '```robofleet-meta\n{"ready": false, "scale": "single"}\n```\n'
         "Final answer.\n"
-        '```roboco-meta\n{"ready": true, "scale": "multi"}\n```'
+        '```robofleet-meta\n{"ready": true, "scale": "multi"}\n```'
     )
     clean, tag = parse_readiness(content)
     assert tag is not None
     assert tag.ready is True
     assert tag.scale == "multi"
-    assert "roboco-meta" not in clean
+    assert "robofleet-meta" not in clean
 
 
 def test_derive_scale_single_vs_multi() -> None:
@@ -811,7 +811,9 @@ async def test_confirm_live_batch_in_progress_raises_when_sidecar_absent(
     service = get_prompter_service(db=db_session)
     drafts = _make_batch_drafts(project1, project2)
     fake = _FakeRedis()
-    fake._store["roboco:megatask_confirm:sess-inflight"] = "1"  # guard held, no sidecar
+    fake._store["robofleet:megatask_confirm:sess-inflight"] = (
+        "1"  # guard held, no sidecar
+    )
     with (
         patch("robofleet.services.prompter.redis.from_url", return_value=fake),
         pytest.raises(ServiceError, match="already in progress"),
@@ -2049,7 +2051,7 @@ async def test_history_digest_layer_single_project_has_no_header(
         return "- `abc12345` Some task (completed, 2026-01-01)"
 
     monkeypatch.setattr(prompter_module, "project_history_digest", _fake)
-    project = SimpleNamespace(slug="roboco", id=uuid4())
+    project = SimpleNamespace(slug="robo-fleet", id=uuid4())
 
     text = await history_digest_layer(cast("AsyncSession", object()), [project])
 

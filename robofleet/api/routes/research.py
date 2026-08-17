@@ -1,6 +1,6 @@
 """Web-research API — pluggable external search/fetch for Board + PM roles.
 
-Request path: agent -> roboco-search MCP -> here -> ResearchService -> provider.
+Request path: agent -> robofleet-search MCP -> here -> ResearchService -> provider.
 The provider key lives only in this server-side process; it is never injected
 into an agent container, and agents never egress (the provider's API does).
 A per-agent UTC-daily quota is enforced in Redis (fails open).

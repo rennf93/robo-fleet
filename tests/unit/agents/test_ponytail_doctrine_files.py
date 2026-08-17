@@ -12,7 +12,7 @@ def test_full_doctrine_has_ladder_and_no_frontmatter() -> None:
     assert text, "ponytail.md is missing or empty"
     assert "# Ponytail Doctrine" in text
     assert "## The ladder" in text
-    assert "## RoboCo preamble" in text
+    assert "## RoboFleet preamble" in text
     assert "## Intensity" in text  # dev doctrine carries the intensity table
     assert "Forces the laziest solution" not in text  # YAML frontmatter stripped
 
@@ -23,5 +23,5 @@ def test_ethos_doctrine_lacks_ladder_and_no_frontmatter() -> None:
     assert "# Ponytail Doctrine (ethos)" in text
     assert "## The ladder" not in text
     assert "## Intensity" not in text  # ethos gets no dial — restrained stance
-    assert "## RoboCo preamble" in text
+    assert "## RoboFleet preamble" in text
     assert "Forces the laziest solution" not in text

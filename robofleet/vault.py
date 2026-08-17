@@ -2,16 +2,16 @@
 
 ``rebuild``: full re-projection of every live entity (agents, tasks, journal
 entries, A2A threads) from the DB into the vault, plus materializing the
-shipped ``.obsidian/`` config + ``RoboCo/_meta/`` dashboards from packaged
+shipped ``.obsidian/`` config + ``RoboFleet/_meta/`` dashboards from packaged
 templates (``robofleet/vault_assets/``) if not already present. A task's
 ``## Narrative`` (Auditor-authored, not derivable from DB state) is read back
 from the existing note and preserved across the rebuild. Archive-aware: an
-old terminal task projects straight into ``RoboCo/Archive/<year>/`` (same
+old terminal task projects straight into ``RoboFleet/Archive/<year>/`` (same
 ``VaultWriter.write_task`` path the drift janitor's archival pass uses).
 
 ``relocate <new-path>``: move the vault tree to a new location. Notes use
 relative/alias-based wikilinks, so nothing inside them needs rewriting. An
-already-existing destination (a personal vault) receives only the ``RoboCo/``
+already-existing destination (a personal vault) receives only the ``RoboFleet/``
 subtree plus any absent shipped assets — its own ``.obsidian`` is never
 touched.
 
@@ -34,7 +34,7 @@ from robofleet.config import settings
 
 
 def ensure_vault_assets(vault_root: Path) -> None:
-    """Materialize ``.obsidian/`` + ``RoboCo/_meta/`` from packaged templates.
+    """Materialize ``.obsidian/`` + ``RoboFleet/_meta/`` from packaged templates.
 
     Never overwrites a file that already exists — an operator's own edits to
     the shipped config/dashboards survive both a later rebuild and repeated
@@ -42,7 +42,7 @@ def ensure_vault_assets(vault_root: Path) -> None:
     """
     assets = resources.files("robofleet.vault_assets")
     _copy_tree(assets.joinpath("obsidian"), vault_root / ".obsidian")
-    _copy_tree(assets.joinpath("meta"), vault_root / "RoboCo" / "_meta")
+    _copy_tree(assets.joinpath("meta"), vault_root / "RoboFleet" / "_meta")
 
 
 def _copy_tree(src: Any, dest: Path) -> None:
@@ -172,7 +172,7 @@ async def _rebuild(vault_root: Path) -> None:
 def _relocate(new_path: Path) -> int:
     """Move the vault to ``new_path``; 0 on success, 1 on refusal.
 
-    An EXISTING destination is a personal vault: graft only the ``RoboCo/``
+    An EXISTING destination is a personal vault: graft only the ``RoboFleet/``
     subtree into it (``shutil.move`` of the whole root would nest the old
     dirname inside it) and materialize the shipped ``.obsidian``/``_meta``
     assets only where absent — never clobbering the vault's own config. An
@@ -182,7 +182,7 @@ def _relocate(new_path: Path) -> int:
     if not old_root.exists() or old_root == new_path:
         new_path.mkdir(parents=True, exist_ok=True)
     elif new_path.exists():
-        dest_tree = new_path / "RoboCo"
+        dest_tree = new_path / "RoboFleet"
         if dest_tree.exists():
             print(
                 f"Refusing to relocate: {dest_tree} already exists. Move or "
@@ -190,7 +190,7 @@ def _relocate(new_path: Path) -> int:
                 file=sys.stderr,
             )
             return 1
-        old_tree = old_root / "RoboCo"
+        old_tree = old_root / "RoboFleet"
         if old_tree.exists():
             shutil.move(str(old_tree), str(dest_tree))
         ensure_vault_assets(new_path)

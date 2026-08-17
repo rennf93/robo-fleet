@@ -18,7 +18,7 @@ def test_vault_intake_disabled_by_default() -> None:
     s = Settings()
     assert s.vault_intake_enabled is False
     assert s.vault_intake_interval_seconds == _DEFAULT_INTERVAL
-    assert s.vault_intake_dir == "RoboCo/Inbox"
+    assert s.vault_intake_dir == "RoboFleet/Inbox"
     assert s.vault_intake_max_per_cycle == _DEFAULT_MAX_PER_CYCLE
     assert s.vault_intake_max_open_drafts == _DEFAULT_MAX_OPEN_DRAFTS
 

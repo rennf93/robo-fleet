@@ -7,7 +7,7 @@ run aggregate SQL itself, so this engine gathers recurring-learning-topic +
 existing-playbook-title evidence ahead of the spawn. Org-scoped (spec §4 — it
 mines journals/learnings org-wide, not a repo) but the exploration task
 itself still needs a resolvable ``project_id`` (``TaskService.
-_require_target_or_umbrella``, the same RoboCo-project-anchor resolution
+_require_target_or_umbrella``, the same RoboFleet-project-anchor resolution
 roadmap/periscope/sentinel all use).
 
 The Auditor does NOT gain ``draft_playbook`` on its manifest for this
@@ -94,7 +94,7 @@ class LibrarianEngine(BaseService):
         """Originate one held mining task, or None (no-op).
 
         No-ops when the program isn't armed, a cycle is already open, or the
-        RoboCo project (the task's required FK anchor) isn't resolvable.
+        RoboFleet project (the task's required FK anchor) isn't resolvable.
         Never authors content itself — the Auditor does, via
         ``propose_playbook_drafts`` once spawned by the board dispatcher.
         """
@@ -103,16 +103,16 @@ class LibrarianEngine(BaseService):
         task_svc = get_task_service(self.session)
         if await task_svc.list_open_librarian_cycles():
             return None  # one open cycle at a time
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         if project is None or project.id is None:
             self.log.warning(
-                "librarian-engine: RoboCo project not resolvable; skipping"
+                "librarian-engine: RoboFleet project not resolvable; skipping"
             )
             return None
         return await self._originate(task_svc, cast("UUID", project.id))
 
-    async def _roboco_project(self) -> ProjectTable | None:
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+    async def _robofleet_project(self) -> ProjectTable | None:
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _originate(self, task_svc: TaskService, project_id: UUID) -> TaskTable:

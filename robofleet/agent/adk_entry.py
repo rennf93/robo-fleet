@@ -109,7 +109,7 @@ async def main() -> int:
     initial = os.environ.get("ROBOFLEET_INITIAL_PROMPT", "")
     tools: list[Any] = build_gateway_tools() + build_git_tools()
     agent = LlmAgent(
-        name="roboco_agent",
+        name="robofleet_agent",
         model=_MODEL,
         instruction=instruction,
         tools=tools,

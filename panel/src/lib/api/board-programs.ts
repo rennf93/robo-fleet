@@ -3,7 +3,7 @@ import api from "./client";
 // ---------------------------------------------------------------------------
 // Board Programs — the generic registry (fourteen entries: the migrated
 // roadmap/x_feature cycles plus the twelve Phase-2/3 programs) the CEO
-// monitors and can run off-schedule. See roboco/api/routes/board_programs.py.
+// monitors and can run off-schedule. See robofleet/api/routes/board_programs.py.
 // ---------------------------------------------------------------------------
 
 export interface BoardProgram {

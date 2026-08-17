@@ -32,7 +32,7 @@ async def _run(
             x_agent_role=headers.get("X-Agent-Role"),
             x_agent_team=headers.get("X-Agent-Team"),
             x_agent_token=headers.get("X-Agent-Token"),
-            roboco_session=headers.get("roboco_session"),
+            robofleet_session=headers.get("robofleet_session"),
         ), m.called
 
 
@@ -57,7 +57,7 @@ async def test_cloud_auth_spoof_bare_agent_id_rejected(
                 x_agent_role=None,
                 x_agent_team=None,
                 x_agent_token=None,
-                roboco_session=None,
+                robofleet_session=None,
             )
         assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -87,7 +87,7 @@ async def test_dev_mode_unchanged_slug_returns_header(
             x_agent_role=None,
             x_agent_team=None,
             x_agent_token=None,
-            roboco_session=None,
+            robofleet_session=None,
         )
     assert slug == "be-dev-1"
     assert not m.called  # dev path does not invoke the cloud gate

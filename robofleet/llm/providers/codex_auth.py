@@ -10,7 +10,7 @@ authoritative expiry — unlike grok's bundle, this file carries no separate
 CLI self-refreshes IN-PROCESS when it notices the token is within 5 minutes of
 expiry, but that only helps a container that can write back to its own
 ``auth.json`` — our per-agent mount is read-only (the same inode-pinning
-concern as grok's mount, see :mod:`roboco.llm.providers.codex`), so an
+concern as grok's mount, see :mod:`robofleet.llm.providers.codex`), so an
 in-container refresh writes silently fail and the container falls back to the
 now-stale in-memory token for the rest of that one run only. The orchestrator
 owns the durable refresh: it holds the host file read-write and calls

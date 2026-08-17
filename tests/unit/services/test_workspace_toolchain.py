@@ -32,7 +32,7 @@ def _service() -> WorkspaceService:
 
 
 def _make_workspace(tmp_path: Path) -> Path:
-    workspace = tmp_path / "roboco" / "backend" / "be-dev-1"
+    workspace = tmp_path / "robo-fleet" / "backend" / "be-dev-1"
     (workspace / ".git").mkdir(parents=True)
     return workspace
 

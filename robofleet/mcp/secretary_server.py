@@ -1,4 +1,4 @@
-"""roboco-secretary MCP server — the Secretary's CEO-authority tools.
+"""robofleet-secretary MCP server — the Secretary's CEO-authority tools.
 
 Parity with the Claude Secretary's SDK tools
 (:func:`robofleet.agent_sdk.secretary_driver.build_secretary_options`):
@@ -29,7 +29,7 @@ from robofleet.agent_sdk.secretary_driver import (
     _do_submit_directive,
 )
 
-mcp = FastMCP("roboco-secretary")
+mcp = FastMCP("robofleet-secretary")
 
 
 @mcp.tool()

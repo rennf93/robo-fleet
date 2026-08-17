@@ -2,14 +2,14 @@
 output — never the full transcript.
 
 Kimi has no documented exit-code taxonomy for ``kimi -p`` (a claimed 75/1
-split is unverified and suspiciously matches RoboCo's own park-exit
+split is unverified and suspiciously matches RoboFleet's own park-exit
 convention — treated as noise, not a real CLI contract). The entrypoint must
 therefore sniff the run's output to tell a Moonshot rate-limit/quota error or
 a membership/auth failure apart from any other error. Sniffing the FULL
 captured stream-json stdout is unsafe: the model's own on-topic prose can
 false-positive by construction — this repo's own role prompts use words like
 "quota-limited", and a commit hash or item id can contain the substring
-"429" (:mod:`roboco.llm.providers.codex_cli_sniff` documents this failure
+"429" (:mod:`robofleet.llm.providers.codex_cli_sniff` documents this failure
 class in detail — it is the template this module mirrors).
 
 The fix is structural, not a pattern tweak: extract ONLY a structured
@@ -31,7 +31,7 @@ word-boundaried digit guard):
     your membership benefits" (the live-verified subscription-gate message),
     a bare ``\\b401\\b``.
 
-The entrypoint calls this as ``python -m roboco.llm.providers.kimi_cli_sniff
+The entrypoint calls this as ``python -m robofleet.llm.providers.kimi_cli_sniff
 <run_log> [err_log]``, printing ``rate_limit`` / ``auth`` / an empty line.
 """
 

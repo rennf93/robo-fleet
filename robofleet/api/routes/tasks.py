@@ -582,7 +582,7 @@ async def supersede_external_pr(
     """CEO-authorized takeover of a reviewed external PR.
 
     Confirms the review task and hands the contribution to the org: a
-    roboco-owned branch is cut from the contributor's fork head and a supersede
+    robo-fleet-owned branch is cut from the contributor's fork head and a supersede
     task is created for Main PM to delegate to a cell. This is the human
     confirmation that authorizes fetching + running the contributor's code, so
     it is CEO-only.
@@ -1370,7 +1370,7 @@ async def submit_for_qa(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
                 "NO_COMMITS: Cannot submit for QA without at least one "
-                "commit on this task. Use the roboco-do `commit(message, "
+                "commit on this task. Use the robofleet-do `commit(message, "
                 "files)` verb before `i_am_done()` via gateway, or POST "
                 "/api/tasks/{id}/submit-qa."
             ),

@@ -1,6 +1,6 @@
 """Scenario: the Pest Control (Board Program) loop end to end.
 
-Mirrors test_board_program_loop.py, minus the RoboCo-project resolution (this
+Mirrors test_board_program_loop.py, minus the RoboFleet-project resolution (this
 program is project-scoped): arming pest_control via the settings-store key
 AND opting a project in opens ONE held exploration task the delivery
 dispatcher's pending-claim filter skips (board-dispatched, not delivery

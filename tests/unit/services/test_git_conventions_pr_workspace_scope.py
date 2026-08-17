@@ -22,7 +22,7 @@ from robofleet.services.git import GitService
 if TYPE_CHECKING:
     from pathlib import Path
 
-_SCAFFOLD_BRANCH = "chore/roboco-conventions-scaffold"
+_SCAFFOLD_BRANCH = "chore/robofleet-conventions-scaffold"
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -85,7 +85,7 @@ async def test_workspace_path_outside_root_refused(
 
     assert result is None
     assert not _branch_exists(outside, _SCAFFOLD_BRANCH)
-    assert not (outside / ".roboco" / "conventions.yml").exists()
+    assert not (outside / ".robofleet" / "conventions.yml").exists()
 
 
 @pytest.mark.asyncio

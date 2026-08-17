@@ -895,7 +895,7 @@ def test_usage_from_transcript_without_session_id_uses_slug_glob(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
     """Without a session id it still finds the agent's own workspace transcript."""
-    slug_dir = tmp_path / ".claude" / "projects" / "-data-ws-roboco-backend-be-dev-1"
+    slug_dir = tmp_path / ".claude" / "projects" / "-data-ws-robofleet-backend-be-dev-1"
     slug_dir.mkdir(parents=True)
     exp_in, exp_out = 7, 8
     line = json.dumps(

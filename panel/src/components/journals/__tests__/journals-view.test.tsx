@@ -27,7 +27,7 @@ vi.mock("@/hooks/use-agents", () => ({
 
 import { JournalsView } from "../journals-view";
 
-const STORAGE_KEY = "roboco-journals-state";
+const STORAGE_KEY = "robofleet-journals-state";
 
 function withPageRefresh(ui: ReactNode) {
   return <PageRefreshProvider>{ui}</PageRefreshProvider>;

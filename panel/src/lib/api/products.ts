@@ -13,13 +13,13 @@ function mockProducts(): ProductSummary[] {
   return [
     {
       id: "p-mock-1",
-      name: "RoboCo Platform",
-      slug: "roboco-platform",
+      name: "RoboFleet Platform",
+      slug: "robofleet-platform",
       cell_count: 3,
       cells: [
-        { team: Team.BACKEND, project_id: "proj-1", project_name: "roboco" },
-        { team: Team.FRONTEND, project_id: "proj-1", project_name: "roboco" },
-        { team: Team.UX_UI, project_id: "proj-1", project_name: "roboco" },
+        { team: Team.BACKEND, project_id: "proj-1", project_name: "robo-fleet" },
+        { team: Team.FRONTEND, project_id: "proj-1", project_name: "robo-fleet" },
+        { team: Team.UX_UI, project_id: "proj-1", project_name: "robo-fleet" },
       ],
       progress: { done: 42, active: 5, blocked: 1 },
     },
@@ -29,7 +29,7 @@ function mockProducts(): ProductSummary[] {
       slug: "docs-site",
       cell_count: 2,
       cells: [
-        { team: Team.FRONTEND, project_id: "proj-2", project_name: "roboco-website" },
+        { team: Team.FRONTEND, project_id: "proj-2", project_name: "robo-fleet-website" },
         { team: Team.BACKEND, project_id: "proj-3", project_name: "docs-api" },
       ],
       progress: { done: 18, active: 3, blocked: 0 },

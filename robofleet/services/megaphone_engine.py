@@ -80,7 +80,7 @@ class MegaphoneEngine(BaseService):
 
         No-ops when the program isn't armed, no X credentials are configured
         (drafting content nobody can ever post is pointless), a cycle is
-        already open, or the RoboCo project (the task's required FK anchor)
+        already open, or the RoboFleet project (the task's required FK anchor)
         isn't resolvable. Never authors content itself — the Head of
         Marketing does, via ``propose_editorial_post`` once spawned by the
         board dispatcher.
@@ -92,16 +92,16 @@ class MegaphoneEngine(BaseService):
         task_svc = get_task_service(self.session)
         if await task_svc.list_open_megaphone_cycles():
             return None  # one open cycle at a time
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         if project is None or project.id is None:
             self.log.warning(
-                "megaphone-engine: RoboCo project not resolvable; skipping"
+                "megaphone-engine: RoboFleet project not resolvable; skipping"
             )
             return None
         return await self._originate(task_svc, cast("UUID", project.id))
 
-    async def _roboco_project(self) -> ProjectTable | None:
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+    async def _robofleet_project(self) -> ProjectTable | None:
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _originate(self, task_svc: TaskService, project_id: UUID) -> TaskTable:
@@ -169,7 +169,7 @@ class MegaphoneEngine(BaseService):
         ]
 
     async def _unreleased_changelog(self) -> str:
-        """The curated ``## [Unreleased]`` body from the RoboCo project's read
+        """The curated ``## [Unreleased]`` body from the RoboFleet project's read
         clone; "" when the file/section is absent, blank, or unreadable —
         never raises (caller renders the empty case explicitly)."""
         try:
@@ -179,7 +179,7 @@ class MegaphoneEngine(BaseService):
             )
             from robofleet.services.workspace import get_workspace_service
 
-            slug = (settings.self_heal_project_slug or "roboco-api").strip()
+            slug = (settings.self_heal_project_slug or "robofleet-api").strip()
             root = await get_workspace_service(self.session).ensure_read_clone(slug)
             return _unreleased_body(_read_changelog(Path(root)))
         except Exception as exc:

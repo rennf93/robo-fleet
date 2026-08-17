@@ -96,7 +96,7 @@ export function BatchReviewCard({
     (d) => selectedProjectIds(d, scoped).length === 0,
   );
 
-  /** Toggle one project in a task's selection. A RoboCo project is per-cell and
+  /** Toggle one project in a task's selection. A RoboFleet project is per-cell and
    *  the backend stores one project per cell, so checking a repo in a cell that
    *  already has a different repo checked swaps it (unchecks the sibling). */
   const toggle = (index: number, projectId: string) => {

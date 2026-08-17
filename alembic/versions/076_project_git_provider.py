@@ -1,7 +1,7 @@
 """Add projects.git_provider — Phase 0 of the forge-providers spec.
 
 Nullable ``git_provider`` (plain string, not a pg enum — validated at the
-service layer by ``roboco.foundation.policy.forge.validate_project_forge``
+service layer by ``robofleet.foundation.policy.forge.validate_project_forge``
 instead of a DB constraint, mirroring how ``assigned_cell``-adjacent free-text
 columns like ``ci_watch_workflow`` are validated in Python, not SQL). Null
 means "auto-detect from git_url host" (github.com -> github; anything else is

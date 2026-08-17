@@ -114,14 +114,14 @@ describe("useGitBrowser", () => {
       loading: false,
     });
     mockUseSearchParams.mockReturnValue(
-      new URLSearchParams("project=roboco&task=t1"),
+      new URLSearchParams("project=robo-fleet&task=t1"),
     );
     mockUseRouter.mockReturnValue({ push: vi.fn() });
   });
 
   it("reads project and task ids from URL search params", () => {
     const { result } = renderHook(() => useGitBrowser());
-    expect(result.current.projectSlug).toBe("roboco");
+    expect(result.current.projectSlug).toBe("robo-fleet");
     expect(result.current.taskId).toBe("t1");
   });
 
@@ -131,7 +131,7 @@ describe("useGitBrowser", () => {
   // head rung (or default_branch), not a literal.
   it("resolves defaultBranch from the selected project's environment ladder head rung", () => {
     mockUseProjects.mockReturnValue(
-      buildQueryResult([{ id: "proj-1", slug: "roboco", name: "RoboCo" }]),
+      buildQueryResult([{ id: "proj-1", slug: "robo-fleet", name: "RoboFleet" }]),
     );
     mockUseProject.mockReturnValue(
       buildQueryResult({
@@ -151,7 +151,7 @@ describe("useGitBrowser", () => {
 
   it("falls back to default_branch when no environment ladder is set", () => {
     mockUseProjects.mockReturnValue(
-      buildQueryResult([{ id: "proj-1", slug: "roboco", name: "RoboCo" }]),
+      buildQueryResult([{ id: "proj-1", slug: "robo-fleet", name: "RoboFleet" }]),
     );
     mockUseProject.mockReturnValue(
       buildQueryResult({
@@ -174,17 +174,17 @@ describe("useGitBrowser", () => {
   it("passes project slug and enabled flag to git query hooks", () => {
     renderHook(() => useGitBrowser());
 
-    expect(mockUseGitStatus).toHaveBeenCalledWith("roboco", "t1", true);
-    expect(mockUseGitLog).toHaveBeenCalledWith("roboco", 20, undefined, true);
-    expect(mockUseGitBranches).toHaveBeenCalledWith("roboco", true, true);
+    expect(mockUseGitStatus).toHaveBeenCalledWith("robo-fleet", "t1", true);
+    expect(mockUseGitLog).toHaveBeenCalledWith("robo-fleet", 20, undefined, true);
+    expect(mockUseGitBranches).toHaveBeenCalledWith("robo-fleet", true, true);
     expect(mockUseGitDiff).toHaveBeenCalledWith(
-      "roboco",
+      "robo-fleet",
       true,
       undefined,
       true,
     );
     expect(mockUseGitDiff).toHaveBeenCalledWith(
-      "roboco",
+      "robo-fleet",
       false,
       undefined,
       true,
@@ -257,7 +257,7 @@ describe("useGitBrowser", () => {
     const push = vi.fn();
     mockUseRouter.mockReturnValue({ push });
     mockUseSearchParams.mockReturnValue(
-      new URLSearchParams("project=roboco&task=t1"),
+      new URLSearchParams("project=robo-fleet&task=t1"),
     );
 
     const { result } = renderHook(() => useGitBrowser());
@@ -279,7 +279,7 @@ describe("useGitBrowser", () => {
 
     await waitFor(() =>
       expect(mutateAsync).toHaveBeenCalledWith({
-        project_slug: "roboco",
+        project_slug: "robo-fleet",
         message: "fix: something",
         task_id: "t1",
         agent_id: "ceo",
@@ -304,7 +304,7 @@ describe("useGitBrowser", () => {
 
     await waitFor(() =>
       expect(mutateAsync).toHaveBeenCalledWith({
-        project_slug: "roboco",
+        project_slug: "robo-fleet",
         task_id: "t1",
         title: "title",
         body: "body",
@@ -343,7 +343,7 @@ describe("useGitBrowser", () => {
 
     await waitFor(() =>
       expect(mutateAsync).toHaveBeenCalledWith({
-        project_slug: "roboco",
+        project_slug: "robo-fleet",
         target_branch: "main",
         task_id: "t1",
         agent_id: "ceo",
@@ -382,7 +382,7 @@ describe("useGitBrowser", () => {
     await result.current.handleCleanupBranches();
 
     await waitFor(() =>
-      expect(mutateAsync).toHaveBeenCalledWith({ project_slug: "roboco" }),
+      expect(mutateAsync).toHaveBeenCalledWith({ project_slug: "robo-fleet" }),
     );
     expect(mockToastSuccess).toHaveBeenCalledWith(
       "Cleaned up branches: 3 remote, 2 local, 1 skipped, 0 errors",

@@ -5,7 +5,7 @@ import { OrchestratorStatusCards } from "../orchestrator-status";
 
 // CEO feedback: "Total Agents shows 0 even though the full 25-agent roster
 // renders below" — the card was reading status.total_agents, the backend's
-// live in-memory instance count (roboco/runtime/orchestrator.py
+// live in-memory instance count (robofleet/runtime/orchestrator.py
 // get_status_summary: len(self._instances)), not the roster. And "Active"
 // keyed off by_state.running / by_state.ready, neither of which the backend
 // ever emits (OrchestratorAgentState is offline/starting/active/

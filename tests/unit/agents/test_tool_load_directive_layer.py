@@ -118,7 +118,7 @@ def test_block_is_first_layer_before_lifecycle() -> None:
     prompt = _composed_prompt_for(AgentRole.DEVELOPER, Team.BACKEND)
     first_idx = prompt.find("# Your tools are ready")
     lifecycle_idx = prompt.find("Lifecycle")
-    base_idx = prompt.find("RoboCo Agent — Base")
+    base_idx = prompt.find("RoboFleet Agent — Base")
     assert first_idx == 0
     if lifecycle_idx > -1:
         assert first_idx < lifecycle_idx

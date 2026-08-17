@@ -1,9 +1,9 @@
 """Documentation-index provenance metadata.
 
-A doc written mid-task via roboco_docs_write (or captured from a workspace
+A doc written mid-task via robofleet_docs_write (or captured from a workspace
 clone at i_documented) describes work that hasn't merged yet — a live
 incident traced this to a frontend dev building UI against an API contract
-that existed only in a still-open PR, because a roboco_kb_search hit off
+that existed only in a still-open PR, because a robofleet_kb_search hit off
 such a doc read indistinguishably from one describing merged/deployed
 reality. ``prepare_metadata``/``index_sources`` now carry a ``provenance``
 marker ("live_write" vs the default "repo_tree") so a reader can tell the
@@ -36,7 +36,7 @@ def test_prepare_metadata_defaults_to_repo_tree() -> None:
 
 
 def test_prepare_metadata_honors_live_write_override() -> None:
-    """roboco_docs_write's index call passes provenance=live_write + the
+    """robofleet_docs_write's index call passes provenance=live_write + the
     writing task's id; both must land verbatim in the chunk metadata."""
     meta = _plugin().prepare_metadata(
         "content",
@@ -55,7 +55,7 @@ async def test_index_sources_threads_live_write_provenance_into_chunks(
 ) -> None:
     """index_sources(provenance="live_write", task_id=...) must reach
     prepare_metadata for every file in the batch — the real seam
-    roboco_docs_write's _index_doc_in_rag drives."""
+    robofleet_docs_write's _index_doc_in_rag drives."""
     doc = tmp_path / "contract.md"
     doc.write_text("# Contract\n\nSome long enough content body.", encoding="utf-8")
 

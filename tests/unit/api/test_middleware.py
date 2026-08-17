@@ -145,7 +145,7 @@ def test_middleware_adds_response_time_header() -> None:
     assert "X-Response-Time-Ms" in response.headers
 
 
-def test_roboco_exception_translates_to_404() -> None:
+def test_robofleet_exception_translates_to_404() -> None:
     client = TestClient(_make_app(), raise_server_exceptions=False)
     response = client.get("/notfound")
     assert response.status_code == HTTPStatus.NOT_FOUND

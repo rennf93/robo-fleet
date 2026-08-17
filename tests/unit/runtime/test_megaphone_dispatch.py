@@ -188,10 +188,10 @@ def test_megaphone_prompt_omits_digest_section_when_empty() -> None:
 def test_megaphone_prompt_renders_digest_when_given() -> None:
     orch = _make_orch()
     prompt = orch._build_megaphone_prompt(
-        _megaphone_task(), "", "Completed this week:\n- Shipped X (RoboCo, backend)"
+        _megaphone_task(), "", "Completed this week:\n- Shipped X (RoboFleet, backend)"
     )
     assert "## Shipped-this-week digest" in prompt
-    assert "Shipped X (RoboCo, backend)" in prompt
+    assert "Shipped X (RoboFleet, backend)" in prompt
 
 
 @pytest.mark.asyncio

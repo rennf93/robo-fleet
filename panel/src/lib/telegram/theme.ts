@@ -11,9 +11,9 @@
 import type { TelegramThemeParams, TelegramWebApp } from "./webapp";
 
 /** [Telegram key, panel CSS variable] — applied in order. Surfaces only:
- * the accent tokens (--primary/--ring) deliberately stay RoboCo's amber
+ * the accent tokens (--primary/--ring) deliberately stay RoboFleet's amber
  * (the #tg-shell skin in globals.css) so the cockpit keeps its identity
- * inside any Telegram theme — Telegram's surfaces, RoboCo's voice. */
+ * inside any Telegram theme — Telegram's surfaces, RoboFleet's voice. */
 const THEME_VAR_MAP: ReadonlyArray<[keyof TelegramThemeParams, string]> = [
   ["bg_color", "--background"],
   ["secondary_bg_color", "--background"],

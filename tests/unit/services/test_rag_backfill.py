@@ -179,7 +179,7 @@ async def test_backfill_journals_selects_only_zero_chunk_entries(
     missing_id = await _seed_entry(db_session, _journal, _LONG_CONTENT)
     present_id = await _seed_entry(db_session, _journal, _LONG_CONTENT)
     await _insert_chunk(
-        db_session, "chunks_journals", f"roboco://journals/{present_id}"
+        db_session, "chunks_journals", f"robofleet://journals/{present_id}"
     )
 
     optimal = _optimal()
@@ -317,7 +317,9 @@ async def test_backfill_learnings_selects_only_missing_from_chunks_learnings(
         db_session, _journal, content, entry_type=JournalEntryType.LEARNING
     )
     # Already indexed into JOURNALS — irrelevant to the LEARNINGS check.
-    await _insert_chunk(db_session, "chunks_journals", f"roboco://journals/{entry_id}")
+    await _insert_chunk(
+        db_session, "chunks_journals", f"robofleet://journals/{entry_id}"
+    )
 
     optimal = _optimal()
     await rif._backfill_learnings(optimal)
@@ -456,7 +458,7 @@ def test_learning_source_matches_plugin_hash() -> None:
     expected_hash = hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()[
         :16
     ]
-    assert rif._learning_source(content) == f"roboco://learnings/lrn-{expected_hash}"
+    assert rif._learning_source(content) == f"robofleet://learnings/lrn-{expected_hash}"
 
 
 # ---------------------------------------------------------------------------

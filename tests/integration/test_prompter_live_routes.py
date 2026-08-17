@@ -404,14 +404,14 @@ async def test_start_project_scope_resolves_slug(start_client: dict) -> None:
     project_id = uuid4()
 
     fake_svc = SimpleNamespace(
-        get=lambda _pid: _async_return(SimpleNamespace(slug="roboco"))
+        get=lambda _pid: _async_return(SimpleNamespace(slug="robo-fleet"))
     )
     with patch("robofleet.services.project.get_project_service", lambda _db: fake_svc):
         resp = await client.post(
             "/api/prompter/live/start", json={"project_id": str(project_id)}
         )
     assert resp.status_code == HTTPStatus.CREATED
-    assert orch.spawned[0]["project_slug"] == "roboco"
+    assert orch.spawned[0]["project_slug"] == "robo-fleet"
     assert orch.spawned[0]["product_id"] is None
 
 

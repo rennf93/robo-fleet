@@ -88,9 +88,9 @@ async def _seed_proposal(session: AsyncSession) -> TaskTable:
     await session.flush()
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo",
-        slug=f"roboco-{uuid4().hex[:6]}",
-        git_url="https://example.com/roboco.git",
+        name="RoboFleet",
+        slug=f"robofleet-{uuid4().hex[:6]}",
+        git_url="https://example.com/robofleet.git",
         assigned_cell=T.BACKEND,
         created_by=system_uuid,
     )

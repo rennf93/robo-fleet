@@ -5,7 +5,7 @@ Covers three failure modes that surfaced at runtime:
 1. ``get_optimal_service`` published a not-yet-initialized singleton while
    ``initialize()`` was still awaiting, so a concurrent caller hit
    "OptimalService not initialized. Call initialize() first." during indexing.
-2. ``roboco_kb_search`` forwarded the legacy alias ``index_types=['docs']``,
+2. ``robofleet_kb_search`` forwarded the legacy alias ``index_types=['docs']``,
    which is not a valid ``IndexType`` value ('documentation' is), producing a
    400 at the route.
 3. The mentor route let exceptions from ``mentor.ask`` escape as a bare 500

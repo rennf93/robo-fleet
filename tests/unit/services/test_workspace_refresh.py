@@ -56,7 +56,7 @@ def _fake_agent(slug: str = "be-pm") -> MagicMock:
 @pytest.fixture
 def healthy_workspace(tmp_path: Path) -> Iterator[Path]:
     """Materialize a directory that passes `_is_workspace_healthy`."""
-    workspace = tmp_path / "roboco" / "backend" / "be-pm"
+    workspace = tmp_path / "robo-fleet" / "backend" / "be-pm"
     git_dir = workspace / ".git"
     (git_dir / "objects").mkdir(parents=True)
     (git_dir / "HEAD").write_text("ref: refs/heads/main\n")
@@ -92,7 +92,7 @@ async def test_ensure_workspace_fetches_origin_on_healthy_short_circuit(
         patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         result = await svc.ensure_workspace(
-            project_slug="roboco",
+            project_slug="robo-fleet",
             agent_id=agent.id,
         )
 
@@ -157,7 +157,7 @@ async def test_refresh_fetch_is_scoped_to_current_and_default_branch(
         patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run),
         patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
-        await svc.ensure_workspace(project_slug="roboco", agent_id=agent.id)
+        await svc.ensure_workspace(project_slug="robo-fleet", agent_id=agent.id)
 
     fetch = next(a for a in captured if a[0] == "git" and "fetch" in a)
     after_origin = fetch[fetch.index("origin") + 1 :]
@@ -208,7 +208,7 @@ async def test_ensure_workspace_rechowns_after_refresh_fetch(
         ),
     ):
         await svc.ensure_workspace(
-            project_slug="roboco",
+            project_slug="robo-fleet",
             agent_id=agent.id,
         )
 
@@ -249,7 +249,7 @@ async def test_ensure_workspace_fetch_failure_does_not_abort(
         patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         result = await svc.ensure_workspace(
-            project_slug="roboco",
+            project_slug="robo-fleet",
             agent_id=agent.id,
         )
 

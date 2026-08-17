@@ -10,7 +10,7 @@ interface OrchestratorStatusCardsProps {
   isLoading: boolean;
   /** Full org roster size (from useAgentDefinitions), NOT the backend's
    * `status.total_agents` — that field is the orchestrator's live in-memory
-   * instance count (roboco/runtime/orchestrator.py get_status_summary:
+   * instance count (robofleet/runtime/orchestrator.py get_status_summary:
    * `len(self._instances)`), so it read 0 whenever nothing was spawned even
    * though the full 25-agent roster renders below. Total Agents must reflect
    * the roster, not who's currently running. */

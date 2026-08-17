@@ -1,4 +1,4 @@
-"""e2e smoke harness — in-process RoboCo stack + scripted-agent driver.
+"""e2e smoke harness — in-process RoboFleet stack + scripted-agent driver.
 
 Pieces (all REAL except GitHub and the LLM):
 
@@ -318,8 +318,8 @@ def _seed_origin(root: Path) -> Path:
     subprocess.run(
         ["git", "clone", str(origin), str(seed)], check=True, capture_output=True
     )
-    _git(seed, "config", "user.name", "roboco-e2e")
-    _git(seed, "config", "user.email", "e2e@roboco.local")
+    _git(seed, "config", "user.name", "robofleet-e2e")
+    _git(seed, "config", "user.email", "e2e@robofleet.local")
     (seed / "README.md").write_text("# e2e smoke project\n")
     _git(seed, "add", "README.md")
     _git(seed, "commit", "-m", "Initial commit")
@@ -355,7 +355,7 @@ def _build_app(gh: _FakeGitHub) -> FastAPI:
     from robofleet.api.routes.v1 import flow_pr_reviewer as fpr
     from robofleet.api.routes.v1 import flow_qa as fq
 
-    app = FastAPI(title="roboco-e2e-smoke")
+    app = FastAPI(title="robofleet-e2e-smoke")
     setup_middleware(app)
     app.include_router(health_router)
     for module in (fd, fq, fdoc, fcp, fmp, fb, fa, fpr):

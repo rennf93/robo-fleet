@@ -49,7 +49,7 @@ def _make_store_with_conn() -> tuple[VectorStore, MagicMock, MagicMock]:
 async def test_replace_chunks_deletes_then_inserts_in_one_transaction() -> None:
     """DELETE + INSERT run on a SINGLE connection inside a transaction."""
     store, conn, pool = _make_store_with_conn()
-    source = "roboco://standards/general/std-1"
+    source = "robofleet://standards/general/std-1"
     chunks = [
         _chunk("aaa" * 100, source, [0.1, 0.2, 0.3]),
         _chunk("bbb" * 100, source, [0.4, 0.5, 0.6]),
@@ -78,7 +78,7 @@ async def test_replace_chunks_with_no_chunks_still_clears_source() -> None:
     """An empty reingest still deletes the source's existing rows (matches
     the prior ``delete_by_source`` then no-op ``add_chunks`` behavior)."""
     store, conn, _pool = _make_store_with_conn()
-    source = "roboco://standards/general/std-1"
+    source = "robofleet://standards/general/std-1"
 
     await store.replace_chunks(source, [])
 
@@ -92,7 +92,7 @@ async def test_replace_chunks_atomic_on_insert_failure() -> None:
     rows are NOT left deleted (no retrieval data loss). The DELETE and
     INSERT share one transaction, so a mid-replace failure reverts both."""
     store, conn, _pool = _make_store_with_conn()
-    source = "roboco://standards/general/std-1"
+    source = "robofleet://standards/general/std-1"
     chunks = [_chunk("aaa" * 100, source, [0.1, 0.2, 0.3])]
     # The INSERT raises inside the transaction.
     conn.executemany.side_effect = RuntimeError("insert blew up")
@@ -112,7 +112,7 @@ async def test_replace_chunks_skips_chunks_without_embeddings() -> None:
     """Chunks lacking an embedding are dropped before insert (matches
     ``add_chunks``)."""
     store, conn, _pool = _make_store_with_conn()
-    source = "roboco://standards/general/std-1"
+    source = "robofleet://standards/general/std-1"
     chunks = [
         _chunk("with-emb", source, [0.1, 0.2, 0.3]),
         Chunk(text="no-emb", source=source, metadata={}),  # no embedding
@@ -133,7 +133,7 @@ async def test_replace_chunks_does_not_wipe_on_all_none_embeddings() -> None:
     nothing. The replace must no-op (no DELETE) in that case, distinct from the
     deliberate empty-list clear (which DOES delete)."""
     store, conn, _pool = _make_store_with_conn()
-    source = "roboco://learnings/lrn-deadbeef"
+    source = "robofleet://learnings/lrn-deadbeef"
 
     chunks = [
         Chunk(text="failed-embed-1", source=source, metadata={}),  # no embedding

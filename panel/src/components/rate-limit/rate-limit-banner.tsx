@@ -50,7 +50,7 @@ function RateLimitRow({ entry }: { entry: RateLimitEntry }) {
           </span>
         </HelpTip>
       )}
-      <HelpTip label="Estimated time until RoboCo retries this provider, based on the retry-after it reported.">
+      <HelpTip label="Estimated time until RoboFleet retries this provider, based on the retry-after it reported.">
         <span className="text-sm text-amber-700">{secondsLeft}s</span>
       </HelpTip>
       <HelpTip label="New spawns for this provider are queued, not dropped — a background probe-and-resume loop revives parked agents as soon as it's confirmed clear.">

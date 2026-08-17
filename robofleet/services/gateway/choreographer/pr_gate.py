@@ -1164,8 +1164,8 @@ class PRGateMixin(_Base):
         body_lines = [
             f"## In-path PR-review gate — {verdict}",
             "",
-            f"Reviewed by **{reviewer_slug}** (RoboCo PR reviewer). Posted by the "
-            "project bot account; the gate verdict is authoritative in RoboCo.",
+            f"Reviewed by **{reviewer_slug}** (RoboFleet PR reviewer). Posted by the "
+            "project bot account; the gate verdict is authoritative in RoboFleet.",
             "",
             (notes or "").strip() or "_(no additional notes)_",
         ]

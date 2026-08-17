@@ -98,7 +98,7 @@ _BRAND_VOICE_NUDGE_KEY = "x_brand_voice_nudge_sent"
 # _release_lock (same style, a different key namespace) rather than a shared
 # helper — this codebase duplicates this small pattern per service
 # (release_proposal.py, prompter.py, x_post_service.py all carry their own).
-_REDRAFT_LOCK_PREFIX = "roboco:x_redraft:"
+_REDRAFT_LOCK_PREFIX = "robofleet:x_redraft:"
 _REDRAFT_LOCK_TTL_SECONDS = 60  # the check+insert completes in ms; crash backstop
 _REDRAFT_RELEASE_SCRIPT = """
 if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -604,15 +604,15 @@ class XEngine(BaseService):
             timeout=settings.x_request_timeout_seconds,
         )
 
-    async def _roboco_project(self) -> ProjectTable | None:
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+    async def _robofleet_project(self) -> ProjectTable | None:
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _project_or_default(self, project_id: UUID | None) -> ProjectTable | None:
         """The explicitly-targeted project, or the deployment-anchor fallback."""
         if project_id is not None:
             return await get_project_service(self.session).get(project_id)
-        return await self._roboco_project()
+        return await self._robofleet_project()
 
     async def _voice_guide(self, product_name: str) -> str:
         """Baseline house style plus the CEO's brand-voice sample, when set.
@@ -769,7 +769,7 @@ class XEngine(BaseService):
             numeric = [int(m.id) for m in mentions if m.id and m.id.isdigit()]
             if numeric:
                 await self._since_id_set(str(max(numeric)))
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         return await self._process_mentions(mentions, project, open_count)
 
     async def _process_mentions(
@@ -788,7 +788,7 @@ class XEngine(BaseService):
                 continue
             if project is None or project.id is None:
                 self.log.warning(
-                    "x-engine: RoboCo project not resolvable; skipping mentions cycle"
+                    "x-engine: RoboFleet project not found; skipping mentions cycle"
                 )
                 break
             if product_name is None:
@@ -825,7 +825,7 @@ class XEngine(BaseService):
         try:
             conn = redis.from_url(settings.redis_url)
             try:
-                v = await conn.get("roboco:x_mentions:since_id")
+                v = await conn.get("robofleet:x_mentions:since_id")
                 if v is None:
                     return None
                 return v.decode() if isinstance(v, bytes) else str(v)
@@ -841,7 +841,7 @@ class XEngine(BaseService):
         try:
             conn = redis.from_url(settings.redis_url)
             try:
-                await conn.set("roboco:x_mentions:since_id", since_id)
+                await conn.set("robofleet:x_mentions:since_id", since_id)
             finally:
                 await conn.aclose()
         except Exception as exc:
@@ -930,7 +930,7 @@ class XEngine(BaseService):
         stack a second one), nothing has shipped since the last spotlight
         activity and the stretched cadence hasn't elapsed yet (the "smart
         cadence" guard — see ``_feature_activity_stretch_skip``), a cycle is
-        already open, the shared open-post cap is reached, or the RoboCo
+        already open, the shared open-post cap is reached, or the RoboFleet
         project isn't resolvable. Never authors content itself — HoM does, via
         propose_feature_spotlight() once the dispatcher spawns it.
         """
@@ -943,10 +943,10 @@ class XEngine(BaseService):
             return None
         if len(await task_svc.list_open_x_posts()) >= settings.x_max_open_posts:
             return None  # respect the shared held-draft cap
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         if project is None or project.id is None:
             self.log.warning(
-                "x-engine: RoboCo project not resolvable; skipping feature spotlight"
+                "x-engine: RoboFleet project not resolvable; skipping feature spotlight"
             )
             return None
         product_name = await get_company_goals_service(
@@ -1053,7 +1053,7 @@ class XEngine(BaseService):
         "did anything ship" signal for both the activity-stretch gate and the
         exploration brief (``_gather_spotlight_brief``).
 
-        Reads the RoboCo project's read clone (``WorkspaceService.
+        Reads the RoboFleet project's read clone (``WorkspaceService.
         ensure_read_clone``) rather than running a full
         ``ReleaseReadinessService.assess``: a single small-file read + regex
         split is far cheaper than the multi-subprocess git snapshot the
@@ -1063,7 +1063,7 @@ class XEngine(BaseService):
         from robofleet.services.release_readiness import _read_changelog
         from robofleet.services.workspace import get_workspace_service
 
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         root = await get_workspace_service(self.session).ensure_read_clone(slug)
         text = _read_changelog(Path(root))
         return _sections_since(_parse_changelog_sections(text), cutoff)

@@ -29,7 +29,7 @@ from robofleet.config import settings
 # / CEO-notify count mid-episode). The counter scripts mutate ONLY
 # ``probe_failures`` so every other episode field survives the bump.
 _INCREMENT_PROBE_FAILURES = """\
--- roboco:increment_probe_failures
+-- robofleet:increment_probe_failures
 local key = KEYS[1]
 local raw = redis.call('GET', key)
 if not raw then
@@ -46,7 +46,7 @@ return new_count
 """
 
 _RESET_PROBE_FAILURES = """\
--- roboco:reset_probe_failures
+-- robofleet:reset_probe_failures
 local key = KEYS[1]
 local raw = redis.call('GET', key)
 if not raw then
@@ -66,7 +66,7 @@ redis.call('SET', key, cjson.encode(state))
 # Like increment/reset, the read-merge-write runs server-side as one atomic Lua
 # EVAL, so it is indivisible w.r.t. the counter scripts.
 _ACTIVATE_RATE_LIMIT = """\
--- roboco:activate_rate_limit
+-- robofleet:activate_rate_limit
 local key = KEYS[1]
 local fresh = ARGV[1]
 local raw = redis.call('GET', key)
@@ -98,7 +98,7 @@ class RateLimitStateTracker:
     will observe the same state — no in-process singleton required.
     """
 
-    _KEY_PREFIX: str = "roboco:rate_limit:"
+    _KEY_PREFIX: str = "robofleet:rate_limit:"
 
     def __init__(self, provider: str, redis_url: str | None = None) -> None:
         """Construct a tracker for *provider*.

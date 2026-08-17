@@ -47,7 +47,7 @@ def _valid_kwargs(**overrides: Any) -> dict[str, Any]:
     kwargs: dict[str, Any] = {
         "feature_slug": "org-memory",
         "feature_title": "Organizational Memory Loop",
-        "body": "Did you know RoboCo agents learn from every completed task?",
+        "body": "Did you know RoboFleet agents learn from every completed task?",
     }
     kwargs.update(overrides)
     return kwargs
@@ -180,7 +180,7 @@ async def test_propose_feature_spotlight_materializes_new_draft_task(
         exploration_task=exploration,
         feature_slug="org-memory",
         feature_title="Organizational Memory Loop",
-        body="Did you know RoboCo agents learn from every completed task?",
+        body="Did you know RoboFleet agents learn from every completed task?",
     )
 
 

@@ -5,7 +5,7 @@ unmigrated DB (no enum types → "no migrated target", not drift), and it must
 distinguish unreachable (skip) from real drift (fail) so the Makefile mask
 can't swallow drift into a false-green. These tests pin the two pure
 predicates behind the I/O shell; the asyncpg connect/fetch path is exercised
-by the live empty-`roboco`-DB smoke (`test_smoke_empty_db_skips`).
+by the live empty-`robo-fleet`-DB smoke (`test_smoke_empty_db_skips`).
 """
 
 from __future__ import annotations
@@ -96,7 +96,7 @@ def test_no_skip_when_both_present() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Live smoke — the empty `roboco` DB on this host must skip (exit 0), not
+# Live smoke — the empty `robo-fleet` DB on this host must skip (exit 0), not
 # false-positive drift (exit 1). Skipped silently if no DB is reachable.
 # ---------------------------------------------------------------------------
 

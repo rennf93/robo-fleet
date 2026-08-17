@@ -206,7 +206,8 @@ async def test_key_carries_type_sender_recipient_task_and_subject() -> None:
         )
     key = conn.set.call_args.args[0]
     assert (
-        key == f"roboco:notif_dedup:task_assignment:{sender}:{recip}:{task}:{subject}"
+        key
+        == f"robofleet:notif_dedup:task_assignment:{sender}:{recip}:{task}:{subject}"
     )
 
     conn2 = _conn([True])
@@ -225,7 +226,7 @@ async def test_key_carries_type_sender_recipient_task_and_subject() -> None:
         )
     assert (
         conn2.set.call_args.args[0]
-        == f"roboco:notif_dedup:broadcast:{sender}:{recip}:none:Company update"
+        == f"robofleet:notif_dedup:broadcast:{sender}:{recip}:none:Company update"
     )
 
 
@@ -302,7 +303,7 @@ async def test_ack_clears_dedup_key_for_recipient() -> None:
         )
     conn.delete.assert_awaited_once()
     deleted_key = conn.delete.call_args.args[0]
-    assert deleted_key.startswith("roboco:notif_dedup:task_assignment:")
+    assert deleted_key.startswith("robofleet:notif_dedup:task_assignment:")
     assert deleted_key.endswith(":Task unblocked")
 
     # After the DEL, a fresh re-fire of the same notification acquires the key

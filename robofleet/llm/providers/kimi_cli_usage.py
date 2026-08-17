@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 # Where the entrypoint writes the captured usage for the orchestrator to read.
 USAGE_OUT_PATH = Path(
     os.environ.get("ROBOFLEET_KIMI_USAGE_FILE")
-    or Path(tempfile.gettempdir()) / "roboco-kimi-usage.json"
+    or Path(tempfile.gettempdir()) / "robofleet-kimi-usage.json"
 )
 
 # kimi's global state dir (see robofleet.llm.providers.kimi_cli_config).

@@ -246,10 +246,10 @@ async def test_create_project_rejects_protected_git_url(
     project_setup: dict, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A project may not point at a denylisted repo (keeps agent merges out of it)."""
-    monkeypatch.setattr(settings, "protected_git_urls", ["github.com/owner/roboco"])
+    monkeypatch.setattr(settings, "protected_git_urls", ["github.com/owner/robofleet"])
     svc = project_setup["svc"]
     payload_dict = _project_payload(uuid4().hex[:6]).model_dump()
-    payload_dict["git_url"] = "https://github.com/owner/roboco.git"
+    payload_dict["git_url"] = "https://github.com/owner/robofleet.git"
     with pytest.raises(ValidationError):
         await svc.create(ProjectCreate(**payload_dict), project_setup["creator_id"])
 

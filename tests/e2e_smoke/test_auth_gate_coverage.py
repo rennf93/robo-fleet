@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 # session secret is set on `settings.cloud_auth_secret` separately.
 _HMAC_SECRET = "e2e-auth-gate-secret"
 _JWT_SECRET = "e2e-jwt-session-secret"
-_CEO_EMAIL = "ceo@roboco.local"
+_CEO_EMAIL = "ceo@robofleet.local"
 _CEO_PASSWORD = "e2e-ceo-password"
 
 
@@ -134,7 +134,7 @@ def test_settings_real_ceo_cookie_passes(
     cookie = _mint_ceo_session_cookie(user)
     resp = httpx.get(
         f"{e2e_stack.base_url}/api/settings",
-        cookies={"roboco_session": cookie},
+        cookies={"robofleet_session": cookie},
         timeout=10,
     )
     assert resp.status_code == HTTPStatus.OK, (
@@ -161,7 +161,7 @@ def test_dashboard_real_ceo_cookie_passes(
     cookie = _mint_ceo_session_cookie(user)
     resp = httpx.get(
         f"{e2e_stack.base_url}/api/dashboard/ceo",
-        cookies={"roboco_session": cookie},
+        cookies={"robofleet_session": cookie},
         timeout=10,
     )
     assert resp.status_code == HTTPStatus.OK, (

@@ -120,7 +120,7 @@ const statusLabels: Record<TaskStatus, string> = {
 };
 
 // Per-action explanation of the real backend consequence — grounded in
-// roboco/foundation/policy/lifecycle.py (ActionSpec/IntentSpec source +
+// robofleet/foundation/policy/lifecycle.py (ActionSpec/IntentSpec source +
 // target statuses, allowed_roles) and the handlers in
 // app/(dashboard)/tasks/[taskId]/page.tsx (handleAction). Some of these
 // route through an admin-override PATCH rather than a dedicated lifecycle

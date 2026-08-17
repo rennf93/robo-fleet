@@ -29,14 +29,14 @@ class _FakeSource:
 
 def _sample(value: float) -> TelemetrySample:
     return TelemetrySample(
-        signal_name="ci_conclusion:roboco",
+        signal_name="ci_conclusion:robo-fleet",
         value=value,
         threshold=1.0,
         window="latest_completed_run",
-        repo_hint="roboco",
+        repo_hint="robo-fleet",
         observed_at="2026-06-17T00:00:00Z",
-        raw_ref="https://github.com/x/roboco/actions/runs/1",
-        detail="CI on roboco@master concluded 'failure'",
+        raw_ref="https://github.com/x/robofleet/actions/runs/1",
+        detail="CI on robo-fleet@master concluded 'failure'",
     )
 
 
@@ -50,8 +50,8 @@ def _engine(samples: list[TelemetrySample]) -> SelfHealEngine:
 async def test_assess_breach_yields_observation() -> None:
     obs = await _engine([_sample(1.0)]).assess()
     assert len(obs) == 1
-    assert obs[0].repo_hint == "roboco"
-    assert obs[0].signal_name == "ci_conclusion:roboco"
+    assert obs[0].repo_hint == "robo-fleet"
+    assert obs[0].signal_name == "ci_conclusion:robo-fleet"
     assert obs[0].fingerprint  # non-empty stable hash
 
 

@@ -2,7 +2,7 @@
 
 Regression guard for the 2026-07-27 roadmap item whose materialization was
 lost to the board-program persistence bug (then the NAS rollback): the fix
-itself — allowlisting ``roboco-app[bot]`` so the fleet's own assembled PRs
+itself — allowlisting ``robo-fleet-app[bot]`` so the fleet's own assembled PRs
 don't demand a signature the App account can never post — is a single line
 in a YAML file with no code path exercising it, so nothing else in the test
 suite would notice a silent revert. Parse the workflow directly instead of
@@ -53,7 +53,7 @@ def _workflow_permissions() -> dict[str, str]:
 def test_app_bot_is_allowlisted() -> None:
     # The App account authors/commits on essentially every fleet PR and can
     # never post the sign-off comment as itself — it must be exempt.
-    assert "roboco-app[bot]" in _allowlist()
+    assert "robo-fleet-app[bot]" in _allowlist()
 
 
 def test_dependabot_is_allowlisted() -> None:

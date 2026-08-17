@@ -72,7 +72,10 @@ async def test_pr_target_scopes_task_lookup_by_project_id() -> None:
 
     # Task lookup returns None → NotFoundError, but we only care about the SQL
     # the lookup was issued with.
-    with _patch_project_service(MagicMock(slug="roboco")), pytest.raises(NotFoundError):
+    with (
+        _patch_project_service(MagicMock(slug="robo-fleet")),
+        pytest.raises(NotFoundError),
+    ):
         await svc.pr_target(_PR_NUMBER, project_id=project_id)
 
     assert len(recorder) == 1
@@ -136,7 +139,10 @@ async def test_pr_target_with_project_id_skips_wrong_repo_task() -> None:
     _bind(svc, "_parse_github_remote", MagicMock(return_value=RepoRef("acme", "repo")))
     _bind(svc, "_get_project_token_or_raise", AsyncMock(return_value="token"))
 
-    with _patch_project_service(MagicMock(slug="roboco")), pytest.raises(NotFoundError):
+    with (
+        _patch_project_service(MagicMock(slug="robo-fleet")),
+        pytest.raises(NotFoundError),
+    ):
         await svc.pr_target(_PR_NUMBER, project_id=project_id)
 
     # The query WAS scoped by project_id (the wrong-repo task did not leak in).

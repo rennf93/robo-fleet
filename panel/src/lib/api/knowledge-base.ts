@@ -2,7 +2,7 @@
  * Knowledge Base API Client
  *
  * Semantic search and RAG queries against indexed knowledge.
- * Matches backend: roboco/api/routes/optimal.py
+ * Matches backend: robofleet/api/routes/optimal.py
  */
 
 import api from "./client";
@@ -472,8 +472,8 @@ async function checkStaleness(): Promise<IndexStalenessResponse> {
           last_indexed: new Date(Date.now() - 86400000).toISOString(),
           stale_file_count: 5,
           stale_files_sample: [
-            "/roboco/services/task.py",
-            "/roboco/services/optimal.py",
+            "/robofleet/services/task.py",
+            "/robofleet/services/optimal.py",
           ],
           recommendation: "Run /kb/reindex?force=true to update",
         },

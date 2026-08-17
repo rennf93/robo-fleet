@@ -49,7 +49,7 @@ function makeProject(overrides: Partial<ProjectSummary>): ProjectSummary {
     id: overrides.id ?? "p1",
     name: overrides.name ?? "Project",
     slug: overrides.slug ?? "project",
-    git_url: "https://github.com/rennf93/roboco.git",
+    git_url: "https://github.com/rennf93/robo-fleet.git",
     assigned_cell: Team.BACKEND,
     is_active: true,
     has_workspace: true,

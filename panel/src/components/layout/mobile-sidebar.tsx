@@ -57,14 +57,14 @@ export function MobileSidebar() {
               className="flex items-center gap-2"
             >
               <Image
-                src="/roboco-logo.png"
-                alt="RoboCo"
+                src="/robofleet-logo.png"
+                alt="RoboFleet"
                 width={32}
                 height={32}
                 unoptimized
                 className="h-8 w-8 rounded"
               />
-              <span className="text-lg font-semibold">RoboCo</span>
+              <span className="text-lg font-semibold">RoboFleet</span>
             </Link>
           </SheetTitle>
         </SheetHeader>

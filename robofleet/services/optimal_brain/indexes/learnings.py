@@ -119,7 +119,7 @@ class LearningsIndexPlugin(BaseIndexPlugin):
         """Build source URI for learning."""
         del kwargs  # Unused - URI uses doc_id only
         learning_id = doc_id or "lrn-unknown"
-        return f"roboco://learnings/{learning_id}"
+        return f"robofleet://learnings/{learning_id}"
 
     async def record_learning(self, params: RecordLearningParams) -> IngestResult:
         """

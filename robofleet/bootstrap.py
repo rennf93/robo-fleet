@@ -1,5 +1,5 @@
 """
-RoboCo Bootstrap Script
+RoboFleet Bootstrap Script
 
 Orchestrates system initialization: database, event bus, API server, and agent runtime.
 Data constants are in robofleet/seeds/, database operations in robofleet/db/seed.py.
@@ -89,7 +89,7 @@ async def main(
         skip_orchestrator: Skip starting orchestrator
         spawn_agents: List of agent IDs to spawn immediately
     """
-    logger.info("RoboCo Bootstrap starting...")
+    logger.info("RoboFleet Bootstrap starting...")
 
     if not skip_db:
         await bootstrap_database()
@@ -162,7 +162,7 @@ async def main(
         await orchestrator.stop()
         await event_bus.disconnect()
         _BootstrapHolder.orchestrator = None
-        logger.info("RoboCo shutdown complete")
+        logger.info("RoboFleet shutdown complete")
 
 
 if __name__ == "__main__":

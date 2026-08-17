@@ -57,8 +57,8 @@ async def test_no_scaffold_when_file_already_present(
 ) -> None:
     monkeypatch.setattr(settings, "conventions_enabled", True)
     spy = _install_spy(monkeypatch)
-    (tmp_path / ".roboco").mkdir()
-    (tmp_path / ".roboco" / "conventions.yml").write_text("version: 1\n")
+    (tmp_path / ".robofleet").mkdir()
+    (tmp_path / ".robofleet" / "conventions.yml").write_text("version: 1\n")
     svc = WorkspaceService(AsyncMock())
     await svc._maybe_scaffold_conventions(object(), "proj-c", tmp_path)
     assert spy.scaffolded == []

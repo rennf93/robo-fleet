@@ -1,4 +1,4 @@
-"""roboco-intake MCP server — propose_draft delivers the draft to the relay."""
+"""robofleet-intake MCP server — propose_draft delivers the draft to the relay."""
 
 from __future__ import annotations
 

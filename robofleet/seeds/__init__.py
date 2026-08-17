@@ -1,7 +1,7 @@
 """
 Seeds Module
 
-Contains initial data definitions for bootstrapping the RoboCo system.
+Contains initial data definitions for bootstrapping the RoboFleet system.
 """
 
 from robofleet.seeds.initial_data import (

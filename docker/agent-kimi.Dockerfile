@@ -3,13 +3,13 @@
 # Runs Kimi K3 through Moonshot's official `kimi` (kimi-code) CLI,
 # authenticated by a Kimi subscription via a symlinked-in
 # ~/.kimi-code/credentials/kimi-code.json + oauth/ (the shared RW auth mount
-# — see roboco.llm.providers.kimi's module docstring) — the parity analogue
+# — see robofleet.llm.providers.kimi's module docstring) — the parity analogue
 # of the Claude Code path's mounted ~/.claude and the codex/gemini paths'
-# subscription mounts (no metered API key). Reuses the base image's roboco
-# venv + uv + the RoboCo MCP gateway servers. The entrypoint symlinks the
+# subscription mounts (no metered API key). Reuses the base image's robo-fleet
+# venv + uv + the RoboFleet MCP gateway servers. The entrypoint symlinks the
 # mounted credential in, renders ~/.kimi-code/config.toml + mcp.json +
 # AGENTS.md from the mounted mcp-config.json (see
-# roboco.llm.providers.kimi_cli_config), and runs the CLI headless. One
+# robofleet.llm.providers.kimi_cli_config), and runs the CLI headless. One
 # runtime image serves every one-shot delivery role — role behaviour comes
 # from the mounted system prompt / manifest / mcp-config, exactly as on the
 # Claude/grok/codex/gemini paths.
@@ -30,7 +30,7 @@ USER root
 # KIMI_INSTALL_DIR splits the binary (/usr/local/bin/kimi — needs root to
 # write) from KIMI_CODE_HOME's mutable per-agent state (~/.kimi-code,
 # rendered fresh at container start, never baked into the image — see
-# roboco.llm.providers.kimi_cli_config): the installer's own default
+# robofleet.llm.providers.kimi_cli_config): the installer's own default
 # co-locates both under ~/.kimi-code, which would mix a writable binary path
 # into the exact tree the entrypoint later writes credentials/config into.
 # Build-fails-loud verification (a broken install fails the build here, not
@@ -65,7 +65,7 @@ LABEL kimi.cli.pinned="false"
 # Runtime self-update is pure spawn latency + an unreviewed binary fetch in
 # an ephemeral container (an update can't persist anyway) — suppressed at
 # the env level; `[upgrade] auto_install=false` in the rendered config.toml
-# is the belt-and-suspenders config-level twin (roboco.llm.providers.kimi_cli_config).
+# is the belt-and-suspenders config-level twin (robofleet.llm.providers.kimi_cli_config).
 ENV KIMI_CODE_NO_AUTO_UPDATE=1
 
 ENTRYPOINT ["/app/scripts/kimi-cli-agent-entrypoint.sh"]

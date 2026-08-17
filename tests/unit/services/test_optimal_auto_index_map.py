@@ -2,7 +2,7 @@
 
 docs/map is the agent-facing exhaustive codebase map (CLAUDE.md); folding it
 into OptimalService._auto_index_docs's auto_index_dirs makes it
-roboco_kb_search-able. _index_docs_directory is generic (rglob *.md, route
+robofleet_kb_search-able. _index_docs_directory is generic (rglob *.md, route
 only the ``standards`` subdir to the standards indexer), so no map-specific
 branch is needed — every docs/map/*.md rides index_documentation like docs/rag.
 """

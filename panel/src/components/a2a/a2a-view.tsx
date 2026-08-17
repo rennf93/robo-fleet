@@ -362,7 +362,7 @@ function A2AViewContent() {
       {isOffline ? (
         <OfflineState
           title="Cannot Load A2A Conversations"
-          description="Start the RoboCo orchestrator to view agent-to-agent chats."
+          description="Start the RoboFleet orchestrator to view agent-to-agent chats."
           onRetry={() => void refresh()}
         />
       ) : (

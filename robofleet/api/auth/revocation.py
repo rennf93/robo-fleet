@@ -21,7 +21,7 @@ from robofleet.config import settings
 
 logger = logging.getLogger(__name__)
 
-_KEY_PREFIX = "roboco:jwt_revoked:"
+_KEY_PREFIX = "robofleet:jwt_revoked:"
 
 
 async def revoke_jti(jti: str, ttl_seconds: int) -> None:

@@ -85,7 +85,7 @@ async def _await_drain(session: AsyncSession) -> None:
     (mirrors `test_notification_delivery_phantom.py`'s helper) — the real
     drain is fire-and-forget via `asyncio.create_task`, so a test must await
     it explicitly rather than racing the event loop."""
-    tasks = list(session.info.get("_roboco_drain_tasks", []))
+    tasks = list(session.info.get("_robofleet_drain_tasks", []))
     if tasks:
         await asyncio.gather(*tasks, return_exceptions=True)
 

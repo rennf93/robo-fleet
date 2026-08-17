@@ -170,7 +170,7 @@ def test_feature_spotlight_proposal_creates_held_draft(e2e_stack: E2EStack) -> N
             feature_slug=feature_slug,
             feature_title="Organizational Memory Loop",
             body=(
-                "Did you know RoboCo agents distill one lesson per completed "
+                "Did you know RoboFleet agents distill one lesson per completed "
                 "task and reuse it on the next matching claim? Institutional "
                 "memory, built in."
             ),

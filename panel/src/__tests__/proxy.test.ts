@@ -40,7 +40,7 @@ describe("proxy", () => {
     const { proxy } = await import("../proxy");
 
     const req = new NextRequest("http://localhost:3000/overview", {
-      headers: { cookie: "roboco_session=abc123" },
+      headers: { cookie: "robofleet_session=abc123" },
     });
     const res = await proxy(req);
     expect(res.status).toBe(200);

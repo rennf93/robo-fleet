@@ -120,7 +120,7 @@ def _janitor(
 
 
 def _state_file(vault: Any) -> Any:
-    return vault / "RoboCo" / "_meta" / ".janitor_state.json"
+    return vault / "RoboFleet" / "_meta" / ".janitor_state.json"
 
 
 def _write_state(vault: Any, state: dict[str, Any]) -> None:
@@ -371,7 +371,9 @@ async def test_archival_moves_old_terminal_note(
     assert not live.exists()
     note = writer.find_task_note(_TASK_ID)
     assert note is not None
-    expected_prefix = tmp_path / "RoboCo" / "Archive" / str(completed_at.year) / "Tasks"
+    expected_prefix = (
+        tmp_path / "RoboFleet" / "Archive" / str(completed_at.year) / "Tasks"
+    )
     assert str(note).startswith(str(expected_prefix))
     # A later re-projection finds the archived note — no duplicate appears.
     data = await assemble_task_note_data(task_svc, MagicMock(), task)
@@ -456,7 +458,7 @@ async def test_weekly_report_written_once_per_week_and_notifies(
         await janitor.run_cycle()  # same ISO week — no second report
 
     week = _iso_week(datetime.now(UTC))
-    report = tmp_path / "RoboCo" / "Reports" / f"{week}.md"
+    report = tmp_path / "RoboFleet" / "Reports" / f"{week}.md"
     assert report.exists()
     notifier.send_weekly_report_notification.assert_awaited_once()
     kwargs = notifier.send_weekly_report_notification.await_args.kwargs
@@ -471,7 +473,7 @@ async def test_weekly_report_skipped_when_report_flag_off(
     monkeypatch.setattr(settings, "vault_report_enabled", False)
     janitor = _janitor(monkeypatch, tmp_path, _TaskSvcStub())
     await janitor.run_cycle()
-    assert not (tmp_path / "RoboCo" / "Reports").exists()
+    assert not (tmp_path / "RoboFleet" / "Reports").exists()
 
 
 @pytest.mark.asyncio
@@ -500,4 +502,4 @@ async def test_weekly_report_notification_failure_never_fails_sweep(
     ):
         await janitor.run_cycle()
     week = _iso_week(datetime.now(UTC))
-    assert (tmp_path / "RoboCo" / "Reports" / f"{week}.md").exists()
+    assert (tmp_path / "RoboFleet" / "Reports" / f"{week}.md").exists()

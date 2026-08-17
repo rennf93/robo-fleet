@@ -18,12 +18,12 @@
 #
 # Env:
 #   WORKSPACES_ROOT — override workspace root (default: tries
-#     /volume1/roboco/data/workspaces then /data/workspaces; skip reset
+#     /volume1/robofleet/data/workspaces then /data/workspaces; skip reset
 #     if none exist).
 #   SKIP_WORKSPACE_RESET=1 — skip the workspace cleanup step entirely
 #     (DB + Redis only).
 #   FULL_RESET=1 — opt-in aggressive clean-slate: after the DB + Redis wipe,
-#     delete everything under the roboco data root EXCEPT ollama/postgres/redis
+#     delete everything under the robo-fleet data root EXCEPT ollama/postgres/redis
 #     (overridable via ROBOFLEET_DATA_ROOT) and clear the persisted agent Claude
 #     session dirs listed in ROBOFLEET_CLAUDE_STATE_DIRS (space-separated). Skips
 #     the per-workspace git reset (the clones are removed and re-cloned).
@@ -43,8 +43,8 @@ if command -v sudo >/dev/null 2>&1 && [ "$(id -u)" -ne 0 ]; then
     DOCKER="sudo docker"
 fi
 
-if ! $DOCKER ps --format '{{.Names}}' | grep -q '^roboco-postgres$'; then
-    echo "roboco-postgres container not running; start the stack first." >&2
+if ! $DOCKER ps --format '{{.Names}}' | grep -q '^robofleet-postgres$'; then
+    echo "robofleet-postgres container not running; start the stack first." >&2
     exit 1
 fi
 
@@ -54,7 +54,7 @@ fi
 # that would abort the entire script before the SQL wipe ever runs. Capture
 # the list with `|| true` so a no-match exit is benign.
 echo ">>> Stopping all agent containers..."
-agents_running=$($DOCKER ps --format '{{.Names}}' | grep '^roboco-agent-' || true)
+agents_running=$($DOCKER ps --format '{{.Names}}' | grep '^robofleet-agent-' || true)
 if [ -n "$agents_running" ]; then
     while IFS= read -r container; do
         echo "    Stopping $container"
@@ -64,20 +64,20 @@ if [ -n "$agents_running" ]; then
 fi
 
 echo ">>> Wiping runtime DB state (preserving agents/projects)..."
-$DOCKER exec -i roboco-postgres psql -U roboco -d roboco < "$SQL_FILE"
+$DOCKER exec -i robofleet-postgres psql -U robo-fleet -d robo-fleet < "$SQL_FILE"
 
 # Flush Redis — it caches permission checks, session lookups, dispatcher
 # heartbeats, and Redis Streams for events. Stale entries after a wipe
 # mask the clean state (e.g. cached agent metrics). `FLUSHDB` drops
 # everything in the default DB (which is all we use), preserving Redis
 # auth/config.
-if $DOCKER ps --format '{{.Names}}' | grep -q '^roboco-redis$'; then
+if $DOCKER ps --format '{{.Names}}' | grep -q '^robofleet-redis$'; then
     echo ">>> Flushing Redis cache..."
-    $DOCKER exec roboco-redis redis-cli FLUSHDB | sed 's/^/    /'
+    $DOCKER exec robofleet-redis redis-cli FLUSHDB | sed 's/^/    /'
 fi
 
 # Optional full clean-slate (opt-in via FULL_RESET=1): wipe everything under the
-# roboco data root EXCEPT the persistent service stores (ollama / postgres /
+# robo-fleet data root EXCEPT the persistent service stores (ollama / postgres /
 # redis), and clear the persisted agent Claude session state that would
 # otherwise replay across runs. Default OFF — the workspace git-reset below is
 # the usual path. The data root is resolved from the workspaces root's parent
@@ -92,7 +92,7 @@ fi
 if [ "${FULL_RESET:-0}" = "1" ]; then
     DATA_ROOT="${ROBOFLEET_DATA_ROOT:-}"
     if [ -z "$DATA_ROOT" ]; then
-        for candidate in /volume1/roboco/data /data; do
+        for candidate in /volume1/robofleet/data /data; do
             if [ -d "$candidate/workspaces" ]; then
                 DATA_ROOT="$candidate"
                 break
@@ -138,7 +138,7 @@ fi
 # Workspace reset — each agent has a private git clone at
 # {root}/{project}/{team}/{agent}. Leftover staged/untracked edits and
 # feature branches from a previous run will fail the claim→start
-# workflow (the `roboco_task_start` handler aborts on UNCOMMITTED_CHANGES
+# workflow (the `robofleet_task_start` handler aborts on UNCOMMITTED_CHANGES
 # and branch create collides with an already-existing feature branch).
 # We bring each clone back to origin/<default> with a hard reset +
 # `git clean -fdx` + local feature-branch prune.
@@ -156,7 +156,7 @@ _resolve_workspaces_root() {
         echo "$WORKSPACES_ROOT"
         return
     fi
-    for candidate in /volume1/roboco/data/workspaces /data/workspaces; do
+    for candidate in /volume1/robofleet/data/workspaces /data/workspaces; do
         if [ -d "$candidate" ]; then
             echo "$candidate"
             return

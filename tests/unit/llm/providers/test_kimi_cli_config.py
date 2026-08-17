@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 _SAMPLE_MCP = {
     "mcpServers": {
-        "roboco-flow": {
+        "robofleet-flow": {
             "command": "uv",
             "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
             "env": {
@@ -25,7 +25,7 @@ _SAMPLE_MCP = {
                 "ROBOFLEET_AGENT_TOKEN": "tok-123",
             },
         },
-        "roboco-do": {"command": "uv", "args": ["run", "x"]},
+        "robofleet-do": {"command": "uv", "args": ["run", "x"]},
     }
 }
 
@@ -187,11 +187,11 @@ def test_render_config_toml_hooks_present() -> None:
 
 def test_render_mcp_json_injects_env_and_omits_empty_env() -> None:
     rendered = json.loads(kc.render_mcp_json(_SAMPLE_MCP))
-    flow = rendered["mcpServers"]["roboco-flow"]
+    flow = rendered["mcpServers"]["robofleet-flow"]
     assert flow["command"] == "uv"
     assert flow["args"][:2] == ["run", "--no-sync"]
     assert flow["env"]["ROBOFLEET_AGENT_TOKEN"] == "tok-123"
-    assert "env" not in rendered["mcpServers"]["roboco-do"]
+    assert "env" not in rendered["mcpServers"]["robofleet-do"]
 
 
 def test_render_mcp_json_empty_servers() -> None:
@@ -205,10 +205,10 @@ def test_render_mcp_json_empty_servers() -> None:
 
 def test_write_agents_md_installs_the_blueprint(tmp_path: Path) -> None:
     src = tmp_path / "system-prompt.md"
-    src.write_text("You are a RoboCo backend developer.", encoding="utf-8")
+    src.write_text("You are a RoboFleet backend developer.", encoding="utf-8")
     dest = tmp_path / ".kimi-code" / "AGENTS.md"
     assert kc.write_agents_md(source=src, dest=dest) is True
-    assert dest.read_text(encoding="utf-8") == "You are a RoboCo backend developer."
+    assert dest.read_text(encoding="utf-8") == "You are a RoboFleet backend developer."
 
 
 def test_write_agents_md_noops_when_source_absent(tmp_path: Path) -> None:
@@ -306,7 +306,7 @@ def test_main_writes_config_mcp_and_agents_md(
     parsed = tomllib.loads(config_path.read_text(encoding="utf-8"))
     assert parsed["providers"]["managed:kimi-code"]["type"] == "kimi"
     rendered_mcp = json.loads(mcp_out_path.read_text(encoding="utf-8"))
-    assert rendered_mcp["mcpServers"]["roboco-flow"]["env"][
+    assert rendered_mcp["mcpServers"]["robofleet-flow"]["env"][
         "ROBOFLEET_AGENT_TOKEN"
     ] == ("tok-123")
     assert agents_md_path.read_text(encoding="utf-8") == "blueprint"

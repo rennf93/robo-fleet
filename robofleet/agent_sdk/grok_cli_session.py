@@ -135,7 +135,7 @@ class _StreamAssembler:
         self.saw_end = True
         # Draft fallback only: the canonical draft path is the propose_draft MCP
         # tool POSTing straight to the relay (tool calls do not surface as stream
-        # events), but if the agent typed a fenced ```roboco-draft``` block we
+        # events), but if the agent typed a fenced ```robofleet-draft``` block we
         # still surface it.
         draft = _extract_draft("".join(self._text))
         if draft is not None:

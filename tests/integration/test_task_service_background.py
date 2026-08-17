@@ -373,7 +373,7 @@ async def test_index_code_changes_with_files(
 
     monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     commits = [{"files": ["a.py", "b.py"]}, {"files": ["a.py"]}]
-    await svc._index_code_changes_background(uuid4(), commits, "roboco")
+    await svc._index_code_changes_background(uuid4(), commits, "robo-fleet")
     fake_optimal.index_code.assert_awaited_once()
 
 
@@ -390,7 +390,7 @@ async def test_index_code_changes_with_no_files(
 
     monkeypatch.setattr("robofleet.services.optimal.get_optimal_service", _get_optimal)
     # Empty list of files
-    await svc._index_code_changes_background(uuid4(), [], "roboco")
+    await svc._index_code_changes_background(uuid4(), [], "robo-fleet")
     fake_optimal.index_code.assert_not_awaited()
 
 
@@ -486,7 +486,7 @@ async def test_index_docs_with_paths_calls_index(
     # These docs are re-indexed off the task's OWN in-flight documents,
     # captured before the task's PR merges (including ones authored via
     # Edit/Write and picked up by _capture_workspace_docs, which bypass
-    # roboco_docs_write entirely) — same live-write bug class as
+    # robofleet_docs_write entirely) — same live-write bug class as
     # DocsService._index_doc_in_rag, so it must carry the same marker.
     _, kwargs = fake_optimal.index_documentation.await_args
     assert kwargs["provenance"] == "live_write"
@@ -542,7 +542,7 @@ async def test_capture_workspace_docs_skips_doc_already_on_server(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Any,
 ) -> None:
-    """A doc already under DOCS_BASE_PATH (written via roboco_docs_write) is not
+    """A doc already under DOCS_BASE_PATH (written via robofleet_docs_write) is not
     re-fetched from the branch."""
     svc = task_setup["svc"]
     monkeypatch.setattr("robofleet.services.docs.DOCS_BASE_PATH", tmp_path)

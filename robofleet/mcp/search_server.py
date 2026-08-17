@@ -82,7 +82,7 @@ async def _handle_fetch(
 
 def create_search_mcp_server(agent_id: str) -> FastMCP:
     """Create a Web Research MCP server bound to a specific agent."""
-    mcp = FastMCP(f"roboco-search-{agent_id}", json_response=True)
+    mcp = FastMCP(f"robofleet-search-{agent_id}", json_response=True)
     client = ApiClient(agent_id)
 
     @mcp.tool()

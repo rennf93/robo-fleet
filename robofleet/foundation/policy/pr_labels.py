@@ -19,7 +19,7 @@ from robofleet.foundation.identity import Team
 
 # A project-level conventions scaffold/restore PR carries no task and no org
 # layer, so it gets a single conventional-commit-kind label (its branch is
-# ``chore/roboco-conventions-scaffold``, its title ``chore(conventions): ...``).
+# ``chore/robofleet-conventions-scaffold``, its title ``chore(conventions): ...``).
 CONVENTIONS_PR_LABELS: list[str] = ["chore"]
 
 

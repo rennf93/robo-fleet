@@ -5,7 +5,7 @@ read-only — a brief has no per-item approve/reject at the TASK level (the
 exploration task completes atomically at propose time). Each FINDING still
 carries its own proposed/approved/rejected status the CEO decides on
 afterward — ``MarketBriefFindingResponse`` and the action schemas below back
-that per-finding queue, mirrored on ``roboco.api.schemas.roadmap``."""
+that per-finding queue, mirrored on ``robofleet.api.schemas.roadmap``."""
 
 from __future__ import annotations
 

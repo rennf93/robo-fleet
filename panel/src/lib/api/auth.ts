@@ -1,6 +1,6 @@
 import api from "./client";
 
-// Matches roboco.api.auth.routes.auth_status's response shape.
+// Matches robofleet.api.auth.routes.auth_status's response shape.
 export interface AuthStatus {
   cloud_auth_enabled: boolean;
 }

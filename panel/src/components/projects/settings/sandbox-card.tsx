@@ -24,7 +24,7 @@ const SANDBOX_SERVICES = [
 ] as const;
 
 // Activatable extensions/modules per service, mirroring the backend allowlist
-// (roboco/models/sandbox.py SANDBOX_ENGINE_FEATURES). The allowlist is the
+// (robofleet/models/sandbox.py SANDBOX_ENGINE_FEATURES). The allowlist is the
 // security containment — a plpython3u (superuser-RCE) is absent by design.
 // Mongo has no activatable features and is intentionally absent here.
 const SANDBOX_EXTENSIONS: Record<

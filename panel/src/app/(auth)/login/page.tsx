@@ -50,7 +50,7 @@ export default function LoginPage() {
     <div className="flex h-dvh items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>RoboCo</CardTitle>
+          <CardTitle>RoboFleet</CardTitle>
           <CardDescription>Sign in to the control panel</CardDescription>
         </CardHeader>
         <CardContent>

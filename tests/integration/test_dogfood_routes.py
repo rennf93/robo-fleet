@@ -22,7 +22,7 @@ from robofleet.models.permissions import AgentContext
 from robofleet.services.task import DOGFOOD_SOURCE
 from sqlalchemy import update
 
-_SEED_GIT_URL = "https://example.com/roboco-api-dogfood.git"
+_SEED_GIT_URL = "https://example.com/robofleet-api-dogfood.git"
 
 CEO_UUID = _foundation.AGENTS["ceo"].uuid
 MAIN_PM_UUID = _foundation.AGENTS["main-pm"].uuid
@@ -111,8 +111,8 @@ async def _seed_cycle(session: AsyncSession) -> tuple[TaskTable, ProjectTable]:
     await _seed_main_pm(session)
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo API",
-        slug=f"roboco-api-{uuid4().hex[:6]}",
+        name="RoboFleet API",
+        slug=f"robofleet-api-{uuid4().hex[:6]}",
         git_url=_SEED_GIT_URL,
         assigned_cell=Team.BACKEND,
         created_by=system.id,

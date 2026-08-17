@@ -1,5 +1,5 @@
 """
-RoboCo Configuration
+RoboFleet Configuration
 
 Environment-based settings using Pydantic Settings.
 """
@@ -123,9 +123,9 @@ class Settings(BaseSettings):
     # ==========================================================================
     database_host: str = "localhost"
     database_port: int = 5432
-    database_user: str = "roboco"
-    database_password: str = "roboco"
-    database_name: str = "roboco"
+    database_user: str = "robofleet"
+    database_password: str = "robofleet"
+    database_name: str = "robofleet"
     database_echo: bool = Field(default=False, description="Log SQL queries")
     database_pool_size: int = Field(default=10, ge=1)
     database_max_overflow: int = Field(default=20, ge=0)
@@ -134,7 +134,7 @@ class Settings(BaseSettings):
     # A SEPARATE, smaller engine/pool for the orchestrator's background engine
     # loops (self-heal, ci-watch, dep-update, env-sync, release-manager,
     # x-mentions, board-program, video-render, the vault engines, telegram
-    # poll, strategy-engine, see roboco.db.base.get_engine(pool=...)) so a
+    # poll, strategy-engine, see robofleet.db.base.get_engine(pool=...)) so a
     # long-held background connection can never starve an agent-facing
     # FastAPI request queued on the primary pool. FastAPI's get_db /
     # get_db_committed always use the primary pool; only these loops opt in
@@ -248,7 +248,7 @@ class Settings(BaseSettings):
         default="", description="Artifact Registry repo for agent images."
     )
     gcp_secret_manager_prefix: str = Field(
-        default="roboco", description="Secret Manager secret name prefix."
+        default="robofleet", description="Secret Manager secret name prefix."
     )
     gcp_cloud_run_agent_job_prefix: str = Field(
         default="robofleet-agent", description="Cloud Run Jobs name prefix."
@@ -271,7 +271,7 @@ class Settings(BaseSettings):
     # ==========================================================================
     # RAG (in-house engine with pgvector)
     # ==========================================================================
-    rag_persist_dir: str = ".roboco"
+    rag_persist_dir: str = ".robofleet"
     rag_chunk_strategy: str = Field(
         default="fixed",
         pattern="^(fixed|semantic|hierarchical|contextual)$",
@@ -501,7 +501,7 @@ class Settings(BaseSettings):
     # ==========================================================================
     # Architectural Conventions (per-project placement + house-style standard)
     # ==========================================================================
-    # A repo-canonical .roboco/conventions.yml plus the roboco-conventions
+    # A repo-canonical .robofleet/conventions.yml plus the robofleet-conventions
     # validator gate i_am_done / pr_pass on block-level placement and hygiene
     # violations. Default-off; every hook (scaffold, ambient injection, baseline
     # constraints, the gates) is inert when off.
@@ -509,7 +509,7 @@ class Settings(BaseSettings):
         default=False,
         description=(
             "Master switch for the architectural-conventions standard: "
-            "auto-scaffold .roboco/conventions.yml, inject the architecture map, "
+            "auto-scaffold .robofleet/conventions.yml, inject the architecture map, "
             "attach baseline constraints, and block gates on violations. Off => "
             "fully inert."
         ),
@@ -539,7 +539,7 @@ class Settings(BaseSettings):
     # ==========================================================================
     # Web Research (pluggable external search/fetch for Board + PM roles)
     # ==========================================================================
-    # Calls go agent -> roboco-search MCP -> /api/research/* -> ResearchService
+    # Calls go agent -> robofleet-search MCP -> /api/research/* -> ResearchService
     # -> provider. The provider key lives ONLY in this server-side process; it
     # is never injected into agent containers, and agents never egress — the
     # provider's own API does. Unset key => graceful NullProvider (empty
@@ -548,7 +548,7 @@ class Settings(BaseSettings):
         default=True,
         description=(
             "Master switch for the web-research capability. When false the "
-            "roboco-search MCP server is not mounted into any agent container."
+            "robofleet-search MCP server is not mounted into any agent container."
         ),
     )
     research_provider: str = Field(
@@ -889,7 +889,7 @@ class Settings(BaseSettings):
             "the request instead of letting it through. Secure default for "
             "cloud/public hosting; the NAS compose ships this same true default "
             "(fail-secure ON) now that the redis-blip 500 class is handled by "
-            "redis_fail_open + roboco.security's behavioral-path patch instead."
+            "redis_fail_open + robofleet.security's behavioral-path patch instead."
         ),
     )
     guard_passive_mode: bool = Field(
@@ -985,7 +985,7 @@ class Settings(BaseSettings):
         description=(
             "Let the guard's return_pattern behavior rules inspect response "
             "bodies, not just status codes. Off by default: byte-for-byte "
-            "unchanged behavior, and roboco's own status:404/status:401 "
+            "unchanged behavior, and robo-fleet's own status:404/status:401 "
             "rules never need it."
         ),
     )
@@ -993,10 +993,10 @@ class Settings(BaseSettings):
     # ==========================================================================
     # Production self-healing ("engine 4") — DORMANT by default
     # ==========================================================================
-    # RoboCo heals ITSELF. A closed loop that watches RoboCo's OWN repo CI (the
+    # RoboFleet heals ITSELF. A closed loop that watches RoboFleet's OWN repo CI (the
     # single project named by self_heal_project_slug — NOT other/client repos),
     # detects a regression (a failing CI run on its default branch), notifies the
-    # CEO, and — behind a second opt-in — opens a PENDING fix task into RoboCo's
+    # CEO, and — behind a second opt-in — opens a PENDING fix task into RoboFleet's
     # own delivery lifecycle and STOPS. It never starts, merges, or deploys; every
     # downstream step stays a human decision. Default OFF: the loop never runs and
     # no GitHub call is made.
@@ -1011,8 +1011,8 @@ class Settings(BaseSettings):
     self_heal_project_slug: str = Field(
         default="",
         description=(
-            "The registered project that IS RoboCo itself — the self-heal loop "
-            "watches ONLY this repo's CI and opens fix tasks ONLY into it (RoboCo "
+            "The registered project that IS RoboFleet itself — the self-heal loop "
+            "watches ONLY this repo's CI and opens fix tasks ONLY into it (RoboFleet "
             "healing itself, not other repos). Empty = no target; the loop no-ops "
             "even when enabled."
         ),
@@ -1021,7 +1021,7 @@ class Settings(BaseSettings):
         default="ci.yml",
         description=(
             "GitHub Actions workflow file name to scope the CI signal to. "
-            "Defaults to 'ci.yml' (RoboCo's own gate). Set empty ONLY for a "
+            "Defaults to 'ci.yml' (RoboFleet's own gate). Set empty ONLY for a "
             "single-workflow repo — an empty value reads the latest completed run "
             "across ALL workflows on the default branch, which on a "
             "multi-workflow repo lets an unrelated green run mask a red CI run "
@@ -1180,11 +1180,11 @@ class Settings(BaseSettings):
         ),
     )
     release_git_name: str = Field(
-        default="RoboCo Release Manager",
+        default="RoboFleet Release Manager",
         description="Committer identity for the executor's release commit.",
     )
     release_git_email: str = Field(
-        default="release-manager@roboco.local",
+        default="release-manager@robofleet.local",
         description="Committer email for the executor's release commit.",
     )
     release_sign_commits: bool = Field(
@@ -1223,8 +1223,8 @@ class Settings(BaseSettings):
 
     # Docs-divergence sync — when enabled, the release-proposal publish-success
     # path invokes the docs-sync engine to originate one bounded, deduped
-    # docs-update task against the roboco-website project per release. Default-off;
-    # the engine no-ops when disabled and logs a warning when roboco-website is
+    # docs-update task against the robo-fleet-website project per release. Default-off;
+    # the engine no-ops when disabled and logs a warning when robo-fleet-website is
     # not registered as a project.
     docs_sync_enabled: bool = Field(
         default=False,
@@ -1232,7 +1232,7 @@ class Settings(BaseSettings):
             "Master switch for the docs-divergence sync engine. OFF by default; "
             "when off the engine is never invoked on release publish. When on, "
             "a successful release proposal may originate one docs-update task "
-            "per release tag against the roboco-website project."
+            "per release tag against the robo-fleet-website project."
         ),
     )
     docs_sync_max_open_tasks: int = Field(
@@ -1256,17 +1256,17 @@ class Settings(BaseSettings):
     # Docs-site identity — the user-facing docs repo/URL a documenter is
     # steered toward when refusing a doc_type="user_facing" write_doc call
     # (robofleet/services/docs.py). Distinct from docs_sync_* above (that engine
-    # stays roboco-only by design); this pair just keeps the refusal message
+    # stays robo-fleet-only by design); this pair just keeps the refusal message
     # itself deployer-configurable instead of hardcoding our own docs site.
     docs_site_project_slug: str = Field(
-        default="roboco-website",
+        default="robo-fleet-website",
         description=(
             "Project slug of the deployer's user-facing docs-site repo, named "
             "in the write_doc(doc_type='user_facing') refusal message."
         ),
     )
     docs_site_public_url: str = Field(
-        default="docs.roboco.tech",
+        default="docs.robo-fleet.tech",
         description=(
             "Public URL of the deployer's docs site, named in the "
             "write_doc(doc_type='user_facing') refusal message."
@@ -1310,7 +1310,7 @@ class Settings(BaseSettings):
 
     # Sandboxed per-agent-spawn DB/Redis — orchestrator-provisioned throwaway
     # Postgres/Redis sibling containers so a dev agent's gate runs against an
-    # isolated DB instead of RoboCo's own production Postgres. Default-off;
+    # isolated DB instead of RoboFleet's own production Postgres. Default-off;
     # even when on, a project only participates with its `sandbox_services`
     # column set. Replaces (never coexists with) the legacy `_append_gate_env`
     # prod-creds injection for an opted-in project's spawns.
@@ -1409,7 +1409,7 @@ class Settings(BaseSettings):
     )
 
     # Barfly (Board Program) — the Head of Marketing searches X for
-    # conversations where RoboCo is relevant but unmentioned and drafts
+    # conversations where RoboFleet is relevant but unmentioned and drafts
     # replies into the same held X-post queue. Arming lives entirely in the
     # settings-store (board_program.barfly.enabled, no legacy flag); these two
     # are ops-tunable knobs only. The API tier is an ops decision, not a code
@@ -1590,7 +1590,7 @@ class Settings(BaseSettings):
     # clusters, rework hotspots) and proposes evidence-backed bug tasks.
     # Weekly cron by default; also accelerated off-schedule by a rework-rate
     # spike (BoardProgramEngine's metric-predicate seam) — see
-    # roboco.services.board_programs._METRIC_PREDICATES. No master enable
+    # robofleet.services.board_programs._METRIC_PREDICATES. No master enable
     # flag: arming is settings-store-only (board_program.pest_control.enabled).
     pest_rework_threshold: float = Field(
         default=0.3,
@@ -1894,7 +1894,7 @@ class Settings(BaseSettings):
             "TOTAL budget for one advisory-evidence build (branch fetch, "
             "diff, list_changed_files — every slow leg) on claim_review / "
             "claim_doc_task / claim_gate_review / evidence() / i_am_done's "
-            "success envelope. A `LegBudget` (roboco.services.gateway."
+            "success envelope. A `LegBudget` (robofleet.services.gateway."
             "choreographer.evidence_legs) is created once per build and "
             "shared across every leg in it — each leg's wait_for gets only "
             "what's left of this total, shrinking as legs consume it, so "
@@ -1918,7 +1918,7 @@ class Settings(BaseSettings):
     protected_git_urls: list[str] = Field(
         default_factory=list,
         description=(
-            "Repo URL substrings a project may not point at (e.g. the roboco "
+            "Repo URL substrings a project may not point at (e.g. the robo-fleet "
             "source repo). Blocks agent commits/merges from reaching a protected "
             "repository; set this to sandbox smoke-test projects."
         ),
@@ -2168,7 +2168,7 @@ class Settings(BaseSettings):
         ),
     )
     # Base retry_after when parking the GEMINI provider on a quota/rate-limit
-    # exit (see roboco.runtime.orchestrator._park_gemini_rate_limited, which
+    # exit (see robofleet.runtime.orchestrator._park_gemini_rate_limited, which
     # backs this off exponentially on repeated re-parks within one episode —
     # same shape as grok's park, but grok hardcodes its base as a module
     # constant; Gemini's is a tunable Setting since an operator may want a
@@ -2207,7 +2207,7 @@ class Settings(BaseSettings):
     )
     # The kimi CLI model alias passed at spawn (`kimi -p ... -m <alias>`).
     # Aliases are namespaced under the login-managed "kimi-code" provider —
-    # see roboco.llm.providers.kimi_cli_config for the rendered config.toml.
+    # see robofleet.llm.providers.kimi_cli_config for the rendered config.toml.
     kimi_cli_model: str = Field(
         default="kimi-code/k3",
         description=(
@@ -2371,7 +2371,7 @@ class Settings(BaseSettings):
     )
 
     # Vault intake — the vexa-inspired input loop (V1 item 4): notes tagged
-    # #roboco in an opt-in vault folder become HELD intake drafts. Inert
+    # #robo-fleet in an opt-in vault folder become HELD intake drafts. Inert
     # unless BOTH obsidian_vault_enabled AND vault_intake_enabled are on.
     vault_intake_enabled: bool = Field(
         default=False,
@@ -2386,7 +2386,7 @@ class Settings(BaseSettings):
         description="Seconds between vault-intake scan cycles.",
     )
     vault_intake_dir: str = Field(
-        default="RoboCo/Inbox",
+        default="RoboFleet/Inbox",
         description=("Vault-relative folder scanned for tagged notes (non-recursive)."),
     )
     vault_intake_max_per_cycle: int = Field(
@@ -2410,13 +2410,13 @@ class Settings(BaseSettings):
         ge=0,
         description=(
             "Age (terminal timestamp) past which a completed/cancelled task's "
-            "note moves to RoboCo/Archive/<year>/. 0 disables archival."
+            "note moves to RoboFleet/Archive/<year>/. 0 disables archival."
         ),
     )
     vault_report_enabled: bool = Field(
         default=True,
         description=(
-            "Materialize a weekly RoboCo/Reports/<ISO-week>.md org-report note "
+            "Materialize a weekly RoboFleet/Reports/<ISO-week>.md org-report note "
             "(deterministic, no LLM) and notify the CEO. Needs "
             "obsidian_vault_enabled."
         ),
@@ -2434,7 +2434,7 @@ class Settings(BaseSettings):
         ),
     )
     vault_kb_dirs: str = Field(
-        default="RoboCo/Notes",
+        default="RoboFleet/Notes",
         description=(
             "CSV of vault-relative folders scanned recursively for KB ingest. "
             "Must never overlap vault_intake_dir or a reserved projection dir "
@@ -2458,13 +2458,13 @@ class Settings(BaseSettings):
         if not self.vault_kb_enabled:
             return self
         reserved = (
-            "RoboCo/Tasks",
-            "RoboCo/Journals",
-            "RoboCo/A2A",
-            "RoboCo/Agents",
-            "RoboCo/Archive",
-            "RoboCo/Reports",
-            "RoboCo/_meta",
+            "RoboFleet/Tasks",
+            "RoboFleet/Journals",
+            "RoboFleet/A2A",
+            "RoboFleet/Agents",
+            "RoboFleet/Archive",
+            "RoboFleet/Reports",
+            "RoboFleet/_meta",
             ".obsidian",
             self.vault_intake_dir,
         )
@@ -2477,7 +2477,7 @@ class Settings(BaseSettings):
                     "vault-relative path — no absolute paths, no '..' "
                     "segments (KB ingest would index files outside the vault)."
                 )
-            # Overlap checks run on the normalized form so './RoboCo/Tasks'
+            # Overlap checks run on the normalized form so './RoboFleet/Tasks'
             # or a vault-root-equivalent '.' can't slip past the guard.
             normalized = posixpath.normpath(kb_dir)
             if normalized == ".":

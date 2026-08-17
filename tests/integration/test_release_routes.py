@@ -74,9 +74,9 @@ async def _seed_proposal(session: AsyncSession) -> TaskTable:
     secretary = await _seed_agent(session, AgentRole.SECRETARY, "secretary")
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo",
-        slug=f"roboco-{uuid4().hex[:6]}",
-        git_url="https://example.com/roboco.git",
+        name="RoboFleet",
+        slug=f"robofleet-{uuid4().hex[:6]}",
+        git_url="https://example.com/robofleet.git",
         assigned_cell=Team.BACKEND,
         created_by=system.id,
     )
@@ -170,7 +170,7 @@ async def test_approve_dispatches_async_and_completes(
         version=_VERSION,
         files_changed=["pyproject.toml"],
         commit_sha="abc123",
-        release_url=f"https://github.com/x/roboco/releases/tag/v{_VERSION}",
+        release_url=f"https://github.com/x/robofleet/releases/tag/v{_VERSION}",
         detail="ok",
     )
     fake_executor = AsyncMock()

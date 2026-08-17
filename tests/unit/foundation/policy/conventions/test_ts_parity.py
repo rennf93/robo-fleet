@@ -1,7 +1,7 @@
 """The panel TS ConventionsStandard type mirrors the Python model fields.
 
 A drift here means the panel editor and the backend disagree on the shape of
-``.roboco/conventions.yml`` — caught at test time, not in production.
+``.robofleet/conventions.yml`` — caught at test time, not in production.
 """
 
 from __future__ import annotations

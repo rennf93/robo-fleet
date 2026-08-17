@@ -1,5 +1,5 @@
 """Schemas for the Spackle (Board Program) engine's CEO surface.
-Mirrors ``roboco.api.schemas.pest_control`` exactly."""
+Mirrors ``robofleet.api.schemas.pest_control`` exactly."""
 
 from __future__ import annotations
 

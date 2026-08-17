@@ -12,9 +12,9 @@ from robofleet.vault import ensure_vault_assets
 
 def test_ensure_vault_assets_materializes_base_files(tmp_path: Path) -> None:
     ensure_vault_assets(tmp_path)
-    task_board = tmp_path / "RoboCo" / "_meta" / "Task Board.base"
-    reports = tmp_path / "RoboCo" / "_meta" / "Reports.base"
-    sync_doc = tmp_path / "RoboCo" / "_meta" / "Sync to your Mac.md"
+    task_board = tmp_path / "RoboFleet" / "_meta" / "Task Board.base"
+    reports = tmp_path / "RoboFleet" / "_meta" / "Reports.base"
+    sync_doc = tmp_path / "RoboFleet" / "_meta" / "Sync to your Mac.md"
     assert task_board.exists()
     assert reports.exists()
     assert sync_doc.exists()

@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 # Defaults under the system temp dir (not a hardcoded /tmp literal).
 USAGE_OUT_PATH = Path(
     os.environ.get("ROBOFLEET_GROK_USAGE_FILE")
-    or Path(tempfile.gettempdir()) / "roboco-grok-usage.json"
+    or Path(tempfile.gettempdir()) / "robofleet-grok-usage.json"
 )
 
 

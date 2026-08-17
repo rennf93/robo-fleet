@@ -1,7 +1,7 @@
 """
-RoboCo CLI
+RoboFleet CLI
 
-Command-line interface for the RoboCo system.
+Command-line interface for the RoboFleet system.
 Separates CLI argument parsing from bootstrap logic.
 """
 
@@ -15,7 +15,7 @@ from robofleet.db import bootstrap_database
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="RoboCo Bootstrap")
+    parser = argparse.ArgumentParser(description="RoboFleet Bootstrap")
     parser.add_argument(
         "--skip-db",
         action="store_true",

@@ -77,7 +77,7 @@ if TYPE_CHECKING:
 
 SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 PO_UUID = _foundation.AGENTS["product-owner"].uuid
-SLUG = "roboco"
+SLUG = "robo-fleet"
 ONE = 1
 TWO = 2
 
@@ -146,9 +146,9 @@ async def _seed(session: AsyncSession) -> None:
             )
     await session.flush()
     project = ProjectTable(
-        name="RoboCo",
+        name="RoboFleet",
         slug=SLUG,
-        git_url="https://github.com/x/roboco.git",
+        git_url="https://github.com/x/robofleet.git",
         default_branch="master",
         protected_branches=["master"],
         assigned_cell=Team.BACKEND,
@@ -954,7 +954,7 @@ async def test_opted_in_projects_filters_by_project_participates(
 
     engine = BoardProgramEngine(db_session)
     projects = await engine.opted_in_projects(_PEST_CONTROL)
-    # SLUG ("roboco", seeded by _seed) never opted in — only the new project.
+    # SLUG ("robo-fleet", seeded by _seed) never opted in — only the new project.
     assert {p.slug for p in projects} == {"opted-in-proj"}
 
 
@@ -1239,7 +1239,7 @@ async def _seed_mirror_item(
                     "description": "Update the README to match shipped behavior",
                     "acceptance_criteria": ["README section 3 rewritten"],
                     "team": "backend",
-                    "project_slug": "roboco",
+                    "project_slug": "robo-fleet",
                     "status": "approved",
                     "materialized_task_id": materialized_task_id,
                 }

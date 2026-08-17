@@ -78,7 +78,7 @@ class CompanyGoalsService(BaseService):
 
     async def resolve_product_name(self, project: ProjectTable | None) -> str:
         """The shared product-name fallback chain: ``project``'s own name,
-        else this charter's ``company_name``, else the "RoboCo" literal.
+        else this charter's ``company_name``, else the "RoboFleet" literal.
 
         The single source of this resolution — XEngine and VideoEngine both
         call it (rather than each keeping its own copy) so a drafted post/
@@ -89,7 +89,7 @@ class CompanyGoalsService(BaseService):
             return project.name
         charter = await self.get()
         company_name = (charter.get("company_name") or "").strip()
-        return company_name or "RoboCo"
+        return company_name or "RoboFleet"
 
     @staticmethod
     def _to_dict(row: CompanyGoalsTable) -> dict[str, Any]:

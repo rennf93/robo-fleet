@@ -16,7 +16,7 @@ def test_doc_source_returns_none_when_id_missing() -> None:
 
 def test_doc_source_with_id() -> None:
     result = build_doc_source(kind="journals", id_="abc-123")
-    assert result == "roboco://journals/abc-123"
+    assert result == "robofleet://journals/abc-123"
 
 
 # ---------------------------------------------------------------------------
@@ -35,11 +35,11 @@ def test_journals_plugin_build_source_uri_with_entry_id() -> None:
     """build_source_uri returns correct URI when entry_id is set."""
     plugin = JournalsIndexPlugin.__new__(JournalsIndexPlugin)
     result = plugin.build_source_uri(doc_id=None, entry_id="entry-abc-123")
-    assert result == "roboco://journals/entry-abc-123"
+    assert result == "robofleet://journals/entry-abc-123"
 
 
 def test_journals_plugin_build_source_uri_falls_back_to_doc_id() -> None:
     """build_source_uri falls back to doc_id when entry_id kwarg is absent."""
     plugin = JournalsIndexPlugin.__new__(JournalsIndexPlugin)
     result = plugin.build_source_uri(doc_id="fallback-id")
-    assert result == "roboco://journals/fallback-id"
+    assert result == "robofleet://journals/fallback-id"

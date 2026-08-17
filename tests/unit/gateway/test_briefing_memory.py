@@ -23,7 +23,7 @@ _LOW = 0.4
 def _result(score: float, index_type: IndexType = IndexType.LEARNINGS) -> SearchResult:
     return SearchResult(
         content="a distilled lesson body",
-        source="roboco://learnings/lrn-1",
+        source="robofleet://learnings/lrn-1",
         score=score,
         index_type=index_type,
     )

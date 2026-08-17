@@ -291,7 +291,7 @@ function PerformanceTabContent() {
     return (
       <OfflineState
         title="Cannot Load Performance Metrics"
-        description="Start the RoboCo orchestrator to view performance analytics."
+        description="Start the RoboFleet orchestrator to view performance analytics."
         onRetry={() => void refresh()}
       />
     );

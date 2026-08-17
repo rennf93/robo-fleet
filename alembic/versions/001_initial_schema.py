@@ -4,7 +4,7 @@ Revision ID: 001_initial_schema
 Revises:
 Create Date: 2025-12-09
 
-Creates all tables for the RoboCo AI Agents Company system:
+Creates all tables for the RoboFleet AI Agents Company system:
 - agents: AI agent definitions and state
 - tasks: Work items with lifecycle management
 - projects: Git repositories that agents work on

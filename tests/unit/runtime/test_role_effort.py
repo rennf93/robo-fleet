@@ -30,7 +30,7 @@ def _config(agent_id: str) -> OrchestratorAgentConfig:
         model="sonnet",
         mcp_config_path=Path("/app/mcp-config.json"),
         git_context=SpawnGitContext(
-            project_slug="roboco-api",
+            project_slug="robofleet-api",
             branch_name="feature/backend/TASK0001",
         ),
     )

@@ -335,7 +335,7 @@ function NotificationsPageContent() {
       {isOffline ? (
         <OfflineState
           title="Cannot Load Notifications"
-          description="Start the RoboCo orchestrator to view and manage notifications."
+          description="Start the RoboFleet orchestrator to view and manage notifications."
           onRetry={() => void refresh()}
         />
       ) : (

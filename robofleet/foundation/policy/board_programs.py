@@ -286,7 +286,7 @@ PROGRAMS: dict[str, BoardProgram] = {
             title="Barfly",
             description=(
                 "Every two days: the Head of Marketing searches X for relevant "
-                "conversations RoboCo isn't in (screened for prompt injection) "
+                "conversations RoboFleet isn't in (screened for prompt injection) "
                 "and drafts replies, held in the X queue for your approval."
             ),
         ),
@@ -298,7 +298,7 @@ PROGRAMS: dict[str, BoardProgram] = {
             # EVENT programs are never cron-due (see program_due below) — this
             # is a harmless placeholder, not a live cadence, mirroring
             # coroner's. Unlike coroner, a Dogfood cycle DOES have a real
-            # ``_ORIGINATORS`` entry (see roboco.services.board_programs) —
+            # ``_ORIGINATORS`` entry (see robofleet.services.board_programs) —
             # it needs no external incident id to target, just the next
             # opted-in project in rotation, so both the release-publish hook
             # and a CEO "run now" can open a cycle through the ordinary

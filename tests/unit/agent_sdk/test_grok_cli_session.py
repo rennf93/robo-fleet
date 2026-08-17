@@ -70,7 +70,7 @@ def test_end_flushes_pending_thinking_before_turn_end() -> None:
 def test_fenced_draft_is_surfaced_as_a_draft_chunk() -> None:
     a = _StreamAssembler()
     draft = {"title": "Build X", "objective": "do it"}
-    a.feed({"type": "text", "data": "Here:\n```roboco-draft\n"})
+    a.feed({"type": "text", "data": "Here:\n```robofleet-draft\n"})
     a.feed({"type": "text", "data": json.dumps(draft)})
     a.feed({"type": "text", "data": "\n```\n"})
     out = a.feed({"type": "end", "sessionId": "s", "stopReason": "EndTurn"})

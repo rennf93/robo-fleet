@@ -796,7 +796,7 @@ async def test_delete_local_branch_force_deletes_unmerged(clone: Path) -> None:
 
 
 async def test_delete_local_branch_squash_merged_needs_force(clone: Path) -> None:
-    # RoboCo's default merge method is SQUASH: the branch's commits are never
+    # RoboFleet's default merge method is SQUASH: the branch's commits are never
     # ancestors of the base afterwards, so `-d` refuses even though the work
     # fully landed. This is why every terminal-path caller passes force=True —
     # with -d the completed-task ref would leak forever.

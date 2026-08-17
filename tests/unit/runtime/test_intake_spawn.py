@@ -56,7 +56,7 @@ def _spec(**overrides: Any) -> _IntakeRunSpec:
             "workspaces": "/data/workspaces",
         },
         "session_id": "sess-abc",
-        "cwd": "/data/workspaces/roboco/board/intake-1",
+        "cwd": "/data/workspaces/robofleet/board/intake-1",
         "cli_model": "claude-opus-5",
         "api_url": "http://robofleet-orchestrator:8000",
         "provider_base_url": None,
@@ -106,7 +106,7 @@ class TestBuildIntakeRunCmd:
     def test_env_carries_session_workspace_and_api(self) -> None:
         cmd = AgentOrchestrator._build_intake_run_cmd(_spec())
         assert "ROBOFLEET_PROMPTER_SESSION_ID=sess-abc" in cmd
-        assert "ROBOFLEET_WORKSPACE=/data/workspaces/roboco/board/intake-1" in cmd
+        assert "ROBOFLEET_WORKSPACE=/data/workspaces/robofleet/board/intake-1" in cmd
         assert "ROBOFLEET_API_URL=http://robofleet-orchestrator:8000" in cmd
         assert "ROBOFLEET_AGENT_ID=intake-1" in cmd
         assert "CLAUDE_CODE_SUBAGENT_MODEL=claude-opus-5" in cmd
@@ -141,9 +141,9 @@ class TestIntakeScopeSlugs:
     @pytest.mark.asyncio
     async def test_project_scope_returns_single_slug(self) -> None:
         slugs = await AgentOrchestrator._intake_scope_slugs(
-            db=object(), project_slug="roboco", product_id=None
+            db=object(), project_slug="robo-fleet", product_id=None
         )
-        assert slugs == ["roboco"]
+        assert slugs == ["robo-fleet"]
 
     @pytest.mark.asyncio
     async def test_product_scope_resolves_distinct_projects_in_order(self) -> None:
@@ -338,9 +338,9 @@ class TestResolveHistoryDigestProjects:
             lambda _db: _FakeProjectSvc(),
         ):
             projects = await AgentOrchestrator._resolve_history_digest_projects(
-                object(), project_slug="roboco", product_id=None, project_ids=None
+                object(), project_slug="robo-fleet", product_id=None, project_ids=None
             )
-        assert [p.slug for p in projects] == ["roboco"]
+        assert [p.slug for p in projects] == ["robo-fleet"]
 
     @pytest.mark.asyncio
     async def test_project_slug_missing_returns_empty(self) -> None:
@@ -428,7 +428,7 @@ class TestResolveHistoryDigestAmbient:
 
         monkeypatch.setattr("robofleet.db.base.get_session_factory", _boom)
 
-        result = await orch._resolve_history_digest_ambient("roboco")
+        result = await orch._resolve_history_digest_ambient("robo-fleet")
         assert result is None
 
 
@@ -455,11 +455,11 @@ class TestResolveAmbientProjects:
         ):
             projects = await orch._resolve_ambient_projects(
                 object(),
-                project_slug="roboco",
+                project_slug="robo-fleet",
                 task_id=None,
                 product_id=None,
             )
-        assert [p.slug for p in projects] == ["roboco"]
+        assert [p.slug for p in projects] == ["robo-fleet"]
 
     @pytest.mark.asyncio
     async def test_project_slug_missing_returns_empty(self) -> None:
@@ -592,7 +592,7 @@ class TestResolveConventionsAmbient:
         monkeypatch.setattr(settings, "conventions_enabled", False)
 
         result = await orch._resolve_conventions_ambient(
-            "roboco", project_ids=["11111111-1111-1111-1111-111111111111"]
+            "robo-fleet", project_ids=["11111111-1111-1111-1111-111111111111"]
         )
         assert result is None
 
@@ -735,8 +735,8 @@ def _wire_spawn_mocks(
     """Patch every external boundary spawn_intake_session touches."""
 
     async def _clone(_p: Any, _pr: Any, _pids: Any = None) -> tuple[str, list[str]]:
-        return "/data/workspaces/roboco/board/intake-1", [
-            "/data/workspaces/roboco/board/intake-1"
+        return "/data/workspaces/robofleet/board/intake-1", [
+            "/data/workspaces/robofleet/board/intake-1"
         ]
 
     async def _route(_aid: str) -> Any:
@@ -780,7 +780,7 @@ class TestSpawnIntakeSession:
         run_calls: list[list[str]] = []
         _wire_spawn_mocks(monkeypatch, orch, run_calls)
 
-        instance = await orch.spawn_intake_session("sess-1", project_slug="roboco")
+        instance = await orch.spawn_intake_session("sess-1", project_slug="robo-fleet")
 
         # Live relay session opened for the container.
         session = prompter_live.get_live_registry().get("sess-1")
@@ -791,7 +791,8 @@ class TestSpawnIntakeSession:
         assert instance.container_id == "containerid0123456789"
         # The cloned cwd reached the docker cmd.
         assert (
-            "ROBOFLEET_WORKSPACE=/data/workspaces/roboco/board/intake-1" in run_calls[0]
+            "ROBOFLEET_WORKSPACE=/data/workspaces/robofleet/board/intake-1"
+            in run_calls[0]
         )
 
     @pytest.mark.asyncio
@@ -813,7 +814,7 @@ class TestSpawnIntakeSession:
             "robofleet.runtime.orchestrator.compose_label_args", _fake_label_args
         )
 
-        await orch.spawn_intake_session("sess-labels", project_slug="roboco")
+        await orch.spawn_intake_session("sess-labels", project_slug="robo-fleet")
 
         assert len(run_calls) == 1
         cmd = run_calls[0]
@@ -837,7 +838,7 @@ class TestSpawnIntakeSession:
             "robofleet.runtime.orchestrator.compose_label_args", _no_labels
         )
 
-        await orch.spawn_intake_session("sess-no-labels", project_slug="roboco")
+        await orch.spawn_intake_session("sess-no-labels", project_slug="robo-fleet")
 
         assert len(run_calls) == 1
         assert not any(a.startswith("com.docker.compose.") for a in run_calls[0])
@@ -846,13 +847,15 @@ class TestSpawnIntakeSession:
     async def test_scope_must_be_exactly_one(self) -> None:
         orch = _make_minimal_orchestrator()
         with pytest.raises(ValueError, match="exactly one"):
-            await orch.spawn_intake_session("s", project_slug="roboco", product_id="p")
+            await orch.spawn_intake_session(
+                "s", project_slug="robo-fleet", product_id="p"
+            )
         with pytest.raises(ValueError, match="exactly one"):
             await orch.spawn_intake_session("s")
         # A MegaTask scope cannot combine with a single-project scope.
         with pytest.raises(ValueError, match="exactly one"):
             await orch.spawn_intake_session(
-                "s", project_slug="roboco", project_ids=["p1"]
+                "s", project_slug="robo-fleet", project_ids=["p1"]
             )
 
     @pytest.mark.asyncio
@@ -886,7 +889,7 @@ class TestSpawnIntakeSession:
         # A prior live container already registered for this agent.
         orch._instances[INTAKE_AGENT_ID] = AgentInstance(agent_id=INTAKE_AGENT_ID)
 
-        await orch.spawn_intake_session("sess-2", project_slug="roboco")
+        await orch.spawn_intake_session("sess-2", project_slug="robo-fleet")
         assert stopped == [INTAKE_AGENT_ID]  # the old one was reaped first
 
     @pytest.mark.asyncio
@@ -916,7 +919,7 @@ class TestSpawnIntakeSession:
 
         monkeypatch.setattr(orch, "_generate_composed_prompt", _spy_prompt)
 
-        await orch.spawn_intake_session("sess-merge", project_slug="roboco")
+        await orch.spawn_intake_session("sess-merge", project_slug="robo-fleet")
 
         assert (
             captured["ambient"]
@@ -948,7 +951,7 @@ class TestSpawnIntakeSession:
 
         monkeypatch.setattr(orch, "_generate_composed_prompt", _spy_prompt)
 
-        await orch.spawn_intake_session("sess-no-ambient", project_slug="roboco")
+        await orch.spawn_intake_session("sess-no-ambient", project_slug="robo-fleet")
 
         assert captured["ambient"] == _INTAKE_WORKSPACE_AMBIENT
 
@@ -967,7 +970,7 @@ class TestSpawnIntakeSession:
         )
 
         await orch.spawn_intake_session(
-            "sess-3", project_slug="roboco", initial_message="build X"
+            "sess-3", project_slug="robo-fleet", initial_message="build X"
         )
         # persist=True — the opening turn of an intake session must be
         # durably recorded, unlike the Secretary's equivalent call site.
@@ -990,7 +993,7 @@ class TestStartIntakeSession:
 
         monkeypatch.setattr(orch, "_spawn_intake_container", _spawn)
 
-        await orch.start_intake_session("sess-A", project_slug="roboco")
+        await orch.start_intake_session("sess-A", project_slug="robo-fleet")
 
         # Relay is open the instant start returns — the SSE stream can connect
         # before the (slow) container spawn finishes.
@@ -1031,7 +1034,7 @@ class TestSpawnGuarded:
         monkeypatch.setattr(registry, "close", closed.append)
 
         await orch._spawn_intake_container_guarded(
-            "sess-B", project_slug="roboco", product_id=None, initial_message=None
+            "sess-B", project_slug="robo-fleet", product_id=None, initial_message=None
         )
 
         assert len(pushed) == 1
@@ -1080,13 +1083,13 @@ class TestConcurrentSpawnSerialization:
             max_depth = max(max_depth, in_clone)
             await asyncio.sleep(0)  # yield so the other spawn may enter if not locked
             in_clone -= 1
-            return "/data/workspaces/roboco/board/intake-1", ["/cwd"]
+            return "/data/workspaces/robofleet/board/intake-1", ["/cwd"]
 
         monkeypatch.setattr(orch, "_clone_intake_scope", _clone)
 
         await asyncio.gather(
-            orch.spawn_intake_session("sess-a", project_slug="roboco"),
-            orch.spawn_intake_session("sess-b", project_slug="roboco"),
+            orch.spawn_intake_session("sess-a", project_slug="robo-fleet"),
+            orch.spawn_intake_session("sess-b", project_slug="robo-fleet"),
         )
 
         assert max_depth == 1  # serialized: never two spawns in the body at once
@@ -1254,7 +1257,7 @@ class TestSpawnIntakeShutdownNoOrphan:
 
         await orch._spawn_intake_container_guarded(
             "sess-orphan",
-            project_slug="roboco",
+            project_slug="robo-fleet",
             product_id=None,
             initial_message=None,
         )
@@ -1294,7 +1297,7 @@ class TestSpawnIntakeShutdownNoOrphan:
 
         monkeypatch.setattr(orch, "_remove_container", _remove)
 
-        instance = await orch.spawn_intake_session("sess-ok", project_slug="roboco")
+        instance = await orch.spawn_intake_session("sess-ok", project_slug="robo-fleet")
 
         assert orch._instances[INTAKE_AGENT_ID] is instance
         # The pre-spawn reap remove is the only remove call (the shutdown guard

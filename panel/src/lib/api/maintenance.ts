@@ -2,7 +2,7 @@ import api from "./client";
 
 // =============================================================================
 // Operator maintenance pause. Real contract, mirrors
-// roboco/api/routes/maintenance_pause.py exactly (CEO-only server-side; the
+// robofleet/api/routes/maintenance_pause.py exactly (CEO-only server-side; the
 // panel's default identity headers in lib/api/client.ts already carry the
 // CEO's X-Agent-ID/X-Agent-Role, so no extra auth wiring is needed here).
 //
@@ -89,7 +89,7 @@ export interface PauseScopeRequest {
   hours?: number;
 }
 
-// Mirrors roboco/foundation/policy/maintenance_pause.py exactly.
+// Mirrors robofleet/foundation/policy/maintenance_pause.py exactly.
 export const DEFAULT_PAUSE_HOURS = 4;
 export const MAX_PAUSE_HOURS = 24 * 14;
 

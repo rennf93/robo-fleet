@@ -1,5 +1,5 @@
 """Schemas for the Pest Control (Board Program) engine's CEO surface.
-Mirrors ``roboco.api.schemas.roadmap`` — ``rationale`` becomes the required
+Mirrors ``robofleet.api.schemas.roadmap`` — ``rationale`` becomes the required
 ``evidence`` field, and a cycle has no top-level theme goal."""
 
 from __future__ import annotations

@@ -53,7 +53,7 @@ def _task(**over: Any) -> MagicMock:
 
 def _ctx(**over: Any) -> _LineageCutContext:
     git_service = over.pop("git_service", None) or MagicMock()
-    project = over.pop("project", None) or MagicMock(id=uuid4(), slug="roboco-api")
+    project = over.pop("project", None) or MagicMock(id=uuid4(), slug="robofleet-api")
     return _LineageCutContext(
         git_service=git_service,
         workspace=over.pop("workspace", _WORKSPACE),
@@ -83,7 +83,7 @@ async def test_same_project_dependency_resolves_source_and_calls_merge() -> None
     PR merged into) and hand it to GitService for the ancestor check/merge."""
     svc = _service()
     any_svc: Any = svc
-    project = MagicMock(id=uuid4(), slug="roboco-api")
+    project = MagicMock(id=uuid4(), slug="robofleet-api")
     dep_id = uuid4()
     dep_task = _task(id=dep_id, project_id=project.id)
     task = _task(project_id=project.id, dependency_ids=[dep_id])
@@ -107,7 +107,7 @@ async def test_same_project_dependency_resolves_source_and_calls_merge() -> None
         task.id,
         _BRANCH,
         "feature/ux_ui/root--ux-cell",
-        project_slug="roboco-api",
+        project_slug="robofleet-api",
     )
 
 
@@ -117,7 +117,7 @@ async def test_cross_project_dependency_is_skipped() -> None:
     rather than attempt a meaningless cross-repo merge."""
     svc = _service()
     any_svc: Any = svc
-    project = MagicMock(id=uuid4(), slug="roboco-api")
+    project = MagicMock(id=uuid4(), slug="robofleet-api")
     dep_id = uuid4()
     dep_task = _task(id=dep_id, project_id=uuid4())  # different project
     task = _task(project_id=project.id, dependency_ids=[dep_id])
@@ -134,7 +134,7 @@ async def test_missing_dependency_task_is_skipped() -> None:
     """A dependency id that no longer resolves to a task: skip, don't crash."""
     svc = _service()
     any_svc: Any = svc
-    project = MagicMock(id=uuid4(), slug="roboco-api")
+    project = MagicMock(id=uuid4(), slug="robofleet-api")
     task = _task(project_id=project.id, dependency_ids=[uuid4()])
     any_svc.get = AsyncMock(return_value=None)
     ctx = _ctx(project=project)
@@ -150,7 +150,7 @@ async def test_conflict_status_notes_transition_and_warns_but_does_not_raise() -
     naming the dependency and its branch so a human follows up."""
     svc = _service()
     any_svc: Any = svc
-    project = MagicMock(id=uuid4(), slug="roboco-api")
+    project = MagicMock(id=uuid4(), slug="robofleet-api")
     dep_id = uuid4()
     dep_task = _task(id=dep_id, project_id=project.id)
     task = _task(project_id=project.id, dependency_ids=[dep_id])
@@ -184,7 +184,7 @@ async def test_second_conflict_appends_rather_than_overwrites() -> None:
     silently drop the first."""
     svc = _service()
     any_svc: Any = svc
-    project = MagicMock(id=uuid4(), slug="roboco-api")
+    project = MagicMock(id=uuid4(), slug="robofleet-api")
     dep_a, dep_b = uuid4(), uuid4()
     dep_task_a = _task(id=dep_a, project_id=project.id)
     dep_task_b = _task(id=dep_b, project_id=project.id)
@@ -219,7 +219,7 @@ async def test_merge_error_is_swallowed_never_raised() -> None:
     failure (network, resolver bug) is logged and swallowed."""
     svc = _service()
     any_svc: Any = svc
-    project = MagicMock(id=uuid4(), slug="roboco-api")
+    project = MagicMock(id=uuid4(), slug="robofleet-api")
     dep_id = uuid4()
     dep_task = _task(id=dep_id, project_id=project.id)
     task = _task(project_id=project.id, dependency_ids=[dep_id])
@@ -246,7 +246,7 @@ async def test_create_branch_in_project_wires_apply_dependency_lineage() -> None
     (_ensure_coordination_root_branches calls this once per spanned repo)."""
     svc = _service()
     task = _task(branch_name=None, dependency_ids=[uuid4()])
-    project = MagicMock(id=task.project_id, slug="roboco-api")
+    project = MagicMock(id=task.project_id, slug="robofleet-api")
 
     object.__setattr__(svc, "_resolve_parent_branch", AsyncMock(return_value=None))
     object.__setattr__(svc, "_resolve_team_dir", MagicMock(return_value="backend"))

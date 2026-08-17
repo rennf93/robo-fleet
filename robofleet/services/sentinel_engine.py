@@ -7,7 +7,7 @@ per-project opt-in), but the exploration task itself still needs a resolvable
 ``project_id`` — ``TaskService._require_target_or_umbrella`` is a hard
 service-layer invariant every non-coordination task must satisfy, the same
 constraint roadmap/x_feature/periscope already carry despite being org-scoped
-too. It resolves against the RoboCo project (``settings.self_heal_project_slug``,
+too. It resolves against the RoboFleet project (``settings.self_heal_project_slug``,
 the same resolution roadmap/x_feature/periscope use) purely as an FK anchor —
 the Auditor's assessment itself is DB-read-driven, not a repo read.
 
@@ -80,7 +80,7 @@ class SentinelEngine(BaseService):
         """Originate one held exploration task, or None (no-op).
 
         No-ops when the program isn't armed, a cycle is already open, or the
-        RoboCo project (the task's required FK anchor) isn't resolvable.
+        RoboFleet project (the task's required FK anchor) isn't resolvable.
         Never authors content itself — the Auditor does, via
         ``propose_quality_report`` once spawned by the board dispatcher.
         """
@@ -89,14 +89,16 @@ class SentinelEngine(BaseService):
         task_svc = get_task_service(self.session)
         if await task_svc.list_open_sentinel_cycles():
             return None  # one open cycle at a time
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         if project is None or project.id is None:
-            self.log.warning("sentinel-engine: RoboCo project not resolvable; skipping")
+            self.log.warning(
+                "sentinel-engine: RoboFleet project not resolvable; skipping"
+            )
             return None
         return await self._originate(task_svc, cast("UUID", project.id))
 
-    async def _roboco_project(self) -> ProjectTable | None:
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+    async def _robofleet_project(self) -> ProjectTable | None:
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _originate(self, task_svc: TaskService, project_id: UUID) -> TaskTable:

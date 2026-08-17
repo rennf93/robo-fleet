@@ -24,8 +24,8 @@ import pytest
 from robofleet.models.runtime import OrchestratorAgentConfig, SpawnGitContext
 from robofleet.runtime.orchestrator import AgentOrchestrator
 
-_WS = "/data/workspaces/roboco-api/backend/be-dev-1"
-_CELL = "/data/workspaces/roboco-api/backend"
+_WS = "/data/workspaces/robofleet-api/backend/be-dev-1"
+_CELL = "/data/workspaces/robofleet-api/backend"
 
 
 def _orch() -> AgentOrchestrator:
@@ -40,7 +40,7 @@ def _make_dev_config() -> OrchestratorAgentConfig:
         model="sonnet",
         mcp_config_path=Path("/app/mcp-config.json"),
         git_context=SpawnGitContext(
-            project_slug="roboco-api",
+            project_slug="robofleet-api",
             branch_name="feature/backend/TASK0001",
         ),
     )
@@ -185,7 +185,9 @@ class TestFableModeHooksInjection:
         hooks = json.loads(Path(path).read_text())["hooks"]
         stop_cmds = [h["command"] for g in hooks["Stop"] for h in g["hooks"]]
         assert stop_cmds[-1] == "/app/scripts/fable-stop-gate-hook.sh"  # appended last
-        assert stop_cmds[0] == "/app/scripts/stop-hook.sh"  # RoboCo's check still first
+        assert (
+            stop_cmds[0] == "/app/scripts/stop-hook.sh"
+        )  # RoboFleet's check still first
         subagent_cmds = [
             h["command"] for g in hooks["SubagentStop"] for h in g["hooks"]
         ]

@@ -1,5 +1,5 @@
 """Schemas for the Scales (Board Program) engine's CEO surface.
-Mirrors ``roboco.api.schemas.pest_control`` — an item references a LIVE task
+Mirrors ``robofleet.api.schemas.pest_control`` — an item references a LIVE task
 (``task_ref``/``target_task_id``) instead of drafting a new one, so there is
 no ``materialized_task_id``; ``executed_detail`` records what approval did
 to the target task instead."""

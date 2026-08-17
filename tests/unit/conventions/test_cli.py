@@ -22,7 +22,7 @@ def _seed_repo(root: Path) -> None:
     (routers / "u.py").write_text(
         "from pydantic import BaseModel\nclass M(BaseModel):\n    x: int\n"
     )
-    conv = root / ".roboco"
+    conv = root / ".robofleet"
     conv.mkdir()
     (conv / "conventions.yml").write_text(
         "modules:\n  - path: app/routers\n    purpose: r\n    forbidden: [model]\n"
@@ -52,7 +52,7 @@ def test_cli_exits_zero_with_no_findings(
 def test_cli_exits_three_on_unparseable_config(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    conv = tmp_path / ".roboco"
+    conv = tmp_path / ".robofleet"
     conv.mkdir()
     (conv / "conventions.yml").write_text("modules: [oops\n")
     rc = main(["check", "--root", str(tmp_path), "--files"])

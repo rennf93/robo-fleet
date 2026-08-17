@@ -64,7 +64,7 @@ async def test_post_pr_review_posts_request_changes() -> None:
         _patch_project(),
         patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
-        out = await svc.post_pr_review("roboco", _PR, "Please fix X.")
+        out = await svc.post_pr_review("robo-fleet", _PR, "Please fix X.")
     client.post.assert_awaited_once()
     call = client.post.await_args
     assert f"/pulls/{_PR}/reviews" in call.args[0]
@@ -78,7 +78,7 @@ async def test_post_pr_review_raises_on_missing_token() -> None:
     svc = _service()
     _bind(svc, "_token_for_project", AsyncMock(return_value=None))
     with _patch_project(), pytest.raises(GitError):
-        await svc.post_pr_review("roboco", _PR, "body")
+        await svc.post_pr_review("robo-fleet", _PR, "body")
 
 
 @pytest.mark.asyncio
@@ -91,7 +91,7 @@ async def test_post_pr_review_raises_on_github_error() -> None:
         patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         pytest.raises(GitError),
     ):
-        await svc.post_pr_review("roboco", _PR, "body")
+        await svc.post_pr_review("robo-fleet", _PR, "body")
 
 
 @pytest.mark.asyncio
@@ -117,7 +117,7 @@ async def test_post_pr_review_self_review_falls_back_to_comment() -> None:
         _patch_project(),
         patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
     ):
-        out = await svc.post_pr_review("roboco", _PR, "Please fix X.")
+        out = await svc.post_pr_review("robo-fleet", _PR, "Please fix X.")
     assert client.post.await_count == 2  # noqa: PLR2004
     first, second = client.post.await_args_list
     assert first.kwargs["json"]["event"] == "REQUEST_CHANGES"
@@ -145,5 +145,5 @@ async def test_post_pr_review_self_review_comment_failure_raises() -> None:
         patch("robofleet.services.git.httpx.AsyncClient", return_value=client),
         pytest.raises(GitError),
     ):
-        await svc.post_pr_review("roboco", _PR, "body")
+        await svc.post_pr_review("robo-fleet", _PR, "body")
     assert client.post.await_count == 2  # noqa: PLR2004

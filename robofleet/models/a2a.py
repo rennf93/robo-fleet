@@ -266,7 +266,7 @@ class A2ATask(RobocoBase):
     """
     A2A Task - A unit of work with lifecycle management.
 
-    Maps to RoboCo's internal TaskTable but follows A2A semantics.
+    Maps to RoboFleet's internal TaskTable but follows A2A semantics.
     """
 
     id: str = Field(
@@ -394,11 +394,11 @@ class CancelTaskRequest(RobocoBase):
 # =============================================================================
 
 
-def task_status_to_a2a_state(roboco_status: str) -> A2ATaskState:
+def task_status_to_a2a_state(robofleet_status: str) -> A2ATaskState:
     """
-    Map RoboCo TaskStatus to A2A TaskState.
+    Map RoboFleet TaskStatus to A2A TaskState.
 
-    This enables interoperability between RoboCo's internal
+    This enables interoperability between RoboFleet's internal
     task lifecycle and the A2A protocol.
     """
     mapping = {
@@ -418,12 +418,12 @@ def task_status_to_a2a_state(roboco_status: str) -> A2ATaskState:
         "completed": A2ATaskState.COMPLETED,
         "cancelled": A2ATaskState.CANCELLED,
     }
-    return mapping.get(roboco_status, A2ATaskState.WORKING)
+    return mapping.get(robofleet_status, A2ATaskState.WORKING)
 
 
 def a2a_state_to_task_status(a2a_state: A2ATaskState) -> str:
     """
-    Map A2A TaskState back to RoboCo TaskStatus.
+    Map A2A TaskState back to RoboFleet TaskStatus.
 
     Used when creating tasks via A2A protocol.
     """
@@ -431,7 +431,7 @@ def a2a_state_to_task_status(a2a_state: A2ATaskState) -> str:
         A2ATaskState.SUBMITTED: "pending",
         A2ATaskState.WORKING: "in_progress",
         A2ATaskState.COMPLETED: "completed",
-        A2ATaskState.FAILED: "cancelled",  # RoboCo uses cancelled for failures
+        A2ATaskState.FAILED: "cancelled",  # RoboFleet uses cancelled for failures
         A2ATaskState.CANCELLED: "cancelled",
         A2ATaskState.INPUT_REQUIRED: "blocked",
         A2ATaskState.REJECTED: "cancelled",

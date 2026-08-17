@@ -1,5 +1,5 @@
 """
-RoboCo Templates Package.
+RoboFleet Templates Package.
 
 Provides structured templates for git workflow, commit messages, and PRs.
 """

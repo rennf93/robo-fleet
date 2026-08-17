@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
-SLUG = "roboco-video-route-test"
+SLUG = "robofleet-video-route-test"
 SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 UX_DEV_1_UUID = _foundation.AGENTS["ux-dev-1"].uuid
 UX_DEV_2_UUID = _foundation.AGENTS["ux-dev-2"].uuid
@@ -78,9 +78,9 @@ async def _seed(session: AsyncSession) -> None:
     if existing.scalar_one_or_none() is None:
         session.add(
             ProjectTable(
-                name="RoboCo",
+                name="RoboFleet",
                 slug=SLUG,
-                git_url="https://github.com/x/roboco.git",
+                git_url="https://github.com/x/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,
@@ -122,9 +122,9 @@ async def _seed_draft(
     secretary = await _seed_agent(session, AgentRole.SECRETARY, "secretary")
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo",
-        slug=f"roboco-{uuid4().hex[:6]}",
-        git_url="https://example.com/roboco.git",
+        name="RoboFleet",
+        slug=f"robofleet-{uuid4().hex[:6]}",
+        git_url="https://example.com/robofleet.git",
         assigned_cell=Team.BACKEND,
         created_by=system.id,
     )
@@ -183,9 +183,9 @@ async def _seed_authoring_task(
     ux_dev = await _seed_agent(session, AgentRole.DEVELOPER, "ux-dev")
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo",
-        slug=f"roboco-{uuid4().hex[:6]}",
-        git_url="https://example.com/roboco.git",
+        name="RoboFleet",
+        slug=f"robofleet-{uuid4().hex[:6]}",
+        git_url="https://example.com/robofleet.git",
         assigned_cell=Team.UX_UI,
         created_by=system.id,
     )
@@ -1477,7 +1477,7 @@ def test_previews_root_confines_frame_orientation_traversal_through_symlink(
     monkeypatch.setattr(cfg, "workspaces_root", str(symlinked_root))
 
     task_id = uuid4()
-    project_slug = "roboco-x"
+    project_slug = "robofleet-x"
     frame_dir = real_root / project_slug / ".previews" / task_id.hex[:8] / "vertical"
     frame_dir.mkdir(parents=True)
     frame = frame_dir / "frame-01-of-1-at-0.5s.png"

@@ -1,9 +1,9 @@
 """Production self-healing engine ("engine 4") — dormant by default.
 
-RoboCo heals ITSELF. This watches RoboCo's OWN repo for a regression (a failing
+RoboFleet heals ITSELF. This watches RoboFleet's OWN repo for a regression (a failing
 CI run on its default branch, via the telemetry source) and, when it sees one,
 surfaces it to the CEO — and, behind a second opt-in, opens a PENDING fix task
-into RoboCo's own delivery lifecycle and STOPS. It is deliberately conservative:
+into RoboFleet's own delivery lifecycle and STOPS. It is deliberately conservative:
 
 * **Default OFF.** ``self_heal_enabled`` is False, so the orchestrator loop never
   starts and the existing system is completely unaffected.
@@ -11,7 +11,7 @@ into RoboCo's own delivery lifecycle and STOPS. It is deliberately conservative:
   most, OPENS a PENDING task. It never starts, approves, merges, or deploys work
   — every downstream step stays a human/CEO decision (the task waits for the
   CEO's Approve-&-Start and terminates at ``awaiting_ceo_approval``).
-* **Repo-singular.** It targets only RoboCo's own project
+* **Repo-singular.** It targets only RoboFleet's own project
   (``self_heal_project_slug``); the org's repo-agnostic delivery work is separate.
 * **Bounded + deduped.** One pass per interval; at most one open fix task per
   signal fingerprint; per-cycle and rolling open-task caps; the notification
@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class RegressionObservation:
-    """One regression the engine detected in RoboCo's own repo."""
+    """One regression the engine detected in RoboFleet's own repo."""
 
     fingerprint: str  # stable per signal — the dedupe key for open fix tasks
     signal_name: str
@@ -80,7 +80,7 @@ _NOTIFY_DEDUPE_KEY_PREFIX = "self_heal:notified:"
 
 
 class SelfHealEngine(BaseService):
-    """Detect a regression in RoboCo's own repo; surface it (and later open a fix)."""
+    """Detect a regression in RoboFleet's repo; surface it (and later open a fix)."""
 
     service_name = "self_heal_engine"
 
@@ -248,7 +248,7 @@ class SelfHealEngine(BaseService):
 
         Bounded + deduped: skips a regression that already has an open self-heal
         task (by fingerprint), honors the per-cycle and rolling open-task caps,
-        and resolves the repo to RoboCo's own project. Each task is created
+        and resolves the repo to RoboFleet's own project. Each task is created
         PENDING + assigned to the Main PM agent (not merely team=main_pm) so
         that, once the CEO approves it, the orchestrator dispatches it straight
         to that agent via the assigned-PM path.
@@ -294,7 +294,7 @@ class SelfHealEngine(BaseService):
                 TaskCreateRequest(
                     title=f"Self-heal: fix the CI regression on {obs.repo_hint}",
                     description=(
-                        f"RoboCo's own CI regressed.\n\n{obs.detail}\n\n"
+                        f"RoboFleet's own CI regressed.\n\n{obs.detail}\n\n"
                         f"Evidence: {obs.raw_ref}\n\n"
                         "This is a Main-PM coordination root: decompose the fix "
                         "and delegate the code work to a cell dev — the Main PM "

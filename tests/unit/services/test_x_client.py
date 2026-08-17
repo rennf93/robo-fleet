@@ -165,7 +165,7 @@ async def test_live_client_fetch_mentions_parses_public_metrics() -> None:
                         {
                             "id": "111",
                             "author_id": "222",
-                            "text": "great work @roboco",
+                            "text": "great work @robo-fleet",
                             "public_metrics": {
                                 "like_count": 3,
                                 "reply_count": 1,

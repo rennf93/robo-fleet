@@ -23,13 +23,13 @@ def test_gate_env_injects_test_db_when_flag_on(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(settings, "db_network_isolated", False)
     monkeypatch.setattr(settings, "database_host", "robofleet-postgres")
     monkeypatch.setattr(settings, "database_port", 5432)
-    monkeypatch.setattr(settings, "database_user", "roboco")
+    monkeypatch.setattr(settings, "database_user", "robo-fleet")
     monkeypatch.setattr(settings, "database_password", "s3cret")
     cmd: list[str] = []
     AgentOrchestrator._append_gate_env(cmd)
     assert "ROBOFLEET_TEST_DB_HOST=robofleet-postgres" in cmd
     assert "ROBOFLEET_TEST_DB_PORT=5432" in cmd
-    assert "ROBOFLEET_TEST_DB_USER=roboco" in cmd
+    assert "ROBOFLEET_TEST_DB_USER=robo-fleet" in cmd
     assert "ROBOFLEET_TEST_DB_PASSWORD=s3cret" in cmd
     assert "ROBOFLEET_TEST_DB_ADMIN_DB=postgres" in cmd
 

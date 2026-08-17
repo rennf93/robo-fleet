@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     import pytest
     from sqlalchemy.ext.asyncio import AsyncSession
 
-_SCAFFOLD_BRANCH = "chore/roboco-conventions-scaffold"
+_SCAFFOLD_BRANCH = "chore/robofleet-conventions-scaffold"
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -89,7 +89,7 @@ async def test_open_conventions_pr_commits_locally_without_remote(
     assert result is not None
     assert result["pr_number"] is None  # no git token / remote → PR not opened
     show = subprocess.run(
-        ["git", "show", f"{_SCAFFOLD_BRANCH}:.roboco/conventions.yml"],
+        ["git", "show", f"{_SCAFFOLD_BRANCH}:.robofleet/conventions.yml"],
         cwd=repo,
         capture_output=True,
         text=True,

@@ -59,7 +59,7 @@ async def test_closes_an_open_pr(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setattr(GitService, "_forge", property(lambda _self: forge))
 
-    out = await svc.close_task_pr_best_effort("roboco", _PR_NUMBER)
+    out = await svc.close_task_pr_best_effort("robo-fleet", _PR_NUMBER)
 
     assert out is True
     forge.update_pr.assert_awaited_once()
@@ -80,7 +80,7 @@ async def test_already_closed_pr_is_a_noop(monkeypatch: pytest.MonkeyPatch) -> N
     )
     monkeypatch.setattr(GitService, "_forge", property(lambda _self: forge))
 
-    out = await svc.close_task_pr_best_effort("roboco", _PR_NUMBER)
+    out = await svc.close_task_pr_best_effort("robo-fleet", _PR_NUMBER)
 
     assert out is False
     forge.update_pr.assert_not_awaited()
@@ -101,7 +101,7 @@ async def test_merged_pr_is_a_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setattr(GitService, "_forge", property(lambda _self: forge))
 
-    out = await svc.close_task_pr_best_effort("roboco", _PR_NUMBER)
+    out = await svc.close_task_pr_best_effort("robo-fleet", _PR_NUMBER)
 
     assert out is False
     forge.update_pr.assert_not_awaited()
@@ -114,7 +114,7 @@ async def test_no_token_is_a_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     forge = MagicMock(get_pr=AsyncMock(), update_pr=AsyncMock())
     monkeypatch.setattr(GitService, "_forge", property(lambda _self: forge))
 
-    out = await svc.close_task_pr_best_effort("roboco", _PR_NUMBER)
+    out = await svc.close_task_pr_best_effort("robo-fleet", _PR_NUMBER)
 
     assert out is False
     forge.get_pr.assert_not_awaited()
@@ -128,7 +128,7 @@ async def test_no_project_git_url_is_a_noop(monkeypatch: pytest.MonkeyPatch) -> 
     forge = MagicMock(get_pr=AsyncMock(), update_pr=AsyncMock())
     monkeypatch.setattr(GitService, "_forge", property(lambda _self: forge))
 
-    out = await svc.close_task_pr_best_effort("roboco", _PR_NUMBER)
+    out = await svc.close_task_pr_best_effort("robo-fleet", _PR_NUMBER)
 
     assert out is False
     forge.get_pr.assert_not_awaited()
@@ -148,7 +148,7 @@ async def test_lookup_transport_error_is_swallowed(
     )
     monkeypatch.setattr(GitService, "_forge", property(lambda _self: forge))
 
-    out = await svc.close_task_pr_best_effort("roboco", _PR_NUMBER)
+    out = await svc.close_task_pr_best_effort("robo-fleet", _PR_NUMBER)
 
     assert out is False
     forge.update_pr.assert_not_awaited()
@@ -166,7 +166,7 @@ async def test_get_pr_non_success_is_a_noop(monkeypatch: pytest.MonkeyPatch) -> 
     )
     monkeypatch.setattr(GitService, "_forge", property(lambda _self: forge))
 
-    out = await svc.close_task_pr_best_effort("roboco", _PR_NUMBER)
+    out = await svc.close_task_pr_best_effort("robo-fleet", _PR_NUMBER)
 
     assert out is False
     forge.update_pr.assert_not_awaited()

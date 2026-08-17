@@ -95,12 +95,12 @@ async def test_task_for_branch_returns_none_when_missing() -> None:
 async def test_project_slug_for_branch_returns_slug() -> None:
     project_id = uuid4()
     fake_task = MagicMock(branch_name="feature/backend/x", project_id=project_id)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=fake_task))
     with _patch_project_service(fake_project):
         out = await svc._project_slug_for_branch("feature/backend/x")
-    assert out == "roboco"
+    assert out == "robo-fleet"
 
 
 @pytest.mark.asyncio
@@ -114,7 +114,7 @@ async def test_project_slug_for_branch_none_when_no_task() -> None:
 async def test_project_for_task_resolves_coordination_root_via_product() -> None:
     """A project-less coordination root resolves its repo from the product map."""
     pid = uuid4()
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
     task = MagicMock(project_id=None, product_id=uuid4())
     svc = _service()
     product_svc = MagicMock(distinct_project_ids=AsyncMock(return_value=[pid]))
@@ -132,7 +132,7 @@ async def test_project_for_task_resolves_coordination_root_via_product() -> None
 @pytest.mark.asyncio
 async def test_project_for_task_uses_project_id_when_present() -> None:
     """A normal task resolves by project_id exactly as before (additive change)."""
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
     task = MagicMock(project_id=uuid4(), product_id=None)
     svc = _service()
     with _patch_project_service(fake_project):
@@ -155,7 +155,7 @@ async def test_push_task_branch_pushes_task_branch_by_name() -> None:
     work never reached origin; the push must target the named ref instead.
     """
     task = MagicMock(branch_name="feature/backend/abc")
-    project = MagicMock(slug="roboco")
+    project = MagicMock(slug="robo-fleet")
     svc = _service()
     _bind(svc, "_assert_task_owned_with_branch", AsyncMock(return_value=task))
     _bind(svc, "_project_for_task", AsyncMock(return_value=project))
@@ -177,7 +177,7 @@ async def test_push_task_branch_pushes_task_branch_by_name() -> None:
 async def test_push_task_branch_runs_codegen_before_push() -> None:
     """push_task_branch regenerates + commits codegen drift before pushing."""
     task = MagicMock(branch_name="feature/backend/abc")
-    project = MagicMock(slug="roboco")
+    project = MagicMock(slug="robo-fleet")
     svc = _service()
     _bind(svc, "_assert_task_owned_with_branch", AsyncMock(return_value=task))
     _bind(svc, "_project_for_task", AsyncMock(return_value=project))
@@ -472,7 +472,7 @@ async def test_run_codegen_and_commit_commits_drift() -> None:
     task_id = uuid4()
     agent_id = uuid4()
     task = MagicMock(id=task_id, branch_name="feature/backend/abc", assigned_to=None)
-    project = MagicMock(codegen_command="make codegen", slug="roboco")
+    project = MagicMock(codegen_command="make codegen", slug="robo-fleet")
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=task))
     _bind(svc, "_project_for_task", AsyncMock(return_value=project))
@@ -524,7 +524,7 @@ async def test_run_codegen_and_commit_excludes_pre_existing_dirty_file() -> None
     though codegen also touches it — only genuinely NEW drift is staged."""
     task_id = uuid4()
     task = MagicMock(id=task_id, branch_name="feature/backend/abc", assigned_to=None)
-    project = MagicMock(codegen_command="make codegen", slug="roboco")
+    project = MagicMock(codegen_command="make codegen", slug="robo-fleet")
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=task))
     _bind(svc, "_project_for_task", AsyncMock(return_value=project))
@@ -570,7 +570,7 @@ async def test_run_codegen_and_commit_noop_when_no_new_drift() -> None:
     set is empty, so nothing is staged or committed even though the worktree
     is dirty both before and after."""
     task = MagicMock(id=uuid4(), branch_name="feature/backend/abc")
-    project = MagicMock(codegen_command="make codegen", slug="roboco")
+    project = MagicMock(codegen_command="make codegen", slug="robo-fleet")
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=task))
     _bind(svc, "_project_for_task", AsyncMock(return_value=project))
@@ -599,7 +599,7 @@ async def test_run_codegen_and_commit_noop_when_no_new_drift() -> None:
 async def test_run_codegen_and_commit_noop_when_codegen_clean() -> None:
     """Codegen runs clean with NO drift -> git status is clean, no commit."""
     task = MagicMock(id=uuid4(), branch_name="feature/backend/abc")
-    project = MagicMock(codegen_command="make codegen", slug="roboco")
+    project = MagicMock(codegen_command="make codegen", slug="robo-fleet")
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=task))
     _bind(svc, "_project_for_task", AsyncMock(return_value=project))
@@ -629,7 +629,7 @@ async def test_run_codegen_and_commit_fail_open_on_command_failure() -> None:
     """A non-zero codegen exit logs a warning and skips the commit (fail-open) —
     push must proceed rather than a broken codegen command blocking delivery."""
     task = MagicMock(id=uuid4(), branch_name="feature/backend/abc")
-    project = MagicMock(codegen_command="make codegen", slug="roboco")
+    project = MagicMock(codegen_command="make codegen", slug="robo-fleet")
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=task))
     _bind(svc, "_project_for_task", AsyncMock(return_value=project))
@@ -665,7 +665,7 @@ async def test_run_codegen_and_commit_links_commit_to_task() -> None:
     task_id = uuid4()
     agent_id = uuid4()
     task = MagicMock(id=task_id, branch_name="feature/backend/abc", assigned_to=None)
-    project = MagicMock(codegen_command="make codegen", slug="roboco")
+    project = MagicMock(codegen_command="make codegen", slug="robo-fleet")
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=task))
     _bind(svc, "_project_for_task", AsyncMock(return_value=project))
@@ -988,7 +988,7 @@ async def test_read_file_at_branch_missing_returns_none() -> None:
 async def test_pr_target_returns_base_ref() -> None:
     project_id = uuid4()
     fake_task = MagicMock(project_id=project_id, assigned_to=uuid4())
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
     result = MagicMock()
     result.scalar_one_or_none.return_value = fake_task
 
@@ -1037,7 +1037,7 @@ async def test_create_pr_returns_pr_dict() -> None:
         title="Add login",
         description="A short description",
     )
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=fake_task))
     _bind(svc, "_workspace_for_branch", AsyncMock(return_value=Path("/tmp/ws")))
@@ -1079,7 +1079,7 @@ async def test_create_pr_records_pr_despite_cancellation_after_post() -> None:
         title="Add login",
         description="A short description",
     )
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=fake_task))
     _bind(svc, "_workspace_for_branch", AsyncMock(return_value=Path("/tmp/ws")))
@@ -1137,7 +1137,7 @@ async def test_create_pr_cancellation_waits_out_record_before_reraising() -> Non
         title="Add login",
         description="A short description",
     )
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
     svc = _service()
     _bind(svc, "_task_for_branch", AsyncMock(return_value=fake_task))
     _bind(svc, "_workspace_for_branch", AsyncMock(return_value=Path("/tmp/ws")))
@@ -1212,7 +1212,7 @@ async def test_ensure_base_creates_missing_base_off_default() -> None:
 
     _bind(svc, "_run_git", fake_run_git)
     out = await svc._ensure_base_on_remote(
-        Path("/tmp/ws"), "feature/frontend/abc--def", "roboco", "tok"
+        Path("/tmp/ws"), "feature/frontend/abc--def", "robo-fleet", "tok"
     )
     assert out == "feature/frontend/abc--def"
     assert any(
@@ -1240,7 +1240,7 @@ async def test_ensure_base_passthrough_when_present() -> None:
 
     _bind(svc, "_run_git", fake_run_git)
     out = await svc._ensure_base_on_remote(
-        Path("/tmp/ws"), "feature/x", "roboco", "tok"
+        Path("/tmp/ws"), "feature/x", "robo-fleet", "tok"
     )
     assert out == "feature/x"
     assert pushed is False
@@ -1261,7 +1261,7 @@ async def test_ensure_base_falls_back_to_default_when_create_fails() -> None:
 
     _bind(svc, "_run_git", fake_run_git)
     out = await svc._ensure_base_on_remote(
-        Path("/tmp/ws"), "feature/x", "roboco", "tok"
+        Path("/tmp/ws"), "feature/x", "robo-fleet", "tok"
     )
     assert out == "master"
 
@@ -1319,7 +1319,7 @@ async def test_pr_merge_returns_merge_commit_dict() -> None:
         assigned_to=uuid4(),
         work_session_id=None,
     )
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
     result = MagicMock()
     result.scalar_one_or_none.return_value = fake_task
 
@@ -1350,7 +1350,7 @@ async def test_pr_merge_into_default_branch_is_ceo_only() -> None:
     fake_task = MagicMock(
         project_id=project_id, parent_task_id=None, assigned_to=uuid4()
     )
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
     result = MagicMock()
     result.scalar_one_or_none.return_value = fake_task
 
@@ -1925,7 +1925,7 @@ async def test_merge_pull_request_none_does_not_raise_git_error() -> None:
     _bind(svc, "_call_merge_api", AsyncMock(return_value=resp_405))
     _bind(svc, "_pr_is_merged", AsyncMock(return_value=None))
 
-    out = await svc.merge_pull_request(Path("/tmp/ws"), 11, "squash", "roboco")
+    out = await svc.merge_pull_request(Path("/tmp/ws"), 11, "squash", "robo-fleet")
     assert out == ("master", "abc123sha")
 
 
@@ -1934,7 +1934,7 @@ async def test_is_pr_merged_for_task_none_treated_as_merged() -> None:
     """is_pr_merged_for_task coerces None -> True so choreographer skips pr_merge."""
     project_id = uuid4()
     fake_task = MagicMock(project_id=project_id, pr_number=11, parent_task_id=None)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
     result = MagicMock()
     result.scalar_one_or_none.return_value = fake_task
 
@@ -2016,7 +2016,7 @@ async def test_update_pr_for_task_threads_actor_agent_id() -> None:
 
     fake_task_service = MagicMock()
     fake_task_service.get = AsyncMock(return_value=task)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     patch_resp = MagicMock()
     patch_resp.status_code = 200

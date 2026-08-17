@@ -129,7 +129,7 @@ export const useScrollRestorationStore = create<ScrollRestorationState>()(
       setTaskListNav: (context) => set({ taskListNav: context }),
     }),
     {
-      name: "roboco-ui-state",
+      name: "robofleet-ui-state",
       storage: createJSONStorage(() => sessionStorage),
       // Only persist certain keys
       partialize: (state) => ({

@@ -18,5 +18,5 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends postgresql-16-postgis-3 \
     && rm -rf /var/lib/apt/lists/*
 
-LABEL org.opencontainers.image.title="RoboCo sandbox postgres (kitchen-sink)"
+LABEL org.opencontainers.image.title="RoboFleet sandbox postgres (kitchen-sink)"
 LABEL org.opencontainers.image.description="PostgreSQL 16 + vector + postgis + contrib for parameterized sandbox dev DBs"

@@ -5,7 +5,7 @@ receiver and the same relay sink to ``/api/secretary/live/{id}/events``, but the
 held-open session is a :class:`GrokCliSession` (per-turn headless ``grok -p``,
 resuming one session id) rather than a ``ClaudeSDKClient``. ``~/.grok/config.toml``
 is rendered first to wire the Secretary's CEO-authority tools (read_company_state
-/ read_task / search_tasks / submit_directive) as the ``roboco-secretary`` MCP
+/ read_task / search_tasks / submit_directive) as the ``robofleet-secretary`` MCP
 server, which
 calls ``/api/secretary/*`` with the container's HMAC agent token — the same auth
 the one-shot Grok path uses.
@@ -42,7 +42,7 @@ _RECEIVER_PORT = 9000  # ROBOFLEET_SDK_PORT — the orchestrator delivers messag
 
 
 def _render_grok_config(base_url: str) -> None:
-    """Write ``~/.grok/config.toml`` wiring the ``roboco-secretary`` MCP server.
+    """Write ``~/.grok/config.toml`` wiring the ``robofleet-secretary`` MCP server.
 
     ``uv run --directory /app`` pins the project env + working directory to
     ``/app`` so ``-m robofleet.mcp.secretary_server`` resolves the installed package
@@ -50,7 +50,7 @@ def _render_grok_config(base_url: str) -> None:
     container's HMAC env, forwarded into the server's env below.
     """
     mcp_servers = {
-        "roboco-secretary": {
+        "robofleet-secretary": {
             "command": "uv",
             "args": [
                 "run",

@@ -42,7 +42,7 @@ SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 AUDITOR_UUID = _foundation.AGENTS["auditor"].uuid
 CEO_UUID = _foundation.AGENTS["ceo"].uuid
 MAIN_PM_UUID = _foundation.AGENTS["main-pm"].uuid
-ROBOFLEET_SLUG = "roboco-standin"
+ROBOFLEET_SLUG = "robofleet-standin"
 ONE = 1
 
 
@@ -105,15 +105,15 @@ async def _seed_agents(session: AsyncSession) -> None:
     await session.flush()
 
 
-async def _seed_roboco_project(
+async def _seed_robofleet_project(
     session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> ProjectTable:
     await _seed_agents(session)
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo",
+        name="RoboFleet",
         slug=ROBOFLEET_SLUG,
-        git_url="https://example.com/roboco.git",
+        git_url="https://example.com/robofleet.git",
         assigned_cell=Team.BACKEND,
         created_by=SYSTEM_UUID,
     )
@@ -170,7 +170,7 @@ def _id(task: TaskTable) -> UUID:
 async def test_approve_materializes_main_pm_owned_task(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_report(db_session)
     result = await _svc(db_session).approve_item(
         _id(task), "item-0", created_by=CEO_UUID
@@ -215,7 +215,7 @@ async def test_approve_materializes_main_pm_owned_task(
 async def test_docs_area_materializes_documentation_task(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_report(db_session, items=[_item(0, area="docs")])
     result = await _svc(db_session).approve_item(
         _id(task), "item-0", created_by=CEO_UUID
@@ -230,7 +230,7 @@ async def test_docs_area_materializes_documentation_task(
 async def test_approve_is_idempotent(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_report(db_session)
     svc = _svc(db_session)
     first = await svc.approve_item(_id(task), "item-0", created_by=CEO_UUID)
@@ -253,7 +253,7 @@ async def test_approve_is_idempotent(
 async def test_reject_records_reason(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_report(db_session)
     result = await _svc(db_session).reject_item(
         _id(task), "item-0", "already tracked elsewhere"
@@ -273,7 +273,7 @@ async def test_reject_records_reason(
 async def test_reject_is_idempotent(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_report(db_session)
     svc = _svc(db_session)
     await svc.reject_item(_id(task), "item-0", "reason one")
@@ -286,7 +286,7 @@ async def test_reject_is_idempotent(
 async def test_cannot_reject_an_approved_item(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_report(db_session)
     svc = _svc(db_session)
     await svc.approve_item(_id(task), "item-0", created_by=CEO_UUID)
@@ -299,7 +299,7 @@ async def test_cannot_reject_an_approved_item(
 async def test_cannot_approve_a_rejected_item(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_report(db_session)
     svc = _svc(db_session)
     await svc.reject_item(_id(task), "item-0", "not now")
@@ -312,7 +312,7 @@ async def test_cannot_approve_a_rejected_item(
 async def test_item_with_no_status_key_defaults_to_proposed(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     legacy_item = _item(0, status=None)
     assert "status" not in legacy_item
     task = await _seed_report(db_session, items=[legacy_item])
@@ -346,7 +346,7 @@ async def test_unknown_task_returns_none(db_session: AsyncSession) -> None:
 async def test_unknown_item_id_returns_none(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_report(db_session)
     result = await _svc(db_session).approve_item(
         _id(task), "item-999", created_by=CEO_UUID
@@ -369,7 +369,7 @@ async def _seed_cycle_ledger_row(session: AsyncSession, task: TaskTable) -> None
 async def test_approve_records_learn_decision(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_report(db_session)
     await _seed_cycle_ledger_row(db_session, task)
     await _svc(db_session).approve_item(_id(task), "item-0", created_by=CEO_UUID)
@@ -391,7 +391,7 @@ async def test_approve_records_learn_decision(
 async def test_approve_survives_learn_recording_failure(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_report(db_session)
     await _seed_cycle_ledger_row(db_session, task)
 

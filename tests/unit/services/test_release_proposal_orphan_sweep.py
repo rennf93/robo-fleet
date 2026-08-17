@@ -1,7 +1,7 @@
 """A restart mid-execute kills ``_run_approve_background`` but the Redis release
 mutex (TTL 3000s) persists with no heartbeat, so a CEO retry gets
 ``already_in_progress`` for up to 50 min. ``sweep_orphan_release_locks`` scans
-the ``roboco:release_proposal:*`` keyspace at orchestrator start and deletes any
+the ``robofleet:release_proposal:*`` keyspace at orchestrator start and deletes any
 whose task_id isn't in the in-flight registry — after a restart that registry is
 empty, so every surviving key is an orphan.
 """

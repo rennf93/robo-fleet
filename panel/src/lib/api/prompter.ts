@@ -8,7 +8,7 @@ import type { Team, TaskType, TaskNature, Complexity } from "@/types";
 // ---------------------------------------------------------------------------
 
 /** One cell's slice of the work — the per-cell breakdown of The Work.
- *  `project_id` is the per-cell repo for a multi-cell MegaTask draft (a RoboCo
+ *  `project_id` is the per-cell repo for a multi-cell MegaTask draft (a RoboFleet
  *  project is per-cell; a monorepo is N per-cell projects sharing one git_url).
  *  A single-cell draft keeps its project at the DraftProposal top level. */
 export interface CellWork {

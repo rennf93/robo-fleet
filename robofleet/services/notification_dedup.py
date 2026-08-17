@@ -64,7 +64,7 @@ def _key(
     # for review" are both TASK_ASSIGNMENT but carry distinct intent, so both
     # must survive the 60s window. subject is stable per sender+state (callers
     # use fixed templates), so a true re-fire still dedups.
-    prefix = f"roboco:notif_dedup:{ntype.value}:{from_agent}:{recipient}"
+    prefix = f"robofleet:notif_dedup:{ntype.value}:{from_agent}:{recipient}"
     return f"{prefix}:{task_part}:{subject}"
 
 

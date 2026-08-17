@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 _SAMPLE_MCP = {
     "mcpServers": {
-        "roboco-flow": {
+        "robofleet-flow": {
             "command": "uv",
             "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
             "env": {
@@ -23,7 +23,7 @@ _SAMPLE_MCP = {
                 "ROBOFLEET_AGENT_TOKEN": "tok-123",
             },
         },
-        "roboco-do": {"command": "uv", "args": ["run", "x"]},
+        "robofleet-do": {"command": "uv", "args": ["run", "x"]},
     }
 }
 
@@ -34,11 +34,11 @@ def _rules_by_tool(rules: list[dict], tool: str) -> list[dict]:
 
 def test_render_settings_json_injects_mcp_servers_and_env() -> None:
     rendered = gc.render_settings_json(_SAMPLE_MCP)
-    flow = rendered["mcpServers"]["roboco-flow"]
+    flow = rendered["mcpServers"]["robofleet-flow"]
     assert flow["command"] == "uv"
     assert flow["args"][:2] == ["run", "--no-sync"]
     assert flow["env"]["ROBOFLEET_AGENT_TOKEN"] == "tok-123"
-    assert "env" not in rendered["mcpServers"]["roboco-do"]
+    assert "env" not in rendered["mcpServers"]["robofleet-do"]
 
 
 def test_render_settings_json_fixed_flags() -> None:
@@ -51,10 +51,10 @@ def test_render_settings_json_fixed_flags() -> None:
 
 def test_write_gemini_memory_installs_the_blueprint(tmp_path: Path) -> None:
     src = tmp_path / "system-prompt.md"
-    src.write_text("You are a RoboCo backend developer.", encoding="utf-8")
+    src.write_text("You are a RoboFleet backend developer.", encoding="utf-8")
     dest = tmp_path / ".gemini" / "GEMINI.md"
     assert gc.write_gemini_memory(source=src, dest=dest) is True
-    assert dest.read_text(encoding="utf-8") == "You are a RoboCo backend developer."
+    assert dest.read_text(encoding="utf-8") == "You are a RoboFleet backend developer."
 
 
 def test_write_gemini_memory_noops_when_source_absent(tmp_path: Path) -> None:
@@ -160,7 +160,7 @@ def test_main_writes_settings_and_args(
     assert gc.main() == 0
 
     rendered = json.loads(settings_path.read_text(encoding="utf-8"))
-    assert rendered["mcpServers"]["roboco-flow"]["env"]["ROBOFLEET_AGENT_TOKEN"] == (
+    assert rendered["mcpServers"]["robofleet-flow"]["env"]["ROBOFLEET_AGENT_TOKEN"] == (
         "tok-123"
     )
     assert memory_path.read_text(encoding="utf-8") == "blueprint"

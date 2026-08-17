@@ -20,7 +20,7 @@ function buildReport(overrides: Partial<QualityReport> = {}): QualityReport {
         id: "item-0",
         area: "waivers",
         observation:
-          "Minor findings in roboco/services/task.py keep getting waived",
+          "Minor findings in robofleet/services/task.py keep getting waived",
         evidence: "5 waived-minor findings this week (prior week: 1)",
         suggested_action: "Convert to a Pest Control bug task",
         status: "proposed",
@@ -99,7 +99,7 @@ describe("QualityReportsTab", () => {
     expect(screen.getByText("waivers")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Minor findings in roboco/services/task.py keep getting waived",
+        "Minor findings in robofleet/services/task.py keep getting waived",
       ),
     ).toBeInTheDocument();
     expect(

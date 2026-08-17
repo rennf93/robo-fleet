@@ -2,7 +2,7 @@
 
 The gateway's ``commit()`` tool calls this validator before writing. CI also
 runs the same validation as a backstop. Configurable via pyproject.toml
-[tool.roboco.commits].
+[tool.robofleet.commits].
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-# Defaults; overridable via roboco.config.Settings (and pyproject [tool.roboco.commits])
+# Overridable via robofleet.config.Settings or pyproject [tool.robofleet.commits]
 DEFAULT_MIN_CHARS: int = 20
 DEFAULT_BANNED_WORDS: tuple[str, ...] = (
     "wip",

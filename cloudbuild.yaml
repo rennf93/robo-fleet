@@ -1,4 +1,4 @@
-# Cloud Build pipeline: build the three RoboCo images into Artifact Registry.
+# Cloud Build pipeline: build the three RoboFleet images into Artifact Registry.
 # Substitutions (override via --substitutions or the env vars in build-images.sh):
 #   _AR_HOST     - the regional docker.pkg.dev host, e.g. us-central1-docker.pkg.dev
 #   _AR_REPO     - the Artifact Registry repo id, e.g. robo-fleet

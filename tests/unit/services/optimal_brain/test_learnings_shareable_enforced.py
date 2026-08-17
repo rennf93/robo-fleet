@@ -27,7 +27,7 @@ def _cite(text: str, shareable: bool, **extra: Any) -> Citation:
     metadata.update(extra)
     return Citation(
         chunk=text,
-        source=f"roboco://learnings/{text.split(maxsplit=1)[0]}",
+        source=f"robofleet://learnings/{text.split(maxsplit=1)[0]}",
         score=0.9,
         metadata=metadata,
     )

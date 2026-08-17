@@ -50,7 +50,7 @@ class PlaybooksIndexPlugin(BaseIndexPlugin):
     def build_source_uri(self, doc_id: str | None = None, **kwargs: Any) -> str | None:
         """Build the source URI for a playbook, or None when its id is missing."""
         del kwargs  # Unused - URI uses doc_id only
-        return f"roboco://playbooks/{doc_id}" if doc_id else None
+        return f"robofleet://playbooks/{doc_id}" if doc_id else None
 
     async def index_playbook(self, params: IndexPlaybookParams) -> IngestResult:
         """Embed an approved playbook's title + when-to-use + procedure."""

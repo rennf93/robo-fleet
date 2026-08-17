@@ -1,4 +1,4 @@
-// video-renderer — HTTP sidecar for the RoboCo video engine.
+// video-renderer — HTTP sidecar for the RoboFleet video engine.
 //
 // POST /render accepts a gzipped tar of a motion/ composition source (arcname
 // "motion") plus {composition_id, orientation, input_props} form fields, and

@@ -17,14 +17,14 @@ class TestBuildForRole:
                 agent_id=uuid4(),
                 role="developer",
                 team="backend",
-                workspace_path=Path("/data/workspaces/roboco/backend/be-dev-1"),
+                workspace_path=Path("/data/workspaces/robofleet/backend/be-dev-1"),
                 agent_model="minimax-m3:cloud",
             )
         )
         assert "i_am_done" in m.flow_tools
         assert "commit" in m.do_tools
         # Issue #8: the developer manifest must carry `evidence` so the
-        # do-server registers mcp__roboco-do__evidence inside the container.
+        # do-server registers mcp__robofleet-do__evidence inside the container.
         assert "evidence" in m.do_tools
         # Every dev's manifest carries propose_video (role alone can't tell a
         # ux-dev from a be-dev/fe-dev); the runtime _caller_team check is the
@@ -42,7 +42,7 @@ class TestBuildForRole:
                 agent_id=uuid4(),
                 role="main_pm",
                 team="board",
-                workspace_path=Path("/data/workspaces/roboco/board/main-pm"),
+                workspace_path=Path("/data/workspaces/robofleet/board/main-pm"),
                 agent_model="minimax-m3:cloud",
             )
         )
@@ -56,7 +56,7 @@ class TestBuildForRole:
                 agent_id=uuid4(),
                 role="qa",
                 team="backend",
-                workspace_path=Path("/data/workspaces/roboco/backend/be-qa"),
+                workspace_path=Path("/data/workspaces/robofleet/backend/be-qa"),
                 agent_model="minimax-m3:cloud",
             )
         )

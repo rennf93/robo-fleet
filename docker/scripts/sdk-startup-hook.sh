@@ -10,7 +10,7 @@ SDK_PORT="${ROBOFLEET_SDK_PORT:-9000}"
 AGENT_ID="${ROBOFLEET_AGENT_ID:-unknown}"
 LOG_FILE="/tmp/sdk-server.log"
 BRIEFING_FILE="/app/briefing.md"
-PRECOMPACT_FILE="/tmp/roboco-precompact-${AGENT_ID}.md"
+PRECOMPACT_FILE="/tmp/robofleet-precompact-${AGENT_ID}.md"
 
 # #179: this hook runs with cwd = the agent's workspace, so a bare
 # `uv run` resolves a cwd-relative `.venv` (≠ the baked /app/.venv),

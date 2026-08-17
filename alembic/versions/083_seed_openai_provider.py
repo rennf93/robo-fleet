@@ -16,7 +16,7 @@ Seeding disabled would leave `resolve_for_agent` silently falling back to the
 legacy Anthropic path forever (`resolved.provider.enabled` gates the route),
 reproducing the exact "silently unreachable" failure this migration exists to
 fix. Codex authenticates via a mounted ChatGPT-subscription `~/.codex`
-directory (see `roboco.llm.providers.codex.CodexCliProvider`), not a stored
+directory (see `robofleet.llm.providers.codex.CodexCliProvider`), not a stored
 API key, so there is no secret to withhold behind a disabled row anyway —
 `base_url` is seeded for display parity with GROK's row but is blanked before
 the container mount just the same (never used for auth).

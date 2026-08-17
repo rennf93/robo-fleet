@@ -166,11 +166,11 @@ async def test_write_doc_invalid_doc_type(docs_setup: dict) -> None:
 async def test_write_doc_user_facing_refused(docs_setup: dict) -> None:
     """doc_type='user_facing' is a recognized value (not a generic 'Unknown
     doc_type') but is structurally refused: this store's buckets are all
-    excluded from the published site. The guidance names the roboco-website
+    excluded from the published site. The guidance names the robo-fleet-website
     project and the 3-edit pattern instead of silently landing an
     unpublished write (docs-site-split Phase 2)."""
     svc = docs_setup["svc"]
-    with pytest.raises(ValidationError, match="roboco-website") as exc_info:
+    with pytest.raises(ValidationError, match="robo-fleet-website") as exc_info:
         await svc.write_doc(
             agent_id="be-doc",
             req=WriteDocInput(
@@ -182,21 +182,21 @@ async def test_write_doc_user_facing_refused(docs_setup: dict) -> None:
             ),
         )
     assert "Unknown doc_type" not in str(exc_info.value)
-    assert "docs.roboco.tech" in str(exc_info.value)
+    assert "docs.robo-fleet.tech" in str(exc_info.value)
 
 
 def test_refused_doc_types_uses_configured_docs_site(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A deployer's own docs-site slug/URL (ROBOFLEET_DOCS_SITE_*) reaches the
-    refusal message instead of RoboCo's own docs site."""
+    refusal message instead of RoboFleet's own docs site."""
     monkeypatch.setattr(settings, "docs_site_project_slug", "acme-docs")
     monkeypatch.setattr(settings, "docs_site_public_url", "docs.acme.example")
     message = _refused_doc_types()["user_facing"]
     assert "acme-docs" in message
     assert "docs.acme.example" in message
-    assert "roboco-website" not in message
-    assert "docs.roboco.tech" not in message
+    assert "robo-fleet-website" not in message
+    assert "docs.robo-fleet.tech" not in message
 
 
 def test_refused_doc_types_falls_back_when_unset(
@@ -208,8 +208,8 @@ def test_refused_doc_types_falls_back_when_unset(
     monkeypatch.setattr(settings, "docs_site_public_url", "")
     message = _refused_doc_types()["user_facing"]
     assert "your docs-site project" in message
-    assert "roboco-website" not in message
-    assert "docs.roboco.tech" not in message
+    assert "robo-fleet-website" not in message
+    assert "docs.robo-fleet.tech" not in message
 
 
 @pytest.mark.asyncio
@@ -908,7 +908,7 @@ async def test_index_doc_in_rag_success(docs_setup: dict, tmp_path: Path) -> Non
 async def test_index_doc_in_rag_marks_live_write_provenance(
     docs_setup: dict, tmp_path: Path
 ) -> None:
-    """roboco_docs_write's index call must mark the doc provenance=live_write
+    """robofleet_docs_write's index call must mark the doc provenance=live_write
     (it's written mid-task, before the PR merges — see the kb-tools.md /
     optimal_server.py caveat) and carry the writing task's id through."""
     svc = docs_setup["svc"]

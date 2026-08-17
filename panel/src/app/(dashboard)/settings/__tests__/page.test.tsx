@@ -7,7 +7,7 @@ Element.prototype.scrollIntoView = vi.fn();
 
 // The four prefs below are CLIENT-ONLY (never sent to the backend — the
 // server's settings allowlist is transcript_retention_days + feature flags
-// only, see roboco/services/settings.py). This mock stands in for the
+// only, see robofleet/services/settings.py). This mock stands in for the
 // persisted UI store; mutate its fields per-test to control what the page
 // renders.
 const mockStore = vi.hoisted(() => ({

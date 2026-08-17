@@ -2,7 +2,7 @@
 PYTHON_VERSIONS = 3.10 3.11 3.12 3.13 3.14
 DEFAULT_PYTHON = 3.10
 
-# Every `uv run` implicitly re-syncs the venv (rebuilding the roboco package
+# Every `uv run` implicitly re-syncs the venv (rebuilding the robo-fleet package
 # after any source edit). Two uv processes doing that concurrently — a
 # background `make quality` plus any foreground `uv run` — race on one
 # .venv and tear site-packages apart (recurring rich/pip/bandit ImportError
@@ -99,13 +99,13 @@ migration:
 # Start API server only (development mode with reload)
 .PHONY: api
 api:
-	@echo "Starting RoboCo API (development mode)..."
+	@echo "Starting RoboFleet API (development mode)..."
 	@uv run uvicorn robofleet.api.app:app --host 0.0.0.0 --port 8000 --reload
 
 # Start API server (production mode, no reload)
 .PHONY: run
 run:
-	@echo "Starting RoboCo API (production mode)..."
+	@echo "Starting RoboFleet API (production mode)..."
 	@uv run uvicorn robofleet.api.app:app --host 0.0.0.0 --port 8000
 
 # Start orchestrator only (spawns agents)
@@ -117,7 +117,7 @@ orchestrator:
 # Start API + Orchestrator (full development mode)
 .PHONY: dev
 dev:
-	@echo "Starting RoboCo in development mode..."
+	@echo "Starting RoboFleet in development mode..."
 	@echo "Agents to spawn: $(AGENTS)"
 	@echo ""
 	@echo "Starting API in background..."
@@ -160,16 +160,16 @@ logs:
 # Create tmux session with all components
 .PHONY: tmux
 tmux:
-	@echo "Creating tmux session 'roboco'..."
-	@tmux kill-session -t roboco 2>/dev/null || true
-	@tmux new-session -d -s roboco -n infra
-	@tmux send-keys -t roboco:infra "cd $(PWD) && docker compose logs -f" Enter
-	@tmux new-window -t roboco -n api
-	@tmux send-keys -t roboco:api "cd $(PWD) && make api" Enter
-	@tmux new-window -t roboco -n orch
-	@tmux send-keys -t roboco:orch "cd $(PWD) && sleep 3 && make orchestrator AGENTS='$(AGENTS)'" Enter
-	@tmux select-window -t roboco:api
-	@echo "tmux session 'roboco' created. Attach with: tmux attach -t roboco"
+	@echo "Creating tmux session 'robo-fleet'..."
+	@tmux kill-session -t robo-fleet 2>/dev/null || true
+	@tmux new-session -d -s robo-fleet -n infra
+	@tmux send-keys -t robofleet:infra "cd $(PWD) && docker compose logs -f" Enter
+	@tmux new-window -t robo-fleet -n api
+	@tmux send-keys -t robofleet:api "cd $(PWD) && make api" Enter
+	@tmux new-window -t robo-fleet -n orch
+	@tmux send-keys -t robofleet:orch "cd $(PWD) && sleep 3 && make orchestrator AGENTS='$(AGENTS)'" Enter
+	@tmux select-window -t robofleet:api
+	@echo "tmux session 'robo-fleet' created. Attach with: tmux attach -t robo-fleet"
 
 # Stop
 .PHONY: stop
@@ -375,7 +375,7 @@ check-all: lint security quality analysis
 # Run tests (default Python version)
 .PHONY: test
 test:
-	@COMPOSE_BAKE=true PYTHON_VERSION=$(DEFAULT_PYTHON) docker compose run --rm --build roboco pytest -v --cov=.
+	@COMPOSE_BAKE=true PYTHON_VERSION=$(DEFAULT_PYTHON) docker compose run --rm --build robo-fleet pytest -v --cov=.
 	@docker compose down --rmi all --remove-orphans -v
 	@docker system prune -f
 
@@ -386,45 +386,45 @@ test-all: test-3.10 test-3.11 test-3.12 test-3.13 test-3.14
 # Python 3.10
 .PHONY: test-3.10
 test-3.10:
-	@docker compose down -v roboco
-	@COMPOSE_BAKE=true PYTHON_VERSION=3.10 docker compose build roboco
-	@PYTHON_VERSION=3.10 docker compose run --rm roboco pytest -v --cov=.
+	@docker compose down -v robo-fleet
+	@COMPOSE_BAKE=true PYTHON_VERSION=3.10 docker compose build robo-fleet
+	@PYTHON_VERSION=3.10 docker compose run --rm robo-fleet pytest -v --cov=.
 	@docker compose down --rmi all --remove-orphans -v
 	@docker system prune -f
 
 # Python 3.11
 .PHONY: test-3.11
 test-3.11:
-	@docker compose down -v roboco
-	@COMPOSE_BAKE=true PYTHON_VERSION=3.11 docker compose build roboco
-	@PYTHON_VERSION=3.11 docker compose run --rm roboco pytest -v --cov=.
+	@docker compose down -v robo-fleet
+	@COMPOSE_BAKE=true PYTHON_VERSION=3.11 docker compose build robo-fleet
+	@PYTHON_VERSION=3.11 docker compose run --rm robo-fleet pytest -v --cov=.
 	@docker compose down --rmi all --remove-orphans -v
 	@docker system prune -f
 
 # Python 3.12
 .PHONY: test-3.12
 test-3.12:
-	@docker compose down -v roboco
-	@COMPOSE_BAKE=true PYTHON_VERSION=3.12 docker compose build roboco
-	@PYTHON_VERSION=3.12 docker compose run --rm roboco pytest -v --cov=.
+	@docker compose down -v robo-fleet
+	@COMPOSE_BAKE=true PYTHON_VERSION=3.12 docker compose build robo-fleet
+	@PYTHON_VERSION=3.12 docker compose run --rm robo-fleet pytest -v --cov=.
 	@docker compose down --rmi all --remove-orphans -v
 	@docker system prune -f
 
 # Python 3.13
 .PHONY: test-3.13
 test-3.13:
-	@docker compose down -v roboco
-	@COMPOSE_BAKE=true PYTHON_VERSION=3.13 docker compose build roboco
-	@PYTHON_VERSION=3.13 docker compose run --rm roboco pytest -v --cov=.
+	@docker compose down -v robo-fleet
+	@COMPOSE_BAKE=true PYTHON_VERSION=3.13 docker compose build robo-fleet
+	@PYTHON_VERSION=3.13 docker compose run --rm robo-fleet pytest -v --cov=.
 	@docker compose down --rmi all --remove-orphans -v
 	@docker system prune -f
 
 # Python 3.14
 .PHONY: test-3.14
 test-3.14:
-	@docker compose down -v roboco
-	@COMPOSE_BAKE=true PYTHON_VERSION=3.14 docker compose build roboco
-	@PYTHON_VERSION=3.14 docker compose run --rm roboco pytest -v --cov=.
+	@docker compose down -v robo-fleet
+	@COMPOSE_BAKE=true PYTHON_VERSION=3.14 docker compose build robo-fleet
+	@PYTHON_VERSION=3.14 docker compose run --rm robo-fleet pytest -v --cov=.
 	@docker compose down --rmi all --remove-orphans -v
 	@docker system prune -f
 
@@ -449,7 +449,7 @@ high-load-stress-test:
 	@docker system prune -f
 
 # Regenerate the GitHub Pages redirect stubs (docs-redirects/) that replaced
-# the old MkDocs-built site — docs.roboco.tech is canonical now. Only needed
+# the old MkDocs-built site — docs.robo-fleet.tech is canonical now. Only needed
 # if a legacy URL is missing a stub; requires a restored copy of the old
 # nav-bearing mkdocs.yml (see git history) since the live one is gone.
 .PHONY: regen-docs-redirects
@@ -486,7 +486,7 @@ panel-token:
 # Help
 .PHONY: help
 help:
-	@echo "RoboCo - AI Agents Company"
+	@echo "RoboFleet - AI Agents Company"
 	@echo ""
 	@echo "Infrastructure:"
 	@echo "  make quickstart               - One-command bring-up (registry pull-and-run)"
@@ -532,7 +532,7 @@ help:
 	@echo "  make clean                    - Clean cache files"
 	@echo "  make prune                    - Prune docker resources"
 	@echo ""
-	@echo "Full docs: https://docs.roboco.tech"
+	@echo "Full docs: https://docs.robo-fleet.tech"
 
 # Python versions list
 .PHONY: show-python-versions

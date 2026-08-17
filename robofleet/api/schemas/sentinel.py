@@ -1,6 +1,6 @@
 """Schemas for the Sentinel (Board Program) engine's CEO-facing surface.
 
-Mirrors ``roboco.api.schemas.periscope`` exactly: the report itself is
+Mirrors ``robofleet.api.schemas.periscope`` exactly: the report itself is
 read-only (the exploration task completes atomically at propose time), but
 each drift ITEM still carries its own proposed/approved/rejected status the
 CEO decides on afterward."""

@@ -167,7 +167,7 @@ def test_build_security_config_reads_settings(
 
 
 def test_build_security_config_excludes_freetext_body_fields() -> None:
-    """The WAF calibration excludes RoboCo's free-text + container body fields."""
+    """The WAF calibration excludes RoboFleet's free-text + container body fields."""
     cfg = security.build_security_config()
     excluded = {f.lower() for f in cfg.excluded_detection_body_fields}
     # A sampling of free-text fields and free-form containers.

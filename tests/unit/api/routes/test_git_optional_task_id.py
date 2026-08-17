@@ -79,7 +79,7 @@ _HDR = {"X-Agent-ID": str(_AGENT_ID), "X-Agent-Role": "developer"}
 def test_commit_request_task_id_optional() -> None:
     """GitCommitRequest accepts a missing task_id (defaults to None)."""
     req = GitCommitRequest(
-        project_slug="roboco",
+        project_slug="robo-fleet",
         message="add something new here",
         commit_type="feat",
     )
@@ -89,7 +89,7 @@ def test_commit_request_task_id_optional() -> None:
 def test_commit_request_task_id_present() -> None:
     """GitCommitRequest still accepts an explicit task_id (regression)."""
     req = GitCommitRequest(
-        project_slug="roboco",
+        project_slug="robo-fleet",
         task_id=_TASK_ID,
         message="add something new here",
         commit_type="feat",
@@ -99,37 +99,37 @@ def test_commit_request_task_id_present() -> None:
 
 def test_push_request_task_id_optional() -> None:
     """GitPushRequest accepts a missing task_id (defaults to None)."""
-    req = GitPushRequest(project_slug="roboco")
+    req = GitPushRequest(project_slug="robo-fleet")
     assert req.task_id is None
 
 
 def test_push_request_task_id_present() -> None:
     """GitPushRequest still accepts an explicit task_id (regression)."""
-    req = GitPushRequest(project_slug="roboco", task_id=_TASK_ID)
+    req = GitPushRequest(project_slug="robo-fleet", task_id=_TASK_ID)
     assert req.task_id == _TASK_ID
 
 
 def test_create_pr_request_task_id_optional() -> None:
     """GitCreatePRRequest accepts a missing task_id (defaults to None)."""
-    req = GitCreatePRRequest(project_slug="roboco")
+    req = GitCreatePRRequest(project_slug="robo-fleet")
     assert req.task_id is None
 
 
 def test_create_pr_request_task_id_present() -> None:
     """GitCreatePRRequest still accepts an explicit task_id (regression)."""
-    req = GitCreatePRRequest(project_slug="roboco", task_id=_TASK_ID)
+    req = GitCreatePRRequest(project_slug="robo-fleet", task_id=_TASK_ID)
     assert req.task_id == _TASK_ID
 
 
 def test_merge_pr_request_task_id_optional() -> None:
     """GitMergePRRequest accepts a missing task_id (defaults to None)."""
-    req = GitMergePRRequest(project_slug="roboco", pr_number=42)
+    req = GitMergePRRequest(project_slug="robo-fleet", pr_number=42)
     assert req.task_id is None
 
 
 def test_merge_pr_request_task_id_present() -> None:
     """GitMergePRRequest still accepts an explicit task_id (regression)."""
-    req = GitMergePRRequest(project_slug="roboco", pr_number=42, task_id=_TASK_ID)
+    req = GitMergePRRequest(project_slug="robo-fleet", pr_number=42, task_id=_TASK_ID)
     assert req.task_id == _TASK_ID
 
 
@@ -152,7 +152,7 @@ async def test_commit_without_task_id_returns_200_not_422(
         response = await client.post(
             "/api/git/commit",
             json={
-                "project_slug": "roboco",
+                "project_slug": "robo-fleet",
                 "agent_id": str(_AGENT_ID),
                 "message": "add something new",
                 "commit_type": "feat",
@@ -178,7 +178,7 @@ async def test_push_without_task_id_returns_200_not_422(
         response = await client.post(
             "/api/git/push",
             json={
-                "project_slug": "roboco",
+                "project_slug": "robo-fleet",
                 # task_id intentionally omitted
             },
             headers=_HDR,
@@ -209,7 +209,7 @@ async def test_create_pr_without_task_id_returns_200_not_422(
         response = await client.post(
             "/api/git/pr/create",
             json={
-                "project_slug": "roboco",
+                "project_slug": "robo-fleet",
                 # task_id intentionally omitted
             },
             headers=_HDR,
@@ -232,7 +232,7 @@ async def test_merge_pr_without_task_id_returns_200_not_422(
         response = await client.post(
             "/api/git/pr/merge",
             json={
-                "project_slug": "roboco",
+                "project_slug": "robo-fleet",
                 "pr_number": 99,
                 # task_id intentionally omitted
             },
@@ -261,7 +261,7 @@ async def test_commit_with_task_id_still_works(client: AsyncClient) -> None:
         response = await client.post(
             "/api/git/commit",
             json={
-                "project_slug": "roboco",
+                "project_slug": "robo-fleet",
                 "task_id": str(_TASK_ID),
                 "agent_id": str(_AGENT_ID),
                 "message": "correct the auth flow",
@@ -282,7 +282,7 @@ async def test_push_with_task_id_still_works(client: AsyncClient) -> None:
         response = await client.post(
             "/api/git/push",
             json={
-                "project_slug": "roboco",
+                "project_slug": "robo-fleet",
                 "task_id": str(_TASK_ID),
             },
             headers=_HDR,
@@ -302,7 +302,7 @@ async def test_create_pr_with_task_id_still_works(client: AsyncClient) -> None:
         response = await client.post(
             "/api/git/pr/create",
             json={
-                "project_slug": "roboco",
+                "project_slug": "robo-fleet",
                 "task_id": str(_TASK_ID),
             },
             headers=_HDR,
@@ -320,7 +320,7 @@ async def test_merge_pr_with_task_id_still_works(client: AsyncClient) -> None:
         response = await client.post(
             "/api/git/pr/merge",
             json={
-                "project_slug": "roboco",
+                "project_slug": "robo-fleet",
                 "pr_number": 5,
                 "task_id": str(_TASK_ID),
             },

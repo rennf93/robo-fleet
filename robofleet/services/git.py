@@ -472,7 +472,7 @@ class GitService(BaseService):
 
         This is also the ONE chokepoint every root-side git write routes
         through, so it's where the ownership-repair root-sentinel marker
-        (``_ensure_agent_owned``'s ``.git/roboco-owned``, workspace.py) gets
+        (``_ensure_agent_owned``'s ``.git/robo-fleet-owned``, workspace.py) gets
         invalidated — BEFORE the op runs, since the op is what's about to
         create new root-owned files a live marker would otherwise let a
         later ``_ensure_agent_owned`` call wrongly skip.
@@ -1571,14 +1571,14 @@ class GitService(BaseService):
         pr_number: int,
         branch_name: str,
     ) -> str:
-        """Create + push a roboco-owned branch off a fork PR's head commits.
+        """Create + push a robo-fleet-owned branch off a fork PR's head commits.
 
         Fork PR heads are NOT branches on origin; GitHub exposes them at the
         special ref ``refs/pull/{n}/head``. We fetch that ref into a
-        roboco-owned local branch and push it to origin, so a dev cell can
+        robo-fleet-owned local branch and push it to origin, so a dev cell can
         finish the contribution on a branch WE own and merge — we NEVER push to
         the contributor's fork. This is the first point untrusted contributor
-        code enters a roboco branch, so the caller MUST only invoke it for a
+        code enters a robo-fleet branch, so the caller MUST only invoke it for a
         human-confirmed (``confirmed_by_human``) supersede.
         """
         project_token = await self._token_for_project(project_slug)
@@ -2821,7 +2821,7 @@ class GitService(BaseService):
         ``_env_merge_status``; a conflict aborts with the clone discarded,
         so the remote is never touched on failure.
         """
-        with tempfile.TemporaryDirectory(prefix="roboco-envsync-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="robofleet-envsync-") as tmp:
             workdir = Path(tmp)
             clone_dir = workdir / "clone"
             clone = await self._run_git(
@@ -2834,8 +2834,8 @@ class GitService(BaseService):
             if clone.returncode != 0:
                 return {"status": "missing_ref"}
             for config_args in (
-                ["config", "user.email", "envsync@roboco.local"],
-                ["config", "user.name", "RoboCo Env Sync"],
+                ["config", "user.email", "envsync@robofleet.local"],
+                ["config", "user.name", "RoboFleet Env Sync"],
                 ["config", "commit.gpgsign", "false"],
             ):
                 await self._run_git(clone_dir, config_args)
@@ -4769,7 +4769,7 @@ class GitService(BaseService):
         workspace; when it claims an awaiting_documentation task the
         branch already exists (created by the dev) so no checkout ever
         ran in the doc's clone — it stayed on the default branch and
-        ``roboco_docs_write`` / ``commit`` failed with BRANCH_MISMATCH.
+        ``robofleet_docs_write`` / ``commit`` failed with BRANCH_MISMATCH.
         This puts the doc's workspace on the task branch (fetch +
         tracking-branch create). Best-effort: a checkout failure must
         not break the claim itself — the caller surfaces a remediation.
@@ -6535,7 +6535,7 @@ class GitService(BaseService):
         body: str,
         workspace: Path | None = None,
     ) -> dict[str, Any] | None:
-        """Commit ``.roboco/conventions.yml`` on the scaffold branch + open a PR.
+        """Commit ``.robofleet/conventions.yml`` on the scaffold branch + open a PR.
 
         Best-effort and project-level (no task): writes ``content`` on a fresh
         ``CONVENTIONS_SCAFFOLD_BRANCH`` cut from the default branch in
@@ -6618,10 +6618,10 @@ class GitService(BaseService):
         if await self.get_current_branch(workspace) != base:
             return False
         await self._run_git(workspace, ["checkout", "-B", spec.branch])
-        target = workspace / ".roboco" / "conventions.yml"
+        target = workspace / ".robofleet" / "conventions.yml"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(spec.content)
-        await self._run_git(workspace, ["add", ".roboco/conventions.yml"])
+        await self._run_git(workspace, ["add", ".robofleet/conventions.yml"])
         await self._run_git(workspace, ["commit", "-m", spec.title])
         return True
 
@@ -6668,7 +6668,7 @@ class GitService(BaseService):
         }
 
 
-CONVENTIONS_SCAFFOLD_BRANCH = "chore/roboco-conventions-scaffold"
+CONVENTIONS_SCAFFOLD_BRANCH = "chore/robofleet-conventions-scaffold"
 
 
 @dataclass(frozen=True)

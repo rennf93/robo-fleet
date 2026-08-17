@@ -6,7 +6,7 @@ filesystem.
 
 The orchestrator loop (``_vault_janitor_loop``) ticks hourly, but this
 service only does real work when a JSON state file under the vault root
-(``RoboCo/_meta/.janitor_state.json``) says a day (sweep) or an ISO week
+(``RoboFleet/_meta/.janitor_state.json``) says a day (sweep) or an ISO week
 (report) has actually elapsed — restart-proof, unlike a naive
 sleep-then-once-a-day loop that never fires again once the orchestrator
 restarts more often than daily. Gated on ``obsidian_vault_enabled`` only
@@ -45,7 +45,7 @@ _PAGE_SIZE = 100
 # never unbounded in one tick.
 _MAX_REPROJECT_PER_CYCLE = 200
 _MAX_ARCHIVE_PER_CYCLE = 200
-_STATE_RELATIVE_PATH = "RoboCo/_meta/.janitor_state.json"
+_STATE_RELATIVE_PATH = "RoboFleet/_meta/.janitor_state.json"
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 

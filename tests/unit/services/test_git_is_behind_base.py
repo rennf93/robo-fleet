@@ -42,7 +42,7 @@ def _task(branch: str | None = _HEAD) -> Any:
 
 
 def _project() -> Any:
-    return MagicMock(slug="roboco")
+    return MagicMock(slug="robo-fleet")
 
 
 async def _wire(svc: Any, *, rev_list_stdout: str) -> AsyncMock:

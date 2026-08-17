@@ -5,10 +5,10 @@ Exposes documentation file management tools to Claude Code agents.
 Bypasses Claude Code's file permission system by going through the API.
 
 Tools:
-- roboco_docs_write: Write/update documentation (RAG-based deduplication)
-- roboco_docs_read: Read a documentation file
-- roboco_docs_list: List documentation files
-- roboco_docs_delete: Delete a documentation file
+- robofleet_docs_write: Write/update documentation (RAG-based deduplication)
+- robofleet_docs_read: Read a documentation file
+- robofleet_docs_list: List documentation files
+- robofleet_docs_delete: Delete a documentation file
 """
 
 from typing import Any
@@ -127,7 +127,7 @@ async def _handle_list(
         "count": result.get("count", 0),
         "guidance": (
             f"Found {result.get('count', 0)} documentation files. "
-            "Use roboco_docs_read to view contents."
+            "Use robofleet_docs_read to view contents."
         ),
     }
 
@@ -167,11 +167,11 @@ def create_docs_mcp_server(agent_id: str) -> FastMCP:
     Returns:
         Configured FastMCP server
     """
-    mcp = FastMCP(f"roboco-docs-{agent_id}", json_response=True)
+    mcp = FastMCP(f"robofleet-docs-{agent_id}", json_response=True)
     client = ApiClient(agent_id)
 
     @mcp.tool()
-    async def roboco_docs_write(data: WriteDocInput) -> dict[str, Any]:
+    async def robofleet_docs_write(data: WriteDocInput) -> dict[str, Any]:
         """
         Write or update documentation for your current task.
 
@@ -180,9 +180,9 @@ def create_docs_mcp_server(agent_id: str) -> FastMCP:
         published to the docs site. It is for internal notes future agents
         need, not for anything a user should read.
 
-        User-facing docs (anything meant to ship at docs.roboco.tech) do NOT
+        User-facing docs (anything meant to ship at docs.robo-fleet.tech) do NOT
         go through this tool at all — author them as a normal task in the
-        'roboco-website' project instead: MDX under src/content/docs/, a
+        'robo-fleet-website' project instead: MDX under src/content/docs/, a
         route wrapper under src/app/docs/, and a src/content/docs/nav.ts
         entry (the 3-edit pattern; a CI check fails the PR if any of the
         three is missing). Calling this tool with doc_type="user_facing" is
@@ -212,7 +212,7 @@ def create_docs_mcp_server(agent_id: str) -> FastMCP:
         return await _handle_write(data, client)
 
     @mcp.tool()
-    async def roboco_docs_read(path: str) -> dict[str, Any]:
+    async def robofleet_docs_read(path: str) -> dict[str, Any]:
         """
         Read a documentation file by path.
 
@@ -222,7 +222,7 @@ def create_docs_mcp_server(agent_id: str) -> FastMCP:
         return await _handle_read(path, client)
 
     @mcp.tool()
-    async def roboco_docs_list(task_id: str | None = None) -> dict[str, Any]:
+    async def robofleet_docs_list(task_id: str | None = None) -> dict[str, Any]:
         """
         List documentation files.
 
@@ -235,7 +235,7 @@ def create_docs_mcp_server(agent_id: str) -> FastMCP:
         return await _handle_list(task_id, client)
 
     @mcp.tool()
-    async def roboco_docs_delete(path: str) -> dict[str, Any]:
+    async def robofleet_docs_delete(path: str) -> dict[str, Any]:
         """
         Delete a documentation file.
 

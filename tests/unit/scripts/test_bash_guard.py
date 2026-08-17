@@ -104,13 +104,13 @@ def test_blocks_uv_run_python_importing_flow_server() -> None:
     )
 
 
-def test_blocks_plain_python_c_import_roboco() -> None:
+def test_blocks_plain_python_c_import_robofleet() -> None:
     assert (
         _run('python3 -c "import robofleet.services.gateway as g; g.foo()"') == _DENIED
     )
 
 
-def test_blocks_python_heredoc_importing_roboco() -> None:
+def test_blocks_python_heredoc_importing_robofleet() -> None:
     """Heredoc body is part of the command string — must still be caught."""
     cmd = (
         "uv run python3 << 'EOF'\n"
@@ -122,16 +122,16 @@ def test_blocks_python_heredoc_importing_roboco() -> None:
     assert _run(cmd) == _DENIED
 
 
-def test_blocks_python_m_roboco_module() -> None:
+def test_blocks_python_m_robofleet_module() -> None:
     assert _run("python -m robofleet.mcp.flow_server") == _DENIED
     assert _run("uv run -m robofleet.services.gateway") == _DENIED
 
 
-def test_blocks_poetry_run_python_import_roboco() -> None:
+def test_blocks_poetry_run_python_import_robofleet() -> None:
     assert _run('poetry run python -c "from robofleet.runtime import x"') == _DENIED
 
 
-def test_blocks_setting_roboco_agent_id_inline() -> None:
+def test_blocks_setting_robofleet_agent_id_inline() -> None:
     """Forging identity via an inline env assignment before a command."""
     assert (
         _run(
@@ -142,17 +142,17 @@ def test_blocks_setting_roboco_agent_id_inline() -> None:
     )
 
 
-def test_blocks_export_roboco_agent_id() -> None:
+def test_blocks_export_robofleet_agent_id() -> None:
     assert (
         _run("export ROBOFLEET_AGENT_ID=00000000-0000-0000-0001-000000000001")
         == _DENIED
     )
 
 
-def test_blocks_os_environ_roboco_agent_id_in_python() -> None:
+def test_blocks_os_environ_robofleet_agent_id_in_python() -> None:
     """The smoke-12 form: os.environ['ROBOFLEET_AGENT_ID']=... then import robofleet.
 
-    Caught by the import-bypass rule (references roboco import) even
+    Caught by the import-bypass rule (references robo-fleet import) even
     independent of the identity rule."""
     cmd = (
         'uv run python3 -c "import os; '
@@ -162,19 +162,19 @@ def test_blocks_os_environ_roboco_agent_id_in_python() -> None:
     assert _run(cmd) == _DENIED
 
 
-def test_allows_legitimate_python_without_roboco() -> None:
-    """A normal python one-liner that doesn't touch roboco internals or
+def test_allows_legitimate_python_without_robofleet() -> None:
+    """A normal python one-liner that doesn't touch robo-fleet internals or
     the identity var must still pass — don't over-block."""
     assert _run('python3 -c "print(2 + 2)"') == _ALLOWED
 
 
-def test_allows_reading_roboco_source_with_cat() -> None:
+def test_allows_reading_robofleet_source_with_cat() -> None:
     """Reading source files for context (cat/grep) is fine — the block is
-    specifically on *executing* roboco internals, not viewing them."""
+    specifically on *executing* robo-fleet internals, not viewing them."""
     assert _run("cat robofleet/services/gateway/choreographer/_impl.py") == _ALLOWED
 
 
-def test_allows_grep_for_roboco_symbol() -> None:
+def test_allows_grep_for_robofleet_symbol() -> None:
     assert _run("grep -rn 'import robofleet' tests/") == _ALLOWED
 
 
@@ -264,8 +264,8 @@ def test_allows_printf_writing_git_instructions() -> None:
 
 
 def test_allows_python_writing_file_content_mentioning_git() -> None:
-    """Non-roboco python that writes a string containing git verbs to a
-    file. Not a roboco import (so #164 is irrelevant) and not a git call."""
+    """Non-robo-fleet python that writes a string containing git verbs to a
+    file. Not a robo-fleet import (so #164 is irrelevant) and not a git call."""
     assert _run("python3 -c \"open('r.md','w').write('git push to ship')\"") == _ALLOWED
 
 
@@ -442,7 +442,7 @@ def test_denies_uv_sync_in_workspace_when_makefile_present() -> None:
     prevent. Makefile-gated like ``uv run``: use ``uv sync --extra dev`` via
     ``make`` targets, not directly."""
     assert (
-        _run("cd /data/workspaces/roboco/backend/be-dev-1 && uv sync --extra dev")
+        _run("cd /data/workspaces/robofleet/backend/be-dev-1 && uv sync --extra dev")
         == _DENIED
     )
 
@@ -518,7 +518,8 @@ def test_blocks_source_claude_json() -> None:
 def test_allows_cat_own_workspace_settings() -> None:
     """Reading an unrelated project settings file must not collide."""
     assert (
-        _run("cat /data/workspaces/roboco/backend/be-dev-1/settings.json") == _ALLOWED
+        _run("cat /data/workspaces/robofleet/backend/be-dev-1/settings.json")
+        == _ALLOWED
     )
 
 

@@ -2,7 +2,7 @@
 
 These guard against the silent ``or 'unknown'`` / ``or None`` fallbacks that
 previously masked upstream bugs (e.g. a journal entry being indexed before
-its ID was flushed to the database produced ``roboco://journals/None`` rows
+its ID was flushed to the database produced ``robofleet://journals/None`` rows
 in indexed_documents).
 
 Each indexer that builds a ``source`` URI from a caller-supplied identifier
@@ -77,7 +77,7 @@ def _service_with_stub_plugin() -> _StubOptimalService:
 async def test_index_journal_entry_raises_when_entry_id_is_none() -> None:
     """``entry_id=None`` must raise — the silent fallback hid an upstream
     bug where the entry row hadn't been flushed before indexing, producing
-    ``roboco://journals/None`` doc-sources in the RAG store.
+    ``robofleet://journals/None`` doc-sources in the RAG store.
 
     ``entry_id`` is typed ``UUID`` (required); a real caller would have to
     bypass the dataclass type contract for this to fire (e.g. via
@@ -116,7 +116,7 @@ async def test_index_journal_entry_succeeds_with_real_entry_id() -> None:
 @pytest.mark.asyncio
 async def test_record_review_raises_when_file_path_empty() -> None:
     """``file_path`` is typed ``str`` (required); empty strings produced
-    ``roboco://reviews/unknown`` doc-sources. Reject empty-or-missing.
+    ``robofleet://reviews/unknown`` doc-sources. Reject empty-or-missing.
     """
     svc = _service_with_stub_plugin()
     params = IndexReviewParams(
@@ -139,7 +139,7 @@ async def test_record_learning_tracking_source_matches_chunk_uri() -> None:
     SAME URI the learnings plugin embedded the chunks under, so a later
     de-index/lookup-by-source against the tracking row finds the chunk rows.
     The plugin returns ``doc_id`` (``lrn-{hash100}``); the tracking source must
-    be ``roboco://learnings/{doc_id}`` — NOT a locally-recomputed
+    be ``robofleet://learnings/{doc_id}`` — NOT a locally-recomputed
     ``learn-{md5(full_content)}`` that never matches the chunk rows."""
     captured: dict[str, str] = {}
 
@@ -179,6 +179,6 @@ async def test_record_learning_tracking_source_matches_chunk_uri() -> None:
     assert doc_id == "lrn-deadbeefdead"
     # The tracking source matches the chunk URI the plugin used (prefix lrn-,
     # the plugin's doc_id) — no locally-recomputed learn-/{full-hash} divergence.
-    assert captured["source"] == f"roboco://learnings/{doc_id}"
-    assert captured["source"].startswith("roboco://learnings/lrn-")
+    assert captured["source"] == f"robofleet://learnings/{doc_id}"
+    assert captured["source"].startswith("robofleet://learnings/lrn-")
     assert "learn-" not in captured["source"]

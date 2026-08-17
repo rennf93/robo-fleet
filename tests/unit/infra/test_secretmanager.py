@@ -81,7 +81,7 @@ def test_auth_secret_uses_secret_manager_when_prefix_set(
     import robofleet.infra.secretmanager as sm
 
     monkeypatch.setattr(ac.settings, "gcp_project_id", "my-proj")
-    monkeypatch.setattr(ac.settings, "gcp_secret_manager_prefix", "roboco")
+    monkeypatch.setattr(ac.settings, "gcp_secret_manager_prefix", "robofleet")
     ac._auth_secret_cache.clear()
     monkeypatch.delenv("ROBOFLEET_AGENT_AUTH_SECRET", raising=False)
     monkeypatch.setattr(
@@ -114,7 +114,7 @@ def test_get_fernet_uses_secret_manager_when_prefix_set(
     real_key = Fernet.generate_key().decode()
     monkeypatch.setattr(crypto.settings, "encryption_key", "")
     monkeypatch.setattr(crypto.settings, "gcp_project_id", "my-proj")
-    monkeypatch.setattr(crypto.settings, "gcp_secret_manager_prefix", "roboco")
+    monkeypatch.setattr(crypto.settings, "gcp_secret_manager_prefix", "robofleet")
 
     def _fake_access(name: str, **kw: Any) -> str:
         return real_key if name == "fernet-key" else ""

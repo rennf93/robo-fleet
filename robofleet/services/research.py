@@ -1,6 +1,6 @@
 """Pluggable web-research service — provider-agnostic search + fetch.
 
-The capability is exposed to Board + PM agents through the ``roboco-search``
+The capability is exposed to Board + PM agents through the ``robofleet-search``
 MCP server, which calls the ``/api/research/*`` routes; those routes call this
 service. The provider API key lives only in the server-side process — never in
 an agent container — and the agent never egresses: the provider's own API does.

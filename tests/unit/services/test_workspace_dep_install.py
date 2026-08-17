@@ -42,7 +42,7 @@ def _service() -> WorkspaceService:
 
 def _make_workspace(tmp_path: Path) -> Path:
     """A workspace dir with a `.git/` so the marker has somewhere to live."""
-    workspace = tmp_path / "roboco" / "backend" / "be-dev-1"
+    workspace = tmp_path / "robo-fleet" / "backend" / "be-dev-1"
     (workspace / ".git").mkdir(parents=True)
     return workspace
 

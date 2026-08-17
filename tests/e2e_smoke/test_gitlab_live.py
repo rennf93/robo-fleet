@@ -243,7 +243,7 @@ async def _verify_merge_publish_cli(
 
 async def test_gitlab_live_contract(tmp_path: Path) -> None:
     scheme, host = _split_url()
-    project_name = f"roboco-e2e-{uuid4().hex[:8]}"
+    project_name = f"robofleet-e2e-{uuid4().hex[:8]}"
     path_with_namespace, head_sha = _seed_project(tmp_path, project_name)
     ref = RepoRef(path_with_namespace, "", host=host)
     provider = GitLabProvider(host, scheme=scheme)

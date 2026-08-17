@@ -471,7 +471,7 @@ function TasksPageContent() {
           {isOffline ? (
             <OfflineState
               title="Cannot Load Tasks"
-              description="Start the RoboCo orchestrator to manage tasks. Tasks you create will be picked up by agents when the backend is running."
+              description="Start the RoboFleet orchestrator to manage tasks. Tasks you create will be picked up by agents when the backend is running."
               onRetry={() => void refresh()}
             />
           ) : stalledFilter && stalledError ? (

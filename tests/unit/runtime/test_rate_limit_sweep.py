@@ -671,7 +671,7 @@ class TestListRateLimitedProviders:
             "affected_agents": ["be-dev-1"],
             "probe_failures": 0,
         }
-        store = {"roboco:rate_limit:anthropic:state": json.dumps(state).encode()}
+        store = {"robofleet:rate_limit:anthropic:state": json.dumps(state).encode()}
         redis_mock = _make_redis_mock(store)
 
         with patch("redis.asyncio.from_url", return_value=redis_mock):
@@ -690,7 +690,7 @@ class TestListRateLimitedProviders:
             "affected_agents": [],
             "probe_failures": 2,
         }
-        store = {"roboco:rate_limit:anthropic:state": json.dumps(state).encode()}
+        store = {"robofleet:rate_limit:anthropic:state": json.dumps(state).encode()}
         redis_mock = _make_redis_mock(store)
 
         with patch("redis.asyncio.from_url", return_value=redis_mock):

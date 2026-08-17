@@ -7,11 +7,11 @@ cd "$(dirname "$0")/../.."
 HOOKS=(docker/scripts/stop-hook.sh docker/scripts/bash-guard-hook.sh)
 
 OLD_VERBS=(
-  roboco_agent_idle
-  roboco_task_substitute
-  roboco_task_pause
-  roboco_task_submit_qa
-  roboco_task_escalate
+  robofleet_agent_idle
+  robofleet_task_substitute
+  robofleet_task_pause
+  robofleet_task_submit_qa
+  robofleet_task_escalate
   qa_pass
   qa_fail
   docs_complete

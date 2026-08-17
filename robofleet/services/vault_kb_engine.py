@@ -1,7 +1,7 @@
 """VaultKBEngine — human-authored vault note folders become one more RAG corpus.
 
 V2 item 4 (KB ingest, the headline): ``vault_kb_dirs`` (default
-``RoboCo/Notes``) are scanned recursively every cycle; changed notes
+``RoboFleet/Notes``) are scanned recursively every cycle; changed notes
 re-ingest into ``IndexType.VAULT_NOTES`` (``replace_chunks`` makes edits
 idempotent), deleted notes deindex. Never covers Tasks/Journals/A2A/Agents/
 Archive/Reports/_meta/.obsidian or the intake Inbox — config-load validation
@@ -61,7 +61,7 @@ _MAX_INGEST_PER_CYCLE = 50
 # The quarantine callout this engine appends (see _append_quarantine_callout).
 # Presence-checked (not just stripped) so a still-quarantined note is neither
 # re-logged nor double-stamped on every later cycle.
-_QUARANTINE_CALLOUT_RE = re.compile(r"> \[!warning\] RoboCo: quarantined .*")
+_QUARANTINE_CALLOUT_RE = re.compile(r"> \[!warning\] RoboFleet: quarantined .*")
 
 
 @dataclass(frozen=True)
@@ -317,7 +317,7 @@ class VaultKBEngine(BaseService):
         try:
             date_str = datetime.now(UTC).strftime("%Y-%m-%d")
             line = (
-                "\n> [!warning] RoboCo: quarantined "
+                "\n> [!warning] RoboFleet: quarantined "
                 f"(injection pattern detected) on {date_str}\n"
             )
             with note_path.open("a", encoding="utf-8") as fh:

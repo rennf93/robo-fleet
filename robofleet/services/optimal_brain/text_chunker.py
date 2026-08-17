@@ -44,7 +44,7 @@ class Chunk:
 
     Attributes:
         text:        Raw text of the chunk.
-        source:      Source URI (e.g. ``roboco://docs/README.md``).
+        source:      Source URI (e.g. ``robofleet://docs/README.md``).
         chunk_index: Zero-based position of this chunk within its document.
         metadata:    Arbitrary key/value metadata merged in by the plugin.
         embedding:   Float vector populated by the embedder; ``None`` until
@@ -97,7 +97,7 @@ class TextChunker:
     Usage
     -----
     >>> chunker = TextChunker(chunk_size=512, chunk_overlap=128)
-    >>> doc = Document(content="long text ...", source="roboco://docs/x")
+    >>> doc = Document(content="long text ...", source="robofleet://docs/x")
     >>> chunks = chunker.chunk_document(doc)
     """
 

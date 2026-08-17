@@ -1,1 +1,1 @@
-"""Prompt-layer composition. See :mod:`roboco.agents.factories._base`."""
+"""Prompt-layer composition. See :mod:`robofleet.agents.factories._base`."""

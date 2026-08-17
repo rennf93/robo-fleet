@@ -126,7 +126,7 @@ def load_tool_manifest() -> dict[str, object] | None:
 
 
 app = FastAPI(
-    title=f"RoboCo SDK Server ({AGENT_ID})",
+    title=f"RoboFleet SDK Server ({AGENT_ID})",
     description="Agent-to-Agent communication server",
     version="1.0.0",
 )
@@ -405,7 +405,7 @@ _CIRCUIT_REJECTION_KINDS: frozenset[str] = frozenset(
 )
 
 # Names match the gateway verb surface — i.e. what `terminal_tool_recorded`
-# stores after stripping the `mcp__roboco-flow__` / `mcp__roboco-do__`
+# stores after stripping the `mcp__robofleet-flow__` / `mcp__robofleet-do__`
 # prefix (see line ~798). The deleted pre-gateway tool names never
 # matched the suffix-stripped values, so the stop hook used to nag
 # every agent even after a successful i_am_idle.

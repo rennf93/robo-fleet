@@ -1,7 +1,7 @@
 """Docs-divergence sync engine — dormant by default.
 
 On a successful release publish, if ``docs_sync_enabled`` is on, the engine
-originates exactly one docs-update task against the ``roboco-website`` project,
+originates exactly one docs-update task against the ``robo-fleet-website`` project,
 carrying the release's CHANGELOG section as the brief plus a pointer to the
 divergence checklist. Conservative:
 
@@ -47,19 +47,19 @@ logger = logging.getLogger(__name__)
 
 # Project slug that hosts the public docs site. The engine logs a warning and
 # no-ops when this project is not registered.
-_DOCS_PROJECT_SLUG = "roboco-website"
+_DOCS_PROJECT_SLUG = "robo-fleet-website"
 
 # Pointer to the divergence checklist included in every originated task.
 _DIVERGENCE_CHECKLIST_POINTER = (
     "Review the divergence checklist in the release readiness report "
     "(docs_drift gaps such as declared-vs-actual agent count and stale "
-    "verb-surface tables) and update the public docs at docs.roboco.tech "
+    "verb-surface tables) and update the public docs at docs.robo-fleet.tech "
     "so they reflect what actually shipped."
 )
 
 
 class DocsSyncEngine(BaseService):
-    """Open one docs-update task per published release against roboco-website."""
+    """Open one docs-update task per published release against robo-fleet-website."""
 
     service_name = "docs_sync_engine"
 
@@ -75,7 +75,7 @@ class DocsSyncEngine(BaseService):
         """If enabled, open one docs-update task for this release.
 
         Returns the created task, or None when disabled, while the
-        ``engines`` maintenance-pause scope is active, when roboco-website is
+        ``engines`` maintenance-pause scope is active, when robo-fleet-website is
         not registered, when either cap is reached, or when a task for this
         version is already open. Flushes; the caller (release_proposal) owns
         the commit. Never starts / approves / merges.
@@ -167,7 +167,7 @@ class DocsSyncEngine(BaseService):
                 acceptance_criteria=[
                     "The docs update is decomposed into one or more delivery "
                     "subtasks delegated to a cell",
-                    f"docs.roboco.tech accurately reflects the v{version} "
+                    f"docs.robo-fleet.tech accurately reflects the v{version} "
                     "release and the update is merged through the normal gates",
                 ],
                 team=Team.MAIN_PM,

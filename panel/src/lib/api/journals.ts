@@ -2,7 +2,7 @@
  * Journals API Client
  *
  * Agent personal journals for reflection, growth tracking, and debugging.
- * Matches backend: roboco/api/routes/journals.py
+ * Matches backend: robofleet/api/routes/journals.py
  */
 
 import api from "./client";

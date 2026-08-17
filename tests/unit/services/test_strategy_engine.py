@@ -164,7 +164,7 @@ async def test_run_cycle_enabled_no_observations_no_notify(
 
 SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 PO_UUID = _foundation.AGENTS["product-owner"].uuid
-SLUG = "roboco"
+SLUG = "robo-fleet"
 ONE = 1
 
 
@@ -192,9 +192,9 @@ async def _seed_roadmap_fixture(session: AsyncSession) -> None:
     await session.flush()
     session.add(
         ProjectTable(
-            name="RoboCo",
+            name="RoboFleet",
             slug=SLUG,
-            git_url="https://github.com/x/roboco.git",
+            git_url="https://github.com/x/robofleet.git",
             default_branch="master",
             protected_branches=["master"],
             assigned_cell=Team.BACKEND,

@@ -1,5 +1,5 @@
 # ============================================================================
-# RoboCo — pre-built (registry) deployment
+# RoboFleet — pre-built (registry) deployment
 # ============================================================================
 # This is the "pull and run" compose for USERS: it runs the images the release
 # workflow publishes (GHCR + Docker Hub) instead of building from source, so a
@@ -25,7 +25,7 @@
 #
 # Declared contract — intended deltas from docker-compose.yml (check drift
 # against THIS list, not against the build compose directly):
-#   - Image source: every roboco-built service pulls `image:` from
+#   - Image source: every robo-fleet-built service pulls `image:` from
 #     ROBOFLEET_REGISTRY/ROBOFLEET_VERSION instead of `build:`-ing from source.
 #   - Agent image pre-pull one-shots + ROBOFLEET_AGENT_IMAGE_REGISTRY/_TAG exist
 #     only here — the build compose builds agent images on demand instead.
@@ -40,7 +40,7 @@
 #     Both stay omitted here rather than carried — a third-party deployer
 #     hasn't run that calibration against their own traffic, so their config
 #     defaults (graceful-degrade routing, guard off) are the safer posture.
-#   - Host path defaults differ (/opt/roboco vs /volume1/roboco, ${HOME}
+#   - Host path defaults differ (/opt/robofleet vs /volume1/robofleet, ${HOME}
 #     instead of a hardcoded /home/renzof) — registry targets a generic host.
 #   - MinIO (object storage for rendered videos) is intentionally omitted —
 #     NAS default-on, registry default-off (see the comment near the
@@ -94,7 +94,7 @@ services:
       retries: 5
 
   # --------------------------------------------------------------------------
-  # Backup - periodic pg_dump of the roboco DB (interim; no PITR/WAL yet)
+  # Backup - periodic pg_dump of the robo-fleet DB (interim; no PITR/WAL yet)
   # --------------------------------------------------------------------------
   backup:
     image: pgvector/pgvector:pg16
@@ -325,7 +325,7 @@ services:
       ROBOFLEET_AGENT_IMAGE_TAG: ${ROBOFLEET_VERSION:-latest}
       # Host paths for spawning agent containers (Docker-in-Docker). MUST be
       # absolute paths on the host. Default to this compose project's ./data.
-      ROBOFLEET_HOST_PROJECT_DIR: ${ROBOFLEET_HOST_PROJECT_DIR:-/opt/roboco}
+      ROBOFLEET_HOST_PROJECT_DIR: ${ROBOFLEET_HOST_PROJECT_DIR:-/opt/robofleet}
       ROBOFLEET_HOST_CLAUDE_DIR: ${ROBOFLEET_HOST_CLAUDE_DIR:-${HOME}/.claude}
       # SuperGrok auth (host ~/.grok) for Grok-CLI agents — the orchestrator
       # mounts <dir>/auth.json into each Grok agent. Run `grok login` on the host.
@@ -349,7 +349,7 @@ services:
       ROBOFLEET_KIMI_RATE_LIMIT_RETRY_AFTER_SECONDS: ${ROBOFLEET_KIMI_RATE_LIMIT_RETRY_AFTER_SECONDS:-60}
       ROBOFLEET_KIMI_AUTH_RETRY_AFTER_SECONDS: ${ROBOFLEET_KIMI_AUTH_RETRY_AFTER_SECONDS:-60}
       ROBOFLEET_KIMI_MAX_CONCURRENT: ${ROBOFLEET_KIMI_MAX_CONCURRENT:-1}
-      ROBOFLEET_HOST_DATA_DIR: ${ROBOFLEET_HOST_DATA_DIR:-/opt/roboco/data}
+      ROBOFLEET_HOST_DATA_DIR: ${ROBOFLEET_HOST_DATA_DIR:-/opt/robofleet/data}
       # Reachable base URL for commit-trailer links — set to your host's LAN
       # address or domain so the links in commit bodies resolve.
       ROBOFLEET_PUBLIC_BASE_URL: ${ROBOFLEET_PUBLIC_BASE_URL:-http://localhost:8000}
@@ -363,12 +363,12 @@ services:
       ROBOFLEET_EXTERNAL_PR_REQUIRE_HUMAN_CONFIRM: ${ROBOFLEET_EXTERNAL_PR_REQUIRE_HUMAN_CONFIRM:-true}
       # ROBOFLEET_EXTERNAL_PR_POLL_INTERVAL_SECONDS: "300"
       # ROBOFLEET_EXTERNAL_PR_AUTHOR_ALLOWLIST: '["corey"]'   # empty = every external PR
-      # Production self-healing ("engine 4"). RoboCo watches its OWN repo CI and,
+      # Production self-healing ("engine 4"). RoboFleet watches its OWN repo CI and,
       # when red, notifies the CEO and (with originate on) opens a PENDING fix
       # task that STOPS for the CEO's Approve-&-Start — it never self-deploys.
       # Both toggles default OFF (arm from Settings -> Feature Flags). Set
-      # PROJECT_SLUG to the registered project that IS RoboCo; CI_WORKFLOW scopes
-      # the signal to the real CI workflow (RoboCo has several workflows, so the
+      # PROJECT_SLUG to the registered project that IS RoboFleet; CI_WORKFLOW scopes
+      # the signal to the real CI workflow (RoboFleet has several workflows, so the
       # unscoped "latest run" would be unreliable).
       ROBOFLEET_SELF_HEAL_ENABLED: ${ROBOFLEET_SELF_HEAL_ENABLED:-false}
       ROBOFLEET_OBSIDIAN_VAULT_ENABLED: ${ROBOFLEET_OBSIDIAN_VAULT_ENABLED:-true}
@@ -377,10 +377,10 @@ services:
       ROBOFLEET_VAULT_ARCHIVE_DAYS: ${ROBOFLEET_VAULT_ARCHIVE_DAYS:-30}
       ROBOFLEET_VAULT_REPORT_ENABLED: ${ROBOFLEET_VAULT_REPORT_ENABLED:-true}
       ROBOFLEET_VAULT_KB_ENABLED: ${ROBOFLEET_VAULT_KB_ENABLED:-false}
-      ROBOFLEET_VAULT_KB_DIRS: ${ROBOFLEET_VAULT_KB_DIRS:-RoboCo/Notes}
+      ROBOFLEET_VAULT_KB_DIRS: ${ROBOFLEET_VAULT_KB_DIRS:-RoboFleet/Notes}
       ROBOFLEET_VAULT_KB_INTERVAL_SECONDS: ${ROBOFLEET_VAULT_KB_INTERVAL_SECONDS:-900}
       ROBOFLEET_SELF_HEAL_ORIGINATE_ENABLED: ${ROBOFLEET_SELF_HEAL_ORIGINATE_ENABLED:-false}
-      ROBOFLEET_SELF_HEAL_PROJECT_SLUG: ${ROBOFLEET_SELF_HEAL_PROJECT_SLUG:-roboco-api}
+      ROBOFLEET_SELF_HEAL_PROJECT_SLUG: ${ROBOFLEET_SELF_HEAL_PROJECT_SLUG:-robofleet-api}
       ROBOFLEET_SELF_HEAL_CI_WORKFLOW: ${ROBOFLEET_SELF_HEAL_CI_WORKFLOW:-ci.yml}
       # Docs-divergence sync (release -> docs-update task): default OFF in the
       # registry compose; arm via .env once the engine is verified.
@@ -570,4 +570,4 @@ networks:
   # orchestrator (multi-homed onto this network too); it can reach nothing
   # else on robofleet_default or robofleet_data.
   render:
-    name: roboco_render
+    name: robofleet_render

@@ -7,17 +7,17 @@
 # message at whichever stage doesn't check out.
 #
 # Grounded probes (don't guess at endpoints — see docker/nginx.conf and
-# roboco/api/routes/health.py):
+# robofleet/api/routes/health.py):
 #   - The health check is GET /health at the ROOT (no /api prefix) — the
 #     health router is mounted with none. GET /api/health genuinely 404s;
 #     nginx itself only proxies literal /health (and /ready) unauthenticated
 #     straight to the orchestrator.
 #   - GET /api/auth/status is ALWAYS mounted, unauthenticated regardless of
-#     ROBOFLEET_AGENT_AUTH_REQUIRED (roboco/api/auth/routes.py — "always
+#     ROBOFLEET_AGENT_AUTH_REQUIRED (robofleet/api/auth/routes.py — "always
 #     available probe; the panel's middleware gates on this"), so it's a
 #     reliable second 200 that exercises the nginx -> /api/ -> orchestrator
 #     path end to end, independent of /health's simpler direct route.
-#   - DB migration-head is logged by roboco/db/base.py's run_migrations()
+#   - DB migration-head is logged by robofleet/db/base.py's run_migrations()
 #     ("Alembic upgrade finished") — there is no dedicated status endpoint,
 #     so we grep the orchestrator container's own log for that line.
 #   - Ollama model presence mirrors what the ollama-init one-shot itself
@@ -43,12 +43,12 @@ COMPOSE_FILE="docker-compose.registry.yml"
 # orchestrator runs in a container but bind-mounts these into every agent it
 # spawns, so they must name paths as the HOST sees them — not as the
 # orchestrator sees them.
-COMPOSE_DEFAULT_HOST_PROJECT_DIR="/opt/roboco"
-COMPOSE_DEFAULT_HOST_DATA_DIR="/opt/roboco/data"
+COMPOSE_DEFAULT_HOST_PROJECT_DIR="/opt/robofleet"
+COMPOSE_DEFAULT_HOST_DATA_DIR="/opt/robofleet/data"
 ENV_FILE=".env"
 ENV_EXAMPLE=".env.example"
 BASE_URL="http://localhost:3000"
-# Well-known CEO identity (roboco/foundation/identity.py — "0000-0000:
+# Well-known CEO identity (robofleet/foundation/identity.py — "0000-0000:
 # System sentinel + CEO"), used only to derive the panel token below.
 CEO_AGENT_ID="00000000-0000-0000-0000-000000000001"
 
@@ -78,7 +78,7 @@ require_nonempty_env_var() {
 }
 
 # require_host_path_var <VAR> <want> <compose_default> — guards the silent,
-# total failure mode where compose's /opt/roboco fallback doesn't match where
+# total failure mode where compose's /opt/robofleet fallback doesn't match where
 # this checkout actually lives. The orchestrator hands these paths to the
 # Docker daemon as bind-mount SOURCES for every agent it spawns; a source that
 # doesn't exist is not an error to Docker, it CREATES it as a directory. The
@@ -189,7 +189,7 @@ else
     # container starts, and (verified above) an empty value is refused the
     # same way even with ROBOFLEET_CLOUD_AUTH_ENABLED=true set alongside it, so
     # there is no "leave it blank for cloud auth" option today. Mint it the
-    # same way `make panel-token` does (roboco/agents_config.py
+    # same way `make panel-token` does (robofleet/agents_config.py
     # issue_panel_token: hex HMAC-SHA256 of "<ceo-id>:ceo:" keyed by the auth
     # secret) using only stdlib, so a fresh .env is actually runnable end to
     # end — the cloud-auth conflict is surfaced as a loud warning below
@@ -209,7 +209,7 @@ print(hmac.new(secret, msg, hashlib.sha256).hexdigest())
     sed -i.bak "s/^ROBOFLEET_PANEL_AGENT_TOKEN=$/ROBOFLEET_PANEL_AGENT_TOKEN=${PANEL_TOKEN}/" "$ENV_FILE"
 
     # Pin the host paths to THIS checkout (see require_host_path_var above for
-    # why the /opt/roboco fallback is a silent, total spawn failure anywhere
+    # why the /opt/robofleet fallback is a silent, total spawn failure anywhere
     # else). .env.example ships both commented out, so uncomment-and-set. `|`
     # delimiters — these values contain slashes.
     sed -i.bak \
@@ -296,19 +296,19 @@ fi
 if retry_until "$DEADLINE" check_health; then
     DOCTOR_LINES+=("[ok] health endpoint: GET ${BASE_URL}/health")
 else
-    fail "Timed out waiting for GET ${BASE_URL}/health (nginx's direct, unauthenticated proxy to the orchestrator — see docker/nginx.conf; NOT /api/health, which 404s since roboco/api/routes/health.py mounts with no /api prefix). Run 'docker compose -f ${COMPOSE_FILE} logs orchestrator nginx'."
+    fail "Timed out waiting for GET ${BASE_URL}/health (nginx's direct, unauthenticated proxy to the orchestrator — see docker/nginx.conf; NOT /api/health, which 404s since robofleet/api/routes/health.py mounts with no /api prefix). Run 'docker compose -f ${COMPOSE_FILE} logs orchestrator nginx'."
 fi
 
 if retry_until "$DEADLINE" check_api_routing; then
     DOCTOR_LINES+=("[ok] API routing: GET ${BASE_URL}/api/auth/status")
 else
-    fail "Timed out waiting for GET ${BASE_URL}/api/auth/status (always-mounted, unauthenticated probe — roboco/api/auth/routes.py). /health passed but the nginx -> /api/ -> orchestrator path isn't answering; run 'docker compose -f ${COMPOSE_FILE} logs nginx orchestrator'."
+    fail "Timed out waiting for GET ${BASE_URL}/api/auth/status (always-mounted, unauthenticated probe — robofleet/api/auth/routes.py). /health passed but the nginx -> /api/ -> orchestrator path isn't answering; run 'docker compose -f ${COMPOSE_FILE} logs nginx orchestrator'."
 fi
 
 if retry_until "$DEADLINE" check_migrations; then
     DOCTOR_LINES+=("[ok] DB migrations at head (orchestrator log: \"Alembic upgrade finished\")")
 else
-    fail "Timed out waiting for the orchestrator log to report \"Alembic upgrade finished\" (roboco/db/base.py run_migrations()). Run 'docker compose -f ${COMPOSE_FILE} logs orchestrator | grep -i alembic'."
+    fail "Timed out waiting for the orchestrator log to report \"Alembic upgrade finished\" (robofleet/db/base.py run_migrations()). Run 'docker compose -f ${COMPOSE_FILE} logs orchestrator | grep -i alembic'."
 fi
 
 if retry_until "$DEADLINE" check_ollama_models; then
@@ -318,9 +318,9 @@ else
 fi
 
 echo ""
-echo "=== RoboCo doctor summary ==="
+echo "=== RoboFleet doctor summary ==="
 for line in "${DOCTOR_LINES[@]}"; do
     echo "  ${line}"
 done
 echo ""
-log "RoboCo is up: ${BASE_URL}"
+log "RoboFleet is up: ${BASE_URL}"

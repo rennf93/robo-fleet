@@ -14,7 +14,7 @@ const { listXHistory, listVideoHistory } = vi.hoisted(() => ({
           source: "x_post",
           title: "X post: release v0.16.0",
           status: "completed",
-          body: "RoboCo v0.16.0 shipped!",
+          body: "RoboFleet v0.16.0 shipped!",
           char_count: 23,
           tweet_id: "555",
           acted_at: "2026-07-01T00:00:00Z",

@@ -15,7 +15,7 @@ repos:
         types: [python]
       - id: mypy
         name: mypy
-        entry: uv run mypy roboco
+        entry: uv run mypy robo-fleet
         require_serial: true
         language: system
         types: [python]
@@ -29,21 +29,21 @@ repos:
         pass_filenames: false
       - id: bandit
         name: bandit
-        entry: uv run bandit -r roboco -ll
+        entry: uv run bandit -r robo-fleet -ll
         require_serial: true
         language: system
         types: [python]
         pass_filenames: false
       - id: radon-cc
         name: radon-cyclomatic-complexity
-        entry: uv run radon cc roboco -nc
+        entry: uv run radon cc robo-fleet -nc
         require_serial: true
         language: system
         types: [python]
         pass_filenames: false
       - id: xenon
         name: xenon
-        entry: uv run xenon roboco --max-absolute B --max-modules A --max-average A
+        entry: uv run xenon robo-fleet --max-absolute B --max-modules A --max-average A
         require_serial: true
         language: system
         types: [python]

@@ -40,7 +40,7 @@ def _task(*, pr_number: int | None) -> MagicMock:
 async def test_closes_open_pr_via_git_service() -> None:
     svc = _service()
     task = _task(pr_number=42)
-    svc.session = _session("roboco-api")
+    svc.session = _session("robofleet-api")
 
     git_service = MagicMock()
     git_service.close_task_pr_best_effort = AsyncMock()
@@ -51,7 +51,7 @@ async def test_closes_open_pr_via_git_service() -> None:
     ):
         await svc._close_task_pr_best_effort(task)
 
-    git_service.close_task_pr_best_effort.assert_awaited_once_with("roboco-api", 42)
+    git_service.close_task_pr_best_effort.assert_awaited_once_with("robofleet-api", 42)
 
 
 @pytest.mark.asyncio
@@ -60,7 +60,7 @@ async def test_skips_when_no_pr_number() -> None:
     # close, and no project lookup should even fire.
     svc = _service()
     task = _task(pr_number=None)
-    svc.session = _session("roboco-api")
+    svc.session = _session("robofleet-api")
 
     git_service = MagicMock()
     git_service.close_task_pr_best_effort = AsyncMock()
@@ -98,7 +98,7 @@ async def test_pr_close_failure_does_not_raise() -> None:
     # Best-effort: a forge failure logs and never blocks the cancellation.
     svc = _service()
     task = _task(pr_number=42)
-    svc.session = _session("roboco-api")
+    svc.session = _session("robofleet-api")
 
     git_service = MagicMock()
     git_service.close_task_pr_best_effort = AsyncMock(

@@ -3,11 +3,11 @@
 # Runs Gemini through Google's official `gemini` CLI, authenticated by an OAuth
 # login via a mounted ~/.gemini/oauth_creds.json — the parity analogue of the
 # Claude Code path's mounted ~/.claude and the grok path's mounted ~/.grok (no
-# metered API key). Reuses the base image's roboco venv + uv + the RoboCo MCP
+# metered API key). Reuses the base image's robo-fleet venv + uv + the RoboFleet MCP
 # gateway servers, and the base image's Node.js 22 (the CLI needs node >= 20).
 # The entrypoint copies the staged read-only OAuth credential into a writable
 # ~/.gemini, renders ~/.gemini/settings.json + a Policy Engine TOML from the
-# mounted mcp-config.json (see roboco.llm.providers.gemini_cli_config), and
+# mounted mcp-config.json (see robofleet.llm.providers.gemini_cli_config), and
 # runs the CLI headless. One runtime image serves every role — role behaviour
 # comes from the mounted system prompt / manifest / mcp-config, exactly as on
 # the Claude/grok paths.

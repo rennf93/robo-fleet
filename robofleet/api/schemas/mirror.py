@@ -1,5 +1,5 @@
 """Schemas for the Mirror (Board Program) engine's CEO surface.
-Mirrors ``roboco.api.schemas.spackle`` exactly."""
+Mirrors ``robofleet.api.schemas.spackle`` exactly."""
 
 from __future__ import annotations
 

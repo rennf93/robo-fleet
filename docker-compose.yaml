@@ -48,7 +48,7 @@ services:
       retries: 5
 
   # ==========================================================================
-  # Backup - periodic pg_dump of the roboco DB (interim; no PITR/WAL yet)
+  # Backup - periodic pg_dump of the robo-fleet DB (interim; no PITR/WAL yet)
   # ==========================================================================
   backup:
     image: pgvector/pgvector:pg16
@@ -425,7 +425,7 @@ services:
       ROBOFLEET_MINIO_REGION: ${ROBOFLEET_MINIO_REGION:-us-east-1}
       # Host paths for spawning agent containers (required for Docker-in-Docker)
       # IMPORTANT: These must be ABSOLUTE paths on the host filesystem
-      ROBOFLEET_HOST_PROJECT_DIR: ${ROBOFLEET_HOST_PROJECT_DIR:-/volume1/roboco}
+      ROBOFLEET_HOST_PROJECT_DIR: ${ROBOFLEET_HOST_PROJECT_DIR:-/volume1/robofleet}
       ROBOFLEET_HOST_CLAUDE_DIR: ${ROBOFLEET_HOST_CLAUDE_DIR:-/home/renzof/.claude}
       # SuperGrok auth (host ~/.grok) for Grok-CLI agents — the orchestrator
       # mounts <dir>/auth.json into each Grok agent. Run `grok login` on the host.
@@ -449,7 +449,7 @@ services:
       ROBOFLEET_KIMI_RATE_LIMIT_RETRY_AFTER_SECONDS: ${ROBOFLEET_KIMI_RATE_LIMIT_RETRY_AFTER_SECONDS:-60}
       ROBOFLEET_KIMI_AUTH_RETRY_AFTER_SECONDS: ${ROBOFLEET_KIMI_AUTH_RETRY_AFTER_SECONDS:-60}
       ROBOFLEET_KIMI_MAX_CONCURRENT: ${ROBOFLEET_KIMI_MAX_CONCURRENT:-1}
-      ROBOFLEET_HOST_DATA_DIR: ${ROBOFLEET_HOST_DATA_DIR:-/volume1/roboco/data}
+      ROBOFLEET_HOST_DATA_DIR: ${ROBOFLEET_HOST_DATA_DIR:-/volume1/robofleet/data}
       # Public base URL for commit-trailer links. Default 127.0.0.1 produces
       # unusable links in commit message bodies; set to NAS LAN IP so
       # f"{api_base}/tasks/{task_id}" renders a reachable URL.
@@ -471,16 +471,16 @@ services:
       ROBOFLEET_EXTERNAL_PR_REQUIRE_HUMAN_CONFIRM: ${ROBOFLEET_EXTERNAL_PR_REQUIRE_HUMAN_CONFIRM:-true}
       # ROBOFLEET_EXTERNAL_PR_POLL_INTERVAL_SECONDS: "300"
       # ROBOFLEET_EXTERNAL_PR_AUTHOR_ALLOWLIST: '["corey"]'   # empty = every external PR
-      # Production self-healing ("engine 4"). RoboCo watches its OWN repo CI and,
+      # Production self-healing ("engine 4"). RoboFleet watches its OWN repo CI and,
       # when red, notifies the CEO and (with originate on) opens a PENDING fix
       # task that STOPS for the CEO's Approve-&-Start — it never self-deploys.
       # Both toggles default OFF (arm from Settings -> Feature Flags). Set
-      # PROJECT_SLUG to the registered project that IS RoboCo; CI_WORKFLOW scopes
-      # the signal to the real CI workflow (RoboCo has several workflows, so the
+      # PROJECT_SLUG to the registered project that IS RoboFleet; CI_WORKFLOW scopes
+      # the signal to the real CI workflow (RoboFleet has several workflows, so the
       # unscoped "latest run" would be unreliable).
       ROBOFLEET_SELF_HEAL_ENABLED: ${ROBOFLEET_SELF_HEAL_ENABLED:-true}
       ROBOFLEET_SELF_HEAL_ORIGINATE_ENABLED: ${ROBOFLEET_SELF_HEAL_ORIGINATE_ENABLED:-true}
-      ROBOFLEET_SELF_HEAL_PROJECT_SLUG: ${ROBOFLEET_SELF_HEAL_PROJECT_SLUG:-roboco-api}
+      ROBOFLEET_SELF_HEAL_PROJECT_SLUG: ${ROBOFLEET_SELF_HEAL_PROJECT_SLUG:-robofleet-api}
       ROBOFLEET_SELF_HEAL_CI_WORKFLOW: ${ROBOFLEET_SELF_HEAL_CI_WORKFLOW:-ci.yml}
       # Agent runtime toolchain matching: provision each agent workspace with
       # the TARGET project's Python (uv resolves requires-python) and block a
@@ -490,7 +490,7 @@ services:
       # default stays conservative until it's verified on a live run.
       ROBOFLEET_TOOLCHAIN_MATCH_ENABLED: ${ROBOFLEET_TOOLCHAIN_MATCH_ENABLED:-true}
       # Architectural conventions standard: gate where code lives (placement,
-      # hygiene, modularity) via each project's .roboco/conventions.yml. Config
+      # hygiene, modularity) via each project's .robofleet/conventions.yml. Config
       # default is OFF; enabled HERE (personal deploy), deliberately left OFF in
       # docker-compose.registry.yml so the published default stays conservative.
       ROBOFLEET_CONVENTIONS_ENABLED: ${ROBOFLEET_CONVENTIONS_ENABLED:-true}
@@ -505,7 +505,7 @@ services:
       #     task — only for projects with a dep_update_command set; never merges.
       #   - Release manager: deterministic readiness sweep -> ONE release proposal
       #     HELD for the CEO; the executor publishes only on CEO approval + green
-      #     CI (reuses SELF_HEAL_PROJECT_SLUG as the RoboCo repo).
+      #     CI (reuses SELF_HEAL_PROJECT_SLUG as the RoboFleet repo).
       #   - Org-memory loop: distils a completion lesson + auto-injects relevant
       #     past lessons/playbooks into each claim's briefing (local model only).
       #   - X engine: drafts release-announcement + mention-reply posts, ALL
@@ -542,7 +542,7 @@ services:
       ROBOFLEET_VAULT_ARCHIVE_DAYS: ${ROBOFLEET_VAULT_ARCHIVE_DAYS:-30}
       ROBOFLEET_VAULT_REPORT_ENABLED: ${ROBOFLEET_VAULT_REPORT_ENABLED:-true}
       ROBOFLEET_VAULT_KB_ENABLED: ${ROBOFLEET_VAULT_KB_ENABLED:-true}
-      ROBOFLEET_VAULT_KB_DIRS: ${ROBOFLEET_VAULT_KB_DIRS:-RoboCo/Notes}
+      ROBOFLEET_VAULT_KB_DIRS: ${ROBOFLEET_VAULT_KB_DIRS:-RoboFleet/Notes}
       ROBOFLEET_VAULT_KB_INTERVAL_SECONDS: ${ROBOFLEET_VAULT_KB_INTERVAL_SECONDS:-3600}
       #   - Board roadmap engine: weekly, opens ONE held exploration task for
       #     the Product Owner, who proposes a themed cycle of roadmap items;
@@ -795,7 +795,7 @@ networks:
   # orchestrator (multi-homed onto this network too); it can reach nothing
   # else on robofleet_default or robofleet_data.
   render:
-    name: roboco_render
+    name: robofleet_render
 
 volumes:
   # Named volume for MinIO — keeps rendered-video storage out of the

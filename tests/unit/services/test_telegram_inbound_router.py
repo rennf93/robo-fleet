@@ -34,7 +34,7 @@ class TestParseCommand:
         )
 
     def test_strips_botname_suffix(self) -> None:
-        assert parse_command("/status@my_roboco_bot") == ("status", "")
+        assert parse_command("/status@my_robofleet_bot") == ("status", "")
 
     def test_non_command_text_is_empty(self) -> None:
         assert parse_command("hello there") == ("", "")

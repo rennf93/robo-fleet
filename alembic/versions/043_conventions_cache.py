@@ -2,7 +2,7 @@
 
 Caches the parsed *effective* architectural-conventions map per
 ``(project_id, commit_sha)`` so the map is re-derived only when HEAD moves.
-``status`` records how the repo's ``.roboco/conventions.yml`` resolved at that
+``status`` records how the repo's ``.robofleet/conventions.yml`` resolved at that
 SHA (``ok`` | ``degraded`` | ``missing``). Pure schema change; no backfill.
 Inert until ``ROBOFLEET_CONVENTIONS_ENABLED``.
 

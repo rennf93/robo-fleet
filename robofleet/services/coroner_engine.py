@@ -110,8 +110,8 @@ class CoronerEngine(BaseService):
         """Open ONE PENDING, HELD postmortem-exploration task assigned to the
         Auditor, naming the incident + kind. Project is the incident's own
         (an autopsy is about that incident, wherever it lived); a branchless
-        incident (no ``project_id``) falls back to the RoboCo project, same
-        posture as ``RoadmapEngine._roboco_project`` — every task needs one."""
+        incident (no ``project_id``) falls back to the RoboFleet project, same
+        posture as ``RoadmapEngine._robofleet_project`` — every task needs one."""
         label = _INCIDENT_KIND_LABELS.get(kind, kind)
         description = (
             f"Task {incident.title!r} ({str(incident.id)[:8]}) was {label}. "
@@ -120,7 +120,7 @@ class CoronerEngine(BaseService):
             "cause, then propose ONE process change via propose_postmortem(): "
             "a playbook draft, a prompt fix, or a conventions rule."
         )
-        project_id = incident.project_id or await self._roboco_project_id()
+        project_id = incident.project_id or await self._robofleet_project_id()
         task = await task_svc.create(
             TaskCreateRequest(
                 title=_EXPLORATION_TITLE,
@@ -174,11 +174,11 @@ class CoronerEngine(BaseService):
         await self.session.flush()
         self.log.info("coroner postmortem recorded (Auditor)", task_id=str(task.id))
 
-    async def _roboco_project_id(self) -> UUID | None:
+    async def _robofleet_project_id(self) -> UUID | None:
         from robofleet.config import settings
         from robofleet.services.project import get_project_service
 
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         project = await get_project_service(self.session).get_by_slug(slug)
         return cast("UUID | None", project.id) if project is not None else None
 

@@ -72,8 +72,8 @@ import ProjectSettingsPage from "../page";
 function makeProject(overrides: Partial<Project> = {}): Project {
   return {
     id: "proj-1",
-    name: "RoboCo API",
-    slug: "roboco-api",
+    name: "RoboFleet API",
+    slug: "robofleet-api",
     git_url: "https://github.com/org/repo.git",
     git_provider: "github",
     github_installation_id: null,
@@ -131,7 +131,7 @@ describe("ProjectSettingsPage", () => {
       refetch: vi.fn(),
     });
     await renderPage();
-    expect(screen.queryByText("RoboCo API")).not.toBeInTheDocument();
+    expect(screen.queryByText("RoboFleet API")).not.toBeInTheDocument();
   });
 
   it("shows a not-found card when the project fails to load", async () => {
@@ -158,9 +158,9 @@ describe("ProjectSettingsPage", () => {
     await renderPage();
 
     expect(
-      screen.getByRole("heading", { name: "RoboCo API" }),
+      screen.getByRole("heading", { name: "RoboFleet API" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("roboco-api")).toBeInTheDocument();
+    expect(screen.getByText("robofleet-api")).toBeInTheDocument();
 
     for (const testId of [
       "identity-card-stub",

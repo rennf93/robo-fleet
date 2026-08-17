@@ -17,7 +17,7 @@ _DEFAULT_INTERVAL = 900
 def test_vault_kb_defaults() -> None:
     s = Settings()
     assert s.vault_kb_enabled is False
-    assert s.vault_kb_dirs == "RoboCo/Notes"
+    assert s.vault_kb_dirs == "RoboFleet/Notes"
     assert s.vault_kb_interval_seconds == _DEFAULT_INTERVAL
 
 
@@ -42,10 +42,10 @@ def test_vault_kb_dirs_clean_config_passes() -> None:
         os.environ,
         {
             "ROBOFLEET_VAULT_KB_ENABLED": "true",
-            "ROBOFLEET_VAULT_KB_DIRS": "RoboCo/Notes",
+            "ROBOFLEET_VAULT_KB_DIRS": "RoboFleet/Notes",
         },
     ):
-        assert Settings().vault_kb_dirs == "RoboCo/Notes"
+        assert Settings().vault_kb_dirs == "RoboFleet/Notes"
 
 
 def test_vault_kb_dirs_overlap_with_intake_dir_rejected() -> None:
@@ -54,7 +54,7 @@ def test_vault_kb_dirs_overlap_with_intake_dir_rejected() -> None:
             os.environ,
             {
                 "ROBOFLEET_VAULT_KB_ENABLED": "true",
-                "ROBOFLEET_VAULT_KB_DIRS": "RoboCo/Inbox",
+                "ROBOFLEET_VAULT_KB_DIRS": "RoboFleet/Inbox",
             },
         ),
         pytest.raises(ValidationError),
@@ -65,11 +65,11 @@ def test_vault_kb_dirs_overlap_with_intake_dir_rejected() -> None:
 @pytest.mark.parametrize(
     "kb_dirs",
     [
-        "RoboCo/Tasks",
-        "RoboCo/Tasks/Sub",  # nests under a reserved dir
-        "RoboCo",  # nests OVER every reserved dir (reverse direction)
+        "RoboFleet/Tasks",
+        "RoboFleet/Tasks/Sub",  # nests under a reserved dir
+        "RoboFleet",  # nests OVER every reserved dir (reverse direction)
         ".obsidian",
-        "RoboCo/Notes,RoboCo/Journals",  # one clean entry, one reserved
+        "RoboFleet/Notes,RoboFleet/Journals",  # one clean entry, one reserved
     ],
 )
 def test_vault_kb_dirs_reserved_overlap_rejected(kb_dirs: str) -> None:
@@ -89,12 +89,12 @@ def test_vault_kb_dirs_reserved_overlap_rejected(kb_dirs: str) -> None:
         "/etc",  # absolute path
         "/etc/passwd",
         "../sibling_secret_dir",  # leading traversal
-        "RoboCo/Notes/..",  # trailing traversal
-        "RoboCo/../../outside",  # embedded traversal
-        "RoboCo/Notes,../outside",  # one clean entry, one traversal
+        "RoboFleet/Notes/..",  # trailing traversal
+        "RoboFleet/../../outside",  # embedded traversal
+        "RoboFleet/Notes,../outside",  # one clean entry, one traversal
         ".",  # vault root itself — would rglob every projection dir
         "./",  # vault root, trailing-slash spelling
-        "./RoboCo/Tasks",  # dot-prefixed reserved dir must not evade overlap
+        "./RoboFleet/Tasks",  # dot-prefixed reserved dir must not evade overlap
     ],
 )
 def test_vault_kb_dirs_traversal_rejected(kb_dirs: str) -> None:
@@ -111,15 +111,15 @@ def test_vault_kb_dirs_traversal_rejected(kb_dirs: str) -> None:
 
 
 def test_vault_kb_dirs_dot_prefixed_clean_entry_passes() -> None:
-    """'./RoboCo/Notes' normalizes to a clean, non-reserved subfolder."""
+    """'./RoboFleet/Notes' normalizes to a clean, non-reserved subfolder."""
     with mock.patch.dict(
         os.environ,
         {
             "ROBOFLEET_VAULT_KB_ENABLED": "true",
-            "ROBOFLEET_VAULT_KB_DIRS": "./RoboCo/Notes",
+            "ROBOFLEET_VAULT_KB_DIRS": "./RoboFleet/Notes",
         },
     ):
-        assert Settings().vault_kb_dirs == "./RoboCo/Notes"
+        assert Settings().vault_kb_dirs == "./RoboFleet/Notes"
 
 
 def test_vault_kb_dirs_dotted_name_is_not_traversal() -> None:
@@ -128,10 +128,10 @@ def test_vault_kb_dirs_dotted_name_is_not_traversal() -> None:
         os.environ,
         {
             "ROBOFLEET_VAULT_KB_ENABLED": "true",
-            "ROBOFLEET_VAULT_KB_DIRS": "RoboCo/my..notes",
+            "ROBOFLEET_VAULT_KB_DIRS": "RoboFleet/my..notes",
         },
     ):
-        assert Settings().vault_kb_dirs == "RoboCo/my..notes"
+        assert Settings().vault_kb_dirs == "RoboFleet/my..notes"
 
 
 def test_vault_kb_disabled_skips_dir_validation() -> None:
@@ -141,7 +141,7 @@ def test_vault_kb_disabled_skips_dir_validation() -> None:
         os.environ,
         {
             "ROBOFLEET_VAULT_KB_ENABLED": "false",
-            "ROBOFLEET_VAULT_KB_DIRS": "RoboCo/Tasks",
+            "ROBOFLEET_VAULT_KB_DIRS": "RoboFleet/Tasks",
         },
     ):
-        assert Settings().vault_kb_dirs == "RoboCo/Tasks"
+        assert Settings().vault_kb_dirs == "RoboFleet/Tasks"

@@ -149,7 +149,7 @@ async def test_get_system_agent_card(a2a_route_client: dict) -> None:
     response = await client.get("/.well-known/agent.json")
     assert response.status_code == HTTPStatus.OK
     body = response.json()
-    assert body["id"] == "roboco-system"
+    assert body["id"] == "robofleet-system"
 
 
 @pytest.mark.asyncio

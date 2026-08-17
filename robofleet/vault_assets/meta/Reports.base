@@ -1,4 +1,4 @@
-filters: file.inFolder("RoboCo/Reports")
+filters: file.inFolder("RoboFleet/Reports")
 
 views:
   - type: table

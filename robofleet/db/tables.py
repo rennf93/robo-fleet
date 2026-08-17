@@ -1,7 +1,7 @@
 """
 SQLAlchemy Table Definitions
 
-ORM mappings for all RoboCo data models.
+ORM mappings for all RoboFleet data models.
 """
 
 from datetime import UTC, datetime
@@ -1799,7 +1799,7 @@ class CompanyGoalsTable(Base):
     brand_voice: Mapped[str] = mapped_column(Text, nullable=False, default="")
     # CEO-authored product/company name — brands X/video drafting prompts
     # when a project name isn't available (mirrors brand_voice's shape).
-    # Feeds XEngine/VideoEngine's product-name resolution; "RoboCo" is the
+    # Feeds XEngine/VideoEngine's product-name resolution; "RoboFleet" is the
     # final fallback when this is also unset.
     company_name: Mapped[str] = mapped_column(Text, nullable=False, default="")
     updated_at: Mapped[datetime] = mapped_column(
@@ -1855,7 +1855,7 @@ class ModelAssignmentTable(Base):
 
     __table_args__ = (
         # NULLS NOT DISTINCT so the global row (scope_value=NULL) can't be
-        # duplicated. Requires PostgreSQL 15+ (roboco runs on pgvector 16).
+        # duplicated. Requires PostgreSQL 15+ (robo-fleet runs on pgvector 16).
         Index(
             "ux_model_assignments_scope_key",
             "scope",
@@ -2283,7 +2283,7 @@ class ProjectConventionsCacheTable(Base):
     """Cached effective conventions map, keyed by (project, commit SHA).
 
     The effective map (auto-derived defaults overlaid by the committed
-    ``.roboco/conventions.yml``) is re-parsed only when HEAD moves; every
+    ``.robofleet/conventions.yml``) is re-parsed only when HEAD moves; every
     consumer reads this cache. ``status`` records how the file resolved at that
     SHA: ``ok`` | ``degraded`` (unparseable, fell back) | ``missing``.
     """

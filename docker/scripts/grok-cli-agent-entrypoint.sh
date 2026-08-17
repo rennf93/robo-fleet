@@ -10,13 +10,13 @@
 set -euo pipefail
 
 # Render ~/.grok/config.toml (the MCP gateway) + the per-role grok flags. Run
-# from /app so `python -m` resolves the INSTALLED roboco package: dev/doc/qa
-# agents run at their workspace-clone cwd, whose own roboco/ dir would shadow it
+# from /app so `python -m` resolves the INSTALLED robo-fleet package: dev/doc/qa
+# agents run at their workspace-clone cwd, whose own robofleet/ dir would shadow it
 # on the sys.path front (the ModuleNotFound lesson). The render reads
 # ROBOFLEET_MCP_CONFIG + ROBOFLEET_AGENT_ID and writes the config + an args file.
 ( cd /app && python -m robofleet.llm.providers.grok_cli_config )
 
-GROK_ARGS_FILE="${ROBOFLEET_GROK_ARGS_FILE:-/tmp/roboco-grok-args}"
+GROK_ARGS_FILE="${ROBOFLEET_GROK_ARGS_FILE:-/tmp/robofleet-grok-args}"
 mapfile -t GROK_ARGS < "$GROK_ARGS_FILE"
 
 # Prompt-injection guard (parity with the Claude UserPromptSubmit hook): the task

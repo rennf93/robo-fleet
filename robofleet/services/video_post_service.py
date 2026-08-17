@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 # layer's internals).
 MAX_TIKTOK_CAPTION_CHARS = 2200
 
-_LOCK_PREFIX = "roboco:video_post:"
+_LOCK_PREFIX = "robofleet:video_post:"
 # A video upload + transcode/poll can run well past a minute (X media
 # processing alone can take ~140s, TikTok chunked uploads longer); the TTL is
 # a crash backstop and the heartbeat keeps it alive for the real duration.

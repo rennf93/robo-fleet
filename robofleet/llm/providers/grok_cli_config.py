@@ -11,7 +11,7 @@ makes it unit-testable.
 Parity with ``ClaudeCodeProvider``'s per-role permissions, expressed as native
 grok flags (built-in tool removal + ``--deny`` rules):
 
-  * **subagents** — every role gets ``--disallowed-tools Agent``: no RoboCo agent
+  * **subagents** — every role gets ``--disallowed-tools Agent``: no RoboFleet agent
     spawns the CLI's own subagents (work is driven through the gateway verbs).
   * **editing** — roles that don't write code (``role_config.allows_write`` is
     False) have the edit tool removed (``--disallowed-tools search_replace``).
@@ -45,7 +45,7 @@ from robofleet.services.gateway.role_config import get_role_config
 GROK_CONFIG_PATH = Path.home() / ".grok" / "config.toml"
 # grok loads ``$HOME/.grok/AGENTS.md`` as a GLOBAL instruction file regardless of
 # --cwd (verified live; the --system-prompt-override / --rules flags are ignored
-# in headless mode). This is how the RoboCo role blueprint becomes grok's system
+# in headless mode). This is how the RoboFleet role blueprint becomes grok's system
 # prompt — the parity analogue of the Claude path's --system-prompt-file — without
 # writing into (and polluting) the agent's git workspace.
 GROK_AGENTS_PATH = Path.home() / ".grok" / "AGENTS.md"
@@ -70,7 +70,7 @@ BASH_GUARD_HOOK = os.environ.get(
 # entrypoint reads the same ROBOFLEET_GROK_ARGS_FILE / tmp default.
 GROK_ARGS_PATH = Path(
     os.environ.get("ROBOFLEET_GROK_ARGS_FILE")
-    or Path(tempfile.gettempdir()) / "roboco-grok-args"
+    or Path(tempfile.gettempdir()) / "robofleet-grok-args"
 )
 
 # Hard ceiling on agentic turns (loop guard). Operator-tunable.
@@ -229,7 +229,7 @@ def grok_cli_args_for_role(
     args: list[str] = ["--always-approve"]
     args += ["--disallowed-tools", _disallowed_tools(role)]
     # No direct web for any role (parity with the Claude path's tool set); the
-    # roles that get web reach it through the gated roboco-search MCP server.
+    # roles that get web reach it through the gated robofleet-search MCP server.
     args += ["--disable-web-search"]
     args += ["--max-turns", str(max_turns)]
     for rule in _deny_rules(role):
@@ -316,7 +316,7 @@ def write_grok_hooks(
     if not Path(hook_path).is_file():
         return False
     hooks_dir.mkdir(parents=True, exist_ok=True)
-    (hooks_dir / "roboco-bash-guard.json").write_text(
+    (hooks_dir / "robofleet-bash-guard.json").write_text(
         json.dumps(bash_guard_hook_config(hook_path), indent=2), encoding="utf-8"
     )
     return True
@@ -370,7 +370,7 @@ def write_grok_fable_hooks(*, hooks_dir: Path = GROK_HOOKS_DIR) -> bool:
     if not Path(FABLE_HONESTY_NUDGE_HOOK).is_file():
         return False
     hooks_dir.mkdir(parents=True, exist_ok=True)
-    (hooks_dir / "roboco-fable-honesty-nudge.json").write_text(
+    (hooks_dir / "robofleet-fable-honesty-nudge.json").write_text(
         json.dumps(fable_honesty_nudge_hook_config(), indent=2), encoding="utf-8"
     )
     return True

@@ -75,7 +75,7 @@ class TestRoleConfigCatalog:
 
     def test_every_role_has_evidence(self) -> None:
         # Issue #8: a developer container shipped without
-        # mcp__roboco-do__evidence. `evidence` is a read-only inspection
+        # mcp__robofleet-do__evidence. `evidence` is a read-only inspection
         # tool every role needs (devs read their own PR diff, QA/PM review,
         # the auditor inspects). Lock the invariant so no role's do-tool
         # tuple can silently drop it again.

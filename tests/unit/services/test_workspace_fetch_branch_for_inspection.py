@@ -46,7 +46,7 @@ def _bind(svc: WorkspaceService, name: str, value: object) -> None:
 def _wire_resolution(svc: WorkspaceService, workspace: Path) -> None:
     """Stub the resolution steps ahead of the fetch subprocess so only the
     fetch itself is under test."""
-    _bind(svc, "_resolve_branch_to_project_slug", AsyncMock(return_value="roboco"))
+    _bind(svc, "_resolve_branch_to_project_slug", AsyncMock(return_value="robo-fleet"))
     _bind(svc, "ensure_workspace", AsyncMock(return_value=workspace))
 
 

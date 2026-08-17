@@ -102,7 +102,7 @@ export function getInitData(): string {
   return getTelegramWebApp()?.initData ?? "";
 }
 
-const DEV_MOCK_MARKER = "__robocoDevMock";
+const DEV_MOCK_MARKER = "__robofleetDevMock";
 
 /**
  * Dev-only stand-in for the real WebApp object so the cockpit shell renders

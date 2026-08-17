@@ -1,6 +1,6 @@
 """Architectural-conventions standard: schema models + effective-map merge.
 
-Pure foundation layer (no IO/DB). The validator CLI (``roboco.conventions``),
+Pure foundation layer (no IO/DB). The validator CLI (``robofleet.conventions``),
 ``ConventionsService``, and the gateway gates all build on these types.
 """
 

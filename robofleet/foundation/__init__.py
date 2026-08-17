@@ -1,4 +1,4 @@
-"""RoboCo foundation package — single source of truth for cross-cutting policy.
+"""RoboFleet foundation package — single source of truth for cross-cutting policy.
 
 Sub-packages:
   - identity: Role, Team, AgentRow, AGENTS, role-sets, lookups

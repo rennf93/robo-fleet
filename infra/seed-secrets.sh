@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Seed the four RoboCo Secret Manager secrets for one GCP project.
+# Seed the four RoboFleet Secret Manager secrets for one GCP project.
 # Usage: ./infra/seed-secrets.sh PROJECT_ID
 # Requires: gcloud (authed), python3 with `cryptography` installed.
 # Env overrides:
-#   ROBOFLEET_SECRET_PREFIX (default roboco) - prefix for secret ids
+#   ROBOFLEET_SECRET_PREFIX (default robo-fleet) - prefix for secret ids
 #   ROBOFLEET_GEMINI_API_KEY (required) - Gemini API key to store
 set -euo pipefail
 

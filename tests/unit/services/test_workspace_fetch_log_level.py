@@ -47,7 +47,7 @@ async def test_fetch_auth_fail_logs_at_debug() -> None:
         patch("robofleet.services.workspace.logger.debug", side_effect=capture_debug),
     ):
         await WorkspaceService._fetch_origin_best_effort(
-            workspace=workspace, project_slug="roboco-api"
+            workspace=workspace, project_slug="robofleet-api"
         )
 
     # The benign auth-fail should NOT be a WARNING.
@@ -87,7 +87,7 @@ async def test_fetch_genuine_failure_still_warns() -> None:
         patch("robofleet.services.workspace.logger.debug", side_effect=capture_debug),
     ):
         await WorkspaceService._fetch_origin_best_effort(
-            workspace=workspace, project_slug="roboco-api"
+            workspace=workspace, project_slug="robofleet-api"
         )
 
     warnings = [e for (level, e) in captured if level == "warning"]

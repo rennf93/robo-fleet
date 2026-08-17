@@ -26,7 +26,7 @@ interface TabDependenciesProps {
   task: Task;
 }
 
-// Grounded in roboco/services/gateway/claim_guards.py: dependency_ids
+// Grounded in robofleet/services/gateway/claim_guards.py: dependency_ids
 // genuinely gates claim (a task can't be claimed until every dependency
 // reaches completed/cancelled); blocker_ids is the pure-informational
 // inverse ("tasks this one is blocking") and does not itself gate anything.

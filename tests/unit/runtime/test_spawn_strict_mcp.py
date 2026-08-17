@@ -29,7 +29,7 @@ def _make_dev_config() -> OrchestratorAgentConfig:
         model="sonnet",
         mcp_config_path=Path("/app/mcp-config.json"),
         git_context=SpawnGitContext(
-            project_slug="roboco-api",
+            project_slug="robofleet-api",
             branch_name="feature/backend/TASK0001",
         ),
         # provider_type defaults to "anthropic" and no dedicated provider is
@@ -94,7 +94,7 @@ class TestMcpConfigPinsBakedVenv:
         orch = AgentOrchestrator.__new__(AgentOrchestrator)
         config_path = await orch._generate_mcp_config("be-dev-1")
         config = json.loads(Path(config_path).read_text())
-        env = config["mcpServers"]["roboco-flow"]["env"]
+        env = config["mcpServers"]["robofleet-flow"]["env"]
         assert env["ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS"] == str(
             settings.flow_verb_timeout_seconds
         )

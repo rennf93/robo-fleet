@@ -1,4 +1,4 @@
-"""Structured agent-content schema — the RoboCo content standard.
+"""Structured agent-content schema — the RoboFleet content standard.
 
 Public surface: the content models, the ``CONTENT_MODELS`` registry, the
 ``validate_content`` entry point, and the ``ContentValidationError`` raised on

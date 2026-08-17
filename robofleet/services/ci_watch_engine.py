@@ -1,6 +1,6 @@
 """Multi-repo CI-watch engine — dormant by default.
 
-The fan-out generalization of the self-heal engine: instead of RoboCo's single
+The fan-out generalization of the self-heal engine: instead of RoboFleet's single
 own repo, it watches EVERY project the operator opted into (``ci_watch_enabled``)
 and, when one's CI is red on its default branch, opens one fix task into that
 project's delivery lifecycle and STOPS. Like self-heal it is conservative:

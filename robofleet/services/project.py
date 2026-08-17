@@ -54,7 +54,7 @@ class ProjectService(BaseService):
         """Reject a project repo URL that matches a protected (denylisted) repo.
 
         Keeps agent commits/merges out of a repository that must not receive
-        them — e.g. the roboco source repo during a smoke run.
+        them — e.g. the robo-fleet source repo during a smoke run.
         """
         if not git_url:
             return

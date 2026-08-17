@@ -37,8 +37,8 @@ def test_relocate_moves_existing_tree(
 ) -> None:
     old_root = tmp_path / "old-vault"
     old_root.mkdir()
-    (old_root / "RoboCo").mkdir()
-    (old_root / "RoboCo" / "marker.md").write_text("hi", encoding="utf-8")
+    (old_root / "RoboFleet").mkdir()
+    (old_root / "RoboFleet" / "marker.md").write_text("hi", encoding="utf-8")
     new_root = tmp_path / "new-vault"
 
     monkeypatch.setattr(settings, "obsidian_vault_enabled", True)
@@ -46,18 +46,18 @@ def test_relocate_moves_existing_tree(
     assert main(["relocate", str(new_root)]) == 0
 
     assert not old_root.exists()
-    assert (new_root / "RoboCo" / "marker.md").read_text(encoding="utf-8") == "hi"
+    assert (new_root / "RoboFleet" / "marker.md").read_text(encoding="utf-8") == "hi"
 
 
-def test_relocate_into_existing_vault_grafts_roboco_subtree(
+def test_relocate_into_existing_vault_grafts_robofleet_subtree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """An existing destination is a personal vault: only RoboCo/ moves into it
+    """An existing destination is a personal vault: only RoboFleet/ moves into it
     (never nesting the old dirname), the personal .obsidian is never
     clobbered, and absent shipped assets are added."""
     old_root = tmp_path / "old-vault"
-    (old_root / "RoboCo").mkdir(parents=True)
-    (old_root / "RoboCo" / "marker.md").write_text("hi", encoding="utf-8")
+    (old_root / "RoboFleet").mkdir(parents=True)
+    (old_root / "RoboFleet" / "marker.md").write_text("hi", encoding="utf-8")
     personal = tmp_path / "personal-vault"
     (personal / ".obsidian").mkdir(parents=True)
     (personal / ".obsidian" / "app.json").write_text("personal", encoding="utf-8")
@@ -67,9 +67,9 @@ def test_relocate_into_existing_vault_grafts_roboco_subtree(
     monkeypatch.setattr(settings, "vault_path", str(old_root))
     assert main(["relocate", str(personal)]) == 0
 
-    assert (personal / "RoboCo" / "marker.md").read_text(encoding="utf-8") == "hi"
+    assert (personal / "RoboFleet" / "marker.md").read_text(encoding="utf-8") == "hi"
     assert not (personal / "old-vault").exists()  # no nested old dirname
-    assert not (old_root / "RoboCo").exists()  # subtree moved, not copied
+    assert not (old_root / "RoboFleet").exists()  # subtree moved, not copied
     # Personal config untouched; absent shipped assets materialized.
     assert (personal / ".obsidian" / "app.json").read_text(
         encoding="utf-8"
@@ -78,21 +78,21 @@ def test_relocate_into_existing_vault_grafts_roboco_subtree(
     assert (personal / "My Notes").exists()
 
 
-def test_relocate_refuses_when_destination_roboco_exists(
+def test_relocate_refuses_when_destination_robofleet_exists(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     old_root = tmp_path / "old-vault"
-    (old_root / "RoboCo").mkdir(parents=True)
-    (old_root / "RoboCo" / "marker.md").write_text("hi", encoding="utf-8")
+    (old_root / "RoboFleet").mkdir(parents=True)
+    (old_root / "RoboFleet" / "marker.md").write_text("hi", encoding="utf-8")
     personal = tmp_path / "personal-vault"
-    (personal / "RoboCo").mkdir(parents=True)
+    (personal / "RoboFleet").mkdir(parents=True)
 
     monkeypatch.setattr(settings, "obsidian_vault_enabled", True)
     monkeypatch.setattr(settings, "vault_path", str(old_root))
     assert main(["relocate", str(personal)]) == 1
 
     # Nothing moved on refusal.
-    assert (old_root / "RoboCo" / "marker.md").exists()
+    assert (old_root / "RoboFleet" / "marker.md").exists()
 
 
 def test_ensure_vault_assets_materializes_templates_idempotently(
@@ -100,8 +100,8 @@ def test_ensure_vault_assets_materializes_templates_idempotently(
 ) -> None:
     ensure_vault_assets(tmp_path)
     plugins = tmp_path / ".obsidian" / "community-plugins.json"
-    dashboard = tmp_path / "RoboCo" / "_meta" / "dashboard.md"
-    kanban = tmp_path / "RoboCo" / "_meta" / "kanban-board.md"
+    dashboard = tmp_path / "RoboFleet" / "_meta" / "dashboard.md"
+    kanban = tmp_path / "RoboFleet" / "_meta" / "kanban-board.md"
     assert plugins.exists()
     assert dashboard.exists()
     assert kanban.exists()
@@ -198,9 +198,9 @@ def test_rebuild_writes_agent_task_journal_and_a2a(
     ):
         assert main(["rebuild"]) == 0
 
-    assert (tmp_path / "RoboCo" / "Agents" / "be-dev-1.md").exists()
-    assert any((tmp_path / "RoboCo" / "Tasks" / "unassigned").glob("*.md"))
-    assert any((tmp_path / "RoboCo" / "Journals" / "be-dev-1").glob("*.md"))
-    assert any((tmp_path / "RoboCo" / "A2A").glob("*.md"))
+    assert (tmp_path / "RoboFleet" / "Agents" / "be-dev-1.md").exists()
+    assert any((tmp_path / "RoboFleet" / "Tasks" / "unassigned").glob("*.md"))
+    assert any((tmp_path / "RoboFleet" / "Journals" / "be-dev-1").glob("*.md"))
+    assert any((tmp_path / "RoboFleet" / "A2A").glob("*.md"))
     # asset bootstrap ran too
     assert (tmp_path / ".obsidian" / "community-plugins.json").exists()

@@ -3,14 +3,14 @@ import type { NextRequest } from "next/server";
 
 // Server-side only (no NEXT_PUBLIC_ prefix — never reaches the browser
 // bundle). Runs inside the panel container and reaches the orchestrator over
-// the docker-internal network (roboco_default), not through nginx — a request
+// the docker-internal network (robofleet_default), not through nginx — a request
 // back out through the panel's own public origin would be a container calling
 // itself over the internet. Defaults to the compose service name.
 const INTERNAL_API_URL =
-  process.env.INTERNAL_API_URL || "http://roboco-orchestrator:8000/api";
+  process.env.INTERNAL_API_URL || "http://robofleet-orchestrator:8000/api";
 
-// Must match roboco.api.auth.backend.SESSION_COOKIE_NAME.
-const SESSION_COOKIE_NAME = "roboco_session";
+// Must match robofleet.api.auth.backend.SESSION_COOKIE_NAME.
+const SESSION_COOKIE_NAME = "robofleet_session";
 
 // The probe must never block navigation: a slow/unreachable backend fails
 // open to "cloud auth off" (the safe default — off is what every deploy

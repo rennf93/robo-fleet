@@ -61,10 +61,13 @@ def test_total_tokens_tolerates_bad_lines(tmp_path: Path) -> None:
 
 def test_find_updates_path_encodes_cwd(tmp_path: Path) -> None:
     home = tmp_path / ".grok"
-    cwd = "/data/workspaces/roboco/backend/be-dev-1"
+    cwd = "/data/workspaces/robo-fleet/backend/be-dev-1"
     sid = "019edd59-bc7b-7920"
     target = (
-        home / "sessions" / "%2Fdata%2Fworkspaces%2Froboco%2Fbackend%2Fbe-dev-1" / sid
+        home
+        / "sessions"
+        / "%2Fdata%2Fworkspaces%2Frobo-fleet%2Fbackend%2Fbe-dev-1"
+        / sid
     )
     _write_updates(target / "updates.jsonl", [10])
     found = gu.find_updates_path(home, cwd, sid)

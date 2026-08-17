@@ -94,7 +94,7 @@ export const useUIStore = create<UIState>()(
       setProjectsView: (view) => set({ projectsView: view }),
     }),
     {
-      name: "roboco-ui-storage",
+      name: "robofleet-ui-storage",
       partialize: (state) => ({
         sidebarCollapsed: state.sidebarCollapsed,
         theme: state.theme,

@@ -45,14 +45,14 @@ const FLAG_DESCRIPTIONS: Record<string, string> = {
     "Run the read-only safety reviewer on internal branch PRs.",
   research_enabled: "Let the Board and PMs run web research.",
   strategy_engine_enabled: "Generate and maintain company strategy artifacts.",
-  self_heal_enabled: "Watch RoboCo's own CI and notify you when it regresses.",
+  self_heal_enabled: "Watch RoboFleet's own CI and notify you when it regresses.",
   self_heal_originate_enabled:
     "Also open a PENDING fix task for a detected regression (needs Self-healing on; the task waits for your approval).",
   provisioning_enabled: "Auto-provision projects from approved pitches.",
   toolchain_match_enabled:
-    "Provision each agent workspace with the target project's Python (not RoboCo's) and block delivery gates when its test suite can't be executed.",
+    "Provision each agent workspace with the target project's Python (not RoboFleet's) and block delivery gates when its test suite can't be executed.",
   conventions_enabled:
-    "Enforce a per-project architectural standard (.roboco/conventions.yml): inject the map, attach baseline constraints, and block i_am_done / pr_pass on misplaced definitions or lint suppressions.",
+    "Enforce a per-project architectural standard (.robofleet/conventions.yml): inject the map, attach baseline constraints, and block i_am_done / pr_pass on misplaced definitions or lint suppressions.",
   possibilities_matrix_enabled:
     "When a task's work is already done (commits + open PR + all acceptance criteria addressed + no open findings), submit it for QA in one i_am_done call instead of 3-6 turns — skips the retroactive plan, journal tracing, and local quality (CI-green proxy) gates. Off by default: the standard path is unchanged until you arm this.",
   task_budgets_enabled:
@@ -70,13 +70,13 @@ const FLAG_DESCRIPTIONS: Record<string, string> = {
   env_sync_enabled:
     "Cascade each project's declared environment ladder prod→dev via GitHub's merges API so dev never falls behind prod; a conflicted rung opens a sync PR for you to merge (per-project opt-in; never pushes prod).",
   docs_sync_enabled:
-    "When a release publishes and the public docs site (roboco-website) has drifted from what shipped, open ONE docs-update task that rides the normal delivery flow (+ PR-review gate) — release-triggered, not polling; never auto-merges. Needs the docs-site repo registered as a project with a git token.",
+    "When a release publishes and the public docs site (robo-fleet-website) has drifted from what shipped, open ONE docs-update task that rides the normal delivery flow (+ PR-review gate) — release-triggered, not polling; never auto-merges. Needs the docs-site repo registered as a project with a git token.",
   release_manager_enabled:
     "Run the deterministic release-readiness sweep and propose a release for you to approve or reject — it never publishes without your approval, and the executor is fail-closed on a red gate.",
   org_memory_enabled:
     "Close the learn→reuse loop: distill a lesson at task completion, index journal reflections, and auto-inject similar past lessons + approved playbooks into an agent's briefing on claim.",
   sandbox_db_enabled:
-    "Provision a throwaway Postgres/Redis sibling container per agent spawn (per-project opt-in) instead of injecting RoboCo's own production DB credentials into the agent's gate.",
+    "Provision a throwaway Postgres/Redis sibling container per agent spawn (per-project opt-in) instead of injecting RoboFleet's own production DB credentials into the agent's gate.",
   routing_strict:
     "Fail-closed model routing: refuse to silently downgrade an agent to the legacy Anthropic path when its configured provider is disabled (raise instead). Off => graceful degradation with a warning.",
   x_engine_enabled:
@@ -84,7 +84,7 @@ const FLAG_DESCRIPTIONS: Record<string, string> = {
   x_replies_enabled:
     "Also poll X mentions and draft replies (still held for your approval — nothing auto-replies). Off by default: reading mentions needs a paid X API tier, so leave this off if you only want release posts.",
   x_feature_spotlight_enabled:
-    "Periodically spawn the Head of Marketing to investigate RoboCo's shipped features and draft a spotlight post for an under-publicized capability — held in the same X post queue below for your approval. Needs x_engine_enabled and X credentials.",
+    "Periodically spawn the Head of Marketing to investigate RoboFleet's shipped features and draft a spotlight post for an under-publicized capability — held in the same X post queue below for your approval. Needs x_engine_enabled and X credentials.",
   roadmap_engine_enabled:
     "Weekly: the Product Owner explores the company's projects and proposes a themed cycle of 3-7 roadmap items — you approve or reject each one individually; approved items land in the backlog and nothing auto-starts.",
   fable_mode_enabled:
@@ -96,13 +96,13 @@ const FLAG_DESCRIPTIONS: Record<string, string> = {
   video_on_spotlight:
     "Also open a video-authoring task when you approve a feature-spotlight draft that requests one. Off by default even with video_engine_enabled on.",
   obsidian_vault_enabled:
-    "Project tasks, journals, and A2A digests into a human-readable, wikilinked Obsidian vault on disk (RoboCo/Tasks, Journals, A2A, Agents) — a rebuildable, DB-derived projection, never the system of record. Needs ROBOFLEET_VAULT_PATH set.",
+    "Project tasks, journals, and A2A digests into a human-readable, wikilinked Obsidian vault on disk (RoboFleet/Tasks, Journals, A2A, Agents) — a rebuildable, DB-derived projection, never the system of record. Needs ROBOFLEET_VAULT_PATH set.",
   vault_intake_enabled:
-    "Watch the vault's inbox folder for #roboco-tagged notes and turn them into board-review drafts — the same Product-Owner-reviewed path a chat-confirmed task takes, never straight into delivery. Needs the Obsidian vault projection on.",
+    "Watch the vault's inbox folder for #robo-fleet-tagged notes and turn them into board-review drafts — the same Product-Owner-reviewed path a chat-confirmed task takes, never straight into delivery. Needs the Obsidian vault projection on.",
   vault_report_enabled:
     "Materialize a weekly org-report note (velocity, cycle time, rework, cost) in the vault's Reports/ folder and notify you — deterministic numbers, no LLM. Needs the Obsidian vault projection on.",
   vault_kb_enabled:
-    "Index your own vault notes (default RoboCo/Notes/) into the knowledge base so the fleet can retrieve what you write — every note is screened for injection attempts before it's indexed. Needs the Obsidian vault projection on.",
+    "Index your own vault notes (default RoboFleet/Notes/) into the knowledge base so the fleet can retrieve what you write — every note is screened for injection attempts before it's indexed. Needs the Obsidian vault projection on.",
   telegram_enabled:
     "Best-effort Telegram DMs to you alongside in-app notifications when a task is escalated for your approval or completes. Server-side fan-out — never blocks the in-app notification. Stays inert until you set bot-token + chat-id credentials in the Telegram card below.",
   telegram_inbound_enabled:
@@ -119,7 +119,7 @@ const FLAG_TOOLTIPS: Record<string, string> = {
   research_enabled: "Lets Board and PM agents research the web for planning.",
   strategy_engine_enabled: "Runs the background company strategy engine.",
   self_heal_enabled:
-    "Watches RoboCo's own CI and flags regressions; never auto-fixes.",
+    "Watches RoboFleet's own CI and flags regressions; never auto-fixes.",
   self_heal_originate_enabled:
     "On a CI regression, opens a fix task held for CEO approval.",
   provisioning_enabled: "Auto-provisions infra for approved Board pitches.",
@@ -166,7 +166,7 @@ const FLAG_TOOLTIPS: Record<string, string> = {
   obsidian_vault_enabled:
     "Projects tasks/journals/A2A into a human-readable Obsidian vault.",
   vault_intake_enabled:
-    "Turns #roboco-tagged vault notes into board-review drafts.",
+    "Turns #robo-fleet-tagged vault notes into board-review drafts.",
   vault_report_enabled:
     "Writes a weekly org metrics report note into the vault.",
   vault_kb_enabled:

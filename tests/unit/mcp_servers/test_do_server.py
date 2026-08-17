@@ -1,4 +1,4 @@
-"""Tests for roboco-do MCP server."""
+"""Tests for robofleet-do MCP server."""
 
 from __future__ import annotations
 

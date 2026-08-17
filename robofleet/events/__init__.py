@@ -1,5 +1,5 @@
 """
-Event System for RoboCo
+Event System for RoboFleet
 
 Handles workflow triggers and event-driven communication between components.
 

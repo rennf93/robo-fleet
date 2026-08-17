@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 # Must match panel/src/middleware.ts's SESSION_COOKIE_NAME and
 # panel/src/app/(auth)/login/page.tsx's cookie check — cross-language, so
 # kept in sync by convention rather than a shared constant.
-SESSION_COOKIE_NAME = "roboco_session"
+SESSION_COOKIE_NAME = "robofleet_session"
 
 cookie_transport = CookieTransport(
     cookie_name=SESSION_COOKIE_NAME,

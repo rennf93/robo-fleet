@@ -77,7 +77,7 @@ logger = logging.getLogger(__name__)
 # Defaults under the system temp dir (not a hardcoded /tmp literal).
 USAGE_OUT_PATH = Path(
     os.environ.get("ROBOFLEET_GEMINI_USAGE_FILE")
-    or Path(tempfile.gettempdir()) / "roboco-gemini-usage.json"
+    or Path(tempfile.gettempdir()) / "robofleet-gemini-usage.json"
 )
 
 _DEFAULT_MODEL = "gemini-2.5-pro"
@@ -230,7 +230,7 @@ def is_quota_error(run_log: Path) -> bool:
 
 
 def classify_exit_code(cli_exit_code: int, run_log: Path) -> int:
-    """Remap the CLI's raw exit code into RoboCo's provider-park vocabulary.
+    """Remap the CLI's raw exit code into RoboFleet's provider-park vocabulary.
 
     41 (auth) is the CLI's own dedicated exit code, passed through unchanged —
     ``robofleet.runtime.orchestrator._is_gemini_auth_exit`` checks it directly. A

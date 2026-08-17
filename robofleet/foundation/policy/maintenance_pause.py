@@ -7,7 +7,7 @@ scopes cover the CEO's stated complaint: the normal dev/delivery dispatch
 tick, the Board Program registry (roadmap/pest-control/coroner/etc.), and
 the originating engines (CI-watch, dep-update, docs-sync, release manager,
 env-sync, X, video, self-heal). A new loop opts in by checking
-``roboco.services.maintenance_pause.is_paused`` next to its own existing
+``robofleet.services.maintenance_pause.is_paused`` next to its own existing
 ``settings.xxx_enabled`` gate, with no central registry to edit. Foundation
 purity: stdlib only, no IO.
 """
@@ -117,7 +117,7 @@ def payload_from_state(state: PauseState) -> dict[str, Any]:
 def validate_pause_payload(payload: dict[str, Any]) -> None:
     """Raise ``ValueError`` on a structurally invalid pause payload.
 
-    The shape ``roboco.services.settings``'s writable-setting validator
+    The shape ``robofleet.services.settings``'s writable-setting validator
     enforces before a write ever lands -- the ONE funnel every write to
     ``maintenance_pause.*`` goes through, including the pre-existing generic
     ``PUT /api/settings/{key}`` route, not just ``MaintenancePauseService.

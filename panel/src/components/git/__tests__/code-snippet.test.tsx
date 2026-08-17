@@ -35,7 +35,7 @@ describe("CodeSnippet", () => {
     mockReturn({
       data: {
         branch: "feature/backend/abc",
-        path: "roboco/services/task.py",
+        path: "robofleet/services/task.py",
         content: "import os\n\ndef x():\n    pass",
         start_line: 40,
         total_lines: 200,
@@ -43,7 +43,7 @@ describe("CodeSnippet", () => {
       },
     });
     const { container } = render(
-      <CodeSnippet branch="feature/backend/abc" file="roboco/services/task.py" activeLine={42} />,
+      <CodeSnippet branch="feature/backend/abc" file="robofleet/services/task.py" activeLine={42} />,
     );
     // Line numbers start at 40 for the 4 content lines.
     expect(screen.getByText("40")).toBeInTheDocument();

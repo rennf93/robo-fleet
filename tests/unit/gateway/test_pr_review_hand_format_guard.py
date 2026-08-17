@@ -2,7 +2,7 @@
 
 The tool's contract (flow_server.post_pr_review docstring) is explicit: ``body``
 is a one-paragraph summary; when ``findings`` are given the GitHub comment is
-GENERATED in the RoboCo format (summary + findings table + verdict) — "do not
+GENERATED in the RoboFleet format (summary + findings table + verdict) — "do not
 hand-format it in body". Nothing enforced that, so a reviewer could pass
 ``findings=[]`` and dump a self-formatted ``## Summary`` / ``## Issues`` /
 ``## Verdict`` markdown blob into ``body`` — which the system posts verbatim

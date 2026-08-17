@@ -126,7 +126,7 @@ async def test_preset_branch_no_project_skips_verify() -> None:
 async def test_named_branch_missing_true_only_when_confirmed_absent() -> None:
     svc = _service()
     task = MagicMock(id=uuid4(), project_id=uuid4(), branch_name="feature/main_pm/x--y")
-    project = MagicMock(slug="roboco-api")
+    project = MagicMock(slug="robofleet-api")
     proj_svc = MagicMock()
     proj_svc.get = AsyncMock(return_value=project)
     git_svc = MagicMock()
@@ -184,7 +184,9 @@ async def test_branch_exists_on_remote_present() -> None:
         ),
     )
     assert (
-        await g.branch_exists_on_remote("roboco-api", "feature/main_pm/x--y", uuid4())
+        await g.branch_exists_on_remote(
+            "robofleet-api", "feature/main_pm/x--y", uuid4()
+        )
         is True
     )
 
@@ -197,7 +199,9 @@ async def test_branch_exists_on_remote_absent() -> None:
     object.__setattr__(g, "_token_for_project", AsyncMock(return_value="tok"))
     object.__setattr__(g, "_run_git", AsyncMock(return_value=_run_git_result("")))
     assert (
-        await g.branch_exists_on_remote("roboco-api", "feature/main_pm/x--y", uuid4())
+        await g.branch_exists_on_remote(
+            "robofleet-api", "feature/main_pm/x--y", uuid4()
+        )
         is False
     )
 
@@ -210,7 +214,9 @@ async def test_branch_exists_on_remote_probe_error_fails_soft() -> None:
     )
     object.__setattr__(g, "_token_for_project", AsyncMock(return_value="tok"))
     assert (
-        await g.branch_exists_on_remote("roboco-api", "feature/main_pm/x--y", uuid4())
+        await g.branch_exists_on_remote(
+            "robofleet-api", "feature/main_pm/x--y", uuid4()
+        )
         is None
     )
 

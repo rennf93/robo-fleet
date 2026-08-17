@@ -78,7 +78,7 @@ class A2AService:
 
     Provides methods for:
     - Building Agent Cards for discovery
-    - Converting between RoboCo tasks and A2A tasks
+    - Converting between RoboFleet tasks and A2A tasks
     - Processing A2A messages
     """
 
@@ -107,22 +107,22 @@ class A2AService:
     @staticmethod
     def build_system_agent_card() -> AgentCard:
         """
-        Build the system-level Agent Card for RoboCo.
+        Build the system-level Agent Card for RoboFleet.
 
-        This card represents the entire RoboCo system and is served
+        This card represents the entire RoboFleet system and is served
         at /.well-known/agent.json
         """
         return AgentCard(
-            id="roboco-system",
-            name="RoboCo System",
+            id="robofleet-system",
+            name="RoboFleet System",
             description=(
-                "RoboCo is an AI Agentic Company - a virtual organization of "
+                "RoboFleet is an AI Agentic Company - a virtual organization of "
                 "AI agents designed to operate as a complete software "
                 "development workforce."
             ),
             provider=AgentProvider(
-                organization="RoboCo",
-                url="https://github.com/roboco",
+                organization="RoboFleet",
+                url="https://github.com/robofleet",
             ),
             protocol_version="1.0",
             service_endpoint=f"{A2AService.get_service_endpoint()}/api/a2a",
@@ -154,7 +154,7 @@ class A2AService:
                     tags=["qa", "review", "testing"],
                 ),
             ],
-            documentation_url="https://github.com/roboco/docs",
+            documentation_url="https://github.com/robofleet/docs",
             security_schemes={
                 "bearerAuth": SecurityScheme(type="http", scheme="bearer"),
             },
@@ -255,10 +255,10 @@ class A2AService:
         return AgentCard(
             id=agent_id,
             name=agent.name,
-            description=f"{agent.name} - {agent.role} agent in RoboCo",
+            description=f"{agent.name} - {agent.role} agent in RoboFleet",
             provider=AgentProvider(
-                organization="RoboCo",
-                url="https://github.com/roboco",
+                organization="RoboFleet",
+                url="https://github.com/robofleet",
             ),
             protocol_version="1.0",
             service_endpoint=f"{self.get_service_endpoint()}/api/a2a",
@@ -284,10 +284,10 @@ class A2AService:
 
     def task_to_a2a(self, task: TaskTable) -> A2ATask:
         """
-        Convert a RoboCo TaskTable to A2A Task.
+        Convert a RoboFleet TaskTable to A2A Task.
 
         This is the canonical conversion that maintains semantic
-        mapping between RoboCo's internal task model and A2A.
+        mapping between RoboFleet's internal task model and A2A.
         """
         task_id = str(task.id)
 
@@ -319,7 +319,7 @@ class A2AService:
 
         # Build metadata
         metadata: dict[str, str | int] = {
-            "roboco_status": status_value,
+            "robofleet_status": status_value,
             "priority": task.priority,
             "team": str(task.team),
         }

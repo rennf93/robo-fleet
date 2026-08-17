@@ -12,15 +12,15 @@ set -euo pipefail
 
 # Render ~/.codex/config.toml (the MCP gateway) + the execpolicy deny rules +
 # the combined system+task prompt + the per-role sandbox flag. Run from /app so
-# `python -m` resolves the INSTALLED roboco package: dev/doc/qa agents run at
-# their workspace-clone cwd, whose own roboco/ dir would shadow it on the
+# `python -m` resolves the INSTALLED robo-fleet package: dev/doc/qa agents run at
+# their workspace-clone cwd, whose own robofleet/ dir would shadow it on the
 # sys.path front (the same ModuleNotFound lesson the grok entrypoint documents).
 ( cd /app && python -m robofleet.llm.providers.codex_cli_config )
 
-CODEX_ARGS_FILE="${ROBOFLEET_CODEX_ARGS_FILE:-/tmp/roboco-codex-args}"
+CODEX_ARGS_FILE="${ROBOFLEET_CODEX_ARGS_FILE:-/tmp/robofleet-codex-args}"
 mapfile -t CODEX_ARGS < "$CODEX_ARGS_FILE"
 
-CODEX_PROMPT_FILE="${ROBOFLEET_CODEX_PROMPT_FILE:-/tmp/roboco-codex-prompt.txt}"
+CODEX_PROMPT_FILE="${ROBOFLEET_CODEX_PROMPT_FILE:-/tmp/robofleet-codex-prompt.txt}"
 
 # Prompt-injection guard (parity with the Claude/grok path): the task prompt is
 # DATA, not instructions — refuse a poisoned one before the model ever sees the

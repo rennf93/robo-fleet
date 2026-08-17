@@ -2,7 +2,7 @@
 
 Mirrors test_pest_control_loop.py's arm -> originate -> dedup -> approve
 shape (org-scoped like Periscope: no per-project opt-in is needed to RUN,
-but the exploration task's project_id still resolves against the RoboCo
+but the exploration task's project_id still resolves against the RoboFleet
 project) AND test_periscope_loop.py's do_server wiring-regression check +
 real-route propose call. The genuinely new piece: a rebalance item targets a
 LIVE task, and approving it EXECUTES the action (reprioritize or cancel)
@@ -30,7 +30,7 @@ def _seed_system_and_po(stack: E2EStack) -> tuple[str, Any]:
     """Seed ``system`` + ``product-owner`` at their FIXED foundation UUIDs,
     plus a project those two own — mirrors test_periscope_loop.py's
     ``_seed_system_and_hom``: the exploration task's ``project_id`` resolves
-    against this project (the RoboCo-project FK anchor every org-scoped
+    against this project (the RoboFleet-project FK anchor every org-scoped
     program's task still needs). Returns (project slug, project id).
     """
     from robofleet.db.tables import AgentTable, ProjectTable
@@ -69,9 +69,9 @@ def _seed_system_and_po(stack: E2EStack) -> tuple[str, Any]:
         session.add(
             ProjectTable(
                 id=project_id,
-                name="RoboCo",
+                name="RoboFleet",
                 slug=slug,
-                git_url="https://example.com/roboco.git",
+                git_url="https://example.com/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,
@@ -118,7 +118,7 @@ def _seed_target_task(
 def _arm(stack: E2EStack, project_slug: str) -> None:
     """Arm via the settings-store key — the ONLY arming path (no legacy env
     flag exists for scales) — and point ``self_heal_project_slug`` at the
-    seeded project (the RoboCo-project resolution roadmap/periscope share)."""
+    seeded project (the RoboFleet-project resolution roadmap/periscope share)."""
     from robofleet.config import settings as cfg
     from robofleet.db.tables import SystemSettingTable
 

@@ -1,6 +1,6 @@
 """Provider-agnostic git-forge contracts.
 
-Pure module: no ``httpx``, no ``settings``, no ``roboco.services`` imports —
+Pure module: no ``httpx``, no ``settings``, no ``robofleet.services`` imports —
 just the shapes a caller needs to talk to *some* forge (GitHub today; GitLab /
 Gitea in later phases) without knowing which one. A future ``GitLabProvider``
 is implemented by reading this file alone: every method below is the full

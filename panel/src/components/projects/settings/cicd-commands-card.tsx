@@ -80,7 +80,7 @@ export function CicdCommandsCard({ project }: { project: Project }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-2">
-          <HelpTip label="Reference only — not yet wired into any automated gate or CI run by RoboCo itself.">
+          <HelpTip label="Reference only — not yet wired into any automated gate or CI run by RoboFleet itself.">
             <Label htmlFor="test_command">Test Command</Label>
           </HelpTip>
           <Input

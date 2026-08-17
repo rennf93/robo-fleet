@@ -36,7 +36,7 @@ def test_prepare_metadata_marks_approved_with_routing_fields() -> None:
 
 
 def test_build_source_uri_with_id() -> None:
-    assert _plugin().build_source_uri(doc_id="pb-1") == "roboco://playbooks/pb-1"
+    assert _plugin().build_source_uri(doc_id="pb-1") == "robofleet://playbooks/pb-1"
 
 
 def test_build_source_uri_none_when_missing() -> None:
@@ -57,4 +57,4 @@ def test_delete_playbook_removes_its_chunks_by_source() -> None:
 
     asyncio.run(plugin.delete_playbook("pb-42"))
 
-    store.delete_by_source.assert_awaited_once_with("roboco://playbooks/pb-42")
+    store.delete_by_source.assert_awaited_once_with("robofleet://playbooks/pb-42")

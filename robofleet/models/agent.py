@@ -72,7 +72,7 @@ class AgentMetrics(RobocoBase):
 
 class Agent(TimestampMixin):
     """
-    An AI agent in the RoboCo organization.
+    An AI agent in the RoboFleet organization.
 
     Each agent has a defined role, team affiliation, and operates
     within the organizational hierarchy.

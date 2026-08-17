@@ -1,7 +1,7 @@
 """Forge (git host) provider detection + registration-time validation.
 
 Phase 0 of the forge-providers spec (``docs/internal/specs/2026-07-18-forge-
-providers-spec.md``): RoboCo's PR/CI/review surface is GitHub-only today
+providers-spec.md``): RoboFleet's PR/CI/review surface is GitHub-only today
 (``GitService`` is inline ``httpx`` hardcoded to ``github.com``). Pointing a
 project at a GitLab/Gitea ``git_url`` used to fail silently, several steps deep,
 at first PR — this module turns that into a loud, registration-time rejection
@@ -93,7 +93,7 @@ def validate_project_forge(git_url: str | None, git_provider: str | None) -> str
     if detect_provider(git_url) in ("github", "gitlab"):
         return None
     return (
-        "RoboCo supports GitHub- and GitLab-hosted repos by default. For a "
+        "RoboFleet supports GitHub- and GitLab-hosted repos by default. For a "
         'self-hosted forge set git_provider explicitly ("gitea", "gitlab", '
         'or "github" for GitHub Enterprise).'
     )

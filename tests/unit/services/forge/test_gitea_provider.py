@@ -250,7 +250,7 @@ async def test_ensure_label_prefixes_hash_on_color(
 async def test_slash_branch_segments_are_url_encoded(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Every RoboCo branch carries slashes (feature/backend/...) — an
+    """Every RoboFleet branch carries slashes (feature/backend/...) — an
     unencoded segment 404s at Gitea's router (caught by the live suite)."""
     recorder = _Recorder(lambda _r: httpx.Response(200, json={"state": "success"}))
     _patch_client(monkeypatch, recorder)

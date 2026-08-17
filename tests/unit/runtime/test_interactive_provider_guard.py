@@ -106,7 +106,7 @@ class TestIntakeSpawnRefusesDeliveryOnlyProvider:
         orch = _make_minimal_orchestrator()
 
         async def _clone(*_a: Any, **_k: Any) -> tuple[str, list[str]]:
-            return "/data/workspaces/roboco/board/intake-1", ["/cwd"]
+            return "/data/workspaces/robofleet/board/intake-1", ["/cwd"]
 
         async def _route(_aid: str) -> Any:
             return SimpleNamespace(
@@ -137,7 +137,10 @@ class TestIntakeSpawnRefusesDeliveryOnlyProvider:
         registry.open("sess-refuse", INTAKE_AGENT_ID)
 
         await orch._spawn_intake_container_guarded(
-            "sess-refuse", project_slug="roboco", product_id=None, initial_message=None
+            "sess-refuse",
+            project_slug="robo-fleet",
+            product_id=None,
+            initial_message=None,
         )
 
         assert not run_calls  # no container was ever launched

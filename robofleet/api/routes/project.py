@@ -102,7 +102,7 @@ async def get_project(
     """
     Get project by ID or slug.
 
-    Accepts either a UUID string or project slug (e.g., "roboco").
+    Accepts either a UUID string or project slug (e.g., "robo-fleet").
     """
     service = get_project_service(db)
 

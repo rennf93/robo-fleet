@@ -1,7 +1,7 @@
 """Scenario: the War Room (Board Program) loop end to end.
 
 Mirrors test_periscope_loop.py's arm -> originate -> dedup shape (org scope,
-no per-project opt-in to RUN, RoboCo-project FK anchor) AND
+no per-project opt-in to RUN, RoboFleet-project FK anchor) AND
 test_feature_spotlight.py's do_server wiring-regression check + real-route
 propose call. The genuinely new piece War Room adds: EVENT trigger with a
 REAL originator (unlike Coroner's always-None stub — proven here via
@@ -90,9 +90,9 @@ def _seed_system_hom_and_secretary(stack: E2EStack) -> tuple[Any, str]:
         session.add(
             ProjectTable(
                 id=project_id,
-                name="RoboCo",
+                name="RoboFleet",
                 slug=slug,
-                git_url="https://example.com/roboco.git",
+                git_url="https://example.com/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,
@@ -251,7 +251,7 @@ def test_war_room_loop_run_now_then_propose_campaign(e2e_stack: E2EStack) -> Non
     assert row["status"] == "pending"
     assert row["assigned_to"] == _foundation.AGENTS["head-marketing"].uuid
     assert row["confirmed_by_human"] is False
-    assert row["project_id"] is not None  # resolves against the RoboCo project
+    assert row["project_id"] is not None  # resolves against the RoboFleet project
 
     # The dispatcher's own dev-work skip recognizes this exact task shape.
     from robofleet.runtime.orchestrator import _is_non_dev_dispatch_source
@@ -286,7 +286,7 @@ def test_war_room_loop_run_now_then_propose_campaign(e2e_stack: E2EStack) -> Non
 
     posts = [
         {
-            "body": "Something big is coming to RoboCo. Watch this space.",
+            "body": "Something big is coming to RoboFleet. Watch this space.",
             "publish_after": _future(1),
             "stage_label": "teaser",
         },

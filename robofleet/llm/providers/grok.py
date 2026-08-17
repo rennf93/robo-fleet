@@ -1,9 +1,9 @@
 """Grok CLI provider — xAI Grok Build via the official ``grok`` CLI.
 
 xAI ships an official terminal coding agent (the ``grok`` CLI, "Grok Build")
-authenticated by the SuperGrok subscription. RoboCo runs Grok agents on it the
+authenticated by the SuperGrok subscription. RoboFleet runs Grok agents on it the
 same way it runs Claude agents on ``claude``: the orchestrator's shared container
-assembly mounts the RoboCo MCP gateway (``mcp-config.json``), the agent HMAC
+assembly mounts the RoboFleet MCP gateway (``mcp-config.json``), the agent HMAC
 identity, and the git context; this provider adds the subscription auth mount
 (``~/.grok``) and the runtime env the grok-cli entrypoint reads, then launches
 the ``robofleet-agent-grok`` image — whose entrypoint renders ``~/.grok/config.toml``

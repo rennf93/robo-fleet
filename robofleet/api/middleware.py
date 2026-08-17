@@ -165,32 +165,32 @@ def get_status_code(exc: RobocoError) -> int:
     return 400
 
 
-async def roboco_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+async def robofleet_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle RobocoError exceptions."""
-    roboco_exc = cast("RobocoError", exc)
-    status_code = get_status_code(roboco_exc)
+    robofleet_exc = cast("RobocoError", exc)
+    status_code = get_status_code(robofleet_exc)
 
     # Add correlation ID to error details
     correlation_id = getattr(request.state, "correlation_id", None)
     if correlation_id:
-        roboco_exc.details["correlation_id"] = correlation_id
+        robofleet_exc.details["correlation_id"] = correlation_id
 
     logger.warning(
         "Handled exception",
-        error_code=roboco_exc.code,
-        error_message=roboco_exc.message,
+        error_code=robofleet_exc.code,
+        error_message=robofleet_exc.message,
         status_code=status_code,
     )
 
     return JSONResponse(
         status_code=status_code,
-        content=roboco_exc.to_dict(),
+        content=robofleet_exc.to_dict(),
     )
 
 
 # `robofleet.services.base.ServiceError` is a parallel exception hierarchy that
 # does NOT inherit from `RobocoError` (it extends `Exception` directly), so
-# `roboco_exception_handler` never sees it and the requests fall through to
+# `robofleet_exception_handler` never sees it and the requests fall through to
 # `generic_exception_handler` as 500s. Map its subclasses to the same status
 # codes used in the RobocoError handler so route-layer try/except blocks can
 # surface clean 4xx codes whether the service raises from `robofleet.exceptions`
@@ -473,7 +473,7 @@ def setup_middleware(app: FastAPI) -> None:
     # Exception handlers (order: specific to general)
     app.add_exception_handler(RequestValidationError, request_validation_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)
-    app.add_exception_handler(RobocoError, roboco_exception_handler)
+    app.add_exception_handler(RobocoError, robofleet_exception_handler)
     app.add_exception_handler(ServiceError, service_exception_handler)
     app.add_exception_handler(RateLimitError, rate_limit_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)

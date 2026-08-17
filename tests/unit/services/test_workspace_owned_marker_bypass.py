@@ -143,7 +143,7 @@ async def test_fetch_branch_ref_invalidates_marker_before_subprocess(
         "robofleet.services.project.get_project_service",
         return_value=mock_project_service,
     ):
-        await _svc()._fetch_branch_ref(tmp_path, "task-branch", "roboco-api")
+        await _svc()._fetch_branch_ref(tmp_path, "task-branch", "robofleet-api")
 
     assert order == ["invalidate_owned_marker", "subprocess.run"]
 
@@ -165,7 +165,7 @@ async def test_fetch_origin_best_effort_invalidates_marker(
         "robofleet.services.workspace.invalidate_owned_marker", invalidate
     )
 
-    await WorkspaceService._fetch_origin_best_effort(tmp_path, "roboco-api")
+    await WorkspaceService._fetch_origin_best_effort(tmp_path, "robofleet-api")
 
     invalidate.assert_called_once_with(tmp_path)
 
@@ -201,7 +201,7 @@ def test_bypass_path_write_forces_next_ensure_agent_owned_to_walk(
         "robofleet.services.workspace._make_owner_and_group_rw", fake_rw
     )
     _ensure_agent_owned(tmp_path)
-    marker = tmp_path / ".git" / "roboco-owned"
+    marker = tmp_path / ".git" / "robo-fleet-owned"
     assert marker.is_file()
     assert touched_pass_1  # the walk actually ran
 

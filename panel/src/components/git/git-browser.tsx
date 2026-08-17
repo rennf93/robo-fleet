@@ -66,7 +66,7 @@ function GitBrowserContent() {
     return (
       <OfflineState
         title="Cannot Connect to Git Service"
-        description="Start the RoboCo orchestrator to access git operations."
+        description="Start the RoboFleet orchestrator to access git operations."
         onRetry={() => void refresh()}
       />
     );

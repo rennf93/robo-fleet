@@ -182,7 +182,7 @@ if echo "$low" | grep -qE '/proc/(self|[0-9]+|\$\$|\$\{.*\})/(environ|cmdline|cw
 fi
 
 if echo "$low" | grep -qE '(^|[[:space:];&|])(curl|wget|http|https)[[:space:]][^|]*(github\.com|api\.github\.com)'; then
-    echo "Denied: direct GitHub HTTP calls bypass the PAT handler. Use the role-appropriate MCP verb: roboco-do commit (devs/docs), roboco-flow complete (PMs), or roboco-git-readonly status/log/diff/branch_list (any role)." >&2
+    echo "Denied: direct GitHub HTTP calls bypass the PAT handler. Use the role-appropriate MCP verb: robofleet-do commit (devs/docs), robofleet-flow complete (PMs), or robofleet-git-readonly status/log/diff/branch_list (any role)." >&2
     exit 2
 fi
 
@@ -225,7 +225,7 @@ fi
 #     server-side X-Agent-Role check is the second gate.
 if echo "$low" | grep -qE '(^|[[:space:];&|])(curl|wget|http|https|httpie)[[:space:]]' && \
    echo "$low" | grep -qE '((http|https)://)?/?(robofleet-[a-z0-9_-]+|localhost|127\.0\.0\.1|0\.0\.0\.0)[:/]'; then
-    echo "Denied: internal API calls bypass the gateway. Use the MCP verbs (roboco-flow / roboco-do / roboco-git-readonly / roboco-optimal / roboco-docs) — they route through the orchestrator with the right auth and tracing." >&2
+    echo "Denied: internal API calls bypass the gateway. Use the MCP verbs (robofleet-flow / robofleet-do / robofleet-git-readonly / robofleet-optimal / robofleet-docs) — they route through the orchestrator with the right auth and tracing." >&2
     exit 2
 fi
 
@@ -239,7 +239,7 @@ fi
 #              headers={"X-Agent-ID": "<self>", "X-Agent-Role": "developer"})
 #   EOF
 # The binary is python3 (slips the CLI check) and it imports httpx, not
-# robofleet.* (slips the roboco-internals import check). Close it language-agnostically:
+# robofleet.* (slips the robofleet-internals import check). Close it language-agnostically:
 # deny when the command pairs an HTTP-client token with a forbidden
 # internal host. The whole command (heredoc body included) is in $low,
 # consistent with the curl/wget sibling above. Legitimate shell work does
@@ -248,7 +248,7 @@ fi
 # has no internal host so it still passes.
 if echo "$low" | grep -qE '(httpx|requests|urllib|aiohttp|http\.client|httplib|http\.request|net/http|net::http|httparty|faraday|lwp|libwww|httpurlconnection|okhttp|node-fetch|axios|xmlhttprequest|websocket|fetch[[:space:]]*\()' && \
    echo "$low" | grep -qE '((http|https|ws|wss)://)?/?(robofleet-[a-z0-9_-]+|localhost|127\.0\.0\.1|0\.0\.0\.0)[:/]'; then
-    echo "Denied: reaching an internal host via an HTTP client (httpx / requests / urllib / aiohttp / fetch / Net::HTTP / ...) bypasses the gateway, role manifest, tracing and auth — and lets you forge X-Agent-* identity headers. Use your role's MCP verbs (roboco-flow / roboco-do / roboco-git-readonly / roboco-optimal / roboco-docs); they are the only sanctioned path to the orchestrator." >&2
+    echo "Denied: reaching an internal host via an HTTP client (httpx / requests / urllib / aiohttp / fetch / Net::HTTP / ...) bypasses the gateway, role manifest, tracing and auth — and lets you forge X-Agent-* identity headers. Use your role's MCP verbs (robofleet-flow / robofleet-do / robofleet-git-readonly / robofleet-optimal / robofleet-docs); they are the only sanctioned path to the orchestrator." >&2
     exit 2
 fi
 
@@ -312,7 +312,7 @@ fi
 # substring match on a robofleet import is sufficient and robust to quoting.
 if echo "$low" | grep -qE '(python3?|uv[[:space:]]+run|poetry[[:space:]]+run|pipenv[[:space:]]+run|pdm[[:space:]]+run|hatch[[:space:]]+run)' && \
    echo "$low" | grep -qE '(import[[:space:]]+robofleet|from[[:space:]]+robofleet|-m[[:space:]]+robofleet|robofleet\.(mcp|services|runtime|foundation|api|enforcement)\b)'; then
-    echo "Denied: importing or running robofleet.* internals from the shell bypasses the MCP role manifest, tracing, and auth. Use your role's MCP verbs (roboco-flow / roboco-do / roboco-git-readonly / roboco-optimal / roboco-docs) — they are the only sanctioned path to the orchestrator." >&2
+    echo "Denied: importing or running robofleet.* internals from the shell bypasses the MCP role manifest, tracing, and auth. Use your role's MCP verbs (robofleet-flow / robofleet-do / robofleet-git-readonly / robofleet-optimal / robofleet-docs) — they are the only sanctioned path to the orchestrator." >&2
     exit 2
 fi
 
@@ -353,7 +353,7 @@ fi
 # --- package-environment mutations targeting /app (ALL providers) -------------
 # /app holds the orchestrator code and the MCP-gateway venv (/app/.venv). An
 # agent that `uv sync` / `pip install`s into /app rebuilds that venv and breaks
-# its OWN gateway tools (every roboco-flow / -do / -git verb) — stranding the
+# its OWN gateway tools (every robofleet-flow / -do / -git verb) — stranding the
 # agent and getting its task reaped. Agents manage dependencies in their
 # workspace clone under /data/workspaces, never in /app. Two-step: a
 # package-mutation verb AND a target that resolves to /app's environment

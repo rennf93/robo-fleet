@@ -1,4 +1,4 @@
-"""roboco-optimal/docs/search receive the agent's CLI arg as sys.argv[1] and
+"""robofleet-optimal/docs/search receive the agent's CLI arg as sys.argv[1] and
 forward it verbatim as X-Agent-ID via ApiClient/_get_agent_headers. The spawn
 token (_append_agent_auth_env) is signed over the agent's UUID, so that CLI
 arg must be the UUID too, or verify_agent_token 401s with a signature
@@ -21,10 +21,10 @@ from robofleet.runtime.orchestrator import AgentOrchestrator
 if TYPE_CHECKING:
     import pytest
 
-# main-pm carries roboco-optimal (always), roboco-docs (docs_roles) and
-# roboco-search (research_roles, research_enabled defaults True) all at once.
+# main-pm carries robofleet-optimal (always), robofleet-docs (docs_roles) and
+# robofleet-search (research_roles, research_enabled defaults True) all at once.
 _AGENT_SLUG = "main-pm"
-_CLI_ARG_SERVERS = ("roboco-optimal", "roboco-docs", "roboco-search")
+_CLI_ARG_SERVERS = ("robofleet-optimal", "robofleet-docs", "robofleet-search")
 
 
 def _spawn_token(monkeypatch: pytest.MonkeyPatch) -> str:

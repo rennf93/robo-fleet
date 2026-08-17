@@ -74,7 +74,7 @@ async def test_mismatched_pr_number_rejected_before_merge(
     svc.session = session
 
     data = GitMergePRRequest(
-        project_slug="roboco",
+        project_slug="robo-fleet",
         pr_number=_CALLER_PR,
         task_id=uuid4(),
         merge_method="squash",
@@ -100,7 +100,7 @@ async def test_matching_pr_number_proceeds_to_merge(
     merge, _ws = _wire(monkeypatch, svc, task)
 
     data = GitMergePRRequest(
-        project_slug="roboco",
+        project_slug="robo-fleet",
         pr_number=_RECORDED_PR,
         task_id=uuid4(),
         merge_method="squash",
@@ -131,7 +131,7 @@ async def test_task_with_no_recorded_pr_rejected(
     merge, _ws = _wire(monkeypatch, svc, task)
 
     data = GitMergePRRequest(
-        project_slug="roboco",
+        project_slug="robo-fleet",
         pr_number=_CALLER_PR,
         task_id=uuid4(),
         merge_method="squash",

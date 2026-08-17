@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 HOM_UUID = _foundation.AGENTS["head-marketing"].uuid
-SLUG = "roboco"
+SLUG = "robo-fleet"
 ONE = 1
 FIVE = 5
 
@@ -109,9 +109,9 @@ async def _seed(session: AsyncSession) -> None:
     if existing.scalar_one_or_none() is None:
         session.add(
             ProjectTable(
-                name="RoboCo",
+                name="RoboFleet",
                 slug=SLUG,
-                git_url="https://github.com/x/roboco.git",
+                git_url="https://github.com/x/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,

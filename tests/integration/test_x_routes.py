@@ -54,9 +54,9 @@ async def _seed_draft(session: AsyncSession) -> TaskTable:
     secretary = await _seed_agent(session, AgentRole.SECRETARY, "secretary")
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo",
-        slug=f"roboco-{uuid4().hex[:6]}",
-        git_url="https://example.com/roboco.git",
+        name="RoboFleet",
+        slug=f"robofleet-{uuid4().hex[:6]}",
+        git_url="https://example.com/robofleet.git",
         assigned_cell=Team.BACKEND,
         created_by=system.id,
     )

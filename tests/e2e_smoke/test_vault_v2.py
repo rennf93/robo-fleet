@@ -164,7 +164,7 @@ async def test_create_seam_materializes_note_flag_on_and_off(
             )
             await session.commit()
 
-            notes = list((vault / "RoboCo" / "Tasks" / _PROJECT_SLUG).glob("*.md"))
+            notes = list((vault / "RoboFleet" / "Tasks" / _PROJECT_SLUG).glob("*.md"))
             assert len(notes) == 1
             text = notes[0].read_text(encoding="utf-8")
             assert str(task.id)[:8] in notes[0].name
@@ -256,20 +256,20 @@ async def test_janitor_cycle_reprojects_archives_and_persists_state(
         # counted by the archival pass (same shared write_task path).
         assert result == {"repaired": 2, "archived": 1, "failed": 0}
 
-        live_notes = list((vault / "RoboCo" / "Tasks" / _PROJECT_SLUG).glob("*.md"))
+        live_notes = list((vault / "RoboFleet" / "Tasks" / _PROJECT_SLUG).glob("*.md"))
         assert len(live_notes) == 1
         assert str(live_id)[:8] in live_notes[0].name
         assert "status: in_progress" in live_notes[0].read_text(encoding="utf-8")
 
         archive_dir = (
-            vault / "RoboCo" / "Archive" / str(old_ts.year) / "Tasks" / _PROJECT_SLUG
+            vault / "RoboFleet" / "Archive" / str(old_ts.year) / "Tasks" / _PROJECT_SLUG
         )
         archived_notes = list(archive_dir.glob("*.md"))
         assert len(archived_notes) == 1
         assert str(old_id)[:8] in archived_notes[0].name
         assert "status: completed" in archived_notes[0].read_text(encoding="utf-8")
 
-        state_path = vault / "RoboCo" / "_meta" / ".janitor_state.json"
+        state_path = vault / "RoboFleet" / "_meta" / ".janitor_state.json"
         state = json.loads(state_path.read_text(encoding="utf-8"))
         assert datetime.fromisoformat(state["last_sweep"]).tzinfo is not None
         assert datetime.fromisoformat(state["archive_watermark"]).tzinfo is not None
@@ -331,7 +331,7 @@ async def test_kb_cycle_ingests_clean_quarantines_flagged_dedups_second_run(
     indexed), and a second cycle ingests nothing new (content-hash dedup)."""
     vault = _arm_vault(monkeypatch, tmp_path)
     monkeypatch.setattr(settings, "vault_kb_enabled", True)
-    notes_dir = vault / "RoboCo" / "Notes"
+    notes_dir = vault / "RoboFleet" / "Notes"
     notes_dir.mkdir(parents=True)
     (notes_dir / "clean.md").write_text(_CLEAN_NOTE, encoding="utf-8")
     (notes_dir / "flagged.md").write_text(_FLAGGED_NOTE, encoding="utf-8")
@@ -348,11 +348,11 @@ async def test_kb_cycle_ingests_clean_quarantines_flagged_dedups_second_run(
     assert (first.ingested, first.quarantined, first.deleted) == (1, 1, 0)
     assert len(stub.index_calls) == 1
     call = stub.index_calls[0]
-    assert call["path"] == "RoboCo/Notes/clean.md"
+    assert call["path"] == "RoboFleet/Notes/clean.md"
     assert call["content"] == _CLEAN_BODY  # raw body: no frontmatter, no envelope
 
     flagged_text = (notes_dir / "flagged.md").read_text(encoding="utf-8")
-    assert flagged_text.count("> [!warning] RoboCo: quarantined") == 1
+    assert flagged_text.count("> [!warning] RoboFleet: quarantined") == 1
     assert stub.unindex_calls == []  # never indexed, so nothing to unindex
 
     # Second run: clean note hash-deduped, flagged note stays quarantined
@@ -361,4 +361,4 @@ async def test_kb_cycle_ingests_clean_quarantines_flagged_dedups_second_run(
     assert second.quarantined == 1
     assert len(stub.index_calls) == 1
     flagged_text = (notes_dir / "flagged.md").read_text(encoding="utf-8")
-    assert flagged_text.count("> [!warning] RoboCo: quarantined") == 1
+    assert flagged_text.count("> [!warning] RoboFleet: quarantined") == 1

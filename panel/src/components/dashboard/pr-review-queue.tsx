@@ -282,7 +282,7 @@ export function PrReviewQueue({ className }: PrReviewQueueProps) {
             </DialogTitle>
             <DialogDescription>
               {action === "supersede"
-                ? "The org takes the contribution over: a roboco-owned branch is cut from the contributor's commits, a cell finishes and hardens it, then opens our own PR. This authorizes fetching and running the contributor's code."
+                ? "The org takes the contribution over: a robo-fleet-owned branch is cut from the contributor's commits, a cell finishes and hardens it, then opens our own PR. This authorizes fetching and running the contributor's code."
                 : "Removes this PR from your review queue. The review stays on the GitHub PR; the org takes no further action."}
             </DialogDescription>
           </DialogHeader>

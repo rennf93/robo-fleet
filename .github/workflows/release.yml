@@ -7,7 +7,7 @@ on:
 
 jobs:
   publish-images:
-    name: Build & push all RoboCo images to GHCR + Docker Hub
+    name: Build & push all RoboFleet images to GHCR + Docker Hub
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,7 +58,7 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Release version: $VERSION"
 
-      - name: Build & push every RoboCo image
+      - name: Build & push every RoboFleet image
         env:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
@@ -183,7 +183,7 @@ jobs:
 
       - name: Free up runner disk space
         run: |
-          # Same trick as publish-images: pulling ~20 images (roboco's own
+          # Same trick as publish-images: pulling ~20 images (robo-fleet's own
           # plus postgres/redis/ollama/nginx) on one runner is disk-heavy.
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
           df -h /

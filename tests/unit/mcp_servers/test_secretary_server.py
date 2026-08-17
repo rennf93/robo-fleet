@@ -1,4 +1,4 @@
-"""roboco-secretary MCP server — tools wrap the shared backend helpers as JSON.
+"""robofleet-secretary MCP server — tools wrap the shared backend helpers as JSON.
 
 The backend-calling logic (``secretary_driver._do_*``) is covered by the secretary
 driver tests; here we only assert the MCP wrappers forward the right args and

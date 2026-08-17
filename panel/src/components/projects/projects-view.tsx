@@ -230,7 +230,7 @@ export function ProjectsView() {
       {isOffline ? (
         <OfflineState
           title="Cannot Load Projects"
-          description="Start the RoboCo orchestrator to manage projects. Projects track git repositories for agent work."
+          description="Start the RoboFleet orchestrator to manage projects. Projects track git repositories for agent work."
           onRetry={() => void refresh()}
         />
       ) : view === "cards" ? (

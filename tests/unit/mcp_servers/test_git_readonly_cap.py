@@ -1,4 +1,4 @@
-"""roboco_git_diff caps oversized diff text at the MCP boundary.
+"""robofleet_git_diff caps oversized diff text at the MCP boundary.
 
 The HTTP route stays uncapped (the panel diff viewer reads it whole); the
 truncation happens only on the agent-facing tool result so a huge diff can't

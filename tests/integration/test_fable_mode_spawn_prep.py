@@ -18,8 +18,8 @@ from unittest.mock import patch
 
 from robofleet.runtime.orchestrator import AgentOrchestrator
 
-_WS = "/data/workspaces/roboco-api/backend/be-dev-1"
-_CELL = "/data/workspaces/roboco-api/backend"
+_WS = "/data/workspaces/robofleet-api/backend/be-dev-1"
+_CELL = "/data/workspaces/robofleet-api/backend"
 
 
 def _orch() -> AgentOrchestrator:

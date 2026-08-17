@@ -18,9 +18,9 @@ if [ $? -eq 0 ]; then
 
     if [ "$total" -gt 0 ]; then
         if [ "$urgent" -gt 0 ]; then
-            echo "[A2A] URGENT: You have $urgent urgent message(s). Use roboco_a2a_check() to read them."
+            echo "[A2A] URGENT: You have $urgent urgent message(s). Use robofleet_a2a_check() to read them."
         else
-            echo "[A2A] You have $total pending message(s). Use roboco_a2a_check() to read them."
+            echo "[A2A] You have $total pending message(s). Use robofleet_a2a_check() to read them."
         fi
     fi
 fi

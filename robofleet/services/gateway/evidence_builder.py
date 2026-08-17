@@ -118,7 +118,7 @@ def truncate_diff(diff: str | None, limit: int = EVIDENCE_DIFF_CAP_CHARS) -> str
     return (
         diff[:limit]
         + f"\n… [diff truncated: {omitted} chars omitted — read the full diff on"
-        " the PR, or scope roboco_git_diff to a single file_path]"
+        " the PR, or scope robofleet_git_diff to a single file_path]"
     )
 
 

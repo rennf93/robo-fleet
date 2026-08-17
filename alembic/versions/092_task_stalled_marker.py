@@ -9,7 +9,7 @@ with nothing durable on the task itself. Both nullable/additive: a null
 progress" and is a pure no-op for every existing row and caller.
 
 ``stalled_reason`` is a plain ``String(50)``, not a DB enum — see
-``roboco.models.base.StalledReason`` — so a future reason value (e.g. the
+``robofleet.models.base.StalledReason`` — so a future reason value (e.g. the
 no-task_id notification-cap path) needs no ``ALTER TYPE`` migration. The
 partial index only covers actually-stalled rows (the common case is NULL),
 backing the read endpoint's "current stalled set" query.

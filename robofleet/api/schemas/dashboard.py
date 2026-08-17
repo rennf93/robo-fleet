@@ -116,7 +116,7 @@ class StalledTaskResponse(BaseModel):
     """One task the dispatcher has given up respawning (durable marker set).
 
     Backs `GET /dashboard/stalled-tasks` — see
-    `roboco.services.task.TaskService.list_stalled_tasks`.
+    `robofleet.services.task.TaskService.list_stalled_tasks`.
     """
 
     task_id: UUID

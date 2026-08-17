@@ -2,7 +2,7 @@
 
 Mirrors ``robofleet.services.x_engine.XEngine``'s mentions-poll shape, but
 SEARCHES instead of listening: the Head of Marketing wants X conversations
-where RoboCo is relevant but UNMENTIONED (spec §4 "Barfly") — keyword/topic
+where RoboFleet is relevant but UNMENTIONED (spec §4 "Barfly") — keyword/topic
 search, not the mentions timeline. The X API tier is ops config, not a code
 concern (spec §8): this engine assumes ``search_recent`` is available; if the
 account's tier doesn't have it, the tier gets upgraded, not the code.
@@ -71,7 +71,7 @@ _MIN_CANDIDATE_CHARS = 3
 def _exploration_description(candidate_count: int) -> str:
     return (
         "Review the screened candidate X conversations already gathered for "
-        "you on this task — search results where RoboCo is relevant but "
+        "you on this task — search results where RoboFleet is relevant but "
         "unmentioned. Pick up to "
         f"{candidate_count} worth engaging and draft commentary via "
         "propose_conversation_replies(). Only target a REAL candidate "
@@ -93,7 +93,7 @@ class BarflyEngine(BaseService):
         """Originate one held exploration task, or None (no-op).
 
         No-ops when the program isn't armed, no X credentials are configured,
-        a cycle is already open, the RoboCo project isn't resolvable, or the
+        a cycle is already open, the RoboFleet project isn't resolvable, or the
         search turned up nothing worth carrying (no candidates survive
         dedup/screening). Never authors replies itself — the Head of
         Marketing does, via ``propose_conversation_replies`` once spawned by
@@ -107,9 +107,11 @@ class BarflyEngine(BaseService):
         task_svc = get_task_service(self.session)
         if await task_svc.list_open_barfly_cycles():
             return None  # one open cycle at a time
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         if project is None or project.id is None:
-            self.log.warning("barfly-engine: RoboCo project not resolvable; skipping")
+            self.log.warning(
+                "barfly-engine: RoboFleet project not resolvable; skipping"
+            )
             return None
         candidates = await self._gather_candidates(client)
         if not candidates:
@@ -124,8 +126,8 @@ class BarflyEngine(BaseService):
             timeout=settings.x_request_timeout_seconds,
         )
 
-    async def _roboco_project(self) -> ProjectTable | None:
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+    async def _robofleet_project(self) -> ProjectTable | None:
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _gather_candidates(self, client: XClient) -> list[dict[str, Any]]:

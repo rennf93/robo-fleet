@@ -84,7 +84,7 @@ TYPE_SUBFOLDERS: dict[str, str] = {
 def _refused_doc_types() -> dict[str, str]:
     """Rebuilt per call from the live ``docs_site_project_slug`` /
     ``docs_site_public_url`` settings, so a deployer's own docs-site repo/URL
-    reaches the refusal message instead of RoboCo's own docs site — with a
+    reaches the refusal message instead of RoboFleet's own docs site — with a
     generic fallback when either is left unset (never a bare empty string)."""
     slug = settings.docs_site_project_slug.strip()
     url = settings.docs_site_public_url.strip()
@@ -109,7 +109,7 @@ def _refused_doc_types() -> dict[str, str]:
 WRITE_ROLES: frozenset[str] = frozenset({"documenter", "cell_pm"})
 
 # Roles that can read documentation. The Board (head_marketing) gets
-# read-only access for oversight — the spawn manifest mounts the roboco-docs
+# read-only access for oversight — the spawn manifest mounts the robofleet-docs
 # MCP for it, so this set must agree or list/read 403 against a tool the
 # agent was handed.
 READ_ROLES: frozenset[str] = frozenset(
@@ -739,8 +739,8 @@ class DocsService(BaseService):
     async def _index_doc_in_rag(self, path: Path, task_id: UUID | None = None) -> None:
         """Index document in RAG. Failures are logged but don't break flow.
 
-        Marked ``provenance="live_write"`` (roboco_docs_write writes a doc
-        mid-task, before the task's PR merges) so a ``roboco_kb_search`` hit
+        Marked ``provenance="live_write"`` (robofleet_docs_write writes a doc
+        mid-task, before the task's PR merges) so a ``robofleet_kb_search`` hit
         built from it carries an explicit caveat instead of reading like
         deployed reality — the live incident this guards against: a dev
         built UI against an API contract that existed only in a still-open PR.

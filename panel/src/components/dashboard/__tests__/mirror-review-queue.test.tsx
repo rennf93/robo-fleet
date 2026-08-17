@@ -27,7 +27,7 @@ const { listCycles, approveItem, rejectItem } = vi.hoisted(() => ({
               team: "backend",
               priority: 2,
               evidence:
-                "README.md:42 says 'real-time sync'; roboco/services/sync.py:88 polls every 30s",
+                "README.md:42 says 'real-time sync'; robofleet/services/sync.py:88 polls every 30s",
               status: "proposed",
             },
             {
@@ -42,7 +42,7 @@ const { listCycles, approveItem, rejectItem } = vi.hoisted(() => ({
               team: "frontend",
               priority: 3,
               evidence:
-                "roboco/config.py:310 arms ROBOFLEET_SANDBOX_DB_ENABLED; docs-site has no page for it",
+                "robofleet/config.py:310 arms ROBOFLEET_SANDBOX_DB_ENABLED; docs-site has no page for it",
               status: "proposed",
             },
           ],

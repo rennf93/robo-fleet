@@ -69,7 +69,7 @@ function sourceMeta(source: XPost["source"]) {
     return {
       label: "Conversation reply",
       icon: MessageCircle,
-      hint: "Drafted by the Head of Marketing's Barfly search sweep — a conversation where RoboCo is relevant but unmentioned",
+      hint: "Drafted by the Head of Marketing's Barfly search sweep — a conversation where RoboFleet is relevant but unmentioned",
     };
   return {
     label: "Mention reply",

@@ -1,9 +1,9 @@
 """Scenario: the Sentinel (Board Program) loop end to end.
 
 Mirrors test_periscope_loop.py's arm -> originate -> dedup shape (same
-RoboCo-project resolution — org scope means no per-project opt-in is needed
+RoboFleet-project resolution — org scope means no per-project opt-in is needed
 to RUN, but the exploration task's project_id still resolves against the
-RoboCo project, a hard TaskService invariant every non-coordination task
+RoboFleet project, a hard TaskService invariant every non-coordination task
 carries) AND its do_server wiring-regression check + real-route propose call.
 Like a market brief, a quality report completes the SAME exploration task it
 was authored on (no separate materialized draft/item task).
@@ -32,7 +32,7 @@ def _seed_system_and_auditor(stack: E2EStack) -> str:
     registry (not ``seed_company``'s random ``uuid4()`` agents; mirrors
     test_periscope_loop.py's identical ``_seed_system_and_hom``), and the
     exploration task's ``project_id`` resolves against this project (the
-    RoboCo-project FK anchor every org-scoped program's task still needs).
+    RoboFleet-project FK anchor every org-scoped program's task still needs).
     Returns the project's slug.
     """
     from robofleet.db.tables import AgentTable, ProjectTable
@@ -70,9 +70,9 @@ def _seed_system_and_auditor(stack: E2EStack) -> str:
         session.add(
             ProjectTable(
                 id=uuid4(),
-                name="RoboCo",
+                name="RoboFleet",
                 slug=slug,
-                git_url="https://example.com/roboco.git",
+                git_url="https://example.com/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,
@@ -88,7 +88,7 @@ def _seed_system_and_auditor(stack: E2EStack) -> str:
 def _arm(stack: E2EStack, project_slug: str) -> None:
     """Arm via the settings-store key — the ONLY arming path (no legacy env
     flag exists for sentinel) — and point ``self_heal_project_slug`` at the
-    seeded project (the RoboCo-project resolution roadmap/x_feature/periscope
+    seeded project (the RoboFleet-project resolution roadmap/x_feature/periscope
     use)."""
     from robofleet.config import settings as cfg
     from robofleet.db.tables import SystemSettingTable
@@ -204,7 +204,7 @@ def test_sentinel_loop_originates_dedups_and_completes(
     assert row["status"] == "pending"
     assert row["assigned_to"] == _foundation.AGENTS["auditor"].uuid
     assert row["confirmed_by_human"] is False
-    assert row["project_id"] is not None  # resolves against the RoboCo project
+    assert row["project_id"] is not None  # resolves against the RoboFleet project
 
     # The dispatcher's own dev-work skip recognizes this exact task shape —
     # board_sentinel is board-dispatched (one-shot Auditor spawn), never

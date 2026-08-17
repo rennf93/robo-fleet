@@ -168,7 +168,7 @@ export function ProductsView() {
       {isOffline ? (
         <OfflineState
           title="Cannot Load Products"
-          description="Start the RoboCo orchestrator to manage products. Products map cells to the projects they work on."
+          description="Start the RoboFleet orchestrator to manage products. Products map cells to the projects they work on."
           onRetry={() => void refresh()}
         />
       ) : view === "cards" ? (

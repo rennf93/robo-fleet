@@ -172,7 +172,7 @@ export function CreateProjectDialog() {
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="RoboCo API"
+                placeholder="RoboFleet API"
               />
             </div>
 
@@ -187,7 +187,7 @@ export function CreateProjectDialog() {
                 onChange={(e) =>
                   setFormData({ ...formData, slug: e.target.value })
                 }
-                placeholder="roboco-api"
+                placeholder="robofleet-api"
                 pattern="^[a-z0-9-]+$"
               />
               <p className="text-xs text-muted-foreground">
@@ -330,7 +330,7 @@ export function CreateProjectDialog() {
             >
               {/* CI/CD Commands */}
               <div className="grid gap-2">
-                <HelpTip label="Reference only — not yet wired into any automated gate or CI run by RoboCo itself.">
+                <HelpTip label="Reference only — not yet wired into any automated gate or CI run by RoboFleet itself.">
                   <Label htmlFor="test_command">Test Command</Label>
                 </HelpTip>
                 <Input

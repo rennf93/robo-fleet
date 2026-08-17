@@ -35,7 +35,7 @@ export interface BoardReviewEntry {
 }
 
 // One row of the revision-findings ledger. Matches the backend
-// TaskFindingResponse schema (roboco/api/schemas/tasks.py).
+// TaskFindingResponse schema (robofleet/api/schemas/tasks.py).
 export interface TaskFinding {
   id: string;
   task_id: string;
@@ -76,7 +76,7 @@ export interface TaskFindingsResponse {
 }
 
 // One surfaced sibling that collides with the task under review — matches
-// the backend CollisionSibling schema (roboco/api/schemas/tasks.py).
+// the backend CollisionSibling schema (robofleet/api/schemas/tasks.py).
 export interface CollisionSibling {
   id: string;
   title: string | null;

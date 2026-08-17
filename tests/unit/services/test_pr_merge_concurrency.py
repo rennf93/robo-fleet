@@ -99,7 +99,7 @@ async def test_pr_merge_retries_once_on_409_conflict() -> None:
         work_session_id=None,
     )
     fake_parent = MagicMock(id=parent_id)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     svc = GitService(_make_session(fake_task, fake_parent))
     _bind(svc, "get_workspace", AsyncMock(return_value=Path("/tmp/ws")))
@@ -143,7 +143,7 @@ async def test_pr_merge_raises_after_second_409() -> None:
         work_session_id=None,
     )
     fake_parent = MagicMock(id=parent_id)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     svc = GitService(_make_session(fake_task, fake_parent))
     _bind(svc, "get_workspace", AsyncMock(return_value=Path("/tmp/ws")))
@@ -180,7 +180,7 @@ async def test_pr_merge_does_not_retry_on_non_409_error() -> None:
         work_session_id=None,
     )
     fake_parent = MagicMock(id=parent_id)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     svc = GitService(_make_session(fake_task, fake_parent))
     _bind(svc, "get_workspace", AsyncMock(return_value=Path("/tmp/ws")))
@@ -217,7 +217,7 @@ async def test_pr_merge_locks_parent_task_with_for_update() -> None:
         work_session_id=None,
     )
     fake_parent = MagicMock(id=parent_id)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     session = _make_session(fake_task, fake_parent)
     svc = GitService(session)
@@ -257,7 +257,7 @@ async def test_pr_merge_skips_parent_lock_for_root_task() -> None:
         assigned_to=uuid4(),
         work_session_id=None,
     )
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     # No second execute() — root task has no parent to lock.
     session = MagicMock()
@@ -306,7 +306,7 @@ async def test_pr_merge_scopes_task_lookup_by_project_id() -> None:
         assigned_to=uuid4(),
         work_session_id=None,
     )
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     session = MagicMock()
     pr_result = MagicMock()

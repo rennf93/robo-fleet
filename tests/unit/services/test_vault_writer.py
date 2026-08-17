@@ -34,7 +34,7 @@ def _task_data(**overrides: Any) -> TaskNoteData:
     base: dict[str, Any] = {
         "id": "11112222-3333-4444-5555-666677778888",
         "title": "Add user authentication endpoint",
-        "project_slug": "roboco-api",
+        "project_slug": "robofleet-api",
         "description": "Implement the login endpoint.",
         "status": "in_progress",
         "team": "backend",
@@ -54,9 +54,9 @@ def test_write_task_layout_and_frontmatter(tmp_path: Path) -> None:
 
     assert path == (
         tmp_path
-        / "RoboCo"
+        / "RoboFleet"
         / "Tasks"
-        / "roboco-api"
+        / "robofleet-api"
         / "Add user authentication endpoint (11112222).md"
     )
     text = path.read_text(encoding="utf-8")
@@ -87,7 +87,7 @@ def test_write_journal_entry_layout(tmp_path: Path) -> None:
     )
     assert path == (
         tmp_path
-        / "RoboCo"
+        / "RoboFleet"
         / "Journals"
         / "be-dev-1"
         / "2026-07-10 Retry flaky pg connections (aaaa1111).md"
@@ -105,7 +105,7 @@ def test_write_agent_layout(tmp_path: Path) -> None:
             slug="be-dev-1", name="BE Dev 1", role="developer", team="backend"
         )
     )
-    assert path == tmp_path / "RoboCo" / "Agents" / "be-dev-1.md"
+    assert path == tmp_path / "RoboFleet" / "Agents" / "be-dev-1.md"
     text = path.read_text(encoding="utf-8")
     assert "role: developer" in text
     assert "BE Dev 1" in text
@@ -226,7 +226,9 @@ def test_existing_narrative_none_for_placeholder(tmp_path: Path) -> None:
     writer = VaultWriter(tmp_path)
     writer.write_task(_task_data())
     assert (
-        writer.existing_narrative("roboco-api", "11112222-3333-4444-5555-666677778888")
+        writer.existing_narrative(
+            "robofleet-api", "11112222-3333-4444-5555-666677778888"
+        )
         is None
     )
 
@@ -235,7 +237,9 @@ def test_existing_narrative_preserved_when_curated(tmp_path: Path) -> None:
     writer = VaultWriter(tmp_path)
     writer.write_task(_task_data(narrative="Shipped cleanly, one rework cycle."))
     assert (
-        writer.existing_narrative("roboco-api", "11112222-3333-4444-5555-666677778888")
+        writer.existing_narrative(
+            "robofleet-api", "11112222-3333-4444-5555-666677778888"
+        )
         == "Shipped cleanly, one rework cycle."
     )
 
@@ -250,11 +254,11 @@ def test_write_task_archived_lands_in_archive_year_dir(tmp_path: Path) -> None:
     path = writer.write_task(_task_data(status="completed", archive_year=_ARCHIVE_YEAR))
     assert path == (
         tmp_path
-        / "RoboCo"
+        / "RoboFleet"
         / "Archive"
         / str(_ARCHIVE_YEAR)
         / "Tasks"
-        / "roboco-api"
+        / "robofleet-api"
         / "Add user authentication endpoint (11112222).md"
     )
 
@@ -289,7 +293,9 @@ def test_existing_narrative_survives_archival(tmp_path: Path) -> None:
         )
     )
     assert (
-        writer.existing_narrative("roboco-api", "11112222-3333-4444-5555-666677778888")
+        writer.existing_narrative(
+            "robofleet-api", "11112222-3333-4444-5555-666677778888"
+        )
         == "Curated before archival."
     )
 
@@ -331,7 +337,7 @@ def _report_data() -> OrgReportData:
 def test_write_org_report_layout_and_frontmatter(tmp_path: Path) -> None:
     writer = VaultWriter(tmp_path)
     path = writer.write_org_report(_report_data())
-    assert path == tmp_path / "RoboCo" / "Reports" / "2026-W28.md"
+    assert path == tmp_path / "RoboFleet" / "Reports" / "2026-W28.md"
     text = path.read_text(encoding="utf-8")
     fm, _, body = text.removeprefix("---\n").partition("\n---\n")
     frontmatter = yaml.safe_load(fm)
@@ -362,7 +368,7 @@ def test_write_org_report_same_week_overwrites(tmp_path: Path) -> None:
     p1 = writer.write_org_report(_report_data())
     p2 = writer.write_org_report(_report_data())
     assert p1 == p2
-    assert len(list((tmp_path / "RoboCo" / "Reports").glob("*.md"))) == 1
+    assert len(list((tmp_path / "RoboFleet" / "Reports").glob("*.md"))) == 1
 
 
 # --- revision-findings ledger section -------------------------------------- #

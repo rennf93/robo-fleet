@@ -100,10 +100,10 @@ def test_grok_usage_dir_branches_compose_vs_local(
 ) -> None:
     monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "")
     local = AgentOrchestrator._grok_usage_dir("be-dev-1")
-    assert "roboco-grok-usage" in str(local)
+    assert "robofleet-grok-usage" in str(local)
     assert local.name == "be-dev-1"
 
-    monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "/volume1/roboco")
+    monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "/volume1/robofleet")
     monkeypatch.setattr(orch_mod, "GROK_USAGE_DATA_DIR", "/data/grok-usage")
     assert str(AgentOrchestrator._grok_usage_dir("be-dev-1")) == (
         "/data/grok-usage/be-dev-1"
@@ -133,7 +133,7 @@ def test_grok_usage_json_reads_the_real_local_dir(
     # writer mounts (the local-mode fix: read side mirrors the write side).
     monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "")
     monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
-    udir = tmp_path / "roboco-grok-usage" / "be-dev-1"
+    udir = tmp_path / "robofleet-grok-usage" / "be-dev-1"
     udir.mkdir(parents=True)
     (udir / "usage.json").write_text(
         json.dumps({"total_tokens": 55, "cost_usd": 0.1}), encoding="utf-8"

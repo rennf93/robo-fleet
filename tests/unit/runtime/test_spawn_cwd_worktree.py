@@ -25,7 +25,7 @@ from robofleet.runtime.orchestrator import (
 
 def _make_dev_config(
     *,
-    project_slug: str = "roboco-api",
+    project_slug: str = "robofleet-api",
     task_short_id: str | None = None,
     branch_name: str | None = "feature/backend/TASK0001",
 ) -> OrchestratorAgentConfig:
@@ -111,33 +111,33 @@ class TestSpawnGitContextTaskShortId:
 class TestAgentWorktreePath:
     def test_appends_worktrees_segment(self) -> None:
         assert (
-            _agent_worktree_path("roboco-api", "backend", "be-dev-1", "a3c40fe7")
-            == "/data/workspaces/roboco-api/backend/be-dev-1/.worktrees/a3c40fe7"
+            _agent_worktree_path("robofleet-api", "backend", "be-dev-1", "a3c40fe7")
+            == "/data/workspaces/robofleet-api/backend/be-dev-1/.worktrees/a3c40fe7"
         )
 
 
 class TestAgentCwdPath:
     def test_worktree_when_task_short_id_set(self) -> None:
         ctx = SpawnGitContext(
-            project_slug="roboco-api",
+            project_slug="robofleet-api",
             branch_name="feature/backend/TASK0001",
             task_short_id="a3c40fe7",
         )
-        assert _agent_cwd_path("roboco-api", "backend", "be-dev-1", ctx) == (
-            "/data/workspaces/roboco-api/backend/be-dev-1/.worktrees/a3c40fe7"
+        assert _agent_cwd_path("robofleet-api", "backend", "be-dev-1", ctx) == (
+            "/data/workspaces/robofleet-api/backend/be-dev-1/.worktrees/a3c40fe7"
         )
 
     def test_clone_root_when_no_task_short_id(self) -> None:
         ctx = SpawnGitContext(
-            project_slug="roboco-api", branch_name="feature/backend/TASK0001"
+            project_slug="robofleet-api", branch_name="feature/backend/TASK0001"
         )
-        assert _agent_cwd_path("roboco-api", "backend", "be-dev-1", ctx) == (
-            "/data/workspaces/roboco-api/backend/be-dev-1"
+        assert _agent_cwd_path("robofleet-api", "backend", "be-dev-1", ctx) == (
+            "/data/workspaces/robofleet-api/backend/be-dev-1"
         )
 
     def test_clone_root_when_no_git_context(self) -> None:
-        assert _agent_cwd_path("roboco-api", "backend", "be-dev-1", None) == (
-            "/data/workspaces/roboco-api/backend/be-dev-1"
+        assert _agent_cwd_path("robofleet-api", "backend", "be-dev-1", None) == (
+            "/data/workspaces/robofleet-api/backend/be-dev-1"
         )
 
 
@@ -147,21 +147,21 @@ class TestAppendWorkspaceCwdWorktree:
         cmd = _build_cmd(config)
         wd = _workdir(cmd)
         assert wd == (
-            "/data/workspaces/roboco-api/backend/be-dev-1/.worktrees/a3c40fe7"
+            "/data/workspaces/robofleet-api/backend/be-dev-1/.worktrees/a3c40fe7"
         )
 
     def test_workdir_is_clone_root_when_no_task_short_id(self) -> None:
         config = _make_dev_config(task_short_id=None)
         cmd = _build_cmd(config)
         wd = _workdir(cmd)
-        assert wd == "/data/workspaces/roboco-api/backend/be-dev-1"
+        assert wd == "/data/workspaces/robofleet-api/backend/be-dev-1"
 
 
 class TestCwdMatchesEditAllowlistWorktree:
     """-w and the Edit/Write allowlist prefix must be the SAME path (lockstep)."""
 
     def test_worktree_path_matches_allowlist_prefix(self) -> None:
-        project_slug = "roboco-api"
+        project_slug = "robofleet-api"
         cwd = _agent_cwd_path(
             project_slug,
             "backend",
@@ -204,7 +204,7 @@ class TestTaskGitContextTaskShortId:
         task_id = "a3c40fe7-0000-0000-0000-000000000000"
         ctx = orch._task_git_context(
             {
-                "project_slug": "roboco-api",
+                "project_slug": "robofleet-api",
                 "branch_name": "feature/backend/abc12345",
                 "id": task_id,
             }
@@ -219,7 +219,7 @@ class TestTaskGitContextTaskShortId:
         # falls back to the clone root, not a phantom .worktrees/<id> dir.
         orch = self._orch()
         ctx = orch._task_git_context(
-            {"project_slug": "roboco-api", "branch_name": None, "id": "abc12345"}
+            {"project_slug": "robofleet-api", "branch_name": None, "id": "abc12345"}
         )
         assert ctx is not None
         assert ctx.task_short_id is None

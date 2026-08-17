@@ -146,7 +146,7 @@ async def get_current_agent_id(
     x_agent_role: Annotated[str | None, Header()] = None,
     x_agent_team: Annotated[str | None, Header()] = None,
     x_agent_token: Annotated[str | None, Header()] = None,
-    roboco_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)] = None,
+    robofleet_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)] = None,
 ) -> UUID:
     """Resolve the caller's agent id. Dev (header-trust) keeps the historical
     slug/UUID resolution unchanged; under cloud auth the request must present a
@@ -160,7 +160,7 @@ async def get_current_agent_id(
             x_agent_role=x_agent_role,
             x_agent_team=x_agent_team,
             x_agent_token=x_agent_token,
-            session_cookie=roboco_session,
+            session_cookie=robofleet_session,
         )
         return ctx.agent_id
     if not x_agent_id:
@@ -183,7 +183,7 @@ async def get_current_agent_slug(
     x_agent_role: Annotated[str | None, Header()] = None,
     x_agent_team: Annotated[str | None, Header()] = None,
     x_agent_token: Annotated[str | None, Header()] = None,
-    roboco_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)] = None,
+    robofleet_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)] = None,
 ) -> str:
     """Return the caller's agent slug. Dev: the header verbatim. Cloud auth:
     the slug from the dual-path gate (a verified agent token resolves the real
@@ -196,7 +196,7 @@ async def get_current_agent_slug(
             x_agent_role=x_agent_role,
             x_agent_team=x_agent_team,
             x_agent_token=x_agent_token,
-            session_cookie=roboco_session,
+            session_cookie=robofleet_session,
         )
         assert ctx.slug is not None  # cloud-auth ctx always carries a slug
         return ctx.slug
@@ -558,7 +558,7 @@ async def get_agent_context(
     x_agent_role: Annotated[str | None, Header()] = None,
     x_agent_team: Annotated[str | None, Header()] = None,
     x_agent_token: Annotated[str | None, Header()] = None,
-    roboco_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)] = None,
+    robofleet_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)] = None,
 ) -> AgentContext:
     """
     Get the current agent context from request headers (dual-path).
@@ -587,7 +587,7 @@ async def get_agent_context(
         x_agent_role=x_agent_role,
         x_agent_team=x_agent_team,
         x_agent_token=x_agent_token,
-        session_cookie=roboco_session,
+        session_cookie=robofleet_session,
     )
 
 

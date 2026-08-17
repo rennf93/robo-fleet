@@ -1,8 +1,8 @@
 """Enumerations for structured agent content.
 
 These are the controlled vocabularies the content schema models
-(:mod:`roboco.foundation.policy.content.models`) validate against. The cell
-``Team`` vocabulary is reused from :mod:`roboco.foundation.identity` rather
+(:mod:`robofleet.foundation.policy.content.models`) validate against. The cell
+``Team`` vocabulary is reused from :mod:`robofleet.foundation.identity` rather
 than redefined here.
 """
 

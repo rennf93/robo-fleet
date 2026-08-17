@@ -1,7 +1,7 @@
 """Read-only git tools available to all roles.
 
 Write operations (commit, push, branch, PR open/merge) go through the
-gateway intent verbs in roboco-flow. This server only exposes the four
+gateway intent verbs in robofleet-flow. This server only exposes the four
 read-only views agents need to reason about workspace state: status,
 log, diff, and branch list.
 
@@ -50,7 +50,7 @@ def _headers() -> dict[str, str]:
 
 _TIMEOUT = 15
 
-mcp = FastMCP("roboco-git-readonly")
+mcp = FastMCP("robofleet-git-readonly")
 
 # Char cap for diff text returned into the agent's context (~5K tokens). Kept
 # local (not imported from the gateway) so this MCP stays dependency-light in
@@ -106,7 +106,7 @@ def _cap_diff(result: dict[str, Any]) -> dict[str, Any]:
 
 
 @mcp.tool()
-def roboco_git_status(project_slug: str | None = None) -> dict[str, Any]:
+def robofleet_git_status(project_slug: str | None = None) -> dict[str, Any]:
     """Read-only: current git status of your workspace.
 
     Args:
@@ -123,7 +123,7 @@ def roboco_git_status(project_slug: str | None = None) -> dict[str, Any]:
 
 
 @mcp.tool()
-def roboco_git_log(
+def robofleet_git_log(
     project_slug: str | None = None,
     limit: int = 10,
     branch: str | None = None,
@@ -149,7 +149,7 @@ def roboco_git_log(
 
 
 @mcp.tool()
-def roboco_git_diff(
+def robofleet_git_diff(
     project_slug: str | None = None,
     staged: bool = False,
     file_path: str | None = None,
@@ -175,7 +175,7 @@ def roboco_git_diff(
 
 
 @mcp.tool()
-def roboco_git_branch_list(
+def robofleet_git_branch_list(
     project_slug: str | None = None,
     include_remote: bool = False,
 ) -> dict[str, Any]:

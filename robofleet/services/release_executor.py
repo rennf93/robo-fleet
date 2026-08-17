@@ -309,7 +309,7 @@ class _ReleaseContext:
 
 
 class _GitReleaseOps:
-    """Real release steps on a writable clone of RoboCo (token-authenticated)."""
+    """Real release steps on a writable clone of RoboFleet (token-authenticated)."""
 
     def __init__(self, session: AsyncSession, ctx: _ReleaseContext) -> None:
         self._session = session
@@ -576,7 +576,7 @@ def _bump_uv_lock(text: str, old: str, new: str, package: str) -> str:
     """Bump only ``package``'s own version block inside uv.lock, leaving a
     dependency that happens to share the version string untouched.
 
-    ``package`` used to be the hardcoded literal ``roboco``, which silently
+    ``package`` used to be the hardcoded literal ``robo-fleet``, which silently
     no-opped the lockfile bump for every other uv project. An unresolvable
     name still no-ops, deliberately: a wrong lockfile edit is worse than none.
     """
@@ -636,7 +636,7 @@ async def get_release_executor(session: AsyncSession) -> ReleaseExecutor:
     from robofleet.models.env_branches import prod_branch, promotion_chain
     from robofleet.services.project import get_project_service
 
-    slug = (settings.self_heal_project_slug or "roboco-api").strip()
+    slug = (settings.self_heal_project_slug or "robofleet-api").strip()
     project_svc = get_project_service(session)
     project = await project_svc.get_by_slug(slug)
     if project is None:

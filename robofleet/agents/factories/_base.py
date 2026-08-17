@@ -17,11 +17,11 @@ if TYPE_CHECKING:
 def _get_prompts_base_path() -> Path:
     """Get the base path for prompt layers.
 
-    Resolves to project_root/agents/prompts/ by finding the roboco package
+    Resolves to project_root/agents/prompts/ by finding the robo-fleet package
     and going up one level.
     """
     # Start from this file's location: robofleet/agents/factories/_base.py
-    # Go up: factories -> agents -> roboco -> project_root
+    # Go up: factories -> agents -> robo-fleet -> project_root
     this_file = Path(__file__).resolve()
     project_root = this_file.parent.parent.parent.parent
     prompts_path = project_root / "agents" / "prompts"

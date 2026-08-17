@@ -35,15 +35,15 @@ async def _tool_names(role: str, monkeypatch: pytest.MonkeyPatch) -> set[str]:
 async def test_developer_scope(monkeypatch: pytest.MonkeyPatch) -> None:
     names = await _tool_names("developer", monkeypatch)
     # Universal + dev-duty groups present.
-    assert "roboco_kb_search" in names
-    assert "roboco_ask_mentor" in names
-    assert "roboco_search_error" in names
-    assert "roboco_review_code" in names
+    assert "robofleet_kb_search" in names
+    assert "robofleet_ask_mentor" in names
+    assert "robofleet_search_error" in names
+    assert "robofleet_review_code" in names
     # PM/board decision tools, indexing and destructive admin absent.
-    assert "roboco_record_decision" not in names
-    assert "roboco_kb_index_code" not in names
-    assert "roboco_reindex_all" not in names
-    assert "roboco_clear_index" not in names
+    assert "robofleet_record_decision" not in names
+    assert "robofleet_kb_index_code" not in names
+    assert "robofleet_reindex_all" not in names
+    assert "robofleet_clear_index" not in names
 
 
 @pytest.mark.asyncio
@@ -51,17 +51,17 @@ async def test_pm_scope_carries_decisions_not_error_tools(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     names = await _tool_names("cell_pm", monkeypatch)
-    assert "roboco_record_decision" in names
-    assert "roboco_search_error" not in names
-    assert "roboco_review_code" not in names
+    assert "robofleet_record_decision" in names
+    assert "robofleet_search_error" not in names
+    assert "robofleet_review_code" not in names
 
 
 @pytest.mark.asyncio
 async def test_documenter_carries_indexing(monkeypatch: pytest.MonkeyPatch) -> None:
     names = await _tool_names("documenter", monkeypatch)
-    assert "roboco_kb_index_docs" in names
-    assert "roboco_get_standards" in names
-    assert "roboco_record_decision" not in names
+    assert "robofleet_kb_index_docs" in names
+    assert "robofleet_get_standards" in names
+    assert "robofleet_record_decision" not in names
 
 
 @pytest.mark.asyncio
@@ -69,10 +69,10 @@ async def test_unknown_role_fails_open_except_admin(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     names = await _tool_names("", monkeypatch)
-    assert "roboco_search_error" in names
-    assert "roboco_record_decision" in names
+    assert "robofleet_search_error" in names
+    assert "robofleet_record_decision" in names
     # Destructive index management never registers without the escape hatch.
-    assert "roboco_reindex_all" not in names
+    assert "robofleet_reindex_all" not in names
 
 
 _ITEM_LIMIT = 2
@@ -100,17 +100,17 @@ def test_append_live_write_caveat_marks_live_write_hits_only() -> None:
     items: list[Any] = [
         {
             "content": "the /v2/widgets endpoint accepts a `color` field",
-            "source": "roboco://docs/x.md",
+            "source": "robofleet://docs/x.md",
             "metadata": {"provenance": "live_write", "task_id": "t-1"},
         },
         {
             "content": "the /v1/widgets endpoint is stable",
-            "source": "roboco://docs/y.md",
+            "source": "robofleet://docs/y.md",
             "metadata": {"provenance": "repo_tree"},
         },
         {
             "content": "a learning with no provenance concept at all",
-            "source": "roboco://learnings/z",
+            "source": "robofleet://learnings/z",
             "metadata": {"category": "pattern"},
         },
         "bare-string-item",
@@ -129,13 +129,13 @@ def test_append_live_write_caveat_marks_live_write_hits_only() -> None:
 
 
 def test_append_live_write_caveat_survives_content_cap() -> None:
-    """Applied after _cap_result_content (the order roboco_kb_search uses),
+    """Applied after _cap_result_content (the order robofleet_kb_search uses),
     the caveat must still be visible — capping must never eat it."""
     long_content = "x" * (_RESULT_CONTENT_CAP + 200)
     items: list[Any] = [
         {
             "content": long_content,
-            "source": "roboco://docs/x.md",
+            "source": "robofleet://docs/x.md",
             "metadata": {"provenance": "live_write"},
         },
     ]
@@ -152,13 +152,13 @@ async def test_full_toolset_escape_hatch(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("ROBOFLEET_ALLOW_FULL_TOOLSET", "1")
     server = create_optimal_mcp_server("00000000-0000-0000-0000-000000000042")
     names = {t.name for t in await server.list_tools()}
-    assert "roboco_reindex_all" in names
-    assert "roboco_record_decision" in names
+    assert "robofleet_reindex_all" in names
+    assert "robofleet_record_decision" in names
 
 
 # ---------------------------------------------------------------------------
-# Caveat reach: roboco_ask_mentor's `sources` and roboco_rag_query's
-# `citations` are the same SearchResultResponse shape roboco_kb_search's
+# Caveat reach: robofleet_ask_mentor's `sources` and robofleet_rag_query's
+# `citations` are the same SearchResultResponse shape robofleet_kb_search's
 # `results` use (content/source/score/index_type/metadata — confirmed in
 # robofleet/api/schemas/optimal.py), so _append_live_write_caveat wires in
 # unchanged. This exercises the real tool bodies end-to-end (via
@@ -167,7 +167,7 @@ async def test_full_toolset_escape_hatch(monkeypatch: pytest.MonkeyPatch) -> Non
 
 _LIVE_WRITE_ITEM = {
     "content": "the /v2/widgets endpoint accepts a `color` field",
-    "source": "roboco://docs/x.md",
+    "source": "robofleet://docs/x.md",
     "score": 0.9,
     "index_type": "documentation",
     "metadata": {"provenance": "live_write", "task_id": "t-1"},
@@ -218,7 +218,7 @@ async def test_ask_mentor_caveats_live_write_sources(
 ) -> None:
     result = await _call_tool(
         "developer",
-        "roboco_ask_mentor",
+        "robofleet_ask_mentor",
         {"question": "how does the widgets API work?"},
         {
             "answer": "…",
@@ -237,7 +237,7 @@ async def test_rag_query_caveats_live_write_citations(
 ) -> None:
     result = await _call_tool(
         "developer",
-        "roboco_rag_query",
+        "robofleet_rag_query",
         {"query": "how does the widgets API work?"},
         {
             "answer": "…",

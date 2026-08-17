@@ -112,7 +112,7 @@ async def test_update_pr_title_only_calls_patch_with_title() -> None:
     svc = _service()
     task = _task_with_pr()
     fake_task_service = _wire_service(svc, task)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     patch_resp = _make_http_response(
         status_code=200,
@@ -150,7 +150,7 @@ async def test_update_pr_title_and_body_calls_patch_with_both() -> None:
     svc = _service()
     task = _task_with_pr()
     fake_task_service = _wire_service(svc, task)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     patch_resp = _make_http_response(
         status_code=200,
@@ -181,7 +181,7 @@ async def test_update_pr_reviewers_only_calls_post_reviewers() -> None:
     svc = _service()
     task = _task_with_pr()
     fake_task_service = _wire_service(svc, task)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     post_resp = _make_http_response(
         status_code=201,
@@ -217,7 +217,7 @@ async def test_update_pr_all_three_fields_forwarded() -> None:
     svc = _service()
     task = _task_with_pr()
     fake_task_service = _wire_service(svc, task)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     patch_resp = _make_http_response(
         status_code=200, json_payload={"number": _PR_NUMBER, "html_url": task.pr_url}
@@ -249,7 +249,7 @@ async def test_update_pr_404_raises_pr_not_found() -> None:
     svc = _service()
     task = _task_with_pr()
     fake_task_service = _wire_service(svc, task)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     patch_resp = _make_http_response(status_code=_HTTP_NOT_FOUND, text="Not Found")
     fake_client = _make_async_client(patch_resp=patch_resp)
@@ -273,7 +273,7 @@ async def test_update_pr_422_raises_with_validation_message() -> None:
     svc = _service()
     task = _task_with_pr()
     fake_task_service = _wire_service(svc, task)
-    fake_project = MagicMock(slug="roboco")
+    fake_project = MagicMock(slug="robo-fleet")
 
     patch_resp = _make_http_response(
         status_code=_HTTP_UNPROCESSABLE, text="Validation Failed: body too long"

@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from robofleet.config import settings as _roboco_settings
+from robofleet.config import settings as _robofleet_settings
 from robofleet.services.gateway.choreographer import (
     Choreographer,
     ChoreographerDeps,
@@ -161,7 +161,7 @@ async def test_stale_decision_outside_window_emits_tracing_gap() -> None:
     journal_svc = AsyncMock()
     # Default window is 300s; 301s old must fall outside.
     journal_svc.latest_decision_at.return_value = datetime.now(UTC) - timedelta(
-        seconds=_roboco_settings.pm_decision_window_seconds + 1
+        seconds=_robofleet_settings.pm_decision_window_seconds + 1
     )
     deps = _make_deps(journal=journal_svc)
     c = Choreographer(deps)
@@ -191,7 +191,7 @@ async def test_decision_at_exact_window_boundary_passes(
     _freeze_clock(monkeypatch, now)
     journal_svc = AsyncMock()
     journal_svc.latest_decision_at.return_value = now - timedelta(
-        seconds=_roboco_settings.pm_decision_window_seconds
+        seconds=_robofleet_settings.pm_decision_window_seconds
     )
     deps = _make_deps(journal=journal_svc)
     c = Choreographer(deps)
@@ -222,7 +222,7 @@ async def test_window_respects_settings_override(
     deps = _make_deps(journal=journal_svc)
     c = Choreographer(deps)
 
-    monkeypatch.setattr(_roboco_settings, "pm_decision_window_seconds", 60)
+    monkeypatch.setattr(_robofleet_settings, "pm_decision_window_seconds", 60)
 
     env = await c._check_pm_decision_required(
         "delegate", agent_id, task_id, _make_task(task_id)

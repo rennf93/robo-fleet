@@ -720,7 +720,7 @@ def test_rebase_request_target_branch_dash_prefix_rejected() -> None:
     """
     with pytest.raises(pydantic.ValidationError, match="INVALID_TARGET_BRANCH"):
         GitRebaseRequest(
-            project_slug="roboco",
+            project_slug="robo-fleet",
             target_branch="-bad-branch",
         )
 
@@ -729,7 +729,7 @@ def test_rebase_request_target_branch_protected_name_rejected() -> None:
     """GitRebaseRequest rejects target_branch 'main' (a protected branch name)."""
     with pytest.raises(pydantic.ValidationError, match="PROTECTED_BRANCH"):
         GitRebaseRequest(
-            project_slug="roboco",
+            project_slug="robo-fleet",
             target_branch="main",
         )
 
@@ -738,7 +738,7 @@ def test_rebase_request_target_branch_master_rejected() -> None:
     """GitRebaseRequest rejects target_branch 'master' (a protected branch name)."""
     with pytest.raises(pydantic.ValidationError, match="PROTECTED_BRANCH"):
         GitRebaseRequest(
-            project_slug="roboco",
+            project_slug="robo-fleet",
             target_branch="master",
         )
 
@@ -746,7 +746,7 @@ def test_rebase_request_target_branch_master_rejected() -> None:
 def test_rebase_request_valid_target_branch_accepted() -> None:
     """GitRebaseRequest accepts a valid, non-protected target_branch."""
     req = GitRebaseRequest(
-        project_slug="roboco",
+        project_slug="robo-fleet",
         target_branch="feature/backend/some-task",
     )
     assert req.target_branch == "feature/backend/some-task"
@@ -791,7 +791,7 @@ async def test_rebase_endpoint_developer_gets_403() -> None:
         response = await client.post(
             "/git/rebase",
             json={
-                "project_slug": "roboco",
+                "project_slug": "robo-fleet",
                 "target_branch": "feature/backend/some-task",
             },
         )
@@ -811,9 +811,9 @@ async def test_rebase_endpoint_pm_gets_200() -> None:
     agent = AgentContext(agent_id=uuid4(), role=AgentRole.CELL_PM)
     app = _build_git_app(agent)
 
-    # Mock project service → returns a project with slug "roboco"
+    # Mock project service → returns a project with slug "robo-fleet"
     mock_project = MagicMock()
-    mock_project.slug = "roboco"
+    mock_project.slug = "robo-fleet"
     mock_project_svc = MagicMock()
     mock_project_svc.get_by_slug = AsyncMock(return_value=mock_project)
 
@@ -834,13 +834,13 @@ async def test_rebase_endpoint_pm_gets_200() -> None:
             response = await client.post(
                 "/git/rebase",
                 json={
-                    "project_slug": "roboco",
+                    "project_slug": "robo-fleet",
                     "target_branch": "feature/backend/some-task",
                 },
             )
 
     assert response.status_code == _HTTP_200
     body = response.json()
-    assert body["project_slug"] == "roboco"
+    assert body["project_slug"] == "robo-fleet"
     assert body["conflict"] is False
     assert body["conflicted_files"] == []

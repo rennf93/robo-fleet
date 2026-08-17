@@ -134,7 +134,7 @@ def test_get_service_endpoint_returns_url() -> None:
 
 def test_build_system_agent_card() -> None:
     card = A2AService.build_system_agent_card()
-    assert card.id == "roboco-system"
+    assert card.id == "robofleet-system"
     assert len(card.skills) >= 1
 
 
@@ -1374,7 +1374,7 @@ def test_task_to_a2a_status_without_value_attr(a2a_setup: dict) -> None:
         created_at=datetime.now(UTC),
     )
     a2a_task = svc.task_to_a2a(fake_task)
-    assert a2a_task.metadata["roboco_status"] == "pending"
+    assert a2a_task.metadata["robofleet_status"] == "pending"
 
 
 # ---------------------------------------------------------------------------

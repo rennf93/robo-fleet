@@ -2,7 +2,7 @@
 
 Smoke-11: be-doc claimed an awaiting_documentation task but its clone
 stayed on the default branch (the branch was created in the dev's
-separate clone). roboco_docs_write / commit failed BRANCH_MISMATCH and
+separate clone). robofleet_docs_write / commit failed BRANCH_MISMATCH and
 the doc looped (i_am_blocked Not Found, give_me_work pointed at a dev
 verb). Primary fix: claim_doc_task checks out the task branch into the
 documenter's workspace. Facet (d): give_me_work's next-hint is now
@@ -109,7 +109,7 @@ def test_claim_verb_hint_dev_default() -> None:
 @pytest.mark.asyncio
 async def test_claim_doc_task_checks_out_branch() -> None:
     """After doc_claim, the task branch is checked out into the
-    documenter's own clone so roboco_docs_write / commit don't
+    documenter's own clone so robofleet_docs_write / commit don't
     BRANCH_MISMATCH."""
     doc_id = uuid4()
     task_id = uuid4()

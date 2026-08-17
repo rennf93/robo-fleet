@@ -3,9 +3,9 @@
 # Runs Grok Build through xAI's official `grok` CLI, authenticated by the
 # SuperGrok subscription via a mounted ~/.grok/auth.json — the parity analogue of
 # the Claude Code path's mounted ~/.claude (no metered API key). Reuses the base
-# image's roboco venv + uv + the RoboCo MCP gateway servers. The entrypoint
+# image's robo-fleet venv + uv + the RoboFleet MCP gateway servers. The entrypoint
 # renders ~/.grok/config.toml (the gateway) + the per-role grok flags from the
-# mounted mcp-config.json (see roboco.llm.providers.grok_cli_config) and runs the
+# mounted mcp-config.json (see robofleet.llm.providers.grok_cli_config) and runs the
 # CLI headless. One runtime image serves every role — role behaviour comes from
 # the mounted system prompt / manifest / mcp-config, exactly as on the Claude path.
 # =============================================================================

@@ -32,7 +32,7 @@ def _touch(path: Path, age_days: float) -> Path:
 
 def test_is_agent_owned_dir_matches_app_and_workspaces() -> None:
     assert is_agent_owned_dir("-app", WORKSPACES) is True
-    assert is_agent_owned_dir("-data-workspaces-roboco-be-dev-1", WORKSPACES) is True
+    assert is_agent_owned_dir("-data-workspaces-robofleet-be-dev-1", WORKSPACES) is True
     # The operator's own sessions are never agent-owned.
     assert is_agent_owned_dir("-Users-renzof-Documents-foo", WORKSPACES) is False
     assert is_agent_owned_dir("-home-renzof-code", WORKSPACES) is False
@@ -59,7 +59,7 @@ def test_select_prunes_only_old_agent_transcripts(tmp_path: Path) -> None:
     old_app = _touch(projects / "-app" / "old.jsonl", age_days=30)
     fresh_app = _touch(projects / "-app" / "fresh.jsonl", age_days=1)
     old_ws = _touch(
-        projects / "-data-workspaces-roboco-be-dev-1" / "old.jsonl", age_days=30
+        projects / "-data-workspaces-robofleet-be-dev-1" / "old.jsonl", age_days=30
     )
     # The operator's own old session — MUST be preserved.
     human_old = _touch(

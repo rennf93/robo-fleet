@@ -1,13 +1,13 @@
 """Telemetry ingestion for production self-healing ("engine 4").
 
-RoboCo heals ITSELF: this reads a health signal for RoboCo's OWN repo — the
+RoboFleet heals ITSELF: this reads a health signal for RoboFleet's OWN repo — the
 single project named by ``settings.self_heal_project_slug`` — and normalizes it
 into ``TelemetrySample``s the regression detector can assess. The sample
 contract is the only thing the detector depends on, so the source is swappable:
 a GitHub Actions CI source today, another CI/APM source later, with no change to
 the engine.
 
-Read-only and repo-singular by design — it watches RoboCo's own project, never
+Read-only and repo-singular by design — it watches RoboFleet's own project, never
 other/client repos (the agent org's general, repo-agnostic delivery work is a
 separate concern). ``fetch`` returns no samples (and never raises) when self-heal
 has no target or the signal is unavailable.
@@ -39,7 +39,7 @@ FAILURE_CONCLUSIONS = frozenset({"failure", "timed_out", "startup_failure"})
 
 @dataclass(frozen=True)
 class TelemetrySample:
-    """One normalized health reading for RoboCo's own repo.
+    """One normalized health reading for RoboFleet's own repo.
 
     ``value >= threshold`` is a breach (a regression). For CI: ``value`` is 1.0
     when the latest completed run failed and 0.0 when it passed; ``threshold`` is
@@ -50,7 +50,7 @@ class TelemetrySample:
     value: float
     threshold: float
     window: str
-    repo_hint: str  # the self-heal project slug (RoboCo's own repo)
+    repo_hint: str  # the self-heal project slug (RoboFleet's own repo)
     observed_at: str
     raw_ref: str  # a link to the underlying evidence (e.g. the CI run URL)
     detail: str = ""
@@ -69,9 +69,9 @@ class TelemetrySource(Protocol):
 
 
 class GitHubCITelemetrySource:
-    """CI health for RoboCo's own repo, from GitHub Actions run conclusions.
+    """CI health for RoboFleet's own repo, from GitHub Actions run conclusions.
 
-    Watches ONLY ``settings.self_heal_project_slug`` (RoboCo healing itself): the
+    Watches ONLY ``settings.self_heal_project_slug`` (RoboFleet healing itself): the
     latest completed run on that project's default branch. A failing run yields a
     breaching sample, a passing run a non-breaching one; no target / no run / any
     error yields no samples.
@@ -132,7 +132,7 @@ class MultiProjectCITelemetrySource:
     """CI health for EVERY opted-in project (multi-repo CI-watch).
 
     The fan-out generalization of ``GitHubCITelemetrySource``: instead of
-    RoboCo's single own repo, it reads the latest completed CI run for each
+    RoboFleet's single own repo, it reads the latest completed CI run for each
     project the operator opted into (``ci_watch_enabled``), reusing the exact
     hardened per-project ``GitService.get_latest_ci_conclusion`` (do NOT
     reimplement — it carries the default-branch ``master`` fix, head-sha run

@@ -1,26 +1,26 @@
 - name: "area: api"
   color: "0E8A16"
-  description: "Touches roboco/api/ (FastAPI routes, schemas, app)"
+  description: "Touches robofleet/api/ (FastAPI routes, schemas, app)"
 
 - name: "area: services"
   color: "0E8A16"
-  description: "Touches roboco/services/ (business logic, side effects)"
+  description: "Touches robofleet/services/ (business logic, side effects)"
 
 - name: "area: gateway"
   color: "0E8A16"
-  description: "Touches roboco/services/gateway/ (Choreographer, verb surface)"
+  description: "Touches robofleet/services/gateway/ (Choreographer, verb surface)"
 
 - name: "area: orchestrator"
   color: "0E8A16"
-  description: "Touches roboco/runtime/ (agent spawner, dispatch loops)"
+  description: "Touches robofleet/runtime/ (agent spawner, dispatch loops)"
 
 - name: "area: enforcement"
   color: "0E8A16"
-  description: "Touches roboco/enforcement/ (task lifecycle, transitions)"
+  description: "Touches robofleet/enforcement/ (task lifecycle, transitions)"
 
 - name: "area: db"
   color: "0E8A16"
-  description: "Touches roboco/db/ or roboco/models/"
+  description: "Touches robofleet/db/ or robofleet/models/"
 
 - name: "area: agents"
   color: "0E8A16"
@@ -28,7 +28,7 @@
 
 - name: "area: mcp"
   color: "0E8A16"
-  description: "Touches roboco/mcp/ (MCP server entry points)"
+  description: "Touches robofleet/mcp/ (MCP server entry points)"
 
 - name: "area: panel"
   color: "0E8A16"

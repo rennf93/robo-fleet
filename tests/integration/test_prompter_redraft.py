@@ -75,7 +75,7 @@ def test_compose_batch_redraft_message_includes_every_child_and_brief() -> None:
             title="Backend piece",
             description="Backend description.",
             acceptance_criteria=["backend ac"],
-            project=SimpleNamespace(name="roboco-api"),
+            project=SimpleNamespace(name="robofleet-api"),
             cell_projects=[],
         ),
         SimpleNamespace(
@@ -103,7 +103,7 @@ def test_compose_batch_redraft_message_includes_every_child_and_brief() -> None:
     )
     assert "Ship the thing" in msg
     assert "Backend piece" in msg
-    assert "roboco-api" in msg
+    assert "robofleet-api" in msg
     assert "backend ac" in msg
     assert "Frontend piece" in msg
     assert "panel-repo" in msg

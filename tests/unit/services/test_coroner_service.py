@@ -2,7 +2,7 @@
 process change as a Main-PM-owned root task (idempotent), reject records a
 reason (idempotent). Unlike Periscope/Sentinel there is no item id — a
 postmortem is one process change, not a list — and the target project
-resolves against the INCIDENT task's own project (falling back to RoboCo's),
+resolves against the INCIDENT task's own project (falling back to RoboFleet's),
 not a per-item project_slug.
 """
 
@@ -43,7 +43,7 @@ SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 AUDITOR_UUID = _foundation.AGENTS["auditor"].uuid
 CEO_UUID = _foundation.AGENTS["ceo"].uuid
 MAIN_PM_UUID = _foundation.AGENTS["main-pm"].uuid
-ROBOFLEET_SLUG = "roboco-standin"
+ROBOFLEET_SLUG = "robofleet-standin"
 INCIDENT_SLUG = "customer-app"
 ONE = 1
 
@@ -106,15 +106,15 @@ async def _seed_agents(session: AsyncSession) -> None:
     await session.flush()
 
 
-async def _seed_roboco_project(
+async def _seed_robofleet_project(
     session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> ProjectTable:
     await _seed_agents(session)
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo",
+        name="RoboFleet",
         slug=ROBOFLEET_SLUG,
-        git_url="https://example.com/roboco.git",
+        git_url="https://example.com/robofleet.git",
         assigned_cell=Team.BACKEND,
         created_by=SYSTEM_UUID,
     )
@@ -126,7 +126,7 @@ async def _seed_roboco_project(
 
 async def _seed_incident(session: AsyncSession, *, project: ProjectTable) -> TaskTable:
     """A real incident task on its OWN project/team — distinct from any
-    RoboCo fallback project, so a test asserting the incident's project/team
+    RoboFleet fallback project, so a test asserting the incident's project/team
     wins can't accidentally pass via the fallback instead."""
     await _seed_agents(session)
     incident = TaskTable(
@@ -230,7 +230,7 @@ async def test_approve_materializes_main_pm_owned_task_on_incident_project(
     db_session: AsyncSession,
 ) -> None:
     """The target project/team is the INCIDENT's own — not the postmortem
-    task's own project_id (left None here) and not a RoboCo fallback."""
+    task's own project_id (left None here) and not a RoboFleet fallback."""
     incident_project = await _seed_incident_project(db_session)
     incident = await _seed_incident(db_session, project=incident_project)
     task = await _seed_postmortem(db_session, incident=incident)
@@ -276,10 +276,10 @@ async def test_approve_materializes_main_pm_owned_task_on_incident_project(
 
 
 @pytest.mark.asyncio
-async def test_approve_falls_back_to_roboco_project_when_incident_gone(
+async def test_approve_falls_back_to_robofleet_project_when_incident_gone(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    roboco_project = await _seed_roboco_project(db_session, monkeypatch)
+    robofleet_project = await _seed_robofleet_project(db_session, monkeypatch)
     # coroner_incident references an incident id that no longer resolves.
     task = await _seed_postmortem(db_session, incident=None)
     markers.set_coroner_incident(
@@ -300,7 +300,7 @@ async def test_approve_falls_back_to_roboco_project_when_incident_gone(
     assert result.status == "approved"
     materialized = await db_session.get(TaskTable, result.materialized_task_id)
     assert materialized is not None
-    assert materialized.project_id == roboco_project.id
+    assert materialized.project_id == robofleet_project.id
     # team is forced to Team.MAIN_PM regardless of the fallback team
     # (Team.BACKEND) _resolve_target reports when the incident is gone.
     assert materialized.team == Team.MAIN_PM
@@ -437,7 +437,7 @@ async def test_process_change_with_no_status_key_defaults_to_proposed(
 async def test_approve_unresolvable_project_is_invalid_state(
     db_session: AsyncSession,
 ) -> None:
-    """Incident gone AND no RoboCo project seeded — fails cleanly instead of
+    """Incident gone AND no RoboFleet project seeded — fails cleanly instead of
     guessing a project."""
     task = await _seed_postmortem(db_session, incident=None)
     markers.set_coroner_incident(

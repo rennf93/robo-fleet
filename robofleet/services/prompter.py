@@ -102,14 +102,14 @@ _MULTI_CELL_MIN = 2
 # MegaTask confirm-batch idempotency: a Redis SETNX guard keyed by the live
 # session_id prevents a network-timeout retry from minting a second umbrella +
 # root-subtasks; a result sidecar lets the retry return the first call's result.
-_MEGATASK_CONFIRM_KEY_PREFIX = "roboco:megatask_confirm:"
-_MEGATASK_CONFIRM_RESULT_PREFIX = "roboco:megatask_confirm:result:"
+_MEGATASK_CONFIRM_KEY_PREFIX = "robofleet:megatask_confirm:"
+_MEGATASK_CONFIRM_RESULT_PREFIX = "robofleet:megatask_confirm:result:"
 _MEGATASK_CONFIRM_KEY_TTL_SECONDS = 3600  # 1h — covers any late retry window
 
 
 @dataclass
 class ReadinessTag:
-    """Parsed contents of an assistant turn's trailing roboco-meta block."""
+    """Parsed contents of an assistant turn's trailing robofleet-meta block."""
 
     covered: list[str] = field(default_factory=list)
     ready: bool = False
@@ -1291,7 +1291,7 @@ class PrompterService:
 # ---------------------------------------------------------------------------
 
 
-_META_FENCE_RE = re.compile(r"```roboco-meta\s*(.*?)```", re.DOTALL)
+_META_FENCE_RE = re.compile(r"```robofleet-meta\s*(.*?)```", re.DOTALL)
 
 # Below this length the composed body is too thin to be a valid task, so we
 # fall back to any model-provided description text.
@@ -1310,7 +1310,7 @@ def parse_readiness(content: str) -> tuple[str, ReadinessTag | None]:
     """Split an assistant reply into (clean_text, readiness_tag).
 
     The interview prompt instructs the model to end each turn with a fenced
-    ``roboco-meta`` JSON block. This extracts the last such block, strips it
+    ``robofleet-meta`` JSON block. This extracts the last such block, strips it
     from the user-visible text, and parses it. A missing or malformed block
     yields ``None`` (treated as not-ready) so the conversation never breaks.
     """
@@ -1374,7 +1374,7 @@ def _batch_subtask_draft(draft: dict[str, Any]) -> dict[str, Any]:
     deadlock the umbrella (board roles have no dev delivery verbs). The top-level
     ``project_id``/``product_id`` is stripped when the ``the_work`` per-cell map
     carries the real target: the intake agent authors the top-level as the repo
-    SLUG it read (e.g. ``"roboco-api"``), which the panel only clears on a manual
+    SLUG it read (e.g. ``"robofleet-api"``), which the panel only clears on a manual
     picker toggle, so an untouched draft would reach ``create_task_from_draft``'s
     UUID parse and 400 the whole batch. A legacy no-``the_work`` draft keeps its
     panel-filled top-level target.

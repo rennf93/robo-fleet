@@ -13,13 +13,13 @@
 #   ROBOFLEET_CLOUD_AUTH_EMAIL     (seeded CEO login)
 #   ROBOFLEET_CLOUD_AUTH_PASSWORD  (seeded CEO login password)
 # Env (optional):
-#   ROBOFLEET_PUBLIC_BASE_URL (default https://roboco.run.app)
+#   ROBOFLEET_PUBLIC_BASE_URL (default https://robo-fleet.run.app)
 set -euo pipefail
 
 PROJECT="${ROBOFLEET_GCP_PROJECT_ID:?set ROBOFLEET_GCP_PROJECT_ID}"
 REGION="${ROBOFLEET_GCP_REGION:?set ROBOFLEET_GCP_REGION}"
 REPO="${ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO:-robo-fleet}"
-PUBLIC_BASE_URL="${ROBOFLEET_PUBLIC_BASE_URL:-https://roboco.run.app}"
+PUBLIC_BASE_URL="${ROBOFLEET_PUBLIC_BASE_URL:-https://robo-fleet.run.app}"
 AR_HOST="${REGION}-docker.pkg.dev"
 
 cd "$(dirname "$0")/.."

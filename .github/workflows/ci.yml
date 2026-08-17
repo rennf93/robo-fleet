@@ -8,7 +8,7 @@ on:
       # fail-closed on the head rung's CI conclusion — no run reads as
       # "unknown", which blocks every release proposal.
       - slave
-      # Fleet task branches (GitService push/merge, roboco/services/git.py).
+      # Fleet task branches (GitService push/merge, robofleet/services/git.py).
       # A revision commit that lands on a PR's head via the merge API
       # (squash-merging a subtask PR into a parent branch) doesn't reliably
       # fire `pull_request`'s synchronize trigger for the PR that already
@@ -127,7 +127,7 @@ jobs:
           --health-retries 5
 
     env:
-      # Runtime settings (roboco.config.Settings reads ROBOFLEET_*).
+      # Runtime settings (robofleet.config.Settings reads ROBOFLEET_*).
       ROBOFLEET_DATABASE_HOST: localhost
       ROBOFLEET_DATABASE_PORT: '5432'
       ROBOFLEET_DATABASE_USER: robofleet

@@ -61,8 +61,8 @@ async def test_create_with_cells_and_project_for(product_setup: dict) -> None:
     projects = product_setup["projects"]
     product = await svc.create(
         ProductCreate(
-            name="RoboCo",
-            slug=f"roboco-{uuid4().hex[:6]}",
+            name="RoboFleet",
+            slug=f"robofleet-{uuid4().hex[:6]}",
             cells=[
                 ProductCellMapping(
                     team=Team.BACKEND, project_id=projects[Team.BACKEND].id

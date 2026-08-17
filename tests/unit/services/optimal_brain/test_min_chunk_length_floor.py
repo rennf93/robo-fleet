@@ -22,7 +22,7 @@ _DEFAULT_FLOOR = _MIN_CHUNK_LENGTH  # 200
 
 
 def _chunk(text: str) -> Chunk:
-    return Chunk(text=text, source="roboco://journals/entry-1")
+    return Chunk(text=text, source="robofleet://journals/entry-1")
 
 
 # ---------------------------------------------------------------------------

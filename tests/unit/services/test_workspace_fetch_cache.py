@@ -44,7 +44,7 @@ def _fake_agent(slug: str = "be-pm") -> MagicMock:
 @pytest.fixture
 def healthy_workspace(tmp_path: Path) -> Iterator[Path]:
     """Materialize a directory that passes `_is_workspace_healthy`."""
-    workspace = tmp_path / "roboco" / "backend" / "be-pm"
+    workspace = tmp_path / "robo-fleet" / "backend" / "be-pm"
     git_dir = workspace / ".git"
     (git_dir / "objects").mkdir(parents=True)
     (git_dir / "HEAD").write_text("ref: refs/heads/main\n")
@@ -81,8 +81,8 @@ async def test_second_fetch_within_ttl_is_skipped(
         ),
         patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
-        await svc.ensure_workspace(project_slug="roboco", agent_id=agent.id)
-        await svc.ensure_workspace(project_slug="roboco", agent_id=agent.id)
+        await svc.ensure_workspace(project_slug="robo-fleet", agent_id=agent.id)
+        await svc.ensure_workspace(project_slug="robo-fleet", agent_id=agent.id)
 
     assert fetch_call_count == _EXPECTED_ONE_FETCH, (
         f"second ensure_workspace within TTL should skip fetch; "
@@ -128,8 +128,8 @@ async def test_fetch_after_ttl_runs_again(
             side_effect=monotonic_calls,
         ),
     ):
-        await svc.ensure_workspace(project_slug="roboco", agent_id=agent.id)
-        await svc.ensure_workspace(project_slug="roboco", agent_id=agent.id)
+        await svc.ensure_workspace(project_slug="robo-fleet", agent_id=agent.id)
+        await svc.ensure_workspace(project_slug="robo-fleet", agent_id=agent.id)
 
     assert fetch_call_count == _EXPECTED_TWO_FETCHES, (
         f"after TTL expiry the second ensure_workspace should fetch again; "
@@ -162,9 +162,11 @@ async def test_force_true_bypasses_cache(
         patch("robofleet.services.workspace._ensure_agent_owned"),
     ):
         # First call populates the cache.
-        await svc.ensure_workspace(project_slug="roboco", agent_id=agent.id)
+        await svc.ensure_workspace(project_slug="robo-fleet", agent_id=agent.id)
         # Second call with force=True must bypass the cache and fetch again.
-        await svc.ensure_workspace(project_slug="roboco", agent_id=agent.id, force=True)
+        await svc.ensure_workspace(
+            project_slug="robo-fleet", agent_id=agent.id, force=True
+        )
 
     assert fetch_call_count == _EXPECTED_TWO_FETCHES, (
         f"force=True should bypass cache and fetch again; "
@@ -180,7 +182,7 @@ async def test_different_workspaces_have_independent_caches(
     suppress the fetch for workspace B even within 30s."""
 
     def _make_healthy(slug: str) -> Path:
-        workspace = tmp_path / "roboco" / "backend" / slug
+        workspace = tmp_path / "robo-fleet" / "backend" / slug
         git_dir = workspace / ".git"
         (git_dir / "objects").mkdir(parents=True)
         (git_dir / "HEAD").write_text("ref: refs/heads/main\n")
@@ -209,11 +211,11 @@ async def test_different_workspaces_have_independent_caches(
     ):
         _bind(svc, "_lookup_agent_or_raise", AsyncMock(return_value=agent_a))
         _bind(svc, "get_workspace_path", MagicMock(return_value=workspace_a))
-        await svc.ensure_workspace(project_slug="roboco", agent_id=agent_a.id)
+        await svc.ensure_workspace(project_slug="robo-fleet", agent_id=agent_a.id)
 
         _bind(svc, "_lookup_agent_or_raise", AsyncMock(return_value=agent_b))
         _bind(svc, "get_workspace_path", MagicMock(return_value=workspace_b))
-        await svc.ensure_workspace(project_slug="roboco", agent_id=agent_b.id)
+        await svc.ensure_workspace(project_slug="robo-fleet", agent_id=agent_b.id)
 
     assert len(fetched_paths) == _EXPECTED_TWO_FETCHES, (
         f"both workspaces should be fetched independently; "

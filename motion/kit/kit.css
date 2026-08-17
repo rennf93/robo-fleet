@@ -1,4 +1,4 @@
-/* Panel kit — reusable building blocks that recreate the RoboCo control
+/* Panel kit — reusable building blocks that recreate the RoboFleet control
  * panel's look for HyperFrames compositions. This is a hand-rolled
  * recreation (plain CSS/HTML), not a screenshot or a port of the panel's
  * React/Tailwind components. Every class is namespaced `pk-` (panel kit).

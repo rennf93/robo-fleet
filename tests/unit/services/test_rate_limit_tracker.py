@@ -54,7 +54,7 @@ def _make_redis_mock(initial_store: dict[str, Any] | None = None) -> AsyncMock:
         key = keys_and_args[0]
         raw = store.get(key)
         text = raw.decode() if isinstance(raw, bytes) else (str(raw) if raw else None)
-        if "roboco:increment_probe_failures" in script:
+        if "robofleet:increment_probe_failures" in script:
             if text is None:
                 state: dict[str, Any] = {"probe_failures": 1}
             else:
@@ -62,7 +62,7 @@ def _make_redis_mock(initial_store: dict[str, Any] | None = None) -> AsyncMock:
                 state["probe_failures"] = state.get("probe_failures", 0) + 1
             store[key] = json.dumps(state)
             return state["probe_failures"]
-        if "roboco:reset_probe_failures" in script:
+        if "robofleet:reset_probe_failures" in script:
             if text is None:
                 state = {"probe_failures": 0}
             else:
@@ -70,7 +70,7 @@ def _make_redis_mock(initial_store: dict[str, Any] | None = None) -> AsyncMock:
                 state["probe_failures"] = 0
             store[key] = json.dumps(state)
             return None
-        if "roboco:activate_rate_limit" in script:
+        if "robofleet:activate_rate_limit" in script:
             # Mirror the production merge: carry over the previous probe_failures
             # (if any) into the fresh episode blob from ARGV[1].
             fresh = json.loads(keys_and_args[1])

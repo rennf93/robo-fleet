@@ -7,12 +7,12 @@ import type { ProductSummary } from "@/types";
 
 const product: ProductSummary = {
   id: "p1",
-  name: "RoboCo Platform",
-  slug: "roboco-platform",
+  name: "RoboFleet Platform",
+  slug: "robofleet-platform",
   cell_count: 3,
   cells: [
-    { team: Team.BACKEND, project_id: "proj-1", project_name: "roboco" },
-    { team: Team.FRONTEND, project_id: "proj-1", project_name: "roboco" },
+    { team: Team.BACKEND, project_id: "proj-1", project_name: "robo-fleet" },
+    { team: Team.FRONTEND, project_id: "proj-1", project_name: "robo-fleet" },
   ],
   progress: { done: 42, active: 5, blocked: 1 },
 };
@@ -20,9 +20,9 @@ const product: ProductSummary = {
 describe("ProductTable", () => {
   it("renders the product name, cells, and progress", () => {
     render(<ProductTable products={[product]} isLoading={false} />);
-    expect(screen.getByText("RoboCo Platform")).toBeInTheDocument();
+    expect(screen.getByText("RoboFleet Platform")).toBeInTheDocument();
     expect(screen.getByText("Backend")).toBeInTheDocument();
-    expect(screen.getAllByText("roboco").length).toBe(2);
+    expect(screen.getAllByText("robo-fleet").length).toBe(2);
     expect(screen.getByText("42 done")).toBeInTheDocument();
     expect(screen.getByText("1 blocked")).toBeInTheDocument();
   });

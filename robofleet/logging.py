@@ -29,7 +29,7 @@ def add_app_context(
     event_dict: MutableMapping[str, Any],
 ) -> Mapping[str, Any]:
     """Add application context to all log entries."""
-    event_dict["app"] = "roboco"
+    event_dict["app"] = "robo-fleet"
     event_dict["version"] = settings.app_version
     event_dict["environment"] = settings.environment
     return event_dict

@@ -41,7 +41,7 @@ _read_path_query: str = Query(
 
 # 2 MiB, not the 64 KiB used elsewhere: this route writes whole reference docs,
 # and the repo's own tree already carries an 82 KiB page and a 1.5 MiB aggregate
-# map. A cap under the real corpus would 413 a legitimate roboco_docs_write and
+# map. A cap under the real corpus would 413 a legitimate robofleet_docs_write and
 # surface to the agent only as WRITE_FAILED, with no hint that size was the cause.
 @router.post("/write", response_model=WriteDocResponse)
 @guard_deco.rate_limit(requests=30, window=60)

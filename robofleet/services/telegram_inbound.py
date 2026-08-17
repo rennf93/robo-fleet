@@ -211,7 +211,7 @@ BOT_COMMANDS: tuple[dict[str, str], ...] = (
     {"command": "help", "description": "This list"},
 )
 
-_HELP_TEXT = "<b>RoboCo commands</b>\n" + "\n".join(
+_HELP_TEXT = "<b>RoboFleet commands</b>\n" + "\n".join(
     f"/{c['command']} — {c['description']}" for c in BOT_COMMANDS
 )
 

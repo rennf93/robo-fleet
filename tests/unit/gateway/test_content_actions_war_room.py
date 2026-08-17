@@ -54,7 +54,7 @@ def _future(hours: float) -> str:
 
 def _post(**overrides: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
-        "body": "RoboCo v0.30.0 teaser drops soon.",
+        "body": "RoboFleet v0.30.0 teaser drops soon.",
         "publish_after": _future(1),
         "stage_label": "teaser",
     }

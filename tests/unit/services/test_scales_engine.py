@@ -4,7 +4,7 @@ opt-in to RUN (org-scoped: it reviews the live portfolio across every
 project, not one repo).
 
 Mirrors test_periscope_engine.py: like periscope/roadmap, the exploration
-task's ``project_id`` still resolves against the RoboCo project (a hard
+task's ``project_id`` still resolves against the RoboFleet project (a hard
 TaskService._require_target_or_umbrella invariant every non-coordination
 task carries) even though the program itself needs no per-project opt-in.
 The stale-backlog snapshot tests mirror PestControlEngine's
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 
 SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 PO_UUID = _foundation.AGENTS["product-owner"].uuid
-SLUG = "roboco"
+SLUG = "robo-fleet"
 ONE = 1
 
 
@@ -102,9 +102,9 @@ async def _seed(session: AsyncSession) -> ProjectTable:
             )
     await session.flush()
     project = ProjectTable(
-        name="RoboCo",
+        name="RoboFleet",
         slug=SLUG,
-        git_url="https://github.com/x/roboco.git",
+        git_url="https://github.com/x/robofleet.git",
         default_branch="master",
         protected_branches=["master"],
         assigned_cell=Team.BACKEND,

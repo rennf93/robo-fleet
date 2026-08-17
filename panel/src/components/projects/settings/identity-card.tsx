@@ -32,7 +32,7 @@ import {
 import { SaveBar } from "./save-bar";
 
 // Auto-detect from the git URL host, mirroring
-// roboco/foundation/policy/forge.py's detect_provider: only gitlab.com is
+// robofleet/foundation/policy/forge.py's detect_provider: only gitlab.com is
 // auto-detected as non-GitHub for App-binding purposes — github.com and any
 // unrecognized/self-hosted host stay github-ish (a self-hosted forge must
 // set the Forge select explicitly to change this).
@@ -149,7 +149,7 @@ export function IdentityCard({ project }: { project: Project }) {
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="RoboCo API"
+            placeholder="RoboFleet API"
           />
         </div>
 

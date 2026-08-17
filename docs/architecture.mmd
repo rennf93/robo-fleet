@@ -11,7 +11,7 @@ flowchart TD
     end
 
     subgraph Agent["Agent runtime (Cloud Run Job, one per task)"]
-        ADK["ADK Runner + LlmAgent<br/>roboco.agent.adk_entry"]
+        ADK["ADK Runner + LlmAgent<br/>robofleet.agent.adk_entry"]
         Shim["Gateway tool-shim<br/>+ git/file FunctionTools"]
     end
 

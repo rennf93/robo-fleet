@@ -1,4 +1,4 @@
-"""Smoke the real ``python -m roboco.conventions`` entrypoint as a subprocess.
+"""Smoke the real ``python -m robofleet.conventions`` entrypoint as a subprocess.
 
 Guards the contract the agent image depends on: the module runs, loads its
 tree-sitter grammars, and emits JSONL findings with exit 0.
@@ -21,7 +21,7 @@ def test_cli_module_entrypoint_emits_jsonl(tmp_path: Path) -> None:
     (routers / "u.py").write_text(
         "from pydantic import BaseModel\nclass M(BaseModel):\n    x: int\n"
     )
-    conv = tmp_path / ".roboco"
+    conv = tmp_path / ".robofleet"
     conv.mkdir()
     (conv / "conventions.yml").write_text(
         "modules:\n  - path: app/routers\n    purpose: r\n    forbidden: [model]\n"

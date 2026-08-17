@@ -227,9 +227,9 @@ class TestBuildManifestForAgent:
 
 
 class TestManifestWorkspacePath:
-    """workspace_path must be the TASK-resolved workspace, not the roboco default.
+    """workspace_path must be the TASK-resolved workspace, not the robo-fleet default.
 
-    Live 2026-07-02: be-dev-2's manifest said /data/workspaces/roboco/... while
+    Live 2026-07-02: be-dev-2's manifest said /data/workspaces/robofleet/... while
     its task lived in guard-core-saas-backend — an agent trusting the manifest
     hunts for its files in the wrong repository.
     """
@@ -260,4 +260,4 @@ class TestManifestWorkspacePath:
 
         assert result is not None
         data = json.loads(result.read_text())
-        assert data["workspace_path"].endswith("workspaces/roboco/backend/be-dev-1")
+        assert data["workspace_path"].endswith("workspaces/robo-fleet/backend/be-dev-1")

@@ -6,7 +6,7 @@ guard's lifespan, and fire real HTTP requests — the first end-to-end exercise 
 the guard, verifying:
 
 * passive mode is genuinely log-only (never blocks, calibration-safe);
-* active mode does NOT false-positive on roboco's code/SQL/diff/URL payloads
+* active mode does NOT false-positive on robo-fleet's code/SQL/diff/URL payloads
   (the excluded_detection_body_fields calibration);
 * the custom validators still block real threats even in excluded fields;
 * the signature WAF still fires on non-excluded (structured) fields.
@@ -130,7 +130,7 @@ def _client(app: _InjectClientIP) -> TestClient:
     return TestClient(app)
 
 
-# Realistic roboco payloads whose free-text fields (real request-model names)
+# Realistic robo-fleet payloads whose free-text fields (real request-model names)
 # legitimately carry code, SQL, diffs, paths, HTML, and URLs — each false-positives
 # WITHOUT the exclusion, so every one must pass in active mode once calibrated. The
 # last two exercise free-form CONTAINER fields whose nested prose gets stringified.
@@ -160,7 +160,7 @@ class TestPassiveMode:
 
 class TestActiveModeNoFalsePositives:
     @pytest.mark.parametrize(("path", "body"), _LEGIT)
-    def test_legit_roboco_payload_not_blocked(
+    def test_legit_robofleet_payload_not_blocked(
         self, path: str, body: dict[str, object]
     ) -> None:
         """Active mode must not WAF-block legit code/SQL/diff/URL agent traffic."""
@@ -444,11 +444,11 @@ class TestBehavioralReturnRuleRedisFailOpen:
 
 
 class TestBehavioralGlobalReturnRuleRedisFailOpen:
-    """global_behavior_rules (roboco's status:404/status:401 rules) run
+    """global_behavior_rules (robo-fleet's status:404/status:401 rules) run
     through process_global_return_rules -- a DIFFERENT seam than
     process_return_rules, also invoked directly from guard's _process_response
     OUTSIDE SecurityCheckPipeline, and also needing its own fail-open patch.
-    This is the seam actually live in prod: roboco has no route-level
+    This is the seam actually live in prod: robo-fleet has no route-level
     return_pattern rules today, only global ones.
     """
 

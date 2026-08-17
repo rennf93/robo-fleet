@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the three RoboCo images via Cloud Build into Artifact Registry.
+# Build the three RoboFleet images via Cloud Build into Artifact Registry.
 # Reads project/region/repo from ROBOFLEET_GCP_* env vars (no hardcoded values).
 # Requires: gcloud (authed to the target project).
 # Env:

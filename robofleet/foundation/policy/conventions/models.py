@@ -1,6 +1,6 @@
 """Architectural-conventions standard — schema models + YAML parse.
 
-The standard is the repo-canonical ``.roboco/conventions.yml``: a per-project
+The standard is the repo-canonical ``.robofleet/conventions.yml``: a per-project
 architecture map (which definition *kinds* belong in which modules), a
 toggleable rule set, custom regex rules, and waivers. These models are pure
 (no IO, no DB) — the validator, the service, and the effective-map merge all
@@ -22,7 +22,7 @@ DefinitionKind = Literal[
 
 
 class ConventionsParseError(ValueError):
-    """Raised when ``.roboco/conventions.yml`` is malformed or invalid."""
+    """Raised when ``.robofleet/conventions.yml`` is malformed or invalid."""
 
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
@@ -111,7 +111,7 @@ class ConventionsStandard(_Base):
 
     @classmethod
     def parse_yaml(cls, text: str) -> ConventionsStandard:
-        """Parse ``.roboco/conventions.yml`` text into a validated standard.
+        """Parse ``.robofleet/conventions.yml`` text into a validated standard.
 
         Raises ``ConventionsParseError`` on malformed YAML, a non-mapping
         top level, or any schema violation (e.g. an unknown rule level).

@@ -42,8 +42,8 @@ fi
 # Render ~/.kimi-code/config.toml (managed provider/model blocks + telemetry/
 # upgrade knobs + per-role [[permission.rules]] + the bash-guard [[hooks]])
 # + mcp.json + AGENTS.md. Run from /app so `python -m` resolves the INSTALLED
-# roboco package: dev/doc/qa agents run at their workspace-clone cwd, whose
-# own roboco/ dir would shadow it on the sys.path front (the same
+# robo-fleet package: dev/doc/qa agents run at their workspace-clone cwd, whose
+# own robofleet/ dir would shadow it on the sys.path front (the same
 # ModuleNotFound lesson the codex/grok entrypoints document).
 ( cd /app && python -m robofleet.llm.providers.kimi_cli_config )
 

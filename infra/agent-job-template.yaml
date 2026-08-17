@@ -1,7 +1,7 @@
-# Cloud Run v2 Job template for RoboCo agents (ADK + Gemini on Cloud Run).
+# Cloud Run v2 Job template for RoboFleet agents (ADK + Gemini on Cloud Run).
 #
 # This is the REFERENCE shape: the CloudRunJobsProvider (Task 2.2,
-# roboco/llm/providers/cloudrun_jobs.py) creates the real per-agent Job in
+# robofleet/llm/providers/cloudrun_jobs.py) creates the real per-agent Job in
 # code via the run_v2 client, setting ROBOFLEET_AGENT_ID / ROBOFLEET_AGENT_MODEL /
 # ROBOFLEET_INITIAL_PROMPT / ROBOFLEET_TOOL_MANIFEST_PATH from the spawn call. This
 # YAML documents the full field set an operator can also apply manually with

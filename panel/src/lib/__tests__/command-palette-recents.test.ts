@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { loadRecents, addRecent } from "@/lib/command-palette-recents";
 
-const STORAGE_KEY = "roboco-cmd-recents";
+const STORAGE_KEY = "robofleet-cmd-recents";
 
 describe("command-palette-recents", () => {
   beforeEach(() => {

@@ -305,7 +305,7 @@ async def test_newtask_with_multiple_projects_asks_which(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     projects = [
-        SimpleNamespace(id=uuid4(), slug="roboco", name="RoboCo"),
+        SimpleNamespace(id=uuid4(), slug="robo-fleet", name="RoboFleet"),
         SimpleNamespace(id=uuid4(), slug="website", name="Website"),
     ]
     svc = MagicMock(list_all=AsyncMock(return_value=projects))
@@ -319,17 +319,17 @@ async def test_newtask_with_multiple_projects_asks_which(
     assert bridge._PENDING_NEWTASK["777"] == "ship a thing"
     keyboard = client.send_message.await_args.kwargs["reply_markup"]
     labels = [row[0]["text"] for row in keyboard["inline_keyboard"]]
-    assert labels == ["RoboCo", "Website"]
+    assert labels == ["RoboFleet", "Website"]
 
 
 @pytest.mark.asyncio
 async def test_project_pick_callback_starts_intake_with_stored_text(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    project = SimpleNamespace(id=uuid4(), slug="roboco", name="RoboCo")
+    project = SimpleNamespace(id=uuid4(), slug="robo-fleet", name="RoboFleet")
     svc = MagicMock(list_all=AsyncMock(return_value=[project]))
     monkeypatch.setattr(ti, "get_project_service", lambda _s: svc)
-    start = AsyncMock(return_value="📝 Intake on RoboCo")
+    start = AsyncMock(return_value="📝 Intake on RoboFleet")
     monkeypatch.setattr(bridge, "start_intake", start)
     bridge._PENDING_NEWTASK["777"] = "ship a thing"
     client = AsyncMock()

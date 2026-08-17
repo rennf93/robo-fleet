@@ -161,7 +161,7 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
     )
-    # NULLS NOT DISTINCT is PG 15+. roboco runs pgvector on PG 16, so fine.
+    # NULLS NOT DISTINCT is PG 15+. robo-fleet runs pgvector on PG 16, so fine.
     # This stops the `global` row (scope_value=NULL) from being duplicated.
     op.create_index(
         "ux_model_assignments_scope_key",

@@ -51,7 +51,9 @@ def _task(*, branch: str, task_id: UUID | None = None) -> MagicMock:
 
 def _stub_rebase_common(svc: GitService, clone: Path) -> dict[str, list[Path]]:
     object.__setattr__(
-        svc, "_project_for_task", AsyncMock(return_value=MagicMock(slug="roboco-api"))
+        svc,
+        "_project_for_task",
+        AsyncMock(return_value=MagicMock(slug="robofleet-api")),
     )
     object.__setattr__(
         svc, "_resolve_workspace_agent_id", MagicMock(return_value=uuid4())

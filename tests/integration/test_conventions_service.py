@@ -30,7 +30,7 @@ class _FakeGit:
     ) -> dict[str, Any]:
         self.calls.append({"slug": project_slug, "content": content})
         return {
-            "branch": "chore/roboco-conventions-scaffold",
+            "branch": "chore/robofleet-conventions-scaffold",
             "pr_number": _FAKE_PR_NUMBER,
             "pr_url": "u",
         }
@@ -104,7 +104,7 @@ async def test_corrupt_file_falls_back_to_last_ok(
     project = await _seed_project(
         db_session, head_commit="ok1", workspace_path=str(tmp_path)
     )
-    conv = tmp_path / ".roboco"
+    conv = tmp_path / ".robofleet"
     conv.mkdir()
     (conv / "conventions.yml").write_text(
         "modules:\n  - path: lib/special\n    purpose: special things\n"
@@ -132,7 +132,7 @@ async def test_health_recovers_after_in_place_repair(
     project = await _seed_project(
         db_session, head_commit="h", workspace_path=str(tmp_path)
     )
-    conv = tmp_path / ".roboco"
+    conv = tmp_path / ".robofleet"
     conv.mkdir()
     (conv / "conventions.yml").write_text("modules: [unterminated\n")
     svc = get_conventions_service(db_session)
@@ -154,7 +154,7 @@ async def test_get_map_recovers_after_in_place_repair(
     project = await _seed_project(
         db_session, head_commit="ok1", workspace_path=str(tmp_path)
     )
-    conv = tmp_path / ".roboco"
+    conv = tmp_path / ".robofleet"
     conv.mkdir()
     (conv / "conventions.yml").write_text(
         "modules:\n  - path: lib/special\n    purpose: special\n"
@@ -223,7 +223,7 @@ async def test_restore_uses_last_good_map(
     project = await _seed_project(
         db_session, head_commit="ok1", workspace_path=str(tmp_path)
     )
-    conv = tmp_path / ".roboco"
+    conv = tmp_path / ".robofleet"
     conv.mkdir()
     (conv / "conventions.yml").write_text(
         "modules:\n  - path: lib/special\n    purpose: special\n"

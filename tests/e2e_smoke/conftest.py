@@ -1,6 +1,6 @@
 """e2e lifecycle smoke harness — collection gate + the stack fixture.
 
-Scripted-agent smoke: an in-process RoboCo API (real routers, real
+Scripted-agent smoke: an in-process RoboFleet API (real routers, real
 middleware, real gateway/choreographer/services) over the ephemeral test
 Postgres, a local bare git origin standing in for GitHub, and a fake
 GitHub REST layer whose merges are REAL git merges on that origin. A

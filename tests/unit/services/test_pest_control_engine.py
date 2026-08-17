@@ -1,7 +1,7 @@
 """Pest control engine: originate ONE held exploration cycle, deduped, never
 authors content itself, and only against an opted-in project.
 
-Mirrors test_roadmap_engine.py, minus the RoboCo-project-slug resolution (this
+Mirrors test_roadmap_engine.py, minus the RoboFleet-project-slug resolution (this
 program is project-scoped: it targets whichever project has opted in via
 ``projects.board_programs``, never a hardcoded slug).
 """

@@ -1,7 +1,7 @@
 """
-MCP Servers for RoboCo
+MCP Servers for RoboFleet
 
-These MCP servers bridge Claude Code agents to the RoboCo APIs,
+These MCP servers bridge Claude Code agents to the RoboFleet APIs,
 providing tool interfaces with built-in enforcement and guidance.
 
 Servers:
@@ -13,11 +13,11 @@ Servers:
 - Docs MCP Server (``docs_server``)         documentation file management
 
 Do NOT eagerly re-export server factories here. Each server is launched
-as its own subprocess via ``python -m roboco.mcp.<name>``, and importing
-the ``roboco.mcp`` package first forces every sibling module to load —
+as its own subprocess via ``python -m robofleet.mcp.<name>``, and importing
+the ``robofleet.mcp`` package first forces every sibling module to load —
 most notably ``optimal_server``, which pulls in the pgvector/ollama stack and adds
 ~6s to startup. Claude Code times out slow MCP servers during
-init, which manifests as "roboco-flow/do tools never register". Keep
+init, which manifests as "robofleet-flow/do tools never register". Keep
 this file empty-of-imports; callers import the specific module they
 need directly.
 """

@@ -14,7 +14,7 @@ split in the panel.
 
 These helpers are the single chokepoint every consumer routes through; never
 read ``project.environments`` raw. Pure domain logic (pydantic-only), kept in
-``roboco.models`` so the Project model can import it without a services-cycle.
+``robofleet.models`` so the Project model can import it without a services-cycle.
 """
 
 from __future__ import annotations

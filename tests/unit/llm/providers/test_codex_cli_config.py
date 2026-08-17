@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 _SAMPLE_MCP = {
     "mcpServers": {
-        "roboco-flow": {
+        "robofleet-flow": {
             "command": "uv",
             "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
             "env": {
@@ -21,27 +21,27 @@ _SAMPLE_MCP = {
                 "ROBOFLEET_AGENT_TOKEN": "tok-123",
             },
         },
-        "roboco-do": {"command": "uv", "args": ["run", "x"]},
-        "roboco-optimal": {"command": "uv", "args": ["run", "y"]},
+        "robofleet-do": {"command": "uv", "args": ["run", "x"]},
+        "robofleet-optimal": {"command": "uv", "args": ["run", "y"]},
     }
 }
 
 
 def test_render_config_toml_is_valid_toml_and_injects_env() -> None:
     parsed = tomllib.loads(cc.render_config_toml(_SAMPLE_MCP))
-    flow = parsed["mcp_servers"]["roboco-flow"]
+    flow = parsed["mcp_servers"]["robofleet-flow"]
     assert flow["command"] == "uv"
     assert flow["args"][:2] == ["run", "--no-sync"]
     assert flow["env"]["ROBOFLEET_AGENT_TOKEN"] == "tok-123"
-    assert "env" not in parsed["mcp_servers"]["roboco-do"]
+    assert "env" not in parsed["mcp_servers"]["robofleet-do"]
 
 
 def test_render_config_toml_marks_gateway_pair_required() -> None:
     parsed = tomllib.loads(cc.render_config_toml(_SAMPLE_MCP))
-    assert parsed["mcp_servers"]["roboco-flow"]["required"] is True
-    assert parsed["mcp_servers"]["roboco-do"]["required"] is True
+    assert parsed["mcp_servers"]["robofleet-flow"]["required"] is True
+    assert parsed["mcp_servers"]["robofleet-do"]["required"] is True
     # Every other server is best-effort — no `required` key at all.
-    assert "required" not in parsed["mcp_servers"]["roboco-optimal"]
+    assert "required" not in parsed["mcp_servers"]["robofleet-optimal"]
 
 
 def test_render_config_toml_widens_startup_timeout_on_required_servers() -> None:
@@ -49,9 +49,9 @@ def test_render_config_toml_widens_startup_timeout_on_required_servers() -> None
     # a cold uv wheel cache; the gateway pair gets a wider budget.
     parsed = tomllib.loads(cc.render_config_toml(_SAMPLE_MCP))
     timeout = cc._REQUIRED_MCP_STARTUP_TIMEOUT_SEC
-    assert parsed["mcp_servers"]["roboco-flow"]["startup_timeout_sec"] == timeout
-    assert parsed["mcp_servers"]["roboco-do"]["startup_timeout_sec"] == timeout
-    assert "startup_timeout_sec" not in parsed["mcp_servers"]["roboco-optimal"]
+    assert parsed["mcp_servers"]["robofleet-flow"]["startup_timeout_sec"] == timeout
+    assert parsed["mcp_servers"]["robofleet-do"]["startup_timeout_sec"] == timeout
+    assert "startup_timeout_sec" not in parsed["mcp_servers"]["robofleet-optimal"]
 
 
 def test_render_config_toml_disables_subagents_unconditionally() -> None:
@@ -77,7 +77,7 @@ def test_sandbox_level_developer_is_workspace_write() -> None:
 def test_sandbox_level_other_delivery_roles_are_read_only() -> None:
     # Narrower than grok's per-role allows_write (documenter also writes there)
     # — Codex V1 restricts local sandbox writes to developer only; documenter's
-    # real writes ride the roboco-docs MCP server, not a local file edit.
+    # real writes ride the robofleet-docs MCP server, not a local file edit.
     for role in ("qa", "documenter", "pr_reviewer", "cell_pm", "main_pm", ""):
         assert cc.sandbox_level_for_role(role) == "read-only"
 
@@ -124,14 +124,14 @@ def test_render_combined_prompt_degrades_gracefully() -> None:
 
 def test_write_combined_prompt_reads_source_and_writes_dest(tmp_path: Path) -> None:
     src = tmp_path / "system-prompt.md"
-    src.write_text("You are the RoboCo developer.", encoding="utf-8")
+    src.write_text("You are the RoboFleet developer.", encoding="utf-8")
     dest = tmp_path / "prompt.txt"
     found = cc.write_combined_prompt(
         task_prompt="Implement the feature.", source=src, dest=dest
     )
     assert found is True
     text = dest.read_text(encoding="utf-8")
-    assert "You are the RoboCo developer." in text
+    assert "You are the RoboFleet developer." in text
     assert "Implement the feature." in text
 
 

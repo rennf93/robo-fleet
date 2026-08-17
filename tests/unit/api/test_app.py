@@ -47,7 +47,7 @@ def _registered_paths(app: FastAPI) -> set[str]:
 def test_default_app_is_a_fastapi_instance() -> None:
     """Importing the module yields a configured FastAPI instance."""
     assert isinstance(default_app, FastAPI)
-    assert default_app.title == "RoboCo API"
+    assert default_app.title == "RoboFleet API"
 
 
 def test_create_app_returns_new_instance_each_call() -> None:

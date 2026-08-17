@@ -39,7 +39,7 @@ import type {
 // =============================================================================
 
 const mockGitStatus: GitStatusResponse = {
-  project_slug: "roboco",
+  project_slug: "robo-fleet",
   current_branch: "feature/backend/abc12345",
   has_changes: true,
   staged_files: ["src/api/routes/tasks.py"],
@@ -50,7 +50,7 @@ const mockGitStatus: GitStatusResponse = {
 };
 
 const mockGitLog: GitLogResponse = {
-  project_slug: "roboco",
+  project_slug: "robo-fleet",
   branch: "feature/backend/abc12345",
   commits: [
     {
@@ -64,7 +64,7 @@ const mockGitLog: GitLogResponse = {
 };
 
 const mockBranches: GitBranchListResponse = {
-  project_slug: "roboco",
+  project_slug: "robo-fleet",
   current_branch: "feature/backend/abc12345",
   branches: [
     {

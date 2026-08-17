@@ -24,21 +24,21 @@ def test_projects_one_per_repo_collapses_monorepo() -> None:
     # Three cell-projects all pointing at the same repo (a monorepo product)
     # collapse to ONE canonical project; a genuinely separate repo is kept.
     projects = [
-        _proj("roboco-uix", "https://github.com/rennf93/roboco.git"),
-        _proj("roboco-api", "https://github.com/rennf93/roboco.git"),
-        _proj("robofleet-panel", "https://github.com/rennf93/roboco.git"),
+        _proj("robofleet-uix", "https://github.com/rennf93/robo-fleet.git"),
+        _proj("robofleet-api", "https://github.com/rennf93/robo-fleet.git"),
+        _proj("robofleet-panel", "https://github.com/rennf93/robo-fleet.git"),
         _proj("other", "https://github.com/rennf93/other-repo.git"),
     ]
     out = AgentOrchestrator._projects_one_per_repo(projects)
     slugs = [p.slug for p in out]
     # one per distinct repo; canonical pick is deterministic (first by slug).
-    assert slugs == ["other", "roboco-api"]
+    assert slugs == ["other", "robofleet-api"]
 
 
 def test_projects_one_per_repo_normalizes_and_skips_repoless() -> None:
     projects = [
-        _proj("a", "https://github.com/rennf93/roboco"),  # no .git
-        _proj("b", "https://github.com/rennf93/roboco.git/"),  # .git + slash
+        _proj("a", "https://github.com/rennf93/robo-fleet"),  # no .git
+        _proj("b", "https://github.com/rennf93/robo-fleet.git/"),  # .git + slash
         _proj("coordination", None),  # product/coordination project, no repo
     ]
     out = AgentOrchestrator._projects_one_per_repo(projects)
@@ -211,7 +211,7 @@ async def test_skip_app_bot_authored_fleet_pr(monkeypatch: pytest.MonkeyPatch) -
         "number": 667,
         "is_fork": False,
         "author_is_owner": False,
-        "user_login": "roboco-app[bot]",
+        "user_login": "robo-fleet-app[bot]",
         "author_association": "NONE",
         "head_ref": "feature/frontend/170c9578--f1957610",
     }

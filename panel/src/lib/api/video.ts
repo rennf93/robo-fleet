@@ -34,7 +34,7 @@ export interface VideoPost {
 }
 
 // One in-flight source=video authoring task — GET /video/pipeline
-// (roboco/api/routes/video.py). Spans claim through the render loop's
+// (robofleet/api/routes/video.py). Spans claim through the render loop's
 // retry/failure states; a rendered task drops out (it's visible via
 // VideoPost/listPosts instead).
 export interface VideoPipelineItem {
@@ -88,7 +88,7 @@ export interface TikTokCredentialsStatus {
 }
 
 // One extracted request_render preview frame — GET /video/preview-frames/
-// {task_id} (roboco/api/routes/video.py). index/timestamp decoded server-side
+// {task_id} (robofleet/api/routes/video.py). index/timestamp decoded server-side
 // from the sidecar's self-describing filename.
 export interface PreviewFrame {
   index: number;
@@ -110,7 +110,7 @@ export interface VideoPreviewFrames {
   frames: Partial<Record<VideoCut, PreviewFrame[]>>;
 }
 
-// GET /video/posts/{id}/media (roboco/api/routes/video.py) serves one
+// GET /video/posts/{id}/media (robofleet/api/routes/video.py) serves one
 // rendered MP4 cut; VideoPost.mp4_paths (above) carries the server-side
 // paths per cut. This builds that route's URL — but a native
 // <video src> pointed straight at it 401s (a plain <video> GET carries none
@@ -121,7 +121,7 @@ export function videoMediaUrl(taskId: string, cut: VideoCut): string {
   return `${API_URL}/video/posts/${taskId}/media?cut=${cut}`;
 }
 
-// GET /video/preview/{task_id}/{file_path:path} (roboco/api/routes/video.py)
+// GET /video/preview/{task_id}/{file_path:path} (robofleet/api/routes/video.py)
 // serves a video-authoring task's composition HTML + sibling assets directly
 // from the project's merged read-clone, with iframe-permitting headers — the
 // panel's live composition preview embeds this URL as an <iframe src>
@@ -202,7 +202,7 @@ export const videoApi = {
     const { data } = await api.post<VideoRequestResult>("/video/request", body);
     return data;
   },
-  // POST /video/pipeline/{task_id}/rerender (roboco/api/routes/video.py) —
+  // POST /video/pipeline/{task_id}/rerender (robofleet/api/routes/video.py) —
   // clears the authoring task's render idempotency keys so the render loop
   // re-picks it up. taskId is the *authoring* task (VideoPost.source_task_id),
   // not the held draft's own task_id.

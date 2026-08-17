@@ -88,7 +88,7 @@ async def test_cell_pm_refused_on_nonterminal_dependency(
                 "dependency_ids": [_DEP_ID],
                 "acceptance_criteria": ["x"],
                 "project_id": "r1",
-                "project_slug": "roboco",
+                "project_slug": "robo-fleet",
             },
         ),
         f"/tasks/{_DEP_ID}": _FakeResp(200, {"id": _DEP_ID, "status": "in_progress"}),

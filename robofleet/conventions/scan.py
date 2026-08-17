@@ -45,7 +45,7 @@ _IGNORE_DIRS = frozenset(
 # define fixtures, fakes, and helper functions of every kind, and documentation
 # trees (e.g. a docs site) are not code at all. A candidate module sitting under
 # any of these path segments is dropped from the map so a test or docs task is
-# never stranded — this holds for any project, not just RoboCo.
+# never stranded — this holds for any project, not just RoboFleet.
 _NON_SOURCE_SEGMENTS = frozenset({"tests", "test", "docs", "__tests__"})
 
 # Directory-name keywords -> (purpose, forbidden definition kinds). Only kinds
@@ -119,7 +119,7 @@ _PLACEMENT_DEFAULT: RuleLevel = "block"
 # a misplaced helper is too weak a signal to hard-block: a route file's small
 # private glue would otherwise strand a task. Helper placement therefore seeds at
 # warn, while the precise kinds (model / route / component) stay block. A project
-# can still promote no_helpers_in_<leaf> to block in .roboco/conventions.yml. The
+# can still promote no_helpers_in_<leaf> to block in .robofleet/conventions.yml. The
 # fat-handler signal that does have teeth is the body-level thin_routes check.
 _SOFT_PLACEMENT_KINDS = frozenset({"helper"})
 _SOFT_PLACEMENT_DEFAULT: RuleLevel = "warn"
@@ -302,10 +302,10 @@ def _to_yaml_data(standard: ConventionsStandard) -> dict[str, object]:
 
 
 def render_yaml(standard: ConventionsStandard) -> str:
-    """Render ``standard`` to a commented ``.roboco/conventions.yml`` string."""
+    """Render ``standard`` to a commented ``.robofleet/conventions.yml`` string."""
     header = (
         "# Architectural conventions for this project.\n"
-        "# Auto-scaffolded by RoboCo — edit freely; this file is canonical.\n"
+        "# Auto-scaffolded by RoboFleet — edit freely; this file is canonical.\n"
         "# Each module lists definition KINDS forbidden in it; rules toggle\n"
         "# warn/block; waivers are accountable, PR-reviewed escape hatches.\n"
     )

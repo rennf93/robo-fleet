@@ -16,7 +16,7 @@ from robofleet.services.git import GitService
 if TYPE_CHECKING:
     from pathlib import Path
 
-_SCAFFOLD_BRANCH = "chore/roboco-conventions-scaffold"
+_SCAFFOLD_BRANCH = "chore/robofleet-conventions-scaffold"
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -129,7 +129,7 @@ async def test_clean_tree_proceeds_and_commits_on_scaffold(
     assert result["pr_number"] is None  # no token → no remote PR
     assert _branch_exists(repo, _SCAFFOLD_BRANCH)
     show = subprocess.run(
-        ["git", "show", f"{_SCAFFOLD_BRANCH}:.roboco/conventions.yml"],
+        ["git", "show", f"{_SCAFFOLD_BRANCH}:.robofleet/conventions.yml"],
         cwd=repo,
         capture_output=True,
         text=True,

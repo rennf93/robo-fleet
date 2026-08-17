@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_LOCK_PREFIX = "roboco:x_post:"
+_LOCK_PREFIX = "robofleet:x_post:"
 _LOCK_TTL_SECONDS = 60  # a tweet POST completes in seconds; generous crash backstop
 
 # X draft source -> the Board Program it LEARNs into. x_post/x_reply are NOT

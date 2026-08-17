@@ -32,8 +32,8 @@ def _enable(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     monkeypatch.setattr(cfg, "obsidian_vault_enabled", True)
     monkeypatch.setattr(cfg, "vault_kb_enabled", True)
     monkeypatch.setattr(cfg, "vault_path", str(tmp_path))
-    monkeypatch.setattr(cfg, "vault_kb_dirs", "RoboCo/Notes")
-    return tmp_path / "RoboCo" / "Notes"
+    monkeypatch.setattr(cfg, "vault_kb_dirs", "RoboFleet/Notes")
+    return tmp_path / "RoboFleet" / "Notes"
 
 
 def _mock_optimal(
@@ -81,7 +81,7 @@ async def test_new_note_is_ingested(
     assert report.ingested == 1
     optimal.index_vault_note.assert_awaited_once()
     _, kwargs = optimal.index_vault_note.call_args
-    assert kwargs["path"] == "RoboCo/Notes/a.md"
+    assert kwargs["path"] == "RoboFleet/Notes/a.md"
     assert kwargs["content"] == _CLEAN_NOTE
 
 
@@ -92,7 +92,7 @@ async def test_unchanged_note_is_skipped(
     notes_dir = _enable(monkeypatch, tmp_path)
     notes_dir.mkdir(parents=True)
     (notes_dir / "a.md").write_text(_CLEAN_NOTE, encoding="utf-8")
-    tracked = [_tracked("RoboCo/Notes/a.md", _content_hash(_CLEAN_NOTE))]
+    tracked = [_tracked("RoboFleet/Notes/a.md", _content_hash(_CLEAN_NOTE))]
     optimal = _mock_optimal(monkeypatch, tracked)
     report = await VaultKBEngine(MagicMock()).run_cycle()
     assert report.skipped == 1
@@ -106,7 +106,7 @@ async def test_edited_note_is_reingested(
     notes_dir = _enable(monkeypatch, tmp_path)
     notes_dir.mkdir(parents=True)
     (notes_dir / "a.md").write_text(_CLEAN_NOTE, encoding="utf-8")
-    tracked = [_tracked("RoboCo/Notes/a.md", "stale-hash")]
+    tracked = [_tracked("RoboFleet/Notes/a.md", "stale-hash")]
     optimal = _mock_optimal(monkeypatch, tracked)
     report = await VaultKBEngine(MagicMock()).run_cycle()
     assert report.ingested == 1
@@ -119,11 +119,11 @@ async def test_deleted_note_is_deindexed(
 ) -> None:
     notes_dir = _enable(monkeypatch, tmp_path)
     notes_dir.mkdir(parents=True)
-    tracked = [_tracked("RoboCo/Notes/gone.md", "some-hash")]
+    tracked = [_tracked("RoboFleet/Notes/gone.md", "some-hash")]
     optimal = _mock_optimal(monkeypatch, tracked)
     report = await VaultKBEngine(MagicMock()).run_cycle()
     assert report.deleted == 1
-    optimal.unindex_vault_note.assert_awaited_once_with("RoboCo/Notes/gone.md")
+    optimal.unindex_vault_note.assert_awaited_once_with("RoboFleet/Notes/gone.md")
 
 
 @pytest.mark.asyncio
@@ -152,7 +152,7 @@ async def test_flagged_note_is_quarantined_not_indexed(
     assert report.quarantined == 1
     optimal.index_vault_note.assert_not_awaited()
     text = path.read_text(encoding="utf-8")
-    assert text.count("RoboCo: quarantined") == 1
+    assert text.count("RoboFleet: quarantined") == 1
 
 
 @pytest.mark.asyncio
@@ -171,7 +171,7 @@ async def test_quarantine_callout_is_not_duplicated_and_hash_is_stable(
     assert second.quarantined == 1
     optimal.index_vault_note.assert_not_awaited()
     text = path.read_text(encoding="utf-8")
-    assert text.count("RoboCo: quarantined") == 1
+    assert text.count("RoboFleet: quarantined") == 1
 
 
 @pytest.mark.asyncio
@@ -185,11 +185,11 @@ async def test_previously_clean_note_edited_into_flagged_state_is_deindexed(
     notes_dir.mkdir(parents=True)
     path = notes_dir / "a.md"
     path.write_text(_POISON_NOTE, encoding="utf-8")
-    tracked = [_tracked("RoboCo/Notes/a.md", "stale-clean-hash")]
+    tracked = [_tracked("RoboFleet/Notes/a.md", "stale-clean-hash")]
     optimal = _mock_optimal(monkeypatch, tracked)
     report = await VaultKBEngine(MagicMock()).run_cycle()
     assert report.quarantined == 1
-    optimal.unindex_vault_note.assert_awaited_once_with("RoboCo/Notes/a.md")
+    optimal.unindex_vault_note.assert_awaited_once_with("RoboFleet/Notes/a.md")
     optimal.index_vault_note.assert_not_awaited()
 
 
@@ -204,8 +204,8 @@ def _enable_subdir_vault(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Pat
     monkeypatch.setattr(cfg, "obsidian_vault_enabled", True)
     monkeypatch.setattr(cfg, "vault_kb_enabled", True)
     monkeypatch.setattr(cfg, "vault_path", str(vault))
-    monkeypatch.setattr(cfg, "vault_kb_dirs", "RoboCo/Notes")
-    notes = vault / "RoboCo" / "Notes"
+    monkeypatch.setattr(cfg, "vault_kb_dirs", "RoboFleet/Notes")
+    notes = vault / "RoboFleet" / "Notes"
     notes.mkdir(parents=True)
     return notes
 
@@ -244,7 +244,7 @@ async def test_escaping_dir_entry_is_skipped_and_cycle_survives(
         "# leaked\n\nnot vault content\n", encoding="utf-8"
     )
     entry = str(outside) if escape_entry == "ABSOLUTE" else escape_entry
-    monkeypatch.setattr(cfg, "vault_kb_dirs", f"RoboCo/Notes,{entry}")
+    monkeypatch.setattr(cfg, "vault_kb_dirs", f"RoboFleet/Notes,{entry}")
     optimal = _mock_optimal(monkeypatch)
 
     report = await VaultKBEngine(MagicMock()).run_cycle()
@@ -252,7 +252,7 @@ async def test_escaping_dir_entry_is_skipped_and_cycle_survives(
     assert report.ingested == 1  # the healthy dir processed; no cycle abort
     optimal.index_vault_note.assert_awaited_once()
     _, kwargs = optimal.index_vault_note.call_args
-    assert kwargs["path"] == "RoboCo/Notes/good.md"
+    assert kwargs["path"] == "RoboFleet/Notes/good.md"
 
 
 @pytest.mark.asyncio
@@ -264,10 +264,10 @@ async def test_vault_root_equivalent_dir_entry_is_skipped(
     notes_dir = _enable(monkeypatch, tmp_path)
     notes_dir.mkdir(parents=True)
     (notes_dir / "good.md").write_text(_CLEAN_NOTE, encoding="utf-8")
-    journals = tmp_path / "RoboCo" / "Journals"
+    journals = tmp_path / "RoboFleet" / "Journals"
     journals.mkdir(parents=True)
     (journals / "private.md").write_text("# private\n\nnot for RAG\n", encoding="utf-8")
-    monkeypatch.setattr(cfg, "vault_kb_dirs", "RoboCo/Notes,.")
+    monkeypatch.setattr(cfg, "vault_kb_dirs", "RoboFleet/Notes,.")
     optimal = _mock_optimal(monkeypatch)
 
     report = await VaultKBEngine(MagicMock()).run_cycle()
@@ -275,7 +275,7 @@ async def test_vault_root_equivalent_dir_entry_is_skipped(
     assert report.ingested == 1
     optimal.index_vault_note.assert_awaited_once()
     _, kwargs = optimal.index_vault_note.call_args
-    assert kwargs["path"] == "RoboCo/Notes/good.md"
+    assert kwargs["path"] == "RoboFleet/Notes/good.md"
 
 
 # --------------------------------------------------------------------------- #

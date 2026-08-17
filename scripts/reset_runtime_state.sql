@@ -9,11 +9,11 @@
 --     handoffs, a2a_*)
 --
 -- Usage:
---   docker exec -i roboco-postgres psql -U roboco -d roboco \
+--   docker exec -i robofleet-postgres psql -U robo-fleet -d robo-fleet \
 --       -f - < scripts/reset_runtime_state.sql
 -- or piped:
 --   cat scripts/reset_runtime_state.sql | \
---       docker exec -i roboco-postgres psql -U roboco -d roboco
+--       docker exec -i robofleet-postgres psql -U robo-fleet -d robo-fleet
 --
 -- Safe to re-run — every clear is idempotent (DELETE, not DROP), and the
 -- preserved tables never get touched.

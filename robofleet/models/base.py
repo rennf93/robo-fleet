@@ -1,5 +1,5 @@
 """
-Base models and enums for RoboCo.
+Base models and enums for RoboFleet.
 
 Contains all enumeration types and the base Pydantic model configuration.
 """
@@ -256,7 +256,7 @@ class AssignmentScope(StrEnum):
 
 class RobocoBase(BaseModel):
     """
-    Base model for all RoboCo models.
+    Base model for all RoboFleet models.
 
     Provides common configuration for JSON serialization,
     immutability, and validation.

@@ -4,7 +4,7 @@ A project-scoped program key ("pest_control") opts a project INTO that
 program's cycles (affirmative opt-in, null = out). An org-scoped key
 prefixed "!" ("!roadmap") opts a project OUT of that program's output
 (default-eligible, null = in). See
-``roboco.foundation.policy.board_programs.project_participates``. Additive,
+``robofleet.foundation.policy.board_programs.project_participates``. Additive,
 nullable; inert until a project sets it or a project-scoped program lands.
 
 Revision ID: 088_project_board_programs

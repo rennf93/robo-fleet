@@ -104,8 +104,8 @@ def test_satisfies_helper() -> None:
     assert satisfies("3.12", "") is True
 
 
-def test_roboco_repo_floor_resolves_to_its_real_python() -> None:
-    """RoboCo's own ``requires-python`` must resolve to 3.13, not lower.
+def test_robofleet_repo_floor_resolves_to_its_real_python() -> None:
+    """RoboFleet's own ``requires-python`` must resolve to 3.13, not lower.
 
     Its code imports ``tomllib`` (3.11+) and the stack runs on 3.13; a
     permissive floor like ``>=3.10`` made the resolver provision agent

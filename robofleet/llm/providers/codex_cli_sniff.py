@@ -27,7 +27,7 @@ Patterns (mirroring grok's own proven, word-boundaried set — see
     a login page; any transcript mentioning it would false-park the whole
     provider).
 
-The entrypoint calls this as ``python -m roboco.llm.providers.codex_cli_sniff
+The entrypoint calls this as ``python -m robofleet.llm.providers.codex_cli_sniff
 <run_log> [err_log]``, printing ``rate_limit`` / ``auth`` / an empty line.
 """
 

@@ -234,7 +234,7 @@ def _learning_source(content: str) -> str:
     backfill below compute the same source and check for it directly.
     """
     content_hash = hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()[:16]
-    return f"roboco://learnings/lrn-{content_hash}"
+    return f"robofleet://learnings/lrn-{content_hash}"
 
 
 async def _backfill_journals(optimal: Any) -> tuple[int, int]:
@@ -242,7 +242,7 @@ async def _backfill_journals(optimal: Any) -> tuple[int, int]:
 
     Candidates are entries at/above the JOURNALS floor (a still-undersized
     entry would zero-chunk again — excluded here so it's never retried
-    forever) whose ``roboco://journals/<id>`` source has zero chunk rows.
+    forever) whose ``robofleet://journals/<id>`` source has zero chunk rows.
     Returns ``(processed, still_missing)`` for this capped batch.
     """
     if not optimal.is_index_registered(IndexType.JOURNALS):
@@ -257,7 +257,7 @@ async def _backfill_journals(optimal: Any) -> tuple[int, int]:
                     FROM journal_entries je
                     JOIN journals j ON j.id = je.journal_id
                     LEFT JOIN chunks_journals cj
-                        ON cj.source = 'roboco://journals/' || je.id::text
+                        ON cj.source = 'robofleet://journals/' || je.id::text
                     WHERE cj.source IS NULL
                         AND je.is_private = false
                         AND length(je.content) >= :floor

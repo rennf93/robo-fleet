@@ -4,21 +4,21 @@ Optimal MCP Server (Optimal Brain)
 Exposes knowledge base, RAG, and semantic search tools to Claude Code agents.
 
 Core Tools:
-- roboco_kb_search: Semantic search across indexed content
-- roboco_rag_query: RAG query with answer generation
-- roboco_kb_index_code: Index code files (PM/Developer)
-- roboco_kb_index_docs: Index documentation (PM/Documenter)
-- roboco_kb_stats: Get index statistics
-- roboco_tokens_estimate: Estimate token count for content
+- robofleet_kb_search: Semantic search across indexed content
+- robofleet_rag_query: RAG query with answer generation
+- robofleet_kb_index_code: Index code files (PM/Developer)
+- robofleet_kb_index_docs: Index documentation (PM/Documenter)
+- robofleet_kb_stats: Get index statistics
+- robofleet_tokens_estimate: Estimate token count for content
 
 Optimal Brain Tools:
-- roboco_ask_mentor: Conversational RAG with follow-up context
-- roboco_search_error: Search for known error solutions
-- roboco_record_error_solution: Record how an error was solved
-- roboco_check_decision: Check for similar past decisions
-- roboco_record_decision: Record an architectural decision
-- roboco_get_standards: Get coding/security/workflow standards
-- roboco_validate_action: Validate action against standards
+- robofleet_ask_mentor: Conversational RAG with follow-up context
+- robofleet_search_error: Search for known error solutions
+- robofleet_record_error_solution: Record how an error was solved
+- robofleet_check_decision: Check for similar past decisions
+- robofleet_record_decision: Record an architectural decision
+- robofleet_get_standards: Get coding/security/workflow standards
+- robofleet_validate_action: Validate action against standards
 """
 
 import os
@@ -69,7 +69,7 @@ def normalize_index_types(index_types: list[str] | None) -> list[str] | None:
 _RESULT_CONTENT_CAP = 800
 
 # Appended to any hit whose metadata marks it "live_write" (written by
-# roboco_docs_write / i_documented mid-task, before the task's PR merged) —
+# robofleet_docs_write / i_documented mid-task, before the task's PR merged) —
 # the live incident this guards against: a dev built UI against an API
 # contract that existed only in a still-open PR, because a search hit off an
 # in-flight doc read indistinguishably from one describing merged/deployed
@@ -77,7 +77,7 @@ _RESULT_CONTENT_CAP = 800
 #
 # ponytail: the marker never flips back to "repo_tree" on merge — there's no
 # lifecycle hook from PR-merge back into the KB, and the periodic re-scan
-# only walks docs/rag + docs/map (siblings of the team dirs roboco_docs_write
+# only walks docs/rag + docs/map (siblings of the team dirs robofleet_docs_write
 # targets), so a caveat persists until an operator/startup reindex re-derives
 # the doc's metadata from the repo tree. Treat it as "verify against git",
 # not "this is unmerged". Upgrade path: stamp the doc's task_id (already
@@ -129,7 +129,7 @@ def _register_search_tools(mcp: FastMCP, client: ApiClient) -> None:
     """Register search tools available to all agents."""
 
     @mcp.tool()
-    async def roboco_kb_search(
+    async def robofleet_kb_search(
         query: str,
         top_k: int = 5,
         project: str | None = None,
@@ -171,7 +171,7 @@ def _register_search_tools(mcp: FastMCP, client: ApiClient) -> None:
                 "SEARCH_FAILED",
                 "Failed to search knowledge base",
                 {"api_error": resp.text},
-                hint="Try roboco_ask_mentor(question) for AI-synthesized answers.",
+                hint="Try robofleet_ask_mentor(question) for AI-synthesized answers.",
             )
 
         result = resp.json()
@@ -187,12 +187,12 @@ def _register_search_tools(mcp: FastMCP, client: ApiClient) -> None:
         }
         if total == 0:
             response["hint"] = (
-                "No results. Try roboco_ask_mentor(question) for better answers."
+                "No results. Try robofleet_ask_mentor(question) for better answers."
             )
         return response
 
     @mcp.tool()
-    async def roboco_rag_query(
+    async def robofleet_rag_query(
         query: str,
         top_k: int = 5,
         project: str | None = None,
@@ -201,7 +201,7 @@ def _register_search_tools(mcp: FastMCP, client: ApiClient) -> None:
         """
         RAG query - get an AI-generated answer using knowledge base context.
 
-        NOTE: For most questions, prefer `roboco_ask_mentor` instead!
+        NOTE: For most questions, prefer `robofleet_ask_mentor` instead!
         The mentor searches multiple indexes and supports follow-up questions.
 
         Use this simpler tool only when you need:
@@ -233,7 +233,7 @@ def _register_search_tools(mcp: FastMCP, client: ApiClient) -> None:
                 "RAG_FAILED",
                 "Failed to query RAG",
                 {"api_error": resp.text},
-                hint="Try roboco_ask_mentor(question) instead - it's more robust.",
+                hint="Try robofleet_ask_mentor(question) instead - it's more robust.",
             )
 
         result = resp.json()
@@ -252,13 +252,13 @@ def _register_search_tools(mcp: FastMCP, client: ApiClient) -> None:
         # Guide to mentor for better results
         if context_used == 0 or "couldn't find" in answer.lower():
             response["hint"] = (
-                "Limited results. roboco_ask_mentor(question) searches more sources "
+                "Limited results. robofleet_ask_mentor(question) searches more sources "
                 "and supports follow-up questions."
             )
         return response
 
     @mcp.tool()
-    async def roboco_kb_stats() -> dict[str, Any]:
+    async def robofleet_kb_stats() -> dict[str, Any]:
         """
         Get knowledge base statistics.
 
@@ -285,7 +285,7 @@ def _register_indexing_tools(mcp: FastMCP, client: ApiClient) -> None:
     """Register indexing tools (permission-controlled at API level)."""
 
     @mcp.tool()
-    async def roboco_kb_index_code(
+    async def robofleet_kb_index_code(
         sources: list[str],
         project: str | None = None,
     ) -> dict[str, Any]:
@@ -333,7 +333,7 @@ def _register_indexing_tools(mcp: FastMCP, client: ApiClient) -> None:
         }
 
     @mcp.tool()
-    async def roboco_kb_index_docs(
+    async def robofleet_kb_index_docs(
         sources: list[str],
         project: str | None = None,
     ) -> dict[str, Any]:
@@ -385,7 +385,7 @@ def _register_utility_tools(mcp: FastMCP, client: ApiClient) -> None:
     """Register utility tools."""
 
     @mcp.tool()
-    async def roboco_tokens_estimate(
+    async def robofleet_tokens_estimate(
         content: str,
         model: str = "claude-sonnet-4-20250514",
     ) -> dict[str, Any]:
@@ -436,7 +436,7 @@ def _register_mentor_tools(mcp: FastMCP, client: ApiClient) -> None:
     """Register mentor (conversational RAG) tools."""
 
     @mcp.tool()
-    async def roboco_ask_mentor(
+    async def robofleet_ask_mentor(
         question: str,
         conversation_id: str | None = None,
         domain: str | None = None,
@@ -445,7 +445,7 @@ def _register_mentor_tools(mcp: FastMCP, client: ApiClient) -> None:
         Ask the organizational knowledge base for help.
 
         THIS IS THE PRIMARY TOOL for knowledge base questions.
-        Use this instead of roboco_rag_query for most questions.
+        Use this instead of robofleet_rag_query for most questions.
 
         This is a conversational interface - you can ask follow-up questions
         by providing the conversation_id from a previous response.
@@ -467,10 +467,10 @@ def _register_mentor_tools(mcp: FastMCP, client: ApiClient) -> None:
 
         Example:
             First question:
-            >>> roboco_ask_mentor("How do I handle authentication?")
+            >>> robofleet_ask_mentor("How do I handle authentication?")
 
             Follow-up:
-            >>> roboco_ask_mentor(
+            >>> robofleet_ask_mentor(
             ...     "What about refresh tokens?",
             ...     conversation_id="abc-123"
             ... )
@@ -507,7 +507,7 @@ def _register_error_tools(mcp: FastMCP, client: ApiClient) -> None:
     """Register error pattern tools."""
 
     @mcp.tool()
-    async def roboco_search_error(
+    async def robofleet_search_error(
         error_message: str,
         context: str = "",
     ) -> dict[str, Any]:
@@ -546,14 +546,14 @@ def _register_error_tools(mcp: FastMCP, client: ApiClient) -> None:
         }
         if solutions_found == 0:
             response["hint"] = (
-                "No known solutions. Try roboco_ask_mentor(f'How do I fix: {error}') "
-                "for guidance. If you solve it, use roboco_record_error_solution() "
+                "No known solutions. Try robofleet_ask_mentor(f'How do I fix: {error}')"
+                " for guidance. If you solve it, use robofleet_record_error_solution() "
                 "to help future agents."
             )
         return response
 
     @mcp.tool()
-    async def roboco_record_error_solution(
+    async def robofleet_record_error_solution(
         error_message: str,
         context: str,
         solution: str,
@@ -610,7 +610,7 @@ def _register_decision_tools(mcp: FastMCP, client: ApiClient) -> None:
     """Register decision memory tools."""
 
     @mcp.tool()
-    async def roboco_check_decision(
+    async def robofleet_check_decision(
         topic: str,
     ) -> dict[str, Any]:
         """
@@ -648,7 +648,7 @@ def _register_decision_tools(mcp: FastMCP, client: ApiClient) -> None:
         }
 
     @mcp.tool()
-    async def roboco_record_decision(params: RecordDecisionInput) -> dict[str, Any]:
+    async def robofleet_record_decision(params: RecordDecisionInput) -> dict[str, Any]:
         """
         Record an architectural or design decision.
 
@@ -700,7 +700,7 @@ def _register_standards_tools(mcp: FastMCP, client: ApiClient) -> None:
     """Register standards and validation tools."""
 
     @mcp.tool()
-    async def roboco_get_standards(
+    async def robofleet_get_standards(
         domain: str,
         language: str | None = None,
     ) -> dict[str, Any]:
@@ -738,7 +738,7 @@ def _register_standards_tools(mcp: FastMCP, client: ApiClient) -> None:
         }
 
     @mcp.tool()
-    async def roboco_validate_action(
+    async def robofleet_validate_action(
         action_type: str,
         context: str,
     ) -> dict[str, Any]:
@@ -783,7 +783,7 @@ def _register_standards_tools(mcp: FastMCP, client: ApiClient) -> None:
         }
 
     @mcp.tool()
-    async def roboco_review_code(
+    async def robofleet_review_code(
         code: str,
         file_path: str,
         change_type: str = "modify",
@@ -840,7 +840,7 @@ def _register_learning_tools(mcp: FastMCP, client: ApiClient) -> None:
     """Register learning tools."""
 
     @mcp.tool()
-    async def roboco_record_learning(
+    async def robofleet_record_learning(
         content: str,
         category: str,
         team: str | None = None,
@@ -895,7 +895,7 @@ def _register_learning_tools(mcp: FastMCP, client: ApiClient) -> None:
         }
 
     @mcp.tool()
-    async def roboco_search_learnings(
+    async def robofleet_search_learnings(
         query: str,
         category: str | None = None,
         team: str | None = None,
@@ -939,9 +939,9 @@ def _register_learning_tools(mcp: FastMCP, client: ApiClient) -> None:
         }
         if total == 0:
             response["hint"] = (
-                "No learnings found. Try roboco_ask_mentor(question) for broader "
+                "No learnings found. Try robofleet_ask_mentor(question) for broader "
                 "knowledge. If you learn something useful, use "
-                "roboco_record_learning() to share it."
+                "robofleet_record_learning() to share it."
             )
         return response
 
@@ -950,7 +950,7 @@ def _register_index_management_tools(mcp: FastMCP, client: ApiClient) -> None:
     """Register index management tools for administrative operations."""
 
     @mcp.tool()
-    async def roboco_clear_index(index_type: str) -> dict[str, Any]:
+    async def robofleet_clear_index(index_type: str) -> dict[str, Any]:
         """
         Clear all documents from a specific index.
 
@@ -999,7 +999,7 @@ def _register_index_management_tools(mcp: FastMCP, client: ApiClient) -> None:
         return {"status": "success", "cleared": index_type}
 
     @mcp.tool()
-    async def roboco_reindex_all(force: bool = False) -> dict[str, Any]:
+    async def robofleet_reindex_all(force: bool = False) -> dict[str, Any]:
         """
         Trigger re-indexing of code and documentation.
 
@@ -1038,7 +1038,7 @@ def _register_index_management_tools(mcp: FastMCP, client: ApiClient) -> None:
         }
 
     @mcp.tool()
-    async def roboco_index_status() -> dict[str, Any]:
+    async def robofleet_index_status() -> dict[str, Any]:
         """
         Get detailed status of all indexes.
 
@@ -1068,7 +1068,7 @@ def _register_proactive_tools(mcp: FastMCP, client: ApiClient) -> None:
     """Register proactive context tools."""
 
     @mcp.tool()
-    async def roboco_get_proactive_context(
+    async def robofleet_get_proactive_context(
         task_id: str,
         force_refresh: bool = False,
     ) -> dict[str, Any]:
@@ -1164,7 +1164,7 @@ def _role_wants(group: str, role: str) -> bool:
 
 def create_optimal_mcp_server(agent_id: str) -> FastMCP:
     """Create an Optimal MCP server for a specific agent, scoped to its role."""
-    mcp = FastMCP(f"roboco-optimal-{agent_id}", json_response=True)
+    mcp = FastMCP(f"robofleet-optimal-{agent_id}", json_response=True)
     client = ApiClient(agent_id)
     role = os.environ.get("ROBOFLEET_AGENT_ROLE", "")
     full_toolset = bool(os.environ.get("ROBOFLEET_ALLOW_FULL_TOOLSET"))

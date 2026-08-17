@@ -1,7 +1,7 @@
 """
 Agent Orchestrator
 
-Manages Claude Code containers for all RoboCo agents.
+Manages Claude Code containers for all RoboFleet agents.
 Handles spawning, monitoring, health checks, and graceful shutdown.
 
 The orchestrator is the BRAIN of the system:
@@ -861,9 +861,9 @@ def _build_manifest_for_agent(
         model:    Resolved model name passed to ``SpawnInputs.agent_model``.
         workspace_path: The task-resolved workspace (project clone or per-task
             worktree) — the SAME path the container ``-w`` uses. Without it
-            the manifest falls back to the agent's roboco-project workspace,
+            the manifest falls back to the agent's robofleet-project workspace,
             which is WRONG for any other project's task (live 2026-07-02:
-            be-dev-2's manifest pointed at /data/workspaces/roboco while the
+            be-dev-2's manifest pointed at /data/workspaces/robofleet while the
             task lived in guard-core-saas-backend).
 
     Returns:
@@ -891,7 +891,7 @@ def _build_manifest_for_agent(
     resolved_workspace = (
         Path(workspace_path)
         if workspace_path
-        else Path(settings.workspaces_root) / "roboco" / team / agent_id
+        else Path(settings.workspaces_root) / "robo-fleet" / team / agent_id
     )
 
     manifest = build_for_role(
@@ -1768,7 +1768,7 @@ class AgentOrchestrator:
         """
         if PROJECT_HOST_PATH:
             return Path(GROK_USAGE_DATA_DIR)
-        return Path(tempfile.gettempdir()) / "roboco-grok-usage"
+        return Path(tempfile.gettempdir()) / "robofleet-grok-usage"
 
     @staticmethod
     def _grok_usage_dir(agent_id: str) -> Path:
@@ -1816,7 +1816,7 @@ class AgentOrchestrator:
         """
         if PROJECT_HOST_PATH:
             return Path(CODEX_USAGE_DATA_DIR)
-        return Path(tempfile.gettempdir()) / "roboco-codex-usage"
+        return Path(tempfile.gettempdir()) / "robofleet-codex-usage"
 
     @staticmethod
     def _codex_usage_dir(agent_id: str) -> Path:
@@ -1857,7 +1857,7 @@ class AgentOrchestrator:
         """
         if PROJECT_HOST_PATH:
             return Path(GEMINI_USAGE_DATA_DIR)
-        return Path(tempfile.gettempdir()) / "roboco-gemini-usage"
+        return Path(tempfile.gettempdir()) / "robofleet-gemini-usage"
 
     @staticmethod
     def _gemini_usage_dir(agent_id: str) -> Path:
@@ -1900,7 +1900,7 @@ class AgentOrchestrator:
         """
         if PROJECT_HOST_PATH:
             return Path(KIMI_USAGE_DATA_DIR)
-        return Path(tempfile.gettempdir()) / "roboco-kimi-usage"
+        return Path(tempfile.gettempdir()) / "robofleet-kimi-usage"
 
     @staticmethod
     def _kimi_usage_dir(agent_id: str) -> Path:
@@ -1999,13 +1999,13 @@ class AgentOrchestrator:
         """Get role-specific allow/deny lists for Claude Code tools.
 
         Post-gateway shape: every state-changing operation an agent can
-        perform routes through ``mcp__roboco-flow__*`` (intent verbs) or
-        ``mcp__roboco-do__*`` (content tools — commit, push, PR, journal,
+        perform routes through ``mcp__robofleet-flow__*`` (intent verbs) or
+        ``mcp__robofleet-do__*`` (content tools — commit, push, PR, journal,
         notify, message), both granted to every role via ``base_allow``.
         Role-specific configuration here only governs file IO (Write/Edit
         scoping) plus a small handful of legacy native-tool denies that
         remain meaningful for weak models. Read-only git lives in
-        ``mcp__roboco-git-readonly__*``.
+        ``mcp__robofleet-git-readonly__*``.
 
         Args:
             role: Agent role (developer, qa, documenter, cell_pm, main_pm, etc.)
@@ -2122,7 +2122,7 @@ class AgentOrchestrator:
 
         Empty when the flag is off, so callers that append these onto the
         existing per-event arrays leave settings.json byte-for-byte
-        unchanged. Appended AFTER RoboCo's own hooks for each event —
+        unchanged. Appended AFTER RoboFleet's own hooks for each event —
         stop-hook.sh's mechanical terminal-verb check runs first, the
         Fable linguistic check runs second. See
         docs/superpowers/plans/2026-07-04-v0.18.0-A-opus-fable-plan.md.
@@ -2226,10 +2226,10 @@ class AgentOrchestrator:
         # API rejects verbs/tools the agent's role isn't authorized for,
         # so granting `*` here is safe.
         base_allow = [
-            "mcp__roboco-flow__*",
-            "mcp__roboco-do__*",
-            "mcp__roboco-optimal__*",
-            "mcp__roboco-git-readonly__*",
+            "mcp__robofleet-flow__*",
+            "mcp__robofleet-do__*",
+            "mcp__robofleet-optimal__*",
+            "mcp__robofleet-git-readonly__*",
             "Read(*)",  # All agents can read any file
         ]
 
@@ -2241,7 +2241,7 @@ class AgentOrchestrator:
         # must go through the orchestrator's git service, which injects the
         # token via bearer header at subprocess time rather than exposing it.
         base_deny = [
-            # Block ALL native git commands - must use roboco_git_* tools
+            # Block ALL native git commands - must use robofleet_git_* tools
             "Bash(git:*)",
             # Fleet-wide subagent ban (CEO, 2026-07-09): no agent spawns Claude
             # Code subagents. `Task` is a default-permitted built-in, so under
@@ -2280,7 +2280,7 @@ class AgentOrchestrator:
             "Read(//home/agent/.claude/.credentials.json)",
             "Read(//home/agent/.claude.json)",
             # Block direct GitHub API/wire access — agents must use
-            # roboco_git_* MCP tools so secrets + traceability stay on the
+            # robofleet_git_* MCP tools so secrets + traceability stay on the
             # orchestrator side.
             "Bash(curl:*github.com*)",
             "Bash(curl:*api.github.com*)",
@@ -3269,20 +3269,20 @@ class AgentOrchestrator:
             "claude": CLAUDE_AUTH_HOST_PATH,
             "mcp_config": str(config.mcp_config_path),
             "grok_usage": str(
-                Path(tempfile.gettempdir()) / "roboco-grok-usage" / config.agent_id
+                Path(tempfile.gettempdir()) / "robofleet-grok-usage" / config.agent_id
             ),
             "codex_usage": str(
-                Path(tempfile.gettempdir()) / "roboco-codex-usage" / config.agent_id
+                Path(tempfile.gettempdir()) / "robofleet-codex-usage" / config.agent_id
             ),
             "gemini_usage": str(
-                Path(tempfile.gettempdir()) / "roboco-gemini-usage" / config.agent_id
+                Path(tempfile.gettempdir()) / "robofleet-gemini-usage" / config.agent_id
             ),
             "kimi_usage": str(
-                Path(tempfile.gettempdir()) / "roboco-kimi-usage" / config.agent_id
+                Path(tempfile.gettempdir()) / "robofleet-kimi-usage" / config.agent_id
             ),
             "prompt": str(
                 Path(tempfile.gettempdir())
-                / "roboco-prompts"
+                / "robofleet-prompts"
                 / f"{config.agent_id}-prompt.md"
             ),
             "settings": str(agent_settings_path) if agent_settings_path else None,
@@ -3443,7 +3443,7 @@ class AgentOrchestrator:
         Single source of truth consumed by BOTH the container ``-w`` and the
         spawn manifest's ``workspace_path`` — they must agree, or the agent's
         prompt claims one directory while its shell sits in another (live
-        2026-07-02: manifest said the roboco workspace for a guard-core task).
+        2026-07-02: manifest said the robo-fleet workspace for a guard-core task).
         """
         role = get_agent_role(config.agent_id) or "developer"
         team = get_agent_team(config.agent_id) or ""
@@ -3977,12 +3977,12 @@ class AgentOrchestrator:
         Post-gateway: every state-changing tool routes through one of two
         servers, and read-only views go through two more:
 
-        - roboco-flow         intent verbs (lifecycle transitions)
-        - roboco-do           content tools (commit, push, PR, journal,
+        - robofleet-flow         intent verbs (lifecycle transitions)
+        - robofleet-do           content tools (commit, push, PR, journal,
                               notify, message)
-        - roboco-git-readonly status, log, diff, branch list
-        - roboco-optimal      knowledge base, RAG, semantic search
-        - roboco-docs         documentation file management (panel docs)
+        - robofleet-git-readonly status, log, diff, branch list
+        - robofleet-optimal      knowledge base, RAG, semantic search
+        - robofleet-docs         documentation file management (panel docs)
         - playwright          browser tools (fe-qa/ux-qa, the ux-dev on
                               a video-authoring task, and the PO on a
                               dogfood-walk task — see below)
@@ -4060,7 +4060,7 @@ class AgentOrchestrator:
             "ROBOFLEET_AGENT_ID": agent_uuid,
             "ROBOFLEET_AGENT_ROLE": agent_role,
             # Mirrors the server-side FlowVerbTimeoutMiddleware budgets so the
-            # roboco-flow MCP client's per-verb timeout (flow_server.py, which
+            # robofleet-flow MCP client's per-verb timeout (flow_server.py, which
             # can't read Settings directly) stays coherent with operator
             # tuning of either setting.
             "ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS": str(
@@ -4096,7 +4096,7 @@ class AgentOrchestrator:
 
         mcp_servers: dict[str, dict[str, Any]] = {
             # Intent verbs — every role-scoped lifecycle transition.
-            "roboco-flow": {
+            "robofleet-flow": {
                 "command": "uv",
                 "args": [
                     "run",
@@ -4108,13 +4108,13 @@ class AgentOrchestrator:
                 "env": mcp_env,
             },
             # Content tools — commit, push, PR, journal, notify, message.
-            "roboco-do": {
+            "robofleet-do": {
                 "command": "uv",
                 "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.do_server"],
                 "env": mcp_env,
             },
             # Read-only git views — status, log, diff, branches.
-            "roboco-git-readonly": {
+            "robofleet-git-readonly": {
                 "command": "uv",
                 "args": [
                     "run",
@@ -4126,7 +4126,7 @@ class AgentOrchestrator:
                 "env": mcp_env,
             },
             # Knowledge base — RAG / semantic search / ask_mentor.
-            "roboco-optimal": {
+            "robofleet-optimal": {
                 "command": "uv",
                 "args": [
                     "run",
@@ -4170,7 +4170,7 @@ class AgentOrchestrator:
         # basename-sanitized like _grok_usage_json: agent ids are orchestrator-
         # issued slugs, but the filename must not be able to traverse anyway.
         safe_agent_id = os.path.basename(agent_id)
-        config_path = config_dir / f"roboco-mcp-{safe_agent_id}.json"
+        config_path = config_dir / f"robofleet-mcp-{safe_agent_id}.json"
         config_path.write_text(json.dumps(config, indent=2))
 
         return config_path
@@ -4225,7 +4225,7 @@ class AgentOrchestrator:
         else:
             config_dir = Path(tempfile.gettempdir())
         safe_agent_id = os.path.basename(agent_id)
-        manifest_path = config_dir / f"roboco-adk-{safe_agent_id}.json"
+        manifest_path = config_dir / f"robofleet-adk-{safe_agent_id}.json"
         manifest_path.write_text(json.dumps(manifest, indent=2))
         return manifest_path
 
@@ -4257,7 +4257,7 @@ class AgentOrchestrator:
             "head_marketing",
         )
         if agent_role in docs_roles:
-            mcp_servers["roboco-docs"] = {
+            mcp_servers["robofleet-docs"] = {
                 "command": "uv",
                 "args": [
                     "run",
@@ -4280,7 +4280,7 @@ class AgentOrchestrator:
             "head_marketing",
         )
         if settings.research_enabled and agent_role in research_roles:
-            mcp_servers["roboco-search"] = {
+            mcp_servers["robofleet-search"] = {
                 "command": "uv",
                 "args": [
                     "run",
@@ -4350,7 +4350,7 @@ class AgentOrchestrator:
             config_dir.mkdir(parents=True, exist_ok=True)
         else:
             # Running directly on host
-            config_dir = Path(tempfile.gettempdir()) / "roboco-prompts"
+            config_dir = Path(tempfile.gettempdir()) / "robofleet-prompts"
             config_dir.mkdir(parents=True, exist_ok=True)
 
         # Write to file
@@ -5038,7 +5038,7 @@ class AgentOrchestrator:
         if PROJECT_HOST_PATH:
             briefings_dir = Path("/app/briefings")
         else:
-            briefings_dir = Path(tempfile.gettempdir()) / "roboco-briefings"
+            briefings_dir = Path(tempfile.gettempdir()) / "robofleet-briefings"
         briefings_dir.mkdir(parents=True, exist_ok=True)
 
         path = briefings_dir / f"{agent_id}.md"
@@ -5851,11 +5851,13 @@ class AgentOrchestrator:
             "claude": CLAUDE_AUTH_HOST_PATH,
             "prompt": str(
                 Path(tempfile.gettempdir())
-                / "roboco-prompts"
+                / "robofleet-prompts"
                 / f"{SECRETARY_AGENT_ID}-prompt.md"
             ),
             "grok_usage": str(
-                Path(tempfile.gettempdir()) / "roboco-grok-usage" / SECRETARY_AGENT_ID
+                Path(tempfile.gettempdir())
+                / "robofleet-grok-usage"
+                / SECRETARY_AGENT_ID
             ),
         }
 
@@ -6039,12 +6041,12 @@ class AgentOrchestrator:
             "claude": CLAUDE_AUTH_HOST_PATH,
             "prompt": str(
                 Path(tempfile.gettempdir())
-                / "roboco-prompts"
+                / "robofleet-prompts"
                 / f"{INTAKE_AGENT_ID}-prompt.md"
             ),
             "workspaces": str(Path(settings.workspaces_root)),
             "grok_usage": str(
-                Path(tempfile.gettempdir()) / "roboco-grok-usage" / INTAKE_AGENT_ID
+                Path(tempfile.gettempdir()) / "robofleet-grok-usage" / INTAKE_AGENT_ID
             ),
         }
 
@@ -9678,12 +9680,12 @@ Start by:
                 logger.exception("external-PR poll cycle failed")
 
     async def _self_heal_loop(self) -> None:
-        """Engine 4: watch RoboCo's OWN CI, surface regressions, open fix tasks.
+        """Engine 4: watch RoboFleet's OWN CI, surface regressions, open fix tasks.
 
         Dormant by default — returns immediately unless ``self_heal_enabled``, so
         a standard deployment makes no CI call and adds zero behaviour. It only
         NOTIFIES the CEO and (behind ``self_heal_originate_enabled``) opens a
-        PENDING fix task into RoboCo's own lifecycle; it never starts, merges, or
+        PENDING fix task into RoboFleet's own lifecycle; it never starts, merges, or
         deploys. The per-cycle session commits any opened task here.
         """
         if not settings.self_heal_enabled:
@@ -10350,7 +10352,7 @@ Start by:
         "square": path}. ``render_key`` (the source task id) scopes each
         cut's output path. ``project_id`` is the task's own ``project_id`` —
         never a fixed slug — so a video task authored against any opted-in
-        project renders from that project's ``motion/`` dir, not RoboCo's.
+        project renders from that project's ``motion/`` dir, not RoboFleet's.
 
         The project + read-clone resolve runs in its own short session,
         closed BEFORE the renderer.render() calls below (see
@@ -10815,7 +10817,7 @@ Start by:
         Resolves the workspace (skip_refresh: the branch is cut from
         ``refs/pull/{n}/head``, not an existing local branch), posts the
         contributor PR comment if it was not posted in the fast path, fetches
-        the PR head ref, and pushes the roboco-owned branch. On success
+        the PR head ref, and pushes the robo-fleet-owned branch. On success
         clears ``branch_pending`` and wakes the dispatcher. On failure
         increments the ``branch_cut_failed`` attempt count and applies a
         backoff so the reconciliation sweep retries; after
@@ -10892,7 +10894,7 @@ Start by:
                             error=str(exc),
                         )
                 logger.warning(
-                    "supersede: cutting roboco branch off untrusted fork PR head",
+                    "supersede: cutting robo-fleet branch off untrusted fork PR head",
                     branch=branch_name,
                     pr_number=pr_number,
                     project=project_slug,
@@ -12789,7 +12791,7 @@ Start by:
             else ""
         )
 
-        body = f"""You are the MAIN PM at RoboCo. This task is assigned to YOU.
+        body = f"""You are the MAIN PM at RoboFleet. This task is assigned to YOU.
 
 TASK: {task_id}
 TITLE: {title}
@@ -18598,7 +18600,7 @@ verbs.
         max_items = PROGRAMS["dogfood"].max_items_per_cycle
         prior_block = f"\n## Prior cycles\n{prior_context}\n" if prior_context else ""
         panel_line = ""
-        self_slug = settings.self_heal_project_slug or "roboco-api"
+        self_slug = settings.self_heal_project_slug or "robofleet-api"
         if task.get("project_slug") == self_slug and settings.panel_base_url:
             panel_line = (
                 f"\nThe panel is reachable at {settings.panel_base_url} — start "
@@ -18620,7 +18622,7 @@ or wrong. You author this alone.
 
 1. triage() — see your board-level context.
 2. Find a live URL for each surface: the panel (see above, when this cycle's
-   target is RoboCo's own project) and the docs site (check the target
+   target is RoboFleet's own project) and the docs site (check the target
    project's README/docs for a published URL). If NO live URL is reachable
    for a surface, do NOT fabricate a walk — fall back to an honest read-tool
    review of that surface's source instead, and say so explicitly in the
@@ -18671,7 +18673,7 @@ You are the Head of Marketing. It's time for your periodic feature-spotlight cyc
 
 TASK: {task_id}
 
-RoboCo markets its own capabilities, not just releases. Investigate what the
+RoboFleet markets its own capabilities, not just releases. Investigate what the
 company has actually shipped and draft ONE marketing post about a genuinely
 useful, under-publicized capability — something a user or prospect would not
 already know from the last release announcement. Prefer something fresh but
@@ -18692,7 +18694,7 @@ RECENTLY REJECTED BY THE CEO — avoid repeating these angles: {rejected_line}
    FEATURE_FLAGS — the enumerated subsystems), docs/map/ (the exhaustive
    codebase map — each slice's Purpose section is marketing-readable), the
    company charter (already in your briefing), and the knowledge base
-   (roboco_ask_mentor / roboco_kb_search).
+   (robofleet_ask_mentor / robofleet_kb_search).
 3. Pick ONE feature that is real, currently shipped (or shipped behind a flag
    the CEO can enable), not in the already-covered list above, and worth
    telling people about.
@@ -18802,7 +18804,7 @@ conversation-reply cycle.
 
 TASK: {task_id}
 
-Barfly finds X conversations where RoboCo is relevant but UNMENTIONED —
+Barfly finds X conversations where RoboFleet is relevant but UNMENTIONED —
 search results, not the mentions timeline. Review the SCREENED candidates
 already gathered below and draft replies for the ones genuinely worth it. You
 must reply ONLY to a candidate already on this list — never invent a tweet or
@@ -18816,10 +18818,10 @@ SCREENED CANDIDATES:
 1. triage() — see your board-level context.
 2. Pick up to {max_items} candidates genuinely worth a reply — skip anything
    low-value, off-topic despite the keyword match, or already answered by
-   someone else in a way that makes a RoboCo reply redundant.
+   someone else in a way that makes a RoboFleet reply redundant.
 3. For each one, draft a reply in your voice (see your identity's VOICE
    GUIDE): answer or add value to the actual conversation, plain text, max
-   280 characters, never invent facts about RoboCo, and it must clear the
+   280 characters, never invent facts about RoboFleet, and it must clear the
    IMPACT BAR in your identity (deliverable noun in the first sentence, one
    falsifiable specific, no hashtags/emoji/exclamations). The platform
    appends the conversation's own URL to your reply automatically, so
@@ -19024,7 +19026,7 @@ cycle curates them, never this same call).
 2. Read the mining context gathered for you above (recurring learning-
    journal topics, existing playbook titles). It is server-assembled — you
    cannot re-run those queries yourself, so start from it.
-3. Also check the knowledge base (roboco_kb_search) for patterns that keep
+3. Also check the knowledge base (robofleet_kb_search) for patterns that keep
    surfacing across tasks/journals but were never distilled into a
    reusable procedure.
 4. For each candidate pattern, confirm it is REAL and REPEATED (at least

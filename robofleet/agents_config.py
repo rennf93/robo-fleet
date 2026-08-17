@@ -59,7 +59,7 @@ def _auth_secret() -> bytes | None:
     """Return the HMAC secret bytes, or None when unset.
 
     When ``settings.gcp_project_id`` is armed (the GCP arming signal; the
-    ``gcp_secret_manager_prefix`` field defaults to ``roboco`` and is only a
+    ``gcp_secret_manager_prefix`` field defaults to ``robo-fleet`` and is only a
     naming prefix, not an on/off switch) the secret is read from Secret
     Manager (``{prefix}-agent-auth-secret``) once per process; otherwise the
     env var path is unchanged.

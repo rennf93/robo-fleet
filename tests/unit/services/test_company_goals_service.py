@@ -115,7 +115,7 @@ async def test_company_name_untouched_by_partial_upsert(db_session: Any) -> None
 # --------------------------------------------------------------------------- #
 # resolve_product_name — the shared fallback chain XEngine and VideoEngine
 # both brand their drafting prompts with (project name -> company_name ->
-# "RoboCo"). A SimpleNamespace stands in for a ProjectTable: the method only
+# "RoboFleet"). A SimpleNamespace stands in for a ProjectTable: the method only
 # reads ``.name``, so a full project/agent seed adds nothing here.
 # --------------------------------------------------------------------------- #
 
@@ -153,8 +153,8 @@ async def test_resolve_product_name_ignores_a_project_with_no_name(
 
 
 @pytest.mark.asyncio
-async def test_resolve_product_name_defaults_to_roboco(db_session: Any) -> None:
+async def test_resolve_product_name_defaults_to_robofleet(db_session: Any) -> None:
     svc = get_company_goals_service(db_session)
     await svc.upsert({"company_name": ""})
     name = await svc.resolve_product_name(None)
-    assert name == "RoboCo"
+    assert name == "RoboFleet"

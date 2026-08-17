@@ -42,7 +42,7 @@ interface WorkSessionTableProps {
 }
 
 // Mirrors the status hints in work-session-filters.tsx's dropdown — grounded
-// in roboco/services/work_session.py's transition triggers.
+// in robofleet/services/work_session.py's transition triggers.
 const STATUS_HINTS: Record<WorkSessionStatus, string> = {
   active: "An agent is currently working this branch.",
   completed: "The session's PR was merged — the branch's work is done.",

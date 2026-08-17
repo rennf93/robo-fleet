@@ -68,7 +68,7 @@ export interface BatchProposal {
 export type StartRoute = "board" | "main_pm";
 
 /** The delivery cells that carry their own per-cell project in a MegaTask draft.
- *  A RoboCo project is per-cell (assigned_cell); a multi-cell draft puts one
+ *  A RoboFleet project is per-cell (assigned_cell); a multi-cell draft puts one
  *  the_work entry per cell, each with its cell's project_id. */
 const CELL_TEAMS: Team[] = [Team.BACKEND, Team.FRONTEND, Team.UX_UI];
 
@@ -130,10 +130,10 @@ function newId(): string {
   return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-/** Remove the fenced ```roboco-draft block from displayed text — the structured
+/** Remove the fenced ```robofleet-draft block from displayed text — the structured
  *  draft card renders it; the raw JSON shouldn't sit in the chat bubble. */
 function stripDraftFence(text: string): string {
-  return text.replace(/```roboco-draft[\s\S]*?```/g, "").trimEnd();
+  return text.replace(/```robofleet-draft[\s\S]*?```/g, "").trimEnd();
 }
 
 /** Map an agent-proposed draft (the `draft` SSE event payload) to the editable
@@ -389,7 +389,7 @@ export function fillBatchProjects(
 // navigate-away reap below never fires on refresh and the session survives.
 // ---------------------------------------------------------------------------
 
-const PERSIST_KEY = "roboco:prompter:live";
+const PERSIST_KEY = "robofleet:prompter:live";
 const PERSIST_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 interface PersistedChat {
@@ -1078,7 +1078,7 @@ export function usePrompter() {
   /** Set the projects one MegaTask task targets. The review card exposes a
    *  multi-select checkbox list per task (one task can span several repos), so
    *  the human picks the whole set at once instead of one dropdown per cell.
-   *  A RoboCo project is per-cell, so the selection maps to one project per
+   *  A RoboFleet project is per-cell, so the selection maps to one project per
    *  cell in ``the_work[]`` (the backend's ``task_cell_projects`` is unique per
    *  ``(task, team)`` — one repo per cell). Existing entries keep their
    *  summary/items; a newly-selected cell gets a minimal entry; a deselected

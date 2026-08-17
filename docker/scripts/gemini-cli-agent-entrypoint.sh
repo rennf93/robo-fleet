@@ -40,8 +40,8 @@ fi
 
 # Render ~/.gemini/settings.json (mcpServers + selectedType/enableAgents/
 # autoConfigureMemory) + GEMINI.md + the Policy Engine TOML. Run from /app so
-# `python -m` resolves the INSTALLED roboco package: dev/doc/qa agents run at
-# their workspace-clone cwd, whose own roboco/ dir would shadow it on the
+# `python -m` resolves the INSTALLED robo-fleet package: dev/doc/qa agents run at
+# their workspace-clone cwd, whose own robofleet/ dir would shadow it on the
 # sys.path front (the ModuleNotFound lesson). The render reads
 # ROBOFLEET_MCP_CONFIG + ROBOFLEET_AGENT_ID and writes the config files.
 ( cd /app && python -m robofleet.llm.providers.gemini_cli_config )
@@ -81,7 +81,7 @@ ERR_LOG="/tmp/gemini-run.err"
 # gemini_cli_config (rendered above) already wrote the per-role CLI flag
 # tokens (today: just --approval-mode yolo — tool scoping lives in
 # settings.json/policy TOML, not CLI flags) one per line to this file.
-GEMINI_ARGS_FILE="${ROBOFLEET_GEMINI_ARGS_FILE:-/tmp/roboco-gemini-args}"
+GEMINI_ARGS_FILE="${ROBOFLEET_GEMINI_ARGS_FILE:-/tmp/robofleet-gemini-args}"
 mapfile -t GEMINI_ARGS < "$GEMINI_ARGS_FILE"
 
 set +e

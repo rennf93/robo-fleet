@@ -56,7 +56,7 @@ def _write(root: Path, rel: str, content: str) -> None:
 
 
 def test_block_then_fix_then_waiver(tmp_path: Path) -> None:
-    _write(tmp_path, ".roboco/conventions.yml", _FORBID_MODEL)
+    _write(tmp_path, ".robofleet/conventions.yml", _FORBID_MODEL)
     _write(tmp_path, "app/routers/users.py", _MODEL_SRC)
 
     # 1. A Pydantic model in the router blocks, naming the offending file:line.
@@ -83,7 +83,7 @@ def test_block_then_fix_then_waiver(tmp_path: Path) -> None:
 
     _write(
         tmp_path,
-        ".roboco/conventions.yml",
+        ".robofleet/conventions.yml",
         _FORBID_MODEL + "waivers:\n  - path: app/routers/legacy.py\n"
         "    rule: no_models_in_routers\n    reason: extraction tracked\n",
     )

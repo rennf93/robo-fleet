@@ -4,7 +4,7 @@ Channels, groups, discussion-sessions, and messages are retired — A2A is
 now the single directed-message channel agents read, and coordination
 rests on the task state machine + task details (see
 docs/internal/specs/2026-07-03-comms-teardown-trace.md). All backend code
-that read/wrote these tables was removed first (roboco commits preceding
+that read/wrote these tables was removed first (robo-fleet commits preceding
 this one); this migration is the last step, once nothing touches them.
 
 Revision ID: 060_drop_messaging

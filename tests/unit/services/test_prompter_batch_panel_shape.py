@@ -81,7 +81,7 @@ async def test_confirm_live_batch_ignores_vestigial_top_level_slug(
     that also still has the intake agent's top-level project_id SLUG (the panel
     only nulls it on a manual picker toggle) must NOT 400 the whole batch on the
     UUID parse — the cell map is authoritative. Repro for the live 400
-    "Invalid project_id UUID: roboco-api"."""
+    "Invalid project_id UUID: robofleet-api"."""
     project1, ceo_id = await _seed_project_and_ceo(db_session)
     project2 = await _seed_second_project(db_session, ceo_id)
     service = get_prompter_service(db=db_session)
@@ -90,7 +90,7 @@ async def test_confirm_live_batch_ignores_vestigial_top_level_slug(
         {
             "title": "A: backend work",
             "acceptance_criteria": ["a"],
-            "project_id": "roboco-api",  # agent's slug, panel left it in place
+            "project_id": "robofleet-api",  # agent's slug, panel left it in place
             "the_work": [
                 {
                     "team": "backend",
@@ -298,6 +298,6 @@ async def test_confirm_live_batch_releases_guard_on_build_failure(
                 session_id=session_id,
             )
         # The guard was released, so the key no longer holds the session.
-        assert f"roboco:megatask_confirm:{session_id}" in fake.deleted
+        assert f"robofleet:megatask_confirm:{session_id}" in fake.deleted
         # A retry can now re-acquire the guard (not a permanent 'in progress').
         assert await service._acquire_confirm_guard(session_id) is None

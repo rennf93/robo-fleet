@@ -4,10 +4,10 @@
 # `grok -p` that exits), this holds a PERSISTENT conversation: it receives the
 # human's messages over HTTP (POST /turn on :9000) and, per turn, runs a headless
 # `grok -p` that resumes one session id, streaming each reply back to the panel
-# via the relay (see roboco.agent_sdk.grok_intake_main + grok_cli_session). The
-# intake `propose_draft` tool is wired as the roboco-intake MCP server (rendered
+# via the relay (see robofleet.agent_sdk.grok_intake_main + grok_cli_session). The
+# intake `propose_draft` tool is wired as the robofleet-intake MCP server (rendered
 # into ~/.grok/config.toml by the driver). Builds on the Grok runtime image
-# (grok CLI + the roboco venv).
+# (grok CLI + the robo-fleet venv).
 # =============================================================================
 
 FROM robofleet-agent-grok

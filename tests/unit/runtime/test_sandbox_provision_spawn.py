@@ -55,7 +55,7 @@ async def test_flag_off_returns_empty_without_project_lookup(
     orch, sandbox = _make_orchestrator()
 
     with patch("robofleet.services.project.get_project_service") as get_svc:
-        result = await orch._sandbox_available_services("roboco-api")
+        result = await orch._sandbox_available_services("robofleet-api")
 
     assert result == []
     get_svc.assert_not_called()
@@ -81,7 +81,7 @@ async def test_project_without_sandbox_services_returns_empty(
             return_value=project_service,
         ),
     ):
-        result = await orch._sandbox_available_services("roboco-api")
+        result = await orch._sandbox_available_services("robofleet-api")
 
     assert result == []
     sandbox.provision.assert_not_called()
@@ -103,7 +103,7 @@ async def test_missing_project_returns_empty(monkeypatch: pytest.MonkeyPatch) ->
             return_value=project_service,
         ),
     ):
-        result = await orch._sandbox_available_services("roboco-api")
+        result = await orch._sandbox_available_services("robofleet-api")
 
     assert result == []
 
@@ -127,7 +127,7 @@ async def test_opted_in_project_returns_services_without_provisioning(
             return_value=project_service,
         ),
     ):
-        result = await orch._sandbox_available_services("roboco-api")
+        result = await orch._sandbox_available_services("robofleet-api")
 
     assert result == ["postgres"]
     sandbox.provision.assert_not_called()
@@ -141,7 +141,7 @@ async def test_project_lookup_failure_degrades_to_no_sandbox(
     orch, sandbox = _make_orchestrator()
 
     with patch("robofleet.db.base.get_db_context", side_effect=RuntimeError("db down")):
-        result = await orch._sandbox_available_services("roboco-api")
+        result = await orch._sandbox_available_services("robofleet-api")
 
     assert result == []
     sandbox.provision.assert_not_called()

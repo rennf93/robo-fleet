@@ -35,7 +35,7 @@ def _build_workspace(root: Path) -> None:
     (git_dir / "refs" / "heads" / "master").write_text("abc123\n")
 
     # Working tree the agent must be able to write.
-    src = root / "roboco" / "services"
+    src = root / "robo-fleet" / "services"
     src.mkdir(parents=True)
     (src / "thing.py").write_text("x = 1\n")
     (root / "README.md").write_text("# hi\n")
@@ -80,7 +80,7 @@ def test_chowns_working_tree_and_git_but_prunes_node_modules(
 
     # Working-tree files the agent edits must be chowned — this is the exact
     # contract the .git-only regression broke.
-    assert str(tmp_path / "roboco" / "services" / "thing.py") in touched
+    assert str(tmp_path / "robo-fleet" / "services" / "thing.py") in touched
     assert str(tmp_path / "README.md") in touched
 
     # .git internals must still be chowned so git ops work.
@@ -271,7 +271,7 @@ def test_own_and_grant_rw_broken_symlink_counts_as_failure_without_crashing(
 # ---------------------------------------------------------------------------
 # Root-sentinel short-circuit: `_ensure_agent_owned` skips the ENTIRE walk
 # when the workspace root is already agent-owned with the right bits AND a
-# `.git/roboco-owned` marker from the last zero-failure pass exists. The
+# `.git/robo-fleet-owned` marker from the last zero-failure pass exists. The
 # marker is invalidated by `GitService._run_git`
 # (tests/unit/services/test_git_ownership_scope.py) before any root-side git
 # write, so a live marker is trustworthy — this only removes the remaining
@@ -308,7 +308,7 @@ def test_skips_walk_when_root_owned_and_marker_present(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, _record_touched: list[str]
 ) -> None:
     _build_workspace(tmp_path)
-    (tmp_path / ".git" / "roboco-owned").touch()
+    (tmp_path / ".git" / "robo-fleet-owned").touch()
     monkeypatch.setattr(workspace_module.os, "stat", _fake_root_owned_stat(tmp_path))
     walk_mock = MagicMock(return_value=iter(()))
     monkeypatch.setattr(workspace_module.os, "walk", walk_mock)
@@ -337,7 +337,7 @@ def test_marker_written_only_on_zero_failure_pass(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _build_workspace(tmp_path)
-    marker = tmp_path / ".git" / "roboco-owned"
+    marker = tmp_path / ".git" / "robo-fleet-owned"
     assert not marker.exists()
 
     # Simulate a rootless/userns host where chown is rejected — the marker
@@ -355,7 +355,7 @@ def test_marker_written_after_successful_pass(
     """`_record_touched`'s fakes report every chown/chmod as succeeding, so
     this exercises the zero-failure branch without needing real root."""
     _build_workspace(tmp_path)
-    marker = tmp_path / ".git" / "roboco-owned"
+    marker = tmp_path / ".git" / "robo-fleet-owned"
 
     _ensure_agent_owned(tmp_path)
 

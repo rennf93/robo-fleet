@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 MAIN_PM_UUID = _foundation.AGENTS["main-pm"].uuid
-SLUG = "roboco"
+SLUG = "robo-fleet"
 ONE = 1
 
 
@@ -83,13 +83,13 @@ def _breach(signal: str) -> TelemetrySample:
         window="latest_completed_run",
         repo_hint=SLUG,
         observed_at="2026-06-17T00:00:00Z",
-        raw_ref="https://github.com/x/roboco/actions/runs/1",
+        raw_ref="https://github.com/x/robofleet/actions/runs/1",
         detail=f"{signal} concluded 'failure'",
     )
 
 
 async def _seed_project(session: AsyncSession, slug: str = SLUG) -> None:
-    """Seed the system agent (FK target for created_by) + RoboCo's own project.
+    """Seed the system agent (FK target for created_by) + RoboFleet's own project.
 
     The system agent has a FIXED foundation uuid (origination hardcodes it as
     created_by). Another test in the full suite may have already committed it
@@ -134,9 +134,9 @@ async def _seed_project(session: AsyncSession, slug: str = SLUG) -> None:
         await session.flush()
     session.add(
         ProjectTable(
-            name="RoboCo",
+            name="RoboFleet",
             slug=slug,
-            git_url="https://github.com/x/roboco.git",
+            git_url="https://github.com/x/robofleet.git",
             default_branch="master",
             protected_branches=["master"],
             assigned_cell=Team.BACKEND,
@@ -170,7 +170,7 @@ async def test_disabled_originate_creates_no_task(
 ) -> None:
     await _seed_project(db_session)
     _enable(monkeypatch, self_heal_originate_enabled=False)
-    engine = SelfHealEngine(db_session, source=_FakeSource([_breach("ci:roboco")]))
+    engine = SelfHealEngine(db_session, source=_FakeSource([_breach("ci:robo-fleet")]))
     obs = await engine.run_cycle()
     assert len(obs) == ONE  # detected + notified
     assert await get_task_service(db_session).list_open_self_heal_tasks() == []
@@ -182,7 +182,7 @@ async def test_originate_creates_pending_main_pm_assigned_task(
 ) -> None:
     await _seed_project(db_session)
     _enable(monkeypatch)
-    engine = SelfHealEngine(db_session, source=_FakeSource([_breach("ci:roboco")]))
+    engine = SelfHealEngine(db_session, source=_FakeSource([_breach("ci:robo-fleet")]))
     await engine.run_cycle()
 
     open_tasks = await get_task_service(db_session).list_open_self_heal_tasks()
@@ -207,7 +207,7 @@ async def test_dedupe_no_second_task_same_fingerprint(
 ) -> None:
     await _seed_project(db_session)
     _enable(monkeypatch)
-    src = _FakeSource([_breach("ci:roboco")])
+    src = _FakeSource([_breach("ci:robo-fleet")])
     await SelfHealEngine(db_session, source=src).run_cycle()
     await SelfHealEngine(db_session, source=src).run_cycle()  # same fingerprint
     open_tasks = await get_task_service(db_session).list_open_self_heal_tasks()
@@ -221,7 +221,7 @@ async def test_per_cycle_cap_limits_origination(
     await _seed_project(db_session)
     _enable(monkeypatch, self_heal_max_per_cycle=1)
     # Two distinct regressions in one cycle, cap = 1 → only one task opens.
-    src = _FakeSource([_breach("ci:roboco:a"), _breach("ci:roboco:b")])
+    src = _FakeSource([_breach("ci:robofleet:a"), _breach("ci:robofleet:b")])
     await SelfHealEngine(db_session, source=src).run_cycle()
     assert len(await get_task_service(db_session).list_open_self_heal_tasks()) == ONE
 
@@ -233,11 +233,11 @@ async def test_open_task_cap_blocks_further_origination(
     await _seed_project(db_session)
     _enable(monkeypatch, self_heal_max_open_tasks=1)
     await SelfHealEngine(
-        db_session, source=_FakeSource([_breach("ci:roboco:a")])
+        db_session, source=_FakeSource([_breach("ci:robofleet:a")])
     ).run_cycle()
     # A different regression next cycle, but one task is already open → blocked.
     await SelfHealEngine(
-        db_session, source=_FakeSource([_breach("ci:roboco:b")])
+        db_session, source=_FakeSource([_breach("ci:robofleet:b")])
     ).run_cycle()
     assert len(await get_task_service(db_session).list_open_self_heal_tasks()) == ONE
 
@@ -273,7 +273,7 @@ async def test_loop_never_starts_or_approves(
     monkeypatch.setattr(TaskService, "approve_and_start", approve)
     monkeypatch.setattr(TaskService, "ceo_approve", ceo_approve)
     await SelfHealEngine(
-        db_session, source=_FakeSource([_breach("ci:roboco")])
+        db_session, source=_FakeSource([_breach("ci:robo-fleet")])
     ).run_cycle()
 
     approve.assert_not_awaited()
@@ -295,7 +295,7 @@ async def test_pool_connection_released_after_telemetry_fetch(
     ``run_cycle`` unless the fetch-adjacent release actually runs."""
     await _seed_project(db_session)
     _enable(monkeypatch)
-    engine = SelfHealEngine(db_session, source=_FakeSource([_breach("ci:roboco")]))
+    engine = SelfHealEngine(db_session, source=_FakeSource([_breach("ci:robo-fleet")]))
 
     in_transaction_after_fetch: list[bool] = []
     real_open_map = engine._open_self_heal_task_ids_by_fp
@@ -321,7 +321,7 @@ async def test_originated_task_is_held_for_ceo_approve_and_start(
     await _seed_project(db_session)
     _enable(monkeypatch)
     await SelfHealEngine(
-        db_session, source=_FakeSource([_breach("ci:roboco")])
+        db_session, source=_FakeSource([_breach("ci:robo-fleet")])
     ).run_cycle()
     task = (await get_task_service(db_session).list_open_self_heal_tasks())[0]
     assert task.confirmed_by_human is False  # held for the CEO — no autonomous dispatch

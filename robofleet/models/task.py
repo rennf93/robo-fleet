@@ -1,7 +1,7 @@
 """
 Task Model
 
-The atomic unit of work in the RoboCo system. Every piece of work
+The atomic unit of work in the RoboFleet system. Every piece of work
 follows the universal task lifecycle: SCAN → CLAIM → UNDERSTAND →
 PLAN → EXECUTE → VERIFY → NOTES → CLOSE.
 """
@@ -131,7 +131,7 @@ class TaskPlan(RobocoBase):
 
 class Task(TimestampMixin):
     """
-    The atomic unit of work in RoboCo.
+    The atomic unit of work in RoboFleet.
 
     Tasks follow the universal lifecycle and persist across sessions.
     Every task must have acceptance criteria.

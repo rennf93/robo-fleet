@@ -117,9 +117,9 @@ def _format_completion_body(task: TaskTable, metrics: "TaskMetrics | None") -> s
 # available); `after_rollback` clears the pending queue so a rolled-back
 # transaction runs none of it.
 
-_PENDING_WORK_KEY = "_roboco_pending_bus_publishes"
-_DRAIN_TASKS_KEY = "_roboco_drain_tasks"
-_DRAIN_REGISTERED_KEY = "_roboco_drain_registered"
+_PENDING_WORK_KEY = "_robofleet_pending_bus_publishes"
+_DRAIN_TASKS_KEY = "_robofleet_drain_tasks"
+_DRAIN_REGISTERED_KEY = "_robofleet_drain_registered"
 
 
 async def _drain_pending_work(pending: list[Callable[[], Awaitable[None]]]) -> None:
@@ -1750,7 +1750,7 @@ class NotificationDeliveryService(BaseService):
             to_agents=[ceo.id],
             subject="Set a brand voice for sharper X/video drafts",
             body=(
-                "X posts and video captions are drafting on RoboCo's generic "
+                "X posts and video captions are drafting on RoboFleet's generic "
                 "house voice — no sample of yours is set yet. Add one in "
                 "Settings -> Business -> Goals -> Brand voice and every "
                 "future draft will read more like you wrote it."

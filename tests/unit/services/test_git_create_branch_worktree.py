@@ -34,7 +34,7 @@ def _stub_base(svc: GitService) -> None:
 
 def _req(task_id: UUID) -> GitCreateBranchRequest:
     return GitCreateBranchRequest(
-        project_slug="roboco-api",
+        project_slug="robofleet-api",
         task_id=task_id,
         branch_type="feature",
         parent_branch=None,

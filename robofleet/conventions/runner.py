@@ -28,7 +28,7 @@ _LANGUAGE_BY_SUFFIX = {".py": "python", ".ts": "typescript", ".tsx": "tsx"}
 # Surfaced on the conventions file itself — a custom rule scoped to a language
 # the validator never reports (a typo) would silently never fire (#129).
 _LANGUAGE_SCOPE_RULE = "custom_language_scope"
-_LANGUAGE_SCOPE_FILE = ".roboco/conventions.yml"
+_LANGUAGE_SCOPE_FILE = ".robofleet/conventions.yml"
 
 
 class ValidatorCouldNotRun(RuntimeError):
@@ -69,7 +69,7 @@ def _language_scope_findings(standard: ConventionsStandard) -> list[Finding]:
                         f" '{tag}' — the validator reports {{python, typescript,"
                         " tsx}}; the rule will never fire"
                     ),
-                    fix_hint="fix the language tag in .roboco/conventions.yml",
+                    fix_hint="fix the language tag in .robofleet/conventions.yml",
                 )
             )
     return out

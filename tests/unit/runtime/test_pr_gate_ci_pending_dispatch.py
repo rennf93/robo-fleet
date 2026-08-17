@@ -41,7 +41,7 @@ def _task(**overrides: Any) -> dict[str, Any]:
         "status": "awaiting_pr_review",
         "team": "main_pm",
         "assigned_to": "main-pm",
-        "project_slug": "roboco",
+        "project_slug": "robo-fleet",
         "pr_number": 42,
     }
     base.update(overrides)

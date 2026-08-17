@@ -84,7 +84,7 @@ export function AgentsFleetView() {
       {isOffline ? (
         <OfflineState
           title="Orchestrator Not Running"
-          description="Start the RoboCo orchestrator to spawn and monitor agents. The agent roster is shown below for reference."
+          description="Start the RoboFleet orchestrator to spawn and monitor agents. The agent roster is shown below for reference."
           onRetry={() => void refresh()}
         />
       ) : (

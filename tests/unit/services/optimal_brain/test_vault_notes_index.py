@@ -25,19 +25,19 @@ def test_index_type_is_vault_notes() -> None:
 
 def test_prepare_metadata_carries_path_and_hash() -> None:
     md = _plugin().prepare_metadata(
-        "content", path="RoboCo/Notes/a.md", title="A", content_hash="abc123"
+        "content", path="RoboFleet/Notes/a.md", title="A", content_hash="abc123"
     )
     assert md["type"] == "vault_note"
     assert md["source"] == "vault"
-    assert md["path"] == "RoboCo/Notes/a.md"
+    assert md["path"] == "RoboFleet/Notes/a.md"
     assert md["title"] == "A"
     assert md["content_hash"] == "abc123"
 
 
 def test_build_source_uri_with_path() -> None:
     assert (
-        _plugin().build_source_uri(doc_id="RoboCo/Notes/a.md")
-        == "vault://RoboCo/Notes/a.md"
+        _plugin().build_source_uri(doc_id="RoboFleet/Notes/a.md")
+        == "vault://RoboFleet/Notes/a.md"
     )
 
 
@@ -67,6 +67,6 @@ def test_delete_note_removes_its_chunks_by_source() -> None:
     object.__setattr__(plugin, "_initialized", True)
     object.__setattr__(plugin, "_store", store)
 
-    asyncio.run(plugin.delete_note("RoboCo/Notes/a.md"))
+    asyncio.run(plugin.delete_note("RoboFleet/Notes/a.md"))
 
-    store.delete_by_source.assert_awaited_once_with("vault://RoboCo/Notes/a.md")
+    store.delete_by_source.assert_awaited_once_with("vault://RoboFleet/Notes/a.md")

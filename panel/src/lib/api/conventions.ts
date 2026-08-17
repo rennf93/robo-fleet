@@ -1,6 +1,6 @@
 import api from "./client";
 
-// Mirrors roboco.foundation.policy.conventions.models — kept in sync by the
+// Mirrors robofleet.foundation.policy.conventions.models — kept in sync by the
 // TS<->Python parity test (tests/unit/foundation/policy/conventions/test_ts_parity.py).
 export type RuleLevel = "warn" | "block";
 export type DefinitionKind =

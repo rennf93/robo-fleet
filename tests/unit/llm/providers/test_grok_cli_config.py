@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 _SAMPLE_MCP = {
     "mcpServers": {
-        "roboco-flow": {
+        "robofleet-flow": {
             "command": "uv",
             "args": ["run", "--no-sync", "python", "-m", "robofleet.mcp.flow_server"],
             "env": {
@@ -24,7 +24,7 @@ _SAMPLE_MCP = {
                 "ROBOFLEET_AGENT_TOKEN": "tok-123",
             },
         },
-        "roboco-do": {"command": "uv", "args": ["run", "x"]},
+        "robofleet-do": {"command": "uv", "args": ["run", "x"]},
     }
 }
 
@@ -35,13 +35,13 @@ def _disallowed(args: list[str]) -> str:
 
 def test_render_config_toml_is_valid_toml_and_injects_env() -> None:
     parsed = tomllib.loads(gc.render_config_toml(_SAMPLE_MCP))
-    flow = parsed["mcp_servers"]["roboco-flow"]
+    flow = parsed["mcp_servers"]["robofleet-flow"]
     assert flow["command"] == "uv"
     assert flow["args"][:2] == ["run", "--no-sync"]
     # The gateway env (token) reaches the server block — the keystone.
     assert flow["env"]["ROBOFLEET_AGENT_TOKEN"] == "tok-123"
     # A server with no env omits the key entirely.
-    assert "env" not in parsed["mcp_servers"]["roboco-do"]
+    assert "env" not in parsed["mcp_servers"]["robofleet-do"]
 
 
 def test_render_config_toml_empty_when_no_servers() -> None:
@@ -51,10 +51,12 @@ def test_render_config_toml_empty_when_no_servers() -> None:
 
 def test_write_agents_md_installs_the_blueprint(tmp_path: Path) -> None:
     src = tmp_path / "system-prompt.md"
-    src.write_text("You are the RoboCo intake interviewer.", encoding="utf-8")
+    src.write_text("You are the RoboFleet intake interviewer.", encoding="utf-8")
     dest = tmp_path / ".grok" / "AGENTS.md"
     assert gc.write_agents_md(source=src, dest=dest) is True
-    assert dest.read_text(encoding="utf-8") == "You are the RoboCo intake interviewer."
+    assert (
+        dest.read_text(encoding="utf-8") == "You are the RoboFleet intake interviewer."
+    )
 
 
 def test_write_agents_md_noops_when_source_absent(tmp_path: Path) -> None:
@@ -168,7 +170,7 @@ def test_write_grok_hooks_installs_when_script_present(tmp_path: Path) -> None:
     script.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
     hooks_dir = tmp_path / ".grok" / "hooks"
     assert gc.write_grok_hooks(hooks_dir=hooks_dir, hook_path=str(script)) is True
-    written = json.loads((hooks_dir / "roboco-bash-guard.json").read_text())
+    written = json.loads((hooks_dir / "robofleet-bash-guard.json").read_text())
     assert written["hooks"]["PreToolUse"][0]["matcher"] == "Bash"
 
 
@@ -195,7 +197,7 @@ def test_write_grok_fable_hooks_writes_honesty_nudge_when_enabled(
     ):
         result = gc.write_grok_fable_hooks(hooks_dir=hooks_dir)
     assert result is True
-    written = json.loads((hooks_dir / "roboco-fable-honesty-nudge.json").read_text())
+    written = json.loads((hooks_dir / "robofleet-fable-honesty-nudge.json").read_text())
     assert written["hooks"]["PostToolUse"][0]["matcher"] == "Bash"
 
 

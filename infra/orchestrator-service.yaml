@@ -44,9 +44,9 @@ spec:
             - name: ROBOFLEET_DATABASE_PORT
               value: "5432"
             - name: ROBOFLEET_DATABASE_USER
-              value: "roboco"
+              value: "robo-fleet"
             - name: ROBOFLEET_DATABASE_NAME
-              value: "roboco"
+              value: "robo-fleet"
             # ROBOFLEET_DATABASE_PASSWORD: set by deploy script via --update-env-vars.
 
             # --- Redis (Memorystore, reached over the VPC connector) ---
@@ -76,7 +76,7 @@ spec:
             - name: ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO
               value: "__AR_REPO__"
             - name: ROBOFLEET_GCP_SECRET_MANAGER_PREFIX
-              value: "roboco"
+              value: "robo-fleet"
             - name: ROBOFLEET_GCP_CLOUD_RUN_AGENT_JOB_PREFIX
               value: "robofleet-agent"
 
@@ -91,7 +91,7 @@ spec:
 
             # --- URLs ---
             - name: ROBOFLEET_PUBLIC_BASE_URL
-              value: "https://roboco.run.app"
+              value: "https://robo-fleet.run.app"
             - name: ROBOFLEET_API_URL
               value: "http://localhost:8000"
             - name: ROBOFLEET_ORCHESTRATOR_URL

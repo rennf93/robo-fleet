@@ -3,7 +3,7 @@ content itself, and — like SentinelEngine — needs no per-project opt-in to
 RUN (org-scoped: it mines journals/learnings org-wide, not a repo).
 
 Mirrors test_sentinel_engine.py: like sentinel, the mining task's
-``project_id`` still resolves against the RoboCo project (a hard
+``project_id`` still resolves against the RoboFleet project (a hard
 TaskService._require_target_or_umbrella invariant every non-coordination
 task carries) even though the program itself needs no per-project opt-in.
 Also covers ``mining_context``'s two sections and
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 AUDITOR_UUID = _foundation.AGENTS["auditor"].uuid
-SLUG = "roboco"
+SLUG = "robo-fleet"
 ONE = 1
 
 
@@ -117,9 +117,9 @@ async def _seed(session: AsyncSession) -> None:
     await session.flush()
     session.add(
         ProjectTable(
-            name="RoboCo",
+            name="RoboFleet",
             slug=SLUG,
-            git_url="https://github.com/x/roboco.git",
+            git_url="https://github.com/x/robofleet.git",
             default_branch="master",
             protected_branches=["master"],
             assigned_cell=Team.BACKEND,

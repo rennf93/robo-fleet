@@ -1,7 +1,7 @@
 """Bump the project version.
 
 Updates the `version` field in `pyproject.toml` and scaffolds a matching
-release section in `CHANGELOG.md` (Keep a Changelog format). RoboCo ships as a
+release section in `CHANGELOG.md` (Keep a Changelog format). RoboFleet ships as a
 Docker image / GitHub release rather than a PyPI package, so there is no
 `.mike.yml` or `versions.json` to maintain — only these two files.
 

@@ -54,7 +54,7 @@ async def test_distinct_bodies_with_shared_prefix_get_distinct_ids() -> None:
     assert content_a != content_b
 
     plugin = LearningsIndexPlugin()
-    store = _wire(plugin, "roboco://learnings/lrn-x")
+    store = _wire(plugin, "robofleet://learnings/lrn-x")
     store.replace_chunks = AsyncMock()
 
     await plugin.record_learning(

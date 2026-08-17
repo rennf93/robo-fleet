@@ -13,9 +13,9 @@ parallel development without conflicts:
                 └── [git repo files]
 
 Example:
-    /data/workspaces/roboco-api/backend/be-dev-1/
-    /data/workspaces/roboco-api/backend/be-dev-2/
-    /data/workspaces/roboco-api/frontend/fe-dev-1/
+    /data/workspaces/robofleet-api/backend/be-dev-1/
+    /data/workspaces/robofleet-api/backend/be-dev-2/
+    /data/workspaces/robofleet-api/frontend/fe-dev-1/
 """
 
 import asyncio
@@ -49,7 +49,7 @@ from robofleet.services.toolchain import resolve_target_python
 logger = get_logger(__name__)
 
 # Lockfile paths the dep-update probe inspects when a project sets no explicit
-# dep_update_paths — the two RoboCo's stack uses.
+# dep_update_paths — the two RoboFleet's stack uses.
 _DEP_LOCK_DEFAULTS = ("uv.lock", "pnpm-lock.yaml")
 
 # A healthy loose ref file holds either an object id (sha1 = 40 hex, sha256 = 64
@@ -250,7 +250,7 @@ def _resolve_clone_root(workspace: Path) -> Path:
 # never tracks its own metadata dir, so this needs no .gitignore entry and
 # sits outside every `_PRUNE_DIRS` exemption — instead of the working tree,
 # so writing/deleting it never touches a tracked file.
-_OWNED_MARKER_NAME = "roboco-owned"
+_OWNED_MARKER_NAME = "robo-fleet-owned"
 
 
 def _owned_marker_path(workspace: Path) -> Path:
@@ -483,11 +483,11 @@ def _safe_segment(value: str, label: str) -> str:
 # Marker file recording the lockfile digest the dev-deps install last ran
 # against. Lives under .git/ so it never shows up in `git status` (the agent's
 # clean-tree checks would otherwise trip on it) and is wiped with the clone.
-_DEP_INSTALL_MARKER = ".git/.roboco-dep-install"
+_DEP_INSTALL_MARKER = ".git/.robofleet-dep-install"
 # Records the interpreter the workspace was provisioned with + whether the
 # project's suite can run there. Lives inside .git/ so it never lands in the
 # target repo's tracked tree. JSON: {"python": "3.14", "status": "ok"}.
-_TOOLCHAIN_MARKER = ".git/.roboco-toolchain"
+_TOOLCHAIN_MARKER = ".git/.robofleet-toolchain"
 
 # pytest exit codes the runnability smoke interprets. A collection error (2) is
 # the interpreter-mismatch signature (imports fail under the wrong Python); 0/5
@@ -600,7 +600,7 @@ class WorkspaceService:
         Compute the workspace path for an agent on a project.
 
         Args:
-            project_slug: Project identifier (e.g., 'roboco')
+            project_slug: Project identifier (e.g., 'robo-fleet')
             team: Agent's team (e.g., Team.BACKEND or 'backend')
             agent_slug: Agent identifier (e.g., 'be-dev-1')
 
@@ -613,8 +613,8 @@ class WorkspaceService:
                 for the canonical team for each agent).
 
         Example:
-            >>> get_workspace_path('roboco', Team.BACKEND, 'be-dev-1')
-            Path('/data/workspaces/roboco/backend/be-dev-1')
+            >>> get_workspace_path('robo-fleet', Team.BACKEND, 'be-dev-1')
+            Path('/data/workspaces/robofleet/backend/be-dev-1')
         """
         if team is None:
             raise WorkspaceError(
@@ -1519,7 +1519,7 @@ class WorkspaceService:
         Flag-gated, best-effort, once-per-process: fires only when the standard
         file is absent in the fresh clone and we have not already tried for this
         project, so a newly registered project gets a starter
-        ``.roboco/conventions.yml`` — and any failure is swallowed so it can
+        ``.robofleet/conventions.yml`` — and any failure is swallowed so it can
         never affect the clone path. Imported lazily to avoid the
         workspace -> conventions -> git import chain.
         """
@@ -1528,7 +1528,7 @@ class WorkspaceService:
         if not settings.conventions_enabled or project_slug in _SCAFFOLD_ATTEMPTED:
             return
         _SCAFFOLD_ATTEMPTED.add(project_slug)
-        if (workspace / ".roboco" / "conventions.yml").exists():
+        if (workspace / ".robofleet" / "conventions.yml").exists():
             return
         try:
             from robofleet.services.conventions import get_conventions_service
@@ -1549,7 +1549,7 @@ class WorkspaceService:
         """Ensure a project-level read clone pinned to the head branch's HEAD.
 
         The architectural-conventions standard is read from the committed
-        ``.roboco/conventions.yml`` plus a scan of the repo tree. Per-agent
+        ``.robofleet/conventions.yml`` plus a scan of the repo tree. Per-agent
         working clones are the wrong source — one may sit on a feature branch or
         be stale — so metadata reads use this dedicated clone instead. It is
         never mounted into an agent container and is always hard-reset to
@@ -1786,7 +1786,7 @@ class WorkspaceService:
             origin re-inject the token just-in-time via the same
             ``http.extraheader`` mechanism in GitService / the fetch paths.
             """
-            name = agent.name if agent else "RoboCo Agent"
+            name = agent.name if agent else "RoboFleet Agent"
             slug = agent.slug if agent else "agent"
 
             subprocess.run(

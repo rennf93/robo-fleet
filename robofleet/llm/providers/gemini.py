@@ -3,8 +3,8 @@
 Google ships an official terminal coding agent (the ``gemini`` CLI)
 authenticated by an OAuth login (``ROBOFLEET_HOST_GEMINI_DIR``, subscription-style
 daily quota caps — the OAuth-login analogue of grok's SuperGrok subscription).
-RoboCo runs Gemini agents on it the same way it runs grok agents: the
-orchestrator's shared container assembly mounts the RoboCo MCP gateway
+RoboFleet runs Gemini agents on it the same way it runs grok agents: the
+orchestrator's shared container assembly mounts the RoboFleet MCP gateway
 (``mcp-config.json``), the agent HMAC identity, and the git context; this
 provider adds the OAuth credential mount and the runtime env the gemini-cli
 entrypoint reads, then launches the ``robofleet-agent-gemini`` image — whose

@@ -83,8 +83,8 @@ import { IdentityCard } from "../identity-card";
 function makeProject(overrides: Partial<Project> = {}): Project {
   return {
     id: "proj-1",
-    name: "RoboCo API",
-    slug: "roboco-api",
+    name: "RoboFleet API",
+    slug: "robofleet-api",
     git_url: "https://github.com/org/repo.git",
     git_provider: "github",
     github_installation_id: null,
@@ -141,9 +141,9 @@ describe("IdentityCard", () => {
 
   it("renders the slug (read-only), name, and git URL fields", () => {
     renderCard(makeProject());
-    expect(screen.getByLabelText("Slug")).toHaveValue("roboco-api");
+    expect(screen.getByLabelText("Slug")).toHaveValue("robofleet-api");
     expect(screen.getByLabelText("Slug")).toBeDisabled();
-    expect(screen.getByLabelText(/Project Name/i)).toHaveValue("RoboCo API");
+    expect(screen.getByLabelText(/Project Name/i)).toHaveValue("RoboFleet API");
     expect(screen.getByLabelText(/Git URL/i)).toHaveValue(
       "https://github.com/org/repo.git",
     );

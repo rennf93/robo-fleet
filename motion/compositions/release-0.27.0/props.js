@@ -1,4 +1,4 @@
-// Default sample props for local preview of the RoboCo v0.27.0 release clip.
+// Default sample props for local preview of the RoboFleet v0.27.0 release clip.
 // The video-renderer sidecar OVERWRITES this file at render time with the
 // real per-request values + window.__ORIENTATION__.
 window.__PROPS__ = {

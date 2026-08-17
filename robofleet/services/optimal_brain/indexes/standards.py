@@ -61,7 +61,7 @@ class StandardsIndexPlugin(BaseIndexPlugin):
         """Build source URI for standard."""
         domain = kwargs.get("domain", "general")
         rule_id = doc_id or kwargs.get("rule_id", "unknown")
-        return f"roboco://standards/{domain}/{rule_id}"
+        return f"robofleet://standards/{domain}/{rule_id}"
 
     async def index_standard(self, params: IndexStandardParams) -> IngestResult:
         """

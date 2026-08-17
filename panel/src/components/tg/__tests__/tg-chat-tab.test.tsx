@@ -267,7 +267,7 @@ describe("TgChatTab — Secretary cross-device preemption", () => {
 
   it("auto-starts without checking isActive when this device has its own persisted session", async () => {
     window.localStorage.setItem(
-      "roboco:secretary:live",
+      "robofleet:secretary:live",
       JSON.stringify({ sessionId: "old", messages: [], savedAt: Date.now() }),
     );
     renderTab();

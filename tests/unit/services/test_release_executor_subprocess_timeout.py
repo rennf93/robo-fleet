@@ -101,10 +101,10 @@ def _ops() -> _GitReleaseOps:
     """A ``_GitReleaseOps`` built without a DB session — these methods only use
     ``self._root`` / ``self._default_branch``, never the session."""
     ops = _GitReleaseOps.__new__(_GitReleaseOps)
-    ops._slug = "roboco"
+    ops._slug = "robo-fleet"
     ops._default_branch = "master"
-    ops._root = Path("/tmp/roboco-release-f078")
-    ops._git_url = "https://github.com/o/roboco"
+    ops._root = Path("/tmp/robofleet-release-f078")
+    ops._git_url = "https://github.com/o/robofleet"
     ops._git_prefix = []
     ops._ci_workflow = None
     ops._head_branch = "slave"
@@ -272,12 +272,12 @@ async def test_publish_release_posts_rest_and_returns_url(
     image) hitting /repos/{owner}/{repo}/releases with the tag payload."""
     _patch_publish_deps(monkeypatch)
     _FakeAsyncClient.response = _FakeResponse(
-        201, body={"html_url": "https://github.com/o/roboco/releases/tag/v1.0.0"}
+        201, body={"html_url": "https://github.com/o/robofleet/releases/tag/v1.0.0"}
     )
     ops = _ops()
     url = await ops.publish_release("1.0.0", "notes")
     assert url.endswith("/releases/tag/v1.0.0")
-    assert _FakeAsyncClient.last_url.endswith("/repos/o/roboco/releases")
+    assert _FakeAsyncClient.last_url.endswith("/repos/o/robofleet/releases")
     assert _FakeAsyncClient.last_json is not None
     assert _FakeAsyncClient.last_json["tag_name"] == "v1.0.0"
     assert _FakeAsyncClient.last_json["target_commitish"] == "master"
@@ -332,7 +332,7 @@ async def test_clone_run_times_out_and_kills_proc(
         _exec_returning(proc),
     )
     rc, out = await asyncio.wait_for(
-        _run(["git", "clone", "https://x@github.com/o/roboco", "/tmp/x"]),
+        _run(["git", "clone", "https://x@github.com/o/robofleet", "/tmp/x"]),
         timeout=2.0,
     )
     assert rc == _TIMEOUT_RC

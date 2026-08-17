@@ -81,7 +81,7 @@ _DOCKER_INSPECT_TIMEOUT_SECONDS = 5.0
 
 # Any value works (compose never reads it — see module docstring); it only
 # has to be a present label key.
-_CONFIG_HASH_PLACEHOLDER = "roboco-sidecar"
+_CONFIG_HASH_PLACEHOLDER = "robofleet-sidecar"
 
 
 @dataclass

@@ -10,7 +10,7 @@ import {
   type AgentTeamColor,
 } from "@/lib/agent-utils";
 
-// Canonical UUIDs from the backend roster (roboco/foundation/identity.py).
+// Canonical UUIDs from the backend roster (robofleet/foundation/identity.py).
 const PR_REVIEWER_UUID = "00000000-0000-0000-0004-000000000007";
 const SECRETARY_UUID = "00000000-0000-0000-0004-000000000006";
 const INTAKE_UUID = "00000000-0000-0000-0004-000000000005";

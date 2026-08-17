@@ -59,7 +59,7 @@ def test_run_emits_warn_finding_for_unknown_language_tag() -> None:
     assert scope[0].level == "warn"
     assert "no-todos" in scope[0].message
     assert "pyhton" in scope[0].message
-    assert scope[0].file == ".roboco/conventions.yml"
+    assert scope[0].file == ".robofleet/conventions.yml"
 
 
 def test_run_clean_when_custom_rules_use_known_languages() -> None:

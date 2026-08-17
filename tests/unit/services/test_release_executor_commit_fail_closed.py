@@ -15,10 +15,10 @@ from robofleet.services.release_executor import _GitReleaseOps, _ReleaseContext
 
 def _ctx() -> _ReleaseContext:
     return _ReleaseContext(
-        slug="roboco",
+        slug="robo-fleet",
         prod_branch="master",
-        root=Path("/tmp/roboco-release-f012"),
-        git_url="https://github.com/o/roboco",
+        root=Path("/tmp/robofleet-release-f012"),
+        git_url="https://github.com/o/robofleet",
         git_prefix=[],
         ci_workflow=None,
         env_chain=[],

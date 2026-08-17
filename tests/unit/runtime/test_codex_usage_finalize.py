@@ -135,10 +135,10 @@ def test_codex_usage_dir_branches_compose_vs_local(
 ) -> None:
     monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "")
     local = AgentOrchestrator._codex_usage_dir("be-dev-1")
-    assert "roboco-codex-usage" in str(local)
+    assert "robofleet-codex-usage" in str(local)
     assert local.name == "be-dev-1"
 
-    monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "/volume1/roboco")
+    monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "/volume1/robofleet")
     monkeypatch.setattr(orch_mod, "CODEX_USAGE_DATA_DIR", "/data/codex-usage")
     assert str(AgentOrchestrator._codex_usage_dir("be-dev-1")) == (
         "/data/codex-usage/be-dev-1"
@@ -159,7 +159,7 @@ def test_codex_usage_json_reads_the_real_local_dir(
 ) -> None:
     monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "")
     monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
-    udir = tmp_path / "roboco-codex-usage" / "be-dev-1"
+    udir = tmp_path / "robofleet-codex-usage" / "be-dev-1"
     udir.mkdir(parents=True)
     _write_usage(udir / "usage.json", tokens_input=55, tokens_output=10)
     orch = AgentOrchestrator.__new__(AgentOrchestrator)

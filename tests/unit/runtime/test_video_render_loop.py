@@ -51,7 +51,7 @@ SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 SECRETARY_UUID = _foundation.AGENTS["secretary-1"].uuid
 UX_DEV_1_UUID = _foundation.AGENTS["ux-dev-1"].uuid
 UX_DEV_2_UUID = _foundation.AGENTS["ux-dev-2"].uuid
-SLUG = "roboco"
+SLUG = "robo-fleet"
 ONE = 1
 TWO = 2
 FOUR = 4
@@ -149,9 +149,9 @@ async def _seed(session: AsyncSession) -> None:
     if existing.scalar_one_or_none() is None:
         session.add(
             ProjectTable(
-                name="RoboCo",
+                name="RoboFleet",
                 slug=SLUG,
-                git_url="https://github.com/x/roboco.git",
+                git_url="https://github.com/x/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,
@@ -488,7 +488,7 @@ async def test_render_video_task_resolves_workspace_from_task_project_not_settin
     with p1, p2, p3:
         await orch._render_video_task(task.id)
 
-    # Still resolved via the task's own project_id -> slug "roboco", not the
+    # Still resolved via the task's own project_id -> slug "robo-fleet", not the
     # now-bogus self_heal_project_slug.
     workspace.ensure_read_clone.assert_awaited_once_with(SLUG)
     posts = await get_task_service(db_session).list_open_video_posts()

@@ -3,7 +3,7 @@
 A key-value store for operator settings that must persist across restarts and be
 editable from the panel. First user: ``transcript_retention_days``, the window
 for the agent-transcript prune sweep. Seeded to 14 so the prune has a value
-before anyone touches the panel; code defaults in ``roboco.config`` are the
+before anyone touches the panel; code defaults in ``robofleet.config`` are the
 fallback when a key is absent.
 
 Revision ID: 027_system_settings

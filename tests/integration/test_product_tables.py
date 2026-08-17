@@ -56,8 +56,8 @@ async def test_product_and_mapping_persist(
 ) -> None:
     product = ProductTable(
         id=uuid4(),
-        name="RoboCo",
-        slug=f"roboco-{uuid4().hex[:6]}",
+        name="RoboFleet",
+        slug=f"robofleet-{uuid4().hex[:6]}",
         created_by=product_table_setup["creator_id"],
     )
     db_session.add(product)

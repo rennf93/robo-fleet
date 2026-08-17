@@ -126,12 +126,12 @@
   }
 }
 
-/* Telegram Mini App cockpit skin. #tg-shell carries RoboCo's own look —
+/* Telegram Mini App cockpit skin. #tg-shell carries RoboFleet's own look —
    deep slate surfaces with a constant amber accent — independent of the
    dashboard theme. Inside Telegram, the themeParams bridge inline-overrides
    the SURFACE tokens (background/card/text/hint/border) to the user's own
-   Telegram palette, while the accent tokens stay RoboCo's: Telegram's
-   surfaces, RoboCo's voice. Cards read as elevation (surface contrast +
+   Telegram palette, while the accent tokens stay RoboFleet's: Telegram's
+   surfaces, RoboFleet's voice. Cards read as elevation (surface contrast +
    an inset top highlight), never as outlines — border is reserved for
    hairline separators. */
 #tg-shell {
@@ -162,7 +162,7 @@
 }
 
 /* Cockpit typography + motion. `.tg-brand` is the Share Tech Mono wordmark
-   voice — the ROBOCO_ mark only, never labels or numerals. `.tg-display`
+   voice — the ROBOFLEET_ mark only, never labels or numerals. `.tg-display`
    is the numeral voice: the native face at a heavier weight with tabular
    figures, so big figures read like a wallet balance instead of terminal
    output. The animation classes are the Mini App's only motion vocabulary:

@@ -34,7 +34,7 @@ class QuotaStatus:
 class ResearchQuotaTracker:
     """Track per-agent/day research call counts in Redis (fail-open)."""
 
-    _KEY_PREFIX: str = "roboco:research_quota:"
+    _KEY_PREFIX: str = "robofleet:research_quota:"
 
     def __init__(self, redis_url: str | None = None) -> None:
         self._redis_url = redis_url or settings.redis_url

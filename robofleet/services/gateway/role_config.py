@@ -24,8 +24,8 @@ class RoleConfig:
     """Static config describing what a role can do."""
 
     role: str
-    flow_tools: tuple[str, ...]  # roboco-flow verbs
-    do_tools: tuple[str, ...]  # roboco-do content tools
+    flow_tools: tuple[str, ...]  # robofleet-flow verbs
+    do_tools: tuple[str, ...]  # robofleet-do content tools
     allows_write: bool  # Edit, Write to workspace
     allows_subagent: bool  # `Agent` tool — fleet-wide False (CEO ban, 2026-07-09)
     description: str

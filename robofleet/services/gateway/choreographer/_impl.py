@@ -2683,14 +2683,14 @@ class Choreographer:
                 " with the findings below so the PR returns to needs_revision and"
                 " the dev places each definition in the module the architecture"
                 " map assigns it, or — if a finding is a false positive — commits"
-                " a waiver to .roboco/conventions.yml in the PR branch for review"
+                " a waiver to .robofleet/conventions.yml in the PR branch for review"
                 " and re-submits:\n\n" + listing
             )
         else:
             remediate = (
                 "place each definition in the module the architecture map assigns "
                 "it, then commit and call the verb again. if a finding is a false "
-                "positive, add a waiver to .roboco/conventions.yml in your branch "
+                "positive, add a waiver to .robofleet/conventions.yml in your branch "
                 "for the PR to review:\n\n" + listing
             )
         return Envelope.invalid_state(
@@ -3807,10 +3807,10 @@ class Choreographer:
         ``acceptance_criterion:<name>``, which the caller batches into
         a single multi-criterion hint).
         """
-        from robofleet.config import settings as _roboco_settings
+        from robofleet.config import settings as _robofleet_settings
 
         tid = str(task_id)
-        notes_min = getattr(_roboco_settings, "notes_min_chars", 20)
+        notes_min = getattr(_robofleet_settings, "notes_min_chars", 20)
         simple_hints: dict[str, str] = {
             "progress>=1": hint_for_missing_progress(),
             "journal:reflect": hint_for_missing_reflect(task_id=tid),
@@ -3819,18 +3819,20 @@ class Choreographer:
             "journal:learning": hint_for_missing_journal_learning(),
             "qa_evidence_inspected": hint_for_evidence_not_inspected(task_id=tid),
             "docs_notes>=min": hint_for_short_doc_notes(
-                min_chars=_roboco_settings.docs_notes_min_chars
+                min_chars=_robofleet_settings.docs_notes_min_chars
             ),
             "docs_files_non_empty": hint_for_missing_doc_files(),
             "dev_notes>=min": hint_for_short_dev_notes(
-                min_chars=getattr(_roboco_settings, "dev_notes_min_chars", 40),
+                min_chars=getattr(_robofleet_settings, "dev_notes_min_chars", 40),
                 task_id=tid,
             ),
             "pr_reviewer_notes>=min": hint_for_short_pr_reviewer_notes(
-                min_chars=getattr(_roboco_settings, "pr_reviewer_notes_min_chars", 40),
+                min_chars=getattr(
+                    _robofleet_settings, "pr_reviewer_notes_min_chars", 40
+                ),
             ),
             "quick_context>=min": hint_for_short_quick_context(
-                min_chars=getattr(_roboco_settings, "quick_context_min_chars", 30),
+                min_chars=getattr(_robofleet_settings, "quick_context_min_chars", 30),
                 task_id=tid,
             ),
             "journal:note_at_claim": (
@@ -7184,7 +7186,7 @@ class Choreographer:
         and complete then point at each other). The check stays as a
         defense-in-depth reject of any non-PM actor that reaches here.
         """
-        from robofleet.config import settings as roboco_settings
+        from robofleet.config import settings as robofleet_settings
 
         agent = await self.task.agent_for(pm_agent_id)
         if agent is None or agent.role not in ("cell_pm", "main_pm"):
@@ -7202,7 +7204,7 @@ class Choreographer:
                 remediate="claim the task or wait for assignment",
                 context_briefing=await self._briefing_for(pm_agent_id, task_id),
             )
-        if not notes or len(notes) < roboco_settings.docs_notes_min_chars:
+        if not notes or len(notes) < robofleet_settings.docs_notes_min_chars:
             return Envelope.tracing_gap(
                 missing=["notes>=min"],
                 remediate=(

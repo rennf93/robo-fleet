@@ -157,11 +157,11 @@ async def test_sdk_session_send_falls_back_to_complete_text_without_deltas() -> 
 
 
 def test_normalize_assistant_message_extracts_draft_block() -> None:
-    # A finished reply that ends with a fenced roboco-draft block yields a
+    # A finished reply that ends with a fenced robofleet-draft block yields a
     # single `draft` chunk carrying the parsed object — and no `text` chunk.
     text = (
         "Here is the task.\n"
-        "```roboco-draft\n"
+        "```robofleet-draft\n"
         '{"title": "Add metrics", "acceptance_criteria": ["x"], "scale": "single"}\n'
         "```\n"
     )
@@ -172,10 +172,10 @@ def test_normalize_assistant_message_extracts_draft_block() -> None:
 
 
 def test_normalize_assistant_message_malformed_draft_is_ignored() -> None:
-    bad = "```roboco-draft\n{not valid json}\n```"
+    bad = "```robofleet-draft\n{not valid json}\n```"
     assert normalize(AssistantMessage([TextBlock(bad)])) == []
     # A draft block with no title is not a usable draft either.
-    no_title = '```roboco-draft\n{"acceptance_criteria": []}\n```'
+    no_title = '```robofleet-draft\n{"acceptance_criteria": []}\n```'
     assert normalize(AssistantMessage([TextBlock(no_title)])) == []
 
 

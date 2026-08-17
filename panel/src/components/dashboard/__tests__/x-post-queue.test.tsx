@@ -17,7 +17,7 @@ const { listPosts, approve, reject } = vi.hoisted(() => ({
           source: "x_post",
           title: "X post: release v0.17.0",
           status: "pending",
-          body: "RoboCo v0.17.0 just shipped!",
+          body: "RoboFleet v0.17.0 just shipped!",
           char_count: 28,
           release_version: "0.17.0",
         },
@@ -28,7 +28,7 @@ const { listPosts, approve, reject } = vi.hoisted(() => ({
           status: "pending",
           body: "Thanks for the shoutout!",
           char_count: 24,
-          mention: { id: "m1", author_id: "a1", text: "great work @roboco" },
+          mention: { id: "m1", author_id: "a1", text: "great work @robo-fleet" },
         },
       ] as XPost[],
   ),
@@ -77,7 +77,7 @@ describe("XPostQueue", () => {
     expect(await screen.findByText("Release post")).toBeInTheDocument();
     expect(await screen.findByText("Mention reply")).toBeInTheDocument();
     expect(
-      screen.getByDisplayValue("RoboCo v0.17.0 just shipped!"),
+      screen.getByDisplayValue("RoboFleet v0.17.0 just shipped!"),
     ).toBeInTheDocument();
   });
 
@@ -88,7 +88,7 @@ describe("XPostQueue", () => {
         source: "x_feature",
         title: "X feature spotlight: playbooks",
         status: "pending",
-        body: "Did you know RoboCo curates playbooks from real task runs?",
+        body: "Did you know RoboFleet curates playbooks from real task runs?",
         char_count: 60,
         feature: { slug: "playbooks", title: "Playbook curation" },
       },
@@ -168,7 +168,7 @@ describe("XPostQueue", () => {
     await waitFor(() =>
       expect(approve).toHaveBeenCalledWith(
         "x-1",
-        "RoboCo v0.17.0 just shipped!",
+        "RoboFleet v0.17.0 just shipped!",
       ),
     );
 
@@ -186,7 +186,7 @@ describe("XPostQueue", () => {
   it("disables Approve when the edited body exceeds 280 characters", async () => {
     render(withQueryClient(<XPostQueue />));
     const textarea = await screen.findByDisplayValue(
-      "RoboCo v0.17.0 just shipped!",
+      "RoboFleet v0.17.0 just shipped!",
     );
     fireEvent.change(textarea, { target: { value: "x".repeat(281) } });
 

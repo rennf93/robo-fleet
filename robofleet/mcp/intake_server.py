@@ -1,4 +1,4 @@
-"""roboco-intake MCP server — the Intake interviewer's ``propose_draft`` and
+"""robofleet-intake MCP server — the Intake interviewer's ``propose_draft`` and
 ``propose_batch`` (MegaTask) tools.
 
 The grok-CLI interactive intake agent calls ``propose_draft`` (one task) or
@@ -9,7 +9,7 @@ driver's relay sink uses).
 
 WHY IT POSTS DIRECTLY: grok's ``streaming-json`` output does not surface
 tool-call events (verified live — a tool runs but never appears in the stream),
-so :class:`~roboco.agent_sdk.grok_cli_session.GrokCliSession` cannot intercept
+so :class:`~robofleet.agent_sdk.grok_cli_session.GrokCliSession` cannot intercept
 this call to emit a ``draft`` chunk. The tool POSTs the draft itself. (The Claude
 intake path differs: the Claude SDK exposes the tool-use block, so its driver
 intercepts it.)
@@ -34,7 +34,7 @@ _SEARCH_QUERY_MAX_LEN = 200
 _SEARCH_DEFAULT_LIMIT = 8
 _SEARCH_MAX_LIMIT = 10
 
-mcp = FastMCP("roboco-intake")
+mcp = FastMCP("robofleet-intake")
 
 
 def _api_base() -> str:

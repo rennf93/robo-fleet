@@ -50,7 +50,7 @@ class ErrorsIndexPlugin(BaseIndexPlugin):
         """Build source URI for error pattern."""
         del kwargs  # Unused - URI uses doc_id only
         error_id = doc_id or "err-unknown"
-        return f"roboco://errors/{error_id}"
+        return f"robofleet://errors/{error_id}"
 
     def _build_content(self, params: IndexErrorParams) -> str:
         """Build searchable content from error params."""

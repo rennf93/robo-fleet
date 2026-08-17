@@ -17,7 +17,7 @@ Deliberate Phase-3 postures (per the spec):
 - ``merge_branch`` (the env-sync cascade's server-side merge) has no GitLab
   equivalent; it returns a shaped 501 so ``_env_merge_status`` lands on its
   existing ``missing_ref`` branch, same as Gitea.
-- ``request_reviewers`` needs numeric GitLab user ids RoboCo does not store
+- ``request_reviewers`` needs numeric GitLab user ids RoboFleet does not store
   (only usernames/slugs) — mirroring is skipped with a synthetic 200 rather
   than failing the PR-open flow over a best-effort reviewer nudge.
 - ``create_org_repo`` (provisioning, Phase 4) resolves ``org`` — a group's
@@ -46,7 +46,7 @@ from robofleet.services.forge.shaping import ShapedResponse
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-# GitLab MR list `state` param: "open" is GitHub/RoboCo's vocabulary, GitLab
+# GitLab MR list `state` param: "open" is GitHub/RoboFleet's vocabulary, GitLab
 # calls it "opened". Every other value (closed/merged/locked/all) passes
 # through unchanged.
 _STATE_PARAM_MAP = {"open": "opened"}
@@ -68,7 +68,7 @@ _DIFF_PAGE_SIZE = 100
 _MIN_PATH_SEGMENTS = 2
 
 # GitLab project ``path`` charset is stricter than a display ``name`` —
-# lowercase alnum/dot/underscore/dash. RoboCo repo names are already slugs
+# lowercase alnum/dot/underscore/dash. RoboFleet repo names are already slugs
 # (pitch.slug-derived) so this is normally a no-op.
 _PATH_INVALID_CHARS_RE = re.compile(r"[^a-z0-9._-]+")
 
@@ -331,7 +331,7 @@ class GitLabProvider(GitProvider):
         self, repo: RepoRef, token: str, pr_number: int, reviewers: list[str]
     ) -> Any:
         """GitLab reviewer assignment needs numeric user ids
-        (``reviewer_ids``) — RoboCo only ever stores usernames/slugs, and
+        (``reviewer_ids``) — RoboFleet only ever stores usernames/slugs, and
         resolving those is out of scope for Phase 3 (spec's open items).
         Skip with a synthetic success rather than failing the PR-open flow
         over a best-effort reviewer mirror."""
@@ -540,7 +540,7 @@ class GitLabProvider(GitProvider):
     async def create_issue_comment(
         self, repo: RepoRef, token: str, issue_number: int, body: str
     ) -> httpx.Response:
-        # RoboCo only ever comments on PRs — GitLab's PR comments live under
+        # RoboFleet only ever comments on PRs — GitLab's PR comments live under
         # the merge-request "notes" endpoint, not a separate issues API call.
         return await self._send(
             "post",

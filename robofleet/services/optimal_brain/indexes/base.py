@@ -33,10 +33,10 @@ logger = structlog.get_logger()
 
 
 def build_doc_source(*, kind: str, id_: str | None) -> str | None:
-    """Construct a roboco:// doc source URI; returns None if id_ is None."""
+    """Construct a robofleet:// doc source URI; returns None if id_ is None."""
     if id_ is None:
         return None
-    return f"roboco://{kind}/{id_}"
+    return f"robofleet://{kind}/{id_}"
 
 
 _MIN_CHUNK_LENGTH = 200
@@ -194,7 +194,7 @@ class BaseIndexPlugin(ABC):
             **kwargs: Additional context for URI building
 
         Returns:
-            A source URI string (e.g., "roboco://errors/err-001"), or None if the
+            A source URI string (e.g., "robofleet://errors/err-001"), or None if the
             required ID is missing — callers must skip indexing when None is returned.
         """
         ...

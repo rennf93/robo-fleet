@@ -78,11 +78,11 @@ async def test_adk_spawn_provisions_workspace_for_developer(
     orch = AgentOrchestrator.__new__(AgentOrchestrator)
     await orch._generate_mcp_config(
         _SLUG,
-        SpawnGitContext(project_slug="roboco"),
+        SpawnGitContext(project_slug="robo-fleet"),
         provider_type=ModelProvider.ADK_CLOUD_RUN.value,
     )
 
-    assert _ensured == [("roboco", _SLUG)]
+    assert _ensured == [("robo-fleet", _SLUG)]
 
 
 @pytest.mark.asyncio
@@ -102,7 +102,7 @@ async def test_adk_spawn_skips_workspace_for_qa(
     orch = AgentOrchestrator.__new__(AgentOrchestrator)
     await orch._generate_mcp_config(
         _SLUG,
-        SpawnGitContext(project_slug="roboco"),
+        SpawnGitContext(project_slug="robo-fleet"),
         provider_type=ModelProvider.ADK_CLOUD_RUN.value,
     )
 

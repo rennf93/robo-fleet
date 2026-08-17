@@ -1,5 +1,5 @@
 """
-RoboCo Custom Exceptions
+RoboFleet Custom Exceptions
 
 Structured exception hierarchy for the AI Agents Company system.
 All exceptions include context for debugging and logging.
@@ -12,7 +12,7 @@ from uuid import UUID
 
 class RobocoError(Exception):
     """
-    Base exception for all RoboCo errors.
+    Base exception for all RoboFleet errors.
 
     All exceptions include:
     - message: Human-readable error description

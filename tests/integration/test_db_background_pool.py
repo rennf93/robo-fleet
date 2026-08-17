@@ -230,9 +230,9 @@ def _point_singletons_at_test_db(
     parsed = urlparse(_test_database_url)
     monkeypatch.setattr(settings, "database_host", parsed.hostname or "localhost")
     monkeypatch.setattr(settings, "database_port", parsed.port or 5432)
-    monkeypatch.setattr(settings, "database_user", parsed.username or "roboco")
+    monkeypatch.setattr(settings, "database_user", parsed.username or "robo-fleet")
     monkeypatch.setattr(settings, "database_password", parsed.password or "")
-    db_name = (parsed.path or "/roboco").lstrip("/")
+    db_name = (parsed.path or "/robofleet").lstrip("/")
     monkeypatch.setattr(settings, "database_name", db_name)
 
 
@@ -321,7 +321,7 @@ async def test_defer_after_commit_is_engine_agnostic_on_background_pool(
             assert ran == []  # not drained at the savepoint boundary
 
             await db.commit()
-            drain_tasks = list(db.info.get("_roboco_drain_tasks", []))
+            drain_tasks = list(db.info.get("_robofleet_drain_tasks", []))
             if drain_tasks:
                 await asyncio.gather(*drain_tasks, return_exceptions=True)
             assert ran == ["ran"]  # drained at the real root commit

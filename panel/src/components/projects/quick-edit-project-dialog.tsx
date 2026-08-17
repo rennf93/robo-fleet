@@ -100,7 +100,7 @@ function QuickEditProjectForm({
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="RoboCo API"
+            placeholder="RoboFleet API"
           />
         </div>
 

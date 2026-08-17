@@ -56,7 +56,7 @@ class DecisionsIndexPlugin(BaseIndexPlugin):
         """Build source URI for decision."""
         del kwargs  # Unused - URI uses doc_id only
         decision_id = doc_id or "dec-unknown"
-        return f"roboco://decisions/{decision_id}"
+        return f"robofleet://decisions/{decision_id}"
 
     def _build_content(self, params: IndexDecisionParams) -> str:
         """Build searchable content from decision params."""

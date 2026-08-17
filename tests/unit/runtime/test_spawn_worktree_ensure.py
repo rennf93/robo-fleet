@@ -40,7 +40,7 @@ async def _fake_db_ctx(db: Any) -> Any:
 
 def _ctx() -> SpawnGitContext:
     return SpawnGitContext(
-        project_slug="roboco-api",
+        project_slug="robofleet-api",
         branch_name="feature/backend/abc12345",
         task_short_id="a3c40fe7",
     )
@@ -63,19 +63,19 @@ async def test_ensures_worktree_when_task_short_id_set() -> None:
         ),
     ):
         await orch._ensure_worktree_before_spawn(
-            _ctx(), "roboco-api", "backend", "be-dev-1", "task-1"
+            _ctx(), "robofleet-api", "backend", "be-dev-1", "task-1"
         )
 
     # Healthy clone -> no re-clone, just the worktree self-heal.
     ws.ensure_workspace.assert_not_awaited()
     ws.ensure_worktree_self_heal.assert_awaited_once()
     call = ws.ensure_worktree_self_heal.call_args
-    assert call.args[0] == Path("/data/workspaces/roboco-api/backend/be-dev-1")
+    assert call.args[0] == Path("/data/workspaces/robofleet-api/backend/be-dev-1")
     assert call.args[1] == Path(
-        "/data/workspaces/roboco-api/backend/be-dev-1/.worktrees/a3c40fe7"
+        "/data/workspaces/robofleet-api/backend/be-dev-1/.worktrees/a3c40fe7"
     )
     assert call.args[2] == "feature/backend/abc12345"
-    assert call.args[3] == "roboco-api"
+    assert call.args[3] == "robofleet-api"
     # be-dev-1 is a developer — an author-capable role.
     assert call.kwargs["can_author"] is True
 
@@ -101,7 +101,7 @@ async def test_reader_role_classified_as_non_author_for_refresh() -> None:
         ),
     ):
         await orch._ensure_worktree_before_spawn(
-            _ctx(), "roboco-api", "backend", "be-qa", "task-1"
+            _ctx(), "robofleet-api", "backend", "be-qa", "task-1"
         )
 
     assert ws.ensure_worktree_self_heal.call_args.kwargs["can_author"] is False
@@ -129,10 +129,10 @@ async def test_heals_missing_clone_before_self_heal() -> None:
         ),
     ):
         await orch._ensure_worktree_before_spawn(
-            _ctx(), "roboco-api", "backend", "be-dev-1", "task-1"
+            _ctx(), "robofleet-api", "backend", "be-dev-1", "task-1"
         )
 
-    ws.ensure_workspace.assert_awaited_once_with("roboco-api", "be-dev-1")
+    ws.ensure_workspace.assert_awaited_once_with("robofleet-api", "be-dev-1")
     ws.ensure_worktree_self_heal.assert_awaited_once()
 
 
@@ -140,7 +140,7 @@ async def test_heals_missing_clone_before_self_heal() -> None:
 async def test_noop_when_no_task_short_id() -> None:
     # A branchless / no-task spawn has no worktree — must not touch the FS.
     orch = _make_orchestrator()
-    ctx = SpawnGitContext(project_slug="roboco-api", branch_name=None)
+    ctx = SpawnGitContext(project_slug="robofleet-api", branch_name=None)
 
     db = MagicMock()
     ws = MagicMock()
@@ -151,7 +151,7 @@ async def test_noop_when_no_task_short_id() -> None:
         patch("robofleet.services.workspace.WorkspaceService", return_value=ws),
     ):
         await orch._ensure_worktree_before_spawn(
-            ctx, "roboco-api", "backend", "be-dev-1", "task-1"
+            ctx, "robofleet-api", "backend", "be-dev-1", "task-1"
         )
 
     ws.ensure_worktree_self_heal.assert_not_called()
@@ -186,7 +186,7 @@ async def test_fatal_failure_releases_claim_and_aborts() -> None:
         pytest.raises(AgentReadinessError, match="worktree ensure failed"),
     ):
         await orch._ensure_worktree_before_spawn(
-            _ctx(), "roboco-api", "backend", "be-dev-1", task_id
+            _ctx(), "robofleet-api", "backend", "be-dev-1", task_id
         )
 
     release.assert_awaited_once_with(task_id)
@@ -218,7 +218,7 @@ async def test_transient_failure_aborts_without_release() -> None:
         pytest.raises(AgentReadinessError, match="transient"),
     ):
         await orch._ensure_worktree_before_spawn(
-            _ctx(), "roboco-api", "backend", "be-dev-1", task_id
+            _ctx(), "robofleet-api", "backend", "be-dev-1", task_id
         )
 
     release.assert_not_awaited()
@@ -247,7 +247,7 @@ async def test_recoverable_ensure_no_raise_no_release() -> None:
         ),
     ):
         await orch._ensure_worktree_before_spawn(
-            _ctx(), "roboco-api", "backend", "be-dev-1", str(uuid4())
+            _ctx(), "robofleet-api", "backend", "be-dev-1", str(uuid4())
         )
 
     release.assert_not_awaited()

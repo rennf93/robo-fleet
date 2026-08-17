@@ -241,15 +241,15 @@ export function Sidebar() {
                 prefetch={false}
               >
                 <Image
-                  src="/roboco-logo.png"
-                  alt="RoboCo"
+                  src="/robofleet-logo.png"
+                  alt="RoboFleet"
                   width={32}
                   height={32}
                   priority
                   unoptimized
                   className="h-8 w-8 rounded"
                 />
-                <span className="font-semibold text-lg">RoboCo</span>
+                <span className="font-semibold text-lg">RoboFleet</span>
               </Link>
             </TooltipTrigger>
             <TooltipContent side="bottom">Back to Overview</TooltipContent>

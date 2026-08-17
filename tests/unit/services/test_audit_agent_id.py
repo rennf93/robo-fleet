@@ -43,7 +43,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from robofleet.db import base as roboco_db_base
+from robofleet.db import base as robofleet_db_base
 from robofleet.db.tables import AgentTable, AuditLogTable, ProjectTable, TaskTable
 from robofleet.models.base import (
     AgentRole,
@@ -106,7 +106,7 @@ async def patched_session_factory(
     test_factory = async_sessionmaker(
         bind=test_engine, expire_on_commit=False, autoflush=False
     )
-    monkeypatch.setattr(roboco_db_base, "get_session_factory", lambda: test_factory)
+    monkeypatch.setattr(robofleet_db_base, "get_session_factory", lambda: test_factory)
     yield db_session
 
 

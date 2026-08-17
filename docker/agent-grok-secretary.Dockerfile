@@ -4,10 +4,10 @@
 # the CEO's messages over HTTP (POST /turn on :9000) and, per turn, runs a
 # headless `grok -p` that resumes one session id, streaming each reply back to the
 # panel via the relay. The Secretary's CEO-authority tools (read_company_state /
-# read_task / submit_directive) are wired as the roboco-secretary MCP server
+# read_task / submit_directive) are wired as the robofleet-secretary MCP server
 # (rendered into ~/.grok/config.toml by the driver), which calls /api/secretary/*
 # with the container's HMAC agent token. Builds on the Grok runtime image
-# (grok CLI + the roboco venv).
+# (grok CLI + the robo-fleet venv).
 # =============================================================================
 
 FROM robofleet-agent-grok

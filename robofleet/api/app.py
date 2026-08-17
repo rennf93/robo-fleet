@@ -214,7 +214,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     Handles startup and shutdown events.
     """
     logger.info(
-        "Starting RoboCo API",
+        "Starting RoboFleet API",
         version=settings.app_version,
         environment=settings.environment,
     )
@@ -292,7 +292,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     yield
 
     # Shutdown
-    logger.info("Shutting down RoboCo API")
+    logger.info("Shutting down RoboFleet API")
 
     _cancel_rag_reconcile(app)
 
@@ -403,7 +403,7 @@ def create_app() -> FastAPI:
         Configured FastAPI application instance.
     """
     app = FastAPI(
-        title="RoboCo API",
+        title="RoboFleet API",
         description="AI Agents Company - Messaging and Task Management API",
         version=settings.app_version,
         docs_url="/docs",  # if settings.debug else None,

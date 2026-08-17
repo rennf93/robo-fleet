@@ -75,7 +75,7 @@ def _svc(execute: object) -> tuple[TaskService, MagicMock]:
 @pytest.mark.asyncio
 async def test_complete_removes_assignee_worktree_best_effort() -> None:
     task = _build_task(status=TaskStatus.AWAITING_PM_REVIEW)
-    svc, _ = _svc(AsyncMock(return_value=_slug_row("roboco-api")))
+    svc, _ = _svc(AsyncMock(return_value=_slug_row("robofleet-api")))
     _bind(svc, "get", AsyncMock(return_value=task))
     _bind(svc, "_get_completing_agent_role", AsyncMock(return_value="cell_pm"))
     _bind(svc, "_validate_completion_prerequisites", AsyncMock(return_value=[]))
@@ -92,7 +92,7 @@ async def test_complete_removes_assignee_worktree_best_effort() -> None:
     result = await svc.complete(task.id)
 
     assert result is task
-    remove.assert_awaited_once_with(task, "roboco-api", force_branch_delete=True)
+    remove.assert_awaited_once_with(task, "robofleet-api", force_branch_delete=True)
 
 
 @pytest.mark.asyncio
@@ -126,7 +126,7 @@ async def test_complete_skips_worktree_cleanup_for_branchless_task() -> None:
 async def test_complete_not_blocked_by_worktree_removal_failure() -> None:
     # Best-effort: a git/FS failure during cleanup must NOT fail the completion.
     task = _build_task(status=TaskStatus.AWAITING_PM_REVIEW)
-    svc, _ = _svc(AsyncMock(return_value=_slug_row("roboco-api")))
+    svc, _ = _svc(AsyncMock(return_value=_slug_row("robofleet-api")))
     _bind(svc, "get", AsyncMock(return_value=task))
     _bind(svc, "_get_completing_agent_role", AsyncMock(return_value="cell_pm"))
     _bind(svc, "_validate_completion_prerequisites", AsyncMock(return_value=[]))
@@ -153,7 +153,7 @@ async def test_complete_not_blocked_by_worktree_removal_failure() -> None:
 @pytest.mark.asyncio
 async def test_ceo_approve_removes_assignee_worktree_best_effort() -> None:
     task = _build_task(status=TaskStatus.AWAITING_CEO_APPROVAL, work_session_id=None)
-    svc, _ = _svc(AsyncMock(return_value=_slug_row("roboco-api")))
+    svc, _ = _svc(AsyncMock(return_value=_slug_row("robofleet-api")))
     _bind(svc, "get", AsyncMock(return_value=task))
     _bind(svc, "_validate_and_set_status", MagicMock())
     _bind(svc, "_close_work_session_for_task", AsyncMock())
@@ -166,7 +166,7 @@ async def test_ceo_approve_removes_assignee_worktree_best_effort() -> None:
     result = await svc.ceo_approve(task.id)
 
     assert result is task
-    remove.assert_awaited_once_with(task, "roboco-api", force_branch_delete=True)
+    remove.assert_awaited_once_with(task, "robofleet-api", force_branch_delete=True)
 
 
 @pytest.mark.asyncio
@@ -195,7 +195,7 @@ async def test_ceo_approve_closes_work_session_and_triggers_completion_hooks() -
     ``complete()`` — not hand-roll a lone learnings task and leave the work
     session ACTIVE forever. The PR-merged gate already ran above."""
     task = _build_task(status=TaskStatus.AWAITING_CEO_APPROVAL, work_session_id=None)
-    svc, _ = _svc(AsyncMock(return_value=_slug_row("roboco-api")))
+    svc, _ = _svc(AsyncMock(return_value=_slug_row("robofleet-api")))
     _bind(svc, "get", AsyncMock(return_value=task))
     _bind(svc, "_validate_and_set_status", MagicMock())
     close_ws = AsyncMock()
@@ -234,7 +234,7 @@ async def test_recurring_worktree_cleanup_failure_escalates_to_ceo() -> None:
     _reset_cleanup_streak()
     n = TaskService._WORKTREE_CLEANUP_ESCALATE_AFTER
     task = _build_task(status=TaskStatus.COMPLETED)
-    svc, _ = _svc(AsyncMock(return_value=_slug_row("roboco-api")))
+    svc, _ = _svc(AsyncMock(return_value=_slug_row("robofleet-api")))
     _bind(
         svc,
         "_remove_task_worktree_best_effort",
@@ -268,7 +268,7 @@ async def test_worktree_cleanup_success_resets_failure_streak() -> None:
     _reset_cleanup_streak()
     n = TaskService._WORKTREE_CLEANUP_ESCALATE_AFTER
     task = _build_task(status=TaskStatus.COMPLETED)
-    svc, _ = _svc(AsyncMock(return_value=_slug_row("roboco-api")))
+    svc, _ = _svc(AsyncMock(return_value=_slug_row("robofleet-api")))
     remove = AsyncMock(side_effect=PermissionError("denied"))
     _bind(svc, "_remove_task_worktree_best_effort", remove)
 
@@ -301,7 +301,7 @@ async def test_non_fs_worktree_cleanup_failure_does_not_escalate() -> None:
     _reset_cleanup_streak()
     n = TaskService._WORKTREE_CLEANUP_ESCALATE_AFTER
     task = _build_task(status=TaskStatus.COMPLETED)
-    svc, _ = _svc(AsyncMock(return_value=_slug_row("roboco-api")))
+    svc, _ = _svc(AsyncMock(return_value=_slug_row("robofleet-api")))
     _bind(
         svc,
         "_remove_task_worktree_best_effort",

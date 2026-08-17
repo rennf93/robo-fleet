@@ -1,4 +1,4 @@
-"""RoboCo HTTP security layer (fastapi-guard 7.6.0 / guard-core 3.12.0).
+"""RoboFleet HTTP security layer (fastapi-guard 7.6.0 / guard-core 3.12.0).
 
 A ``SecurityMiddleware`` + per-route decorator layer, gated by
 ``settings.guard_enabled`` (default off). Importing this module is always safe:
@@ -51,7 +51,7 @@ logger = get_logger(__name__)
 # redis_fail_open is honored (guard_core/core/checks/pipeline.py:93,
 # _handle_check_error). BehaviorTracker.track_endpoint_usage /
 # track_return_pattern call redis unguarded and raise GuardRedisError (not an
-# HTTPException) on a redis blip, so they fall through to roboco's generic
+# HTTPException) on a redis blip, so they fall through to robo-fleet's generic
 # exception handler as a 500 instead of failing open like every pipeline check
 # does. Verified still required at guard-core 3.12.0 (redis_fail_open is
 # still not consulted on either seam). Wrap all three seams here rather than
@@ -110,7 +110,7 @@ async def _process_return_rules_fail_open(
 setattr(BehavioralProcessor, "process_return_rules", _process_return_rules_fail_open)
 
 # global_behavior_rules (_BEHAVIOR_RULES below) run through THIS seam, not
-# process_return_rules -- roboco's status:404/status:401 rules are global,
+# process_return_rules -- robo-fleet's status:404/status:401 rules are global,
 # not per-route, so this is the one that is actually live in prod.
 _orig_process_global_return_rules = BehavioralProcessor.process_global_return_rules
 
@@ -196,7 +196,7 @@ _SECRET_EXFIL_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
     )
 )
 
-# SSRF: bodies/params aiming a fetch at roboco-internal or cloud-metadata hosts.
+# SSRF: bodies/params aiming a fetch at robofleet-internal or cloud-metadata hosts.
 _INTERNAL_HOST_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
     re.compile(p, re.IGNORECASE)
     for p in (
@@ -204,7 +204,7 @@ _INTERNAL_HOST_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
         r"https?://(?:10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+"
         r"|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)",
         r"https?://169\.254\.169\.254",  # cloud instance-metadata endpoint
-        r"https?://[a-z0-9.\-]*(?:roboco|ollama|postgres|redis|orchestrator)"
+        r"https?://[a-z0-9.\-]*(?:robo-fleet|ollama|postgres|redis|orchestrator)"
         r"[a-z0-9.\-]*(?::\d+)?/",
         r"https?://[a-z0-9.\-]+\.(?:internal|local|svc|cluster\.local)\b",
     )
@@ -261,7 +261,7 @@ async def secret_exfil_validator(request: GuardRequest) -> GuardResponse | None:
 
 
 async def internal_ssrf_validator(request: GuardRequest) -> GuardResponse | None:
-    """Block research/fetch bodies aimed at roboco-internal or metadata hosts."""
+    """Block research/fetch bodies aimed at robofleet-internal or metadata hosts."""
     body = await _scan_body(request)
     if body and any(p.search(body) for p in _INTERNAL_HOST_PATTERNS):
         return _block()
@@ -361,14 +361,14 @@ def _endpoint_rate_limits() -> dict[str, tuple[int, int]]:
     }
 
 
-# WAF false-positive calibration. RoboCo is an internal, authenticated API whose
+# WAF false-positive calibration. RoboFleet is an internal, authenticated API whose
 # request bodies legitimately carry code, SQL, diffs, file paths, HTML and URLs
 # (task specs, agent notes/commits, RAG queries, git bodies, chat). The signature
 # WAF (SQLi/XSS/path-traversal/URL) false-positives on ~half of that traffic when
 # active, so these free-text TOP-LEVEL body fields are excluded from scanning.
 # guard scans each non-excluded top-level field's whole stringified value, so the
 # free-form container fields (plan/risks/findings/section/payload/…) are excluded
-# too — otherwise their nested prose is stringified and scanned. The actual roboco
+# too — otherwise their nested prose is stringified and scanned. The actual robo-fleet
 # threats (prompt-injection, secret-exfil, internal SSRF) are caught by the custom
 # validators, which run independently of this exclusion; the WAF still scans every
 # non-excluded (id/enum/slug/branch) field. Matching is case-insensitive and
@@ -776,7 +776,7 @@ def _agent_kwargs() -> dict[str, Any]:
 
 
 def build_security_config() -> SecurityConfig:
-    """Assemble roboco's global guard config from settings (behind nginx)."""
+    """Assemble robo-fleet's global guard config from settings (behind nginx)."""
     return SecurityConfig(
         # Real client IP behind nginx (single hop) + the docker bridge ranges.
         # INVARIANT: trusted_proxies must mirror _INTERNAL_NETWORKS exactly
@@ -800,7 +800,7 @@ def build_security_config() -> SecurityConfig:
         # Distributed state (redis is always in the compose stack).
         enable_redis=True,
         redis_url=_redis_url(),
-        redis_prefix="roboco:guard:",
+        redis_prefix="robofleet:guard:",
         # Paired with fail_secure below, and the pairing is the whole point.
         # fail_secure covers a BUG in a check: block, surface the 500, fix it.
         # This covers redis being UNAVAILABLE, which is not a security signal at
@@ -840,14 +840,14 @@ def build_security_config() -> SecurityConfig:
         security_headers=_SECURITY_HEADERS,
         threat_ban_config=_THREAT_BAN_CONFIG,
         global_behavior_rules=_BEHAVIOR_RULES,
-        # Off by default: roboco's own return_pattern rules match on status:
+        # Off by default: robo-fleet's own return_pattern rules match on status:
         # only, which never needs a response body read.
         behavior_scan_response_body=settings.guard_scan_response_body,
         # Signature WAF on, but calibrated: free-text bodies excluded (below).
         enable_penetration_detection=True,
         excluded_detection_headers=_TRACING_HEADERS,
         excluded_detection_body_fields=_WAF_FREETEXT_BODY_FIELDS,
-        # roboco keeps its own CORSMiddleware (single origin via nginx).
+        # robo-fleet keeps its own CORSMiddleware (single origin via nginx).
         enable_cors=False,
         **_agent_kwargs(),
     )
@@ -888,7 +888,7 @@ def apply_guard(app: FastAPI) -> None:
 
 
 def guarded_lifespan(existing: Any) -> Any:
-    """Wrap roboco's existing lifespan with guard's, only when armed.
+    """Wrap robo-fleet's existing lifespan with guard's, only when armed.
 
     guard's lifespan drives the middleware's async init/teardown (redis, geo,
     the agent). When disabled, the existing lifespan is returned untouched.

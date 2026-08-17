@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Periodic pg_dump of the roboco DB (interim backup — no PITR/WAL archiving).
+# Periodic pg_dump of the robo-fleet DB (interim backup — no PITR/WAL archiving).
 # Runs once on start, then every BACKUP_INTERVAL_SECONDS (default 24h). A
 # failed dump logs and is retried next cycle; the loop itself never exits.
 # ponytail: a plain sleep loop, not a cron daemon — good enough for a fixed

@@ -22,7 +22,7 @@ export interface ChatMessage {
 // re-attaches). TTL'd so a stale id is never reconnected.
 // ---------------------------------------------------------------------------
 
-const PERSIST_KEY = "roboco:secretary:live";
+const PERSIST_KEY = "robofleet:secretary:live";
 const PERSIST_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 interface PersistedChat {

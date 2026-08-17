@@ -5,7 +5,7 @@ propose) — there is no cycle-completion transition to test, only the
 finding's own status.
 
 Mirrors test_roadmap_service.py's per-item shape, adapted for: no
-project_slug on the item (resolves against the RoboCo project instead), and
+project_slug on the item (resolves against the RoboFleet project instead), and
 a finding authored before this feature shipped carrying no status key at all
 (setdefault, not a hard requirement).
 """
@@ -47,7 +47,7 @@ SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 HOM_UUID = _foundation.AGENTS["head-marketing"].uuid
 CEO_UUID = _foundation.AGENTS["ceo"].uuid
 MAIN_PM_UUID = _foundation.AGENTS["main-pm"].uuid
-ROBOFLEET_SLUG = "roboco-standin"
+ROBOFLEET_SLUG = "robofleet-standin"
 ONE = 1
 
 
@@ -109,18 +109,18 @@ async def _seed_agents(session: AsyncSession) -> None:
     await session.flush()
 
 
-async def _seed_roboco_project(
+async def _seed_robofleet_project(
     session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> ProjectTable:
-    """The org's own project — the RoboCo project resolution anchor every
+    """The org's own project — the RoboFleet project resolution anchor every
     Periscope/Sentinel/Coroner materialization falls back to. Mirrors
     test_periscope_engine.py's ``_seed``/``_arm`` shape."""
     await _seed_agents(session)
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo",
+        name="RoboFleet",
         slug=ROBOFLEET_SLUG,
-        git_url="https://example.com/roboco.git",
+        git_url="https://example.com/robofleet.git",
         assigned_cell=Team.BACKEND,
         created_by=SYSTEM_UUID,
     )
@@ -180,7 +180,7 @@ def _id(task: TaskTable) -> UUID:
 async def test_approve_materializes_main_pm_owned_task(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_brief(db_session)
     result = await _svc(db_session).approve_finding(
         _id(task), "finding-0", created_by=CEO_UUID
@@ -226,7 +226,7 @@ async def test_approve_materializes_main_pm_owned_task(
 async def test_approve_is_idempotent(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_brief(db_session)
     svc = _svc(db_session)
     first = await svc.approve_finding(_id(task), "finding-0", created_by=CEO_UUID)
@@ -249,7 +249,7 @@ async def test_approve_is_idempotent(
 async def test_reject_records_reason(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_brief(db_session)
     result = await _svc(db_session).reject_finding(
         _id(task), "finding-0", "not actionable this quarter"
@@ -269,7 +269,7 @@ async def test_reject_records_reason(
 async def test_reject_is_idempotent(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_brief(db_session)
     svc = _svc(db_session)
     await svc.reject_finding(_id(task), "finding-0", "reason one")
@@ -282,7 +282,7 @@ async def test_reject_is_idempotent(
 async def test_cannot_reject_an_approved_finding(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_brief(db_session)
     svc = _svc(db_session)
     await svc.approve_finding(_id(task), "finding-0", created_by=CEO_UUID)
@@ -295,7 +295,7 @@ async def test_cannot_reject_an_approved_finding(
 async def test_cannot_approve_a_rejected_finding(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_brief(db_session)
     svc = _svc(db_session)
     await svc.reject_finding(_id(task), "finding-0", "not now")
@@ -310,7 +310,7 @@ async def test_finding_with_no_status_key_defaults_to_proposed(
 ) -> None:
     """A finding authored before this feature shipped carries no status key
     at all — setdefault treats it as proposed, not a crash."""
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     legacy_finding = _finding(0, status=None)
     assert "status" not in legacy_finding
     task = await _seed_brief(db_session, findings=[legacy_finding])
@@ -325,7 +325,7 @@ async def test_finding_with_no_status_key_defaults_to_proposed(
 async def test_approve_unresolvable_project_is_invalid_state(
     db_session: AsyncSession,
 ) -> None:
-    """No RoboCo project seeded (and no monkeypatched slug pointing at one)
+    """No RoboFleet project seeded (and no monkeypatched slug pointing at one)
     — the materialize fails cleanly instead of guessing a project."""
     task = await _seed_brief(db_session)
     result = await _svc(db_session).approve_finding(
@@ -348,7 +348,7 @@ async def test_unknown_task_returns_none(db_session: AsyncSession) -> None:
 async def test_unknown_finding_id_returns_none(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_brief(db_session)
     result = await _svc(db_session).approve_finding(
         _id(task), "finding-999", created_by=CEO_UUID
@@ -371,7 +371,7 @@ async def _seed_cycle_ledger_row(session: AsyncSession, task: TaskTable) -> None
 async def test_approve_records_learn_decision(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_brief(db_session)
     await _seed_cycle_ledger_row(db_session, task)
     await _svc(db_session).approve_finding(_id(task), "finding-0", created_by=CEO_UUID)
@@ -395,7 +395,7 @@ async def test_approve_records_learn_decision(
 async def test_approve_survives_learn_recording_failure(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    await _seed_roboco_project(db_session, monkeypatch)
+    await _seed_robofleet_project(db_session, monkeypatch)
     task = await _seed_brief(db_session)
     await _seed_cycle_ledger_row(db_session, task)
 

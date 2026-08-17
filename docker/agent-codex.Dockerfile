@@ -3,10 +3,10 @@
 # Runs OpenAI's Codex agent through the official `codex` CLI, authenticated by a
 # ChatGPT subscription via a mounted ~/.codex/auth.json — the parity analogue of
 # the Grok path's mounted ~/.grok (no metered API key). Reuses the base image's
-# roboco venv + uv + the RoboCo MCP gateway servers. The entrypoint renders
+# robo-fleet venv + uv + the RoboFleet MCP gateway servers. The entrypoint renders
 # ~/.codex/config.toml (the gateway) + the execpolicy deny rules + the per-role
 # sandbox flag from the mounted mcp-config.json (see
-# roboco.llm.providers.codex_cli_config) and runs the CLI headless. One runtime
+# robofleet.llm.providers.codex_cli_config) and runs the CLI headless. One runtime
 # image serves every one-shot delivery role — role behaviour comes from the
 # mounted system prompt / manifest / mcp-config, exactly as on the grok path.
 #

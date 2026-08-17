@@ -29,9 +29,9 @@ via the ``coroner_incident`` marker's ``incident_task_id`` — the same
 resolution ``CoronerEngine._originate`` already uses to anchor the
 postmortem-exploration task itself: "Project is the incident's own — an
 autopsy is about that incident, wherever it lived"), falling back to
-RoboCo's own project (``settings.self_heal_project_slug``) when the incident
+RoboFleet's own project (``settings.self_heal_project_slug``) when the incident
 is gone or carries no project — mirroring ``CoronerEngine._originate``'s own
-``incident.project_id or await self._roboco_project_id()`` fallback exactly.
+``incident.project_id or await self._robofleet_project_id()`` fallback exactly.
 """
 
 from __future__ import annotations
@@ -230,7 +230,7 @@ class CoronerService(BaseService):
         project_id, team = await self._resolve_target(task)
         if project_id is None:
             raise ValueError(
-                "neither the incident's own project nor the RoboCo project "
+                "neither the incident's own project nor the RoboFleet project "
                 "(settings.self_heal_project_slug) is resolvable — cannot "
                 "anchor a materialized task"
             )
@@ -263,9 +263,9 @@ class CoronerService(BaseService):
 
     async def _resolve_target(self, task: TaskTable) -> tuple[UUID | None, Team]:
         """(project_id, team) for the materialized follow-up — the
-        incident's own, else RoboCo's project + Team.BACKEND. Mirrors
+        incident's own, else RoboFleet's project + Team.BACKEND. Mirrors
         ``CoronerEngine._originate``'s ``incident.project_id or await
-        self._roboco_project_id()`` exactly, extended to also resolve the
+        self._robofleet_project_id()`` exactly, extended to also resolve the
         incident's own team, which ``_materialize`` now carries forward as a
         Notes delegation hint rather than the materialized task's ``team``
         column (forced to ``Team.MAIN_PM`` — see ``_materialize``'s
@@ -278,18 +278,18 @@ class CoronerService(BaseService):
             incident = await get_task_service(self.session).get(UUID(incident_task_id))
             if incident is not None and incident.project_id is not None:
                 return cast("UUID", incident.project_id), incident.team or Team.BACKEND
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         if project is not None:
             return cast("UUID", project.id), Team.BACKEND
         return None, Team.BACKEND
 
-    async def _roboco_project(self) -> Any:
-        """Mirrors ``CoronerEngine._roboco_project_id`` exactly — the same
+    async def _robofleet_project(self) -> Any:
+        """Mirrors ``CoronerEngine._robofleet_project_id`` exactly — the same
         fallback anchor the postmortem-exploration task itself resolves
         against when the incident carries no project."""
         from robofleet.services.project import get_project_service
 
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _record_learn(

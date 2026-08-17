@@ -23,7 +23,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from robofleet.config import settings as _roboco_settings
+from robofleet.config import settings as _robofleet_settings
 from robofleet.services.gateway.choreographer import (
     Choreographer,
     ChoreographerDeps,
@@ -88,7 +88,7 @@ async def test_skips_when_fresh_decision_already_exists() -> None:
 async def test_writes_when_existing_decision_is_stale() -> None:
     journal = AsyncMock()
     journal.latest_decision_at.return_value = datetime.now(UTC) - timedelta(
-        seconds=_roboco_settings.pm_decision_window_seconds + 1
+        seconds=_robofleet_settings.pm_decision_window_seconds + 1
     )
     c = Choreographer(_make_deps(journal=journal))
 

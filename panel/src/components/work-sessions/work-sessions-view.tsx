@@ -90,7 +90,7 @@ export function WorkSessionsView() {
       {isOffline ? (
         <OfflineState
           title="Cannot Load Work Sessions"
-          description="Start the RoboCo orchestrator to view work sessions. Work sessions track agent activity on git branches."
+          description="Start the RoboFleet orchestrator to view work sessions. Work sessions track agent activity on git branches."
           onRetry={() => void refresh()}
         />
       ) : (

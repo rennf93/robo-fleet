@@ -2,12 +2,12 @@
 """Generate GitHub Pages redirect stubs for every page MkDocs used to publish.
 
 Docs-site split Phase 1 (docs/internal/specs/2026-07-03-docs-site-split.md):
-docs.roboco.tech (the `roboco-website` repo) is now the canonical user-facing
+docs.robo-fleet.tech (the `robo-fleet-website` repo) is now the canonical user-facing
 docs site; this repo's MkDocs build retires. Every URL MkDocs published under
-https://rennf93.github.io/roboco/ must keep resolving — old links, bookmarks,
+https://rennf93.github.io/robofleet/ must keep resolving — old links, bookmarks,
 and search results don't get to 404 — so instead of real content each gets a
 tiny static stub: a meta-refresh + `rel=canonical` pointing at the
-docs.roboco.tech equivalent.
+docs.robo-fleet.tech equivalent.
 
 The stub set is generated once, while `mkdocs.yml`'s nav still lists every
 published page, and the output is committed under `docs-redirects/` (NOT
@@ -17,14 +17,14 @@ this same phase — nothing durable would be left for a future run to read.
 not re-run this script.
 
 Section rename: the mirror's "how-to" tour section is called "tour" on
-docs.roboco.tech (per the spec's slug map). Every other section slug is
+docs.robo-fleet.tech (per the spec's slug map). Every other section slug is
 identical between the two sites — verified with --verify-nav-ts against the
 website repo's nav.ts before this stub set was committed.
 
 Usage:
     uv run python scripts/gen_docs_redirects.py
     uv run python scripts/gen_docs_redirects.py \\
-        --verify-nav-ts ../roboco-website/src/content/docs/nav.ts
+        --verify-nav-ts ../robo-fleet-website/src/content/docs/nav.ts
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ import yaml
 
 MKDOCS_YML = Path("mkdocs.yml")
 OUT_DIR = Path("docs-redirects")
-DEST_BASE = "https://docs.roboco.tech/docs"
+DEST_BASE = "https://docs.robo-fleet.tech/docs"
 
 SECTION_RENAME = {"how-to": "tour"}
 
@@ -83,7 +83,7 @@ def load_nav_pages(mkdocs_yml: Path) -> list[Page]:
 def _walk_nav(items: list[Any], section_title: str | None = None) -> Any:
     for item in items:
         if isinstance(item, str):
-            yield Page(title=section_title or "RoboCo Docs", md_path=item)
+            yield Page(title=section_title or "RoboFleet Docs", md_path=item)
         elif isinstance(item, dict):
             for title, value in item.items():
                 if isinstance(value, str):
@@ -136,7 +136,7 @@ def generate(pages: list[Page], out_dir: Path) -> list[tuple[str, str]]:
 
 
 def verify_against_nav_ts(mapping: list[tuple[str, str]], nav_ts: Path) -> list[str]:
-    """Every stub's destination must resolve to a real docs.roboco.tech page.
+    """Every stub's destination must resolve to a real docs.robo-fleet.tech page.
     Returns the unmapped destinations (empty = every stub target exists)."""
     nav_slugs = set(re.findall(r'slug:\s*"([^"]+)"', nav_ts.read_text()))
     unmapped = []

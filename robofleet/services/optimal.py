@@ -554,7 +554,7 @@ class OptimalService:
         Mirrors unindex_playbook/unindex_vault_note/unindex_journal_entry:
         drops the file's vector-store chunks AND its IndexedDocumentTable
         tracking row, so a file removed from docs/rag or docs/map stops
-        surfacing in roboco_kb_search once it's gone from the tree.
+        surfacing in robofleet_kb_search once it's gone from the tree.
         Idempotent; failures are logged and swallowed so one bad path never
         aborts the rest of the periodic re-scan.
 
@@ -575,7 +575,7 @@ class OptimalService:
         from robofleet.db import get_db_context
         from robofleet.services.repositories import IndexedDocumentRepository
 
-        store_source = f"roboco://docs/{file_path_str}"
+        store_source = f"robofleet://docs/{file_path_str}"
         try:
             plugin = self._get_plugin(IndexType.DOCUMENTATION)
             await plugin._require_store.delete_by_source(store_source)
@@ -792,7 +792,7 @@ class OptimalService:
         """Index documentation files and track in database.
 
         ``provenance="live_write"`` marks a doc written mid-task (not yet
-        merged/deployed) so ``roboco_kb_search`` can caveat it; the default
+        merged/deployed) so ``robofleet_kb_search`` can caveat it; the default
         ``"repo_tree"`` is for content already on disk (auto-index dirs,
         startup/manual reindex).
         """
@@ -931,7 +931,7 @@ class OptimalService:
 
         # Track in database. Refuse to fall back to 'unknown' — that masked
         # the upstream bug where the journal entry row hadn't been flushed
-        # before indexing, producing roboco://journals/None doc-sources.
+        # before indexing, producing robofleet://journals/None doc-sources.
         if params.entry_id is None:
             raise ValueError(
                 "index_journal_entry: entry_id is required; refusing to "
@@ -948,7 +948,7 @@ class OptimalService:
                 error=result.error,
             )
             return
-        source = f"roboco://journals/{params.entry_id}"
+        source = f"robofleet://journals/{params.entry_id}"
         await self._track_indexed_document(
             IndexType.JOURNALS,
             source=source,
@@ -987,7 +987,7 @@ class OptimalService:
             return result
         await self._track_indexed_document(
             IndexType.PLAYBOOKS,
-            source=f"roboco://playbooks/{params.playbook_id}",
+            source=f"robofleet://playbooks/{params.playbook_id}",
             title=f"Playbook: {params.title}",
             preview=params.problem[:500] if params.problem else None,
             metadata={
@@ -1017,7 +1017,7 @@ class OptimalService:
             if isinstance(plugin, PlaybooksIndexPlugin):
                 await plugin.delete_playbook(playbook_id)
             else:
-                source = f"roboco://playbooks/{playbook_id}"
+                source = f"robofleet://playbooks/{playbook_id}"
                 await plugin._require_store.delete_by_source(source)
         except Exception as exc:
             logger.warning(
@@ -1032,7 +1032,7 @@ class OptimalService:
                 repo = IndexedDocumentRepository(db)
                 await repo.delete_by_source(
                     IndexType.PLAYBOOKS.value,
-                    f"roboco://playbooks/{playbook_id}",
+                    f"robofleet://playbooks/{playbook_id}",
                 )
         except Exception as exc:
             logger.warning(
@@ -1124,7 +1124,7 @@ class OptimalService:
         from robofleet.db import get_db_context
         from robofleet.services.repositories import IndexedDocumentRepository
 
-        source = f"roboco://journals/{entry_id}"
+        source = f"robofleet://journals/{entry_id}"
         try:
             plugin = self._get_plugin(IndexType.JOURNALS)
             # JournalsIndexPlugin has no specialized delete; use the shared
@@ -1168,7 +1168,7 @@ class OptimalService:
         error_hash = hashlib.md5(
             params.error_message.encode(), usedforsecurity=False
         ).hexdigest()[:12]
-        source = f"roboco://errors/err-{error_hash}"
+        source = f"robofleet://errors/err-{error_hash}"
         await self._track_indexed_document(
             IndexType.ERRORS,
             source=source,
@@ -1191,7 +1191,7 @@ class OptimalService:
             raise RuntimeError(f"Failed to index standard: {result.error}")
 
         # Track in database
-        source = f"roboco://standards/{params.domain or 'general'}"
+        source = f"robofleet://standards/{params.domain or 'general'}"
         await self._track_indexed_document(
             IndexType.STANDARDS,
             source=source,
@@ -1220,7 +1220,7 @@ class OptimalService:
         topic_hash = hashlib.md5(
             params.topic.encode(), usedforsecurity=False
         ).hexdigest()[:12]
-        source = f"roboco://decisions/dec-{topic_hash}"
+        source = f"robofleet://decisions/dec-{topic_hash}"
         await self._track_indexed_document(
             IndexType.DECISIONS,
             source=source,
@@ -1264,7 +1264,7 @@ class OptimalService:
                 "doc-source with placeholder. Caller must pass a non-empty "
                 "path or task identifier."
             )
-        source = f"roboco://reviews/{params.file_path}"
+        source = f"robofleet://reviews/{params.file_path}"
         await self._track_indexed_document(
             IndexType.REVIEWS,
             source=source,
@@ -1291,12 +1291,12 @@ class OptimalService:
             raise RuntimeError(f"Failed to record learning: {result.error}")
 
         # Track in database. The tracking row's ``source`` MUST match the URI
-        # the plugin embedded the chunks under (``roboco://learnings/{doc_id}``,
+        # the plugin embedded the chunks under (``robofleet://learnings/{doc_id}``,
         # doc_id = ``lrn-{md5(content[:100])[:12]}``) so a later de-index /
         # lookup-by-source against the tracking row finds the chunk rows. The
         # plugin already returned that doc_id — reuse it instead of recomputing
         # a divergent ``learn-{md5(full_content)}`` that orphans the chunk rows.
-        source = f"roboco://learnings/{doc_id}"
+        source = f"robofleet://learnings/{doc_id}"
         await self._track_indexed_document(
             IndexType.LEARNINGS,
             source=source,
@@ -2028,7 +2028,7 @@ class OptimalService:
                 reason="empty" if docs_count == 0 else "forced",
             )
             result["docs"] = await self.index_documentation(
-                docs_sources, project="roboco"
+                docs_sources, project="robo-fleet"
             )
 
         if result["docs"] > 0:

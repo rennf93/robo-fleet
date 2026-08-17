@@ -1,9 +1,9 @@
 """Codex CLI provider — OpenAI via the official ``codex`` CLI.
 
 OpenAI ships an official terminal coding agent (the ``codex`` CLI) authenticated
-by a ChatGPT subscription. RoboCo runs Codex agents on it the same way it runs
+by a ChatGPT subscription. RoboFleet runs Codex agents on it the same way it runs
 Grok agents on ``grok``: the orchestrator's shared container assembly mounts
-the RoboCo MCP gateway (``mcp-config.json``), the agent HMAC identity, and the
+the RoboFleet MCP gateway (``mcp-config.json``), the agent HMAC identity, and the
 git context; this provider adds the subscription auth mount (``~/.codex``) and
 the runtime env the codex-cli entrypoint reads, then launches the
 ``robofleet-agent-codex`` image — whose entrypoint renders ``~/.codex/config.toml``

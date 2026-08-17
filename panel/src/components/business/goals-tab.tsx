@@ -339,7 +339,7 @@ function GoalsForm({ goals, refetch }: GoalsFormProps) {
 
         {/* Company / product name */}
         <div className="space-y-2">
-          <HelpTip label="Brands X/video marketing drafts when a project name isn't available — falls back to 'RoboCo' when both are unset">
+          <HelpTip label="Brands X/video marketing drafts when a project name isn't available — falls back to 'RoboFleet' when both are unset">
             <Label htmlFor="company-name">Company / product name</Label>
           </HelpTip>
           <Input
@@ -347,7 +347,7 @@ function GoalsForm({ goals, refetch }: GoalsFormProps) {
             value={companyNameVal}
             disabled={saving}
             onChange={(e) => setCompanyName(e.target.value)}
-            placeholder="RoboCo"
+            placeholder="RoboFleet"
           />
         </div>
 

@@ -7,7 +7,7 @@ reject the nil UUID before touching the DB so callers cannot generate
 The MCP-layer URL-builder test that used to live here was tied to
 ``robofleet.mcp.a2a_server._handle_send_chat_message`` — that module was
 deleted as part of the gateway cutover, so the test was dropped along
-with it. Agent A2A traffic now flows through ``mcp__roboco-do__*`` and
+with it. Agent A2A traffic now flows through ``mcp__robofleet-do__*`` and
 is exercised by the gateway-tool integration tests.
 """
 

@@ -1,9 +1,9 @@
 """Scenario: the Periscope (Board Program) loop end to end.
 
 Mirrors test_board_program_loop.py's roadmap arm -> originate -> dedup shape
-(same RoboCo-project resolution — org scope means no per-project opt-in is
+(same RoboFleet-project resolution — org scope means no per-project opt-in is
 needed to RUN, but the exploration task's project_id still resolves against
-the RoboCo project, a hard TaskService invariant every non-coordination task
+the RoboFleet project, a hard TaskService invariant every non-coordination task
 carries) AND test_feature_spotlight.py's do_server wiring-regression check +
 real-route propose call. The genuinely new piece: unlike either program, a
 market brief completes the SAME exploration task it was authored on (no
@@ -34,7 +34,7 @@ def _seed_system_and_hom(stack: E2EStack) -> str:
     registry (not ``seed_company``'s random ``uuid4()`` agents; mirrors
     test_board_program_loop.py's identical ``_seed_system_and_po`` for
     roadmap), and the exploration task's ``project_id`` resolves against
-    this project (the RoboCo-project FK anchor every org-scoped program's
+    this project (the RoboFleet-project FK anchor every org-scoped program's
     task still needs — see PeriscopeEngine's module docstring). Returns the
     project's slug.
     """
@@ -73,9 +73,9 @@ def _seed_system_and_hom(stack: E2EStack) -> str:
         session.add(
             ProjectTable(
                 id=uuid4(),
-                name="RoboCo",
+                name="RoboFleet",
                 slug=slug,
-                git_url="https://example.com/roboco.git",
+                git_url="https://example.com/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,
@@ -91,7 +91,7 @@ def _seed_system_and_hom(stack: E2EStack) -> str:
 def _arm(stack: E2EStack, project_slug: str) -> None:
     """Arm via the settings-store key — the ONLY arming path (no legacy env
     flag exists for periscope) — and point ``self_heal_project_slug`` at the
-    seeded project (the RoboCo-project resolution roadmap/x_feature share)."""
+    seeded project (the RoboFleet-project resolution roadmap/x_feature share)."""
     from robofleet.config import settings as cfg
     from robofleet.db.tables import SystemSettingTable
 
@@ -216,7 +216,7 @@ def test_periscope_loop_originates_dedups_and_completes(
     assert row["status"] == "pending"
     assert row["assigned_to"] == _foundation.AGENTS["head-marketing"].uuid
     assert row["confirmed_by_human"] is False
-    assert row["project_id"] is not None  # resolves against the RoboCo project
+    assert row["project_id"] is not None  # resolves against the RoboFleet project
 
     # The dispatcher's own dev-work skip recognizes this exact task shape —
     # board_periscope is board-dispatched (one-shot HoM spawn), never handed

@@ -62,8 +62,8 @@ import { PlacementCard } from "../placement-card";
 function makeProject(overrides: Partial<Project> = {}): Project {
   return {
     id: "proj-1",
-    name: "RoboCo API",
-    slug: "roboco-api",
+    name: "RoboFleet API",
+    slug: "robofleet-api",
     git_url: "https://github.com/org/repo.git",
     git_provider: "github",
     github_installation_id: null,

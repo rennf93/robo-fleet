@@ -5,7 +5,7 @@ a CEO-gated artifact -> hold" shape, with two differences that follow from the
 spec (docs/internal/specs/2026-07-24-board-programs-design.md §4): the cycle
 targets an OPTED-IN project (``scope="project"`` — see
 ``robofleet.foundation.policy.board_programs.project_participates``) instead of
-RoboCo unconditionally, and the exploration prompt needs evidence the Product
+RoboFleet unconditionally, and the exploration prompt needs evidence the Product
 Owner can't gather itself (findings-ledger aggregates, rework hotspots), so
 this engine also assembles that evidence for the orchestrator's prompt builder
 (``evidence_context``) — a pure DB read, no content authored here either way.

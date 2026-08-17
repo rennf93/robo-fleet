@@ -59,7 +59,7 @@ class RoadmapEngine(BaseService):
 
         No-ops when the program isn't armed (``program_armed`` — settings-store
         override, else the legacy flag), a cycle is already open, or the
-        RoboCo project isn't resolvable. Never authors content itself — the
+        RoboFleet project isn't resolvable. Never authors content itself — the
         Product Owner does, via ``propose_roadmap`` once spawned by the board
         dispatcher.
         """
@@ -68,16 +68,16 @@ class RoadmapEngine(BaseService):
         task_svc = get_task_service(self.session)
         if await task_svc.list_open_roadmap_cycles():
             return None  # one open cycle at a time
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         if project is None or project.id is None:
             self.log.warning(
-                "roadmap-engine: RoboCo project not resolvable; skipping",
+                "roadmap-engine: RoboFleet project not resolvable; skipping",
             )
             return None
         return await self._originate(task_svc, cast("UUID", project.id))
 
-    async def _roboco_project(self) -> ProjectTable | None:
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+    async def _robofleet_project(self) -> ProjectTable | None:
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _originate(self, task_svc: TaskService, project_id: UUID) -> TaskTable:

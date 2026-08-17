@@ -1,7 +1,7 @@
 """
 Initial Data Constants
 
-Static seed data for bootstrapping the RoboCo system.
+Static seed data for bootstrapping the RoboFleet system.
 Separates data definitions from bootstrap logic.
 """
 

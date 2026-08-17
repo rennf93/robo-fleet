@@ -154,7 +154,7 @@ async def test_on_mode_valid_session_yields_ceo_context_and_slides_cookie(
     response = Response()
 
     ctx = await get_agent_context(
-        db=db_session, response=response, roboco_session=token
+        db=db_session, response=response, robofleet_session=token
     )
 
     assert ctx.role == AgentRole.CEO
@@ -173,7 +173,7 @@ async def test_on_mode_invalid_session_cookie_401(
     monkeypatch.setattr(settings, "cloud_auth_enabled", True)
     with pytest.raises(HTTPException) as exc:
         await get_agent_context(
-            db=db_session, response=Response(), roboco_session="not-a-real-jwt"
+            db=db_session, response=Response(), robofleet_session="not-a-real-jwt"
         )
     assert exc.value.status_code == _HTTP_401
 

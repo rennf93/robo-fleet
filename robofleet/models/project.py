@@ -111,7 +111,7 @@ class Project(TimestampMixin):
         min_length=1,
         max_length=50,
         pattern=r"^[a-z0-9-]+$",
-        description="URL-safe identifier (e.g., 'roboco', 'robofleet-panel')",
+        description="URL-safe identifier (e.g., 'robo-fleet', 'robofleet-panel')",
     )
 
     # Git Configuration
@@ -124,7 +124,7 @@ class Project(TimestampMixin):
         default=None,
         description=(
             "Forge provider ('github'|'gitlab'|'gitea'). null = auto-detect "
-            "from git_url host; RoboCo is GitHub-only today."
+            "from git_url host; RoboFleet is GitHub-only today."
         ),
     )
     # GitHub App installation covering this repo. Set -> git operations mint a

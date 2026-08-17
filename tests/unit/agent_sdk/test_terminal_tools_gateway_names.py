@@ -1,8 +1,8 @@
 """Smoke-7: SDK's _TERMINAL_TOOLS matches the current gateway verb names.
 
-Original bug: the set still held pre-gateway names (roboco_agent_idle,
-roboco_task_submit_qa, ...). Tools recorded via /terminal/tool_recorded
-get their `mcp__roboco-flow__` prefix stripped, so `i_am_idle` lands in
+Original bug: the set still held pre-gateway names (robofleet_agent_idle,
+robofleet_task_submit_qa, ...). Tools recorded via /terminal/tool_recorded
+get their `mcp__robofleet-flow__` prefix stripped, so `i_am_idle` lands in
 recent_tools — but the membership check against the old names always
 returned False. The stop hook then nagged every agent on every clean
 exit, wasting tokens and burning the stop-allowance counter.
@@ -50,14 +50,14 @@ def test_documenter_terminal_verbs() -> None:
 def test_pre_gateway_names_not_present() -> None:
     """Pre-gateway names must NOT be in the set (they never match recent_tools)."""
     pre_gateway = {
-        "roboco_agent_idle",
-        "roboco_task_submit_qa",
-        "roboco_task_qa_pass",
-        "roboco_task_qa_fail",
-        "roboco_task_complete",
-        "roboco_task_docs_complete",
-        "roboco_task_escalate",
-        "roboco_task_escalate_to_ceo",
+        "robofleet_agent_idle",
+        "robofleet_task_submit_qa",
+        "robofleet_task_qa_pass",
+        "robofleet_task_qa_fail",
+        "robofleet_task_complete",
+        "robofleet_task_docs_complete",
+        "robofleet_task_escalate",
+        "robofleet_task_escalate_to_ceo",
     }
     leaked = pre_gateway & _TERMINAL_TOOLS
     assert not leaked, (

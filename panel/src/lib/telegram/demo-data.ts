@@ -1,7 +1,7 @@
 /**
  * Canned cockpit fixtures for `/tg?demo=1` (see demo.ts). Typed against
  * the real API modules so drift breaks typecheck, flavored like a live
- * RoboCo day so the UI reads true.
+ * RoboFleet day so the UI reads true.
  */
 
 import type { ReleaseProposal } from "@/lib/api/release";
@@ -41,13 +41,13 @@ export const DEMO_RELEASE: ReleaseProposal = {
       "## 0.26.0\n\n### Added\n- Telegram Mini App V4: Today brief, native approvals card stack.\n\n### Fixed\n- CEO approve-and-merge no longer fails on a diverged workspace clone.",
     version_bump_plan: [
       "pyproject.toml",
-      "roboco/__init__.py",
+      "robofleet/__init__.py",
       "panel/package.json",
     ],
     gaps: [
       {
         category: "docs",
-        detail: "docs.roboco.tech Mini App page not yet updated",
+        detail: "docs.robo-fleet.tech Mini App page not yet updated",
       },
     ],
     migration_notes: [],
@@ -61,9 +61,9 @@ export const DEMO_X_POSTS: XPost[] = [
     source: "x_feature",
     title: "Feature spotlight: findings ledger",
     status: "pending",
-    body: "Every QA bounce in RoboCo is now a structured finding — file, line, severity, expected vs actual — not prose. Reviewers stamp them, devs resolve them by id, and nothing gets lost between rounds. The ledger closed our noisiest feedback loop.",
+    body: "Every QA bounce in RoboFleet is now a structured finding — file, line, severity, expected vs actual — not prose. Reviewers stamp them, devs resolve them by id, and nothing gets lost between rounds. The ledger closed our noisiest feedback loop.",
     char_count: 243,
-    project_name: "RoboCo",
+    project_name: "RoboFleet",
   },
 ];
 
@@ -76,12 +76,12 @@ export const DEMO_VIDEO_POSTS: VideoPost[] = [
     occasion: "release",
     script: "Three features, three scenes, twelve seconds.",
     platforms: ["x", "tiktok"],
-    x_caption: "RoboCo 0.25.0 — the org now cuts its own releases. 🤖",
+    x_caption: "RoboFleet 0.25.0 — the org now cuts its own releases. 🤖",
     tiktok_caption:
-      "An AI company that ships itself: RoboCo 0.25.0 was proposed, gated, and published by the fleet — the human just tapped approve.",
+      "An AI company that ships itself: RoboFleet 0.25.0 was proposed, gated, and published by the fleet — the human just tapped approve.",
     mp4_paths: {},
     render_status: "rendered",
-    project_name: "RoboCo",
+    project_name: "RoboFleet",
   },
 ];
 
@@ -101,7 +101,7 @@ export const DEMO_ROADMAP: RoadmapCycle[] = [
           "Digest renders from existing usage rollups",
           "Opt-out via panel settings",
         ],
-        project_slug: "roboco",
+        project_slug: "robo-fleet",
         team: "backend",
         priority: 2,
         rationale: "The usage dashboard exists but nobody opens it on Mondays.",
@@ -113,7 +113,7 @@ export const DEMO_ROADMAP: RoadmapCycle[] = [
         description:
           "Export a project's completed-task history with cycle times for offline analysis.",
         acceptance_criteria: ["One-click export from the project page"],
-        project_slug: "roboco",
+        project_slug: "robo-fleet",
         team: "frontend",
         priority: 3,
         rationale: "Asked for twice during board reviews.",
@@ -513,7 +513,7 @@ export const DEMO_CHAT_MESSAGES: Record<string, A2AChatMessage[]> = {
       "df-2",
       "demo-conv-fedev1",
       "fe-dev-1",
-      "Yes — `usage-time-series-chart.tsx:84` was mounting the tooltip inside the overflow container. Pushed the fix, PR checks are green.\n\nPR: https://github.com/rennf93/roboco/pull/612",
+      "Yes — `usage-time-series-chart.tsx:84` was mounting the tooltip inside the overflow container. Pushed the fix, PR checks are green.\n\nPR: https://github.com/rennf93/robo-fleet/pull/612",
       95,
     ),
   ],

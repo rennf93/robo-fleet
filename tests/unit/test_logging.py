@@ -65,7 +65,7 @@ def test_redact_secrets_no_change_for_clean_string() -> None:
 def test_add_app_context_injects_app_name() -> None:
     event = {"event": "test"}
     out = add_app_context(None, "info", event)
-    assert out["app"] == "roboco"
+    assert out["app"] == "robo-fleet"
     assert "version" in out
     assert "environment" in out
 

@@ -118,7 +118,7 @@ describe("TgTaskSheet", () => {
             origin: "qa",
             round: 1,
             author_slug: "be-qa",
-            file: "roboco/services/queue.py",
+            file: "robofleet/services/queue.py",
             line: 42,
             severity: "major",
             criterion: null,
@@ -138,7 +138,7 @@ describe("TgTaskSheet", () => {
             origin: "qa",
             round: 1,
             author_slug: "be-qa",
-            file: "roboco/services/dlq.py",
+            file: "robofleet/services/dlq.py",
             line: 7,
             severity: "minor",
             criterion: null,
@@ -160,7 +160,7 @@ describe("TgTaskSheet", () => {
     });
     render(<TgTaskSheet task={task()} onClose={vi.fn()} />);
     expect(screen.getByText(/open findings · 1/i)).toBeInTheDocument();
-    expect(screen.getByText("roboco/services/queue.py:42")).toBeInTheDocument();
+    expect(screen.getByText("robofleet/services/queue.py:42")).toBeInTheDocument();
     expect(screen.queryByText(/dlq\.py/)).not.toBeInTheDocument();
   });
 

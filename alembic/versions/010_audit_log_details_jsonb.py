@@ -6,7 +6,7 @@ when the alembic chain was applied cleanly, BUT the ORM in
 modes followed:
 
 1. DBs bootstrapped via `Base.metadata.create_all` (the production
-   create_all-fallback path in `roboco.db.base.init_db`, and the test
+   create_all-fallback path in `robofleet.db.base.init_db`, and the test
    conftest path) created the column as `JSON` — not JSONB. PostgreSQL
    stores `JSON` as text and exposes a different operator class than
    `JSONB`, so `details->>'reason'` works at the SQL level but

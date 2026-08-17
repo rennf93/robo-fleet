@@ -33,7 +33,7 @@ SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 SECRETARY_UUID = _foundation.AGENTS["secretary-1"].uuid
 UX_DEV_1_UUID = _foundation.AGENTS["ux-dev-1"].uuid
 UX_DEV_2_UUID = _foundation.AGENTS["ux-dev-2"].uuid
-SLUG = "roboco"
+SLUG = "robo-fleet"
 ONE = 1
 TWO = 2
 THREE = 3
@@ -73,9 +73,9 @@ async def _seed(session: AsyncSession) -> None:
     if existing.scalar_one_or_none() is None:
         session.add(
             ProjectTable(
-                name="RoboCo",
+                name="RoboFleet",
                 slug=SLUG,
-                git_url="https://github.com/x/roboco.git",
+                git_url="https://github.com/x/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,
@@ -415,9 +415,9 @@ async def test_open_video_task_insert_error_returns_none_session_usable(
     if has_project is None:
         db_session.add(
             ProjectTable(
-                name="RoboCo",
+                name="RoboFleet",
                 slug=SLUG,
-                git_url="https://github.com/x/roboco.git",
+                git_url="https://github.com/x/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,
@@ -452,7 +452,7 @@ async def test_open_video_task_with_explicit_project_id_ignores_self_heal_slug(
 ) -> None:
     """A caller-supplied project_id resolves independent of
     self_heal_project_slug — the authoring task lands on THAT project, not
-    the fixed RoboCo one."""
+    the fixed RoboFleet one."""
     await _seed(db_session)
     _enable(monkeypatch)
     other = ProjectTable(
@@ -721,7 +721,7 @@ async def test_draft_release_video_opens_authoring_task(
 ) -> None:
     await _seed(db_session)
     _enable(monkeypatch, video_on_release=True)
-    _mock_local_model(monkeypatch, "RoboCo v1.0.0 just shipped a huge release.")
+    _mock_local_model(monkeypatch, "RoboFleet v1.0.0 just shipped a huge release.")
     engine = video_engine_module.VideoEngine(db_session)
     task = await engine.draft_release_video(version="1.0.0", changelog=_CHANGELOG)
     assert task is not None
@@ -732,7 +732,7 @@ async def test_draft_release_video_opens_authoring_task(
     assert draft is not None
     assert draft["occasion"] == "release 1.0.0"
     assert draft["platforms"] == ["x", "tiktok"]
-    assert draft["script"] == "RoboCo v1.0.0 just shipped a huge release."
+    assert draft["script"] == "RoboFleet v1.0.0 just shipped a huge release."
     # brief is now the structured changelog block, not the LLM one-liner —
     # the whole CHANGELOG section (not one bullet) plus a highlights list.
     assert draft["brief"] != draft["script"]
@@ -778,7 +778,7 @@ async def test_draft_release_video_falls_back_to_template_on_empty_local_reply(
     assert task is not None
     draft = markers.get_video_draft(task)
     assert draft is not None
-    assert draft["script"] == "RoboCo v2.0.0 just shipped: no bullets."
+    assert draft["script"] == "RoboFleet v2.0.0 just shipped: no bullets."
     assert "- no bullets" in draft["brief"]
     assert draft["suggested_input_props"] == {
         "version": "2.0.0",
@@ -806,8 +806,8 @@ async def test_draft_release_video_brief_contains_brand_voice_when_set(
 
 # --------------------------------------------------------------------------- #
 # Product-name resolution (release-video prompts brand off the target
-# project, not a hardcoded "RoboCo" literal). The fallback-chain unit
-# coverage (project name -> company_name -> "RoboCo") lives on the shared
+# project, not a hardcoded "RoboFleet" literal). The fallback-chain unit
+# coverage (project name -> company_name -> "RoboFleet") lives on the shared
 # helper, CompanyGoalsService.resolve_product_name, in
 # test_company_goals_service.py — this only asserts the end-to-end wiring
 # through draft_release_video.
@@ -842,9 +842,9 @@ async def test_draft_release_video_uses_project_name_when_set(
     draft = markers.get_video_draft(task)
     assert draft is not None
     assert "Acme Robotics" in draft["script"]
-    assert "RoboCo" not in draft["script"]
+    assert "RoboFleet" not in draft["script"]
     assert "Acme Robotics" in draft["brief"]
-    assert "RoboCo" not in draft["brief"]
+    assert "RoboFleet" not in draft["brief"]
 
 
 # --------------------------------------------------------------------------- #
@@ -913,7 +913,7 @@ async def test_open_video_task_does_not_compress_spotlight_brief(
     _enable(monkeypatch)
     engine = video_engine_module.VideoEngine(db_session)
     feature_brief = (
-        "Organizational Memory Loop: Did you know RoboCo agents learn from "
+        "Organizational Memory Loop: Did you know RoboFleet agents learn from "
         "every completed task? A local model distills one high-signal lesson "
         "per task, retrieved back into future briefings."
     )

@@ -26,7 +26,7 @@ const { listCycles, approveItem, rejectItem } = vi.hoisted(() => ({
               team: "backend",
               priority: 2,
               evidence:
-                "roboco/api/routes/widgets.py:12 defines GET /widgets; no panel/src page calls it",
+                "robofleet/api/routes/widgets.py:12 defines GET /widgets; no panel/src page calls it",
               status: "proposed",
             },
             {
@@ -38,7 +38,7 @@ const { listCycles, approveItem, rejectItem } = vi.hoisted(() => ({
               team: "frontend",
               priority: 3,
               evidence:
-                "roboco/config.py:210 defines the flag; docs/map/ has no entry for it",
+                "robofleet/config.py:210 defines the flag; docs/map/ has no entry for it",
               status: "proposed",
             },
           ],
@@ -96,7 +96,7 @@ describe("SpackleReviewQueue", () => {
       screen.getByText("Document ROBOFLEET_WIDGETS_ENABLED"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/roboco\/api\/routes\/widgets.py:12/),
+      screen.getByText(/robofleet\/api\/routes\/widgets.py:12/),
     ).toBeInTheDocument();
   });
 

@@ -37,7 +37,7 @@ export const TG_CARD =
 /**
  * A quick-action tile — the cockpit's primary verbs, styled like a native
  * wallet's Transfer/Deposit row. An optional badge count sits on the tile;
- * `accent` fills it with the RoboCo amber for the one action that most
+ * `accent` fills it with the RoboFleet amber for the one action that most
  * wants attention.
  */
 export function TgCircleAction({

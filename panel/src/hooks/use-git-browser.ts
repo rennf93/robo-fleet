@@ -91,7 +91,7 @@ export function useGitBrowser(): UseGitBrowserResult {
     projects?.find((p) => p.slug === projectSlug)?.id ?? "";
   const { data: currentProject } = useProject(currentProjectId);
   // Ladder rung 0 (head) when an environment ladder is declared, else the
-  // plain default_branch shim — mirrors roboco/models/env_branches.head_branch.
+  // plain default_branch shim — mirrors robofleet/models/env_branches.head_branch.
   const defaultBranch =
     currentProject?.environments?.[0]?.branch ??
     currentProject?.default_branch ??

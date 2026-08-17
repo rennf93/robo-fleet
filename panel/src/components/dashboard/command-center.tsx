@@ -118,7 +118,7 @@ export function CommandCenter() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            RoboCo Command Center
+            RoboFleet Command Center
           </h1>
           <p className="text-muted-foreground">
             Complete visibility into all operations

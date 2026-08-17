@@ -12,5 +12,5 @@ LABEL role="prompter"
 LABEL description="Intake interviewer — a long-lived Claude Agent SDK session driven by the panel"
 
 # Override the base `["claude"]` entrypoint with the intake driver. WORKDIR /app
-# and the venv on PATH are inherited from the base; roboco lives at /app/roboco.
-ENTRYPOINT ["python", "-m", "roboco.agent_sdk.intake_main"]
+# and the venv on PATH are inherited from the base; robo-fleet lives at /app/robofleet.
+ENTRYPOINT ["python", "-m", "robofleet.agent_sdk.intake_main"]

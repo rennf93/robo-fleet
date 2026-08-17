@@ -98,11 +98,11 @@ async def test_write_doc_user_facing_refused_is_400_not_422(
 ) -> None:
     """doc_type='user_facing' is a recognized DocType enum member, so Pydantic
     accepts it at the HTTP boundary (no 422) and the service's actionable
-    refusal (400 with roboco-website guidance) is what the agent sees."""
+    refusal (400 with robo-fleet-website guidance) is what the agent sees."""
     with patch("robofleet.api.routes.docs.get_docs_service") as mock_get:
         mock_service = AsyncMock()
         mock_service.write_doc = AsyncMock(
-            side_effect=ValidationError("...roboco-website project...")
+            side_effect=ValidationError("...robo-fleet-website project...")
         )
         mock_get.return_value = mock_service
         response = await docs_client.post(

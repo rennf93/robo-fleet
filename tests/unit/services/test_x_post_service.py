@@ -140,9 +140,9 @@ async def _seed_draft(
     await session.flush()
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo",
-        slug=f"roboco-{uuid4().hex[:6]}",
-        git_url="https://example.com/roboco.git",
+        name="RoboFleet",
+        slug=f"robofleet-{uuid4().hex[:6]}",
+        git_url="https://example.com/robofleet.git",
         assigned_cell=Team.BACKEND,
         created_by=SYSTEM_UUID,
     )
@@ -562,7 +562,7 @@ async def test_approve_threads_x_reply_draft(db_session: AsyncSession) -> None:
     task = await _seed_draft(db_session, source=X_REPLY_SOURCE)
     markers.set_x_mention_ref(
         task,
-        {"id": "777", "author_id": "42", "text": "hey @roboco what do you think?"},
+        {"id": "777", "author_id": "42", "text": "hey @robo-fleet what do you think?"},
     )
     await db_session.flush()
     client = _StubClient()
@@ -1306,7 +1306,7 @@ async def test_approve_feature_spotlight_video_failure_does_not_break_post(
 
 
 def _drain_tasks(session: AsyncSession) -> list[asyncio.Task[object]]:
-    return list(session.info.get("_roboco_drain_tasks", []))
+    return list(session.info.get("_robofleet_drain_tasks", []))
 
 
 async def _await_drain(session: AsyncSession) -> None:
@@ -1375,7 +1375,7 @@ async def test_reject_with_reason_schedules_deferred_redraft(
     task = await _seed_draft(db_session)
     with _lock_free():
         await _svc(db_session).reject(_id(task), "Too vague")
-    assert db_session.info.get("_roboco_pending_bus_publishes")
+    assert db_session.info.get("_robofleet_pending_bus_publishes")
 
 
 @pytest.mark.asyncio
@@ -1387,7 +1387,7 @@ async def test_reject_blank_reason_schedules_no_redraft(
     task = await _seed_draft(db_session)
     with _lock_free():
         await _svc(db_session).reject(_id(task), "   ")
-    assert not db_session.info.get("_roboco_pending_bus_publishes")
+    assert not db_session.info.get("_robofleet_pending_bus_publishes")
 
 
 @pytest.mark.asyncio
@@ -1574,7 +1574,7 @@ async def test_reject_replayed_on_already_cancelled_is_noop(
     assert first.status == TS.CANCELLED
     # The first reject scheduled its own redraft — clear the pending queue
     # so the assertion below is unambiguous about what the SECOND call does.
-    db_session.info.pop("_roboco_pending_bus_publishes", None)
+    db_session.info.pop("_robofleet_pending_bus_publishes", None)
 
     with _lock_free():
         second = await _svc(db_session).reject(task_id, "A completely different reason")
@@ -1582,4 +1582,4 @@ async def test_reject_replayed_on_already_cancelled_is_noop(
     assert second.status == TS.CANCELLED
     # Unchanged: the replay's reason must NOT overwrite the original.
     assert markers.get_x_reject_reason(second) == "Needs work"
-    assert not db_session.info.get("_roboco_pending_bus_publishes")
+    assert not db_session.info.get("_robofleet_pending_bus_publishes")

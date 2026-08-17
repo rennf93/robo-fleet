@@ -136,7 +136,7 @@ const DEMO_SECRETARY: ChatMessage[] = [
   { role: "user", text: "What shipped this week, one line each?" },
   {
     role: "assistant",
-    text: "This week:\n\n- **v0.26.0** released (video preview frames, X caption fix)\n- Env-branch DM wording parity fixes merged\n- Docs sweep for the release published to docs.roboco.tech",
+    text: "This week:\n\n- **v0.26.0** released (video preview frames, X caption fix)\n- Env-branch DM wording parity fixes merged\n- Docs sweep for the release published to docs.robo-fleet.tech",
   },
 ];
 
@@ -172,7 +172,7 @@ function SecretaryPinnedRow({ onOpen }: { onOpen: () => void }) {
 // PERSIST_KEY) — read-only here, just to tell "this device has nothing of
 // its own to restore" apart from "a restore is still resolving" before this
 // view decides whether it's safe to auto-start.
-const SECRETARY_PERSIST_KEY = "roboco:secretary:live";
+const SECRETARY_PERSIST_KEY = "robofleet:secretary:live";
 
 function hasPersistedSecretarySession(): boolean {
   if (typeof window === "undefined") return false;

@@ -20,14 +20,14 @@ if TYPE_CHECKING:
     import pytest
 
 
-def test_intake_render_wires_roboco_intake_mcp(
+def test_intake_render_wires_robofleet_intake_mcp(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     cfg = tmp_path / ".grok" / "config.toml"
     monkeypatch.setattr(grok_intake_main, "GROK_CONFIG_PATH", cfg)
     grok_intake_main._render_grok_config("http://orch:8000", "sess-1")
     parsed = tomllib.loads(cfg.read_text())
-    server = parsed["mcp_servers"]["roboco-intake"]
+    server = parsed["mcp_servers"]["robofleet-intake"]
     assert server["command"] == "uv"
     # The ModuleNotFound guard: --directory /app + --no-sync, installed module.
     assert server["args"] == [
@@ -54,7 +54,7 @@ def test_secretary_render_wires_mcp_and_hmac_identity(
     monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "hmac-xyz")
     grok_secretary_main._render_grok_config("http://orch:8000")
     parsed = tomllib.loads(cfg.read_text())
-    server = parsed["mcp_servers"]["roboco-secretary"]
+    server = parsed["mcp_servers"]["robofleet-secretary"]
     assert server["args"] == [
         "run",
         "--directory",

@@ -6,7 +6,7 @@ EXPLORATION TASK has no per-item CEO decision to wait on — but its single
 for the CEO to decide on afterward (unless its kind is "playbook", already
 routed into the playbook curation queue: status "not_applicable"). Unlike
 Periscope/Sentinel there is no item id — a postmortem is one process change,
-not a list (``roboco.services.coroner_engine``'s own docstring), so the
+not a list (``robofleet.services.coroner_engine``'s own docstring), so the
 action routes key on the task id alone.
 """
 

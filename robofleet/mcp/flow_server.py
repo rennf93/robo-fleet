@@ -1,4 +1,4 @@
-"""roboco-flow MCP server — exposes intent verbs to agents.
+"""robofleet-flow MCP server — exposes intent verbs to agents.
 
 Tools are role-scoped via the agent's spawn manifest. The orchestrator writes
 ``/app/tool-manifest.json`` into each spawned agent container with that role's
@@ -89,7 +89,7 @@ _CIRCUIT_REJECTION_KINDS: frozenset[str] = frozenset(
 
 
 # Dict-shaped `error.code` values (from FastAPI's exception handlers —
-# `roboco_exception_handler` / `http_exception_handler` / `generic_exception_handler`)
+# `robofleet_exception_handler`, `http_exception_handler`, `generic_exception_handler`)
 # mapped to the counted breaker kind they are semantically equivalent to. A
 # 422 / 500 / 4xx-exception storm is retry-storm-worthy but the response body
 # carries `error` as a DICT (not a string kind), so the breaker's string-only
@@ -185,7 +185,7 @@ def _normalize_exception_envelope(
     """Synthesize an Envelope-wire-format dict from an exception-handler body.
 
     FastAPI's exception handlers return ``error`` as a DICT
-    (``{code, message, details?}`` from ``roboco_exception_handler`` /
+    (``{code, message, details?}`` from ``robofleet_exception_handler`` /
     ``http_exception_handler`` / ``generic_exception_handler``) or a bare
     ``detail`` list (``request_validation_handler``, 422) — neither is the
     Envelope wire format the agent is prompted to trust (string ``error`` kind
@@ -244,7 +244,7 @@ def _classify_rejection(payload: dict[str, Any]) -> str | None:
        ``not_found``, ``transport_error``, ``circuit_open``) return None —
        preserves the prior contract that those don't touch the SDK.
     2. Exception-handler dict: ``error`` is a DICT
-       (``{code, message, details?}`` from ``roboco_exception_handler`` /
+       (``{code, message, details?}`` from ``robofleet_exception_handler`` /
        ``http_exception_handler`` / ``generic_exception_handler``). Map its
        ``code`` to a counted kind — auth/permission/denied → ``not_authorized``,
        ``INVALID_INPUT`` / validation → ``incomplete_input``, anything else
@@ -267,7 +267,7 @@ def _classify_rejection(payload: dict[str, Any]) -> str | None:
     return None
 
 
-mcp = FastMCP("roboco-flow")
+mcp = FastMCP("robofleet-flow")
 log = structlog.get_logger()
 
 
@@ -774,7 +774,7 @@ def post_pr_review(
 
     body: a one-paragraph summary. findings: the per-criterion list — each
     {file, line?, severity (blocker|major|minor|nit), expected, actual}. When
-    findings are given, the GitHub comment is GENERATED in the RoboCo format
+    findings are given, the GitHub comment is GENERATED in the RoboFleet format
     (summary + a findings table + verdict) — do not hand-format it in body.
     event: REQUEST_CHANGES (default), APPROVE, or COMMENT. The verdict must
     match the findings: to APPROVE a clean PR pass event='APPROVE' (do not rely
@@ -1114,7 +1114,7 @@ _TOOLS: dict[str, Any] = {
     # advertise). `pass`/`fail` are Python keywords so the IntentSpec uses
     # `pass_review`/`fail_review` internally; the public-name mapping below
     # bridges the two so the manifest's IntentSpec entries register as
-    # `mcp__roboco-flow__pass` / `mcp__roboco-flow__fail`.
+    # `mcp__robofleet-flow__pass` / `mcp__robofleet-flow__fail`.
     "claim_review": claim_review,
     "pass": pass_review,
     "fail": fail_review,

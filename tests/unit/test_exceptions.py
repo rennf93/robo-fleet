@@ -30,7 +30,7 @@ from robofleet.exceptions import (
 _TIMEOUT_SECONDS = 30
 
 
-def test_roboco_error_to_dict_shape() -> None:
+def test_robofleet_error_to_dict_shape() -> None:
     err = RobocoError("boom", code="X", details={"a": 1})
     out = err.to_dict()
     assert out["error"]["code"] == "X"
@@ -38,7 +38,7 @@ def test_roboco_error_to_dict_shape() -> None:
     assert out["error"]["details"] == {"a": 1}
 
 
-def test_roboco_error_default_details_is_empty_dict() -> None:
+def test_robofleet_error_default_details_is_empty_dict() -> None:
     err = RobocoError("no details")
     assert err.details == {}
 

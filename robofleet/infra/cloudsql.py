@@ -52,7 +52,7 @@ def async_engine_for_cloudsql(
     Returns ``(engine, connector)``; the caller caches the connector next to
     the engine so it outlives the engine. ``async_creator`` closes over both.
     ``pool`` selects primary vs background sizing, mirroring the plain-DSN
-    path in ``roboco.db.base.get_engine`` so background loops stay on the
+    path in ``robofleet.db.base.get_engine`` so background loops stay on the
     smaller independent pool under Cloud SQL.
     """
     loop = asyncio.get_running_loop()

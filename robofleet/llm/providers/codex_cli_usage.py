@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 # Where the entrypoint writes the captured usage for the orchestrator to read.
 USAGE_OUT_PATH = Path(
     os.environ.get("ROBOFLEET_CODEX_USAGE_FILE")
-    or Path(tempfile.gettempdir()) / "roboco-codex-usage.json"
+    or Path(tempfile.gettempdir()) / "robofleet-codex-usage.json"
 )
 
 _TURN_COMPLETED = "turn.completed"

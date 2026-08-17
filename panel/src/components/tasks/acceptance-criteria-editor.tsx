@@ -19,7 +19,7 @@ interface AcceptanceCriteriaEditorProps {
 }
 
 // Mirrors the backend cap (acceptance_criteria max_length=7 — see
-// roboco/api/schemas/tasks.py's TaskUpdate and the agent-facing v1 flow
+// robofleet/api/schemas/tasks.py's TaskUpdate and the agent-facing v1 flow
 // schema). Blocking it here means an 8th criterion never round-trips into a
 // swallowed 422 on save.
 const MAX_CRITERIA = 7;

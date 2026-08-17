@@ -53,7 +53,7 @@ def _valid_item(idx: int) -> dict[str, Any]:
         "title": f"Item {idx}",
         "description": f"A substantive description of item {idx}",
         "acceptance_criteria": ["it does the thing", "it is tested"],
-        "project_slug": "roboco-api",
+        "project_slug": "robofleet-api",
         "team": "frontend",
         "priority": 2,
         "evidence": (

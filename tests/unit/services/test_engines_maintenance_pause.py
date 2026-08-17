@@ -117,7 +117,7 @@ async def test_self_heal_notifies_but_does_not_originate_while_paused(
     observation = RegressionObservation(
         fingerprint="fp1",
         signal_name="ci",
-        repo_hint="roboco",
+        repo_hint="robo-fleet",
         summary="CI red",
         detail="workflow failed",
         raw_ref="",

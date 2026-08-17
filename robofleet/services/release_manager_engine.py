@@ -12,8 +12,8 @@ CEO. It is deliberately conservative:
   by the Secretary, and explicitly skipped by every dispatcher) — it is acted on
   only by the CEO-gated release routes + the fail-closed executor, never by the
   loop. The loop NEVER calls start / approve / merge / publish.
-* **Repo-singular.** It assesses RoboCo's own project (``self_heal_project_slug``,
-  the canonical "this project IS RoboCo" pointer; defaults to ``roboco-api``).
+* **Repo-singular.** It assesses RoboFleet's own project (``self_heal_project_slug``,
+  the canonical "this project IS RoboFleet" pointer; defaults to ``robofleet-api``).
 * **Bounded.** At most one open proposal at a time (dedup by source).
 
 Correctness is deterministic: the readiness audit lives in code
@@ -60,9 +60,9 @@ if TYPE_CHECKING:
 ReleaseAssessor = Callable[[], Awaitable[ReleaseReadinessReport | None]]
 
 
-def _roboco_slug() -> str:
-    """The registered project that IS RoboCo itself (reused from self-heal)."""
-    return (settings.self_heal_project_slug or "roboco-api").strip()
+def _robofleet_slug() -> str:
+    """The registered project that IS RoboFleet itself (reused from self-heal)."""
+    return (settings.self_heal_project_slug or "robofleet-api").strip()
 
 
 def _past_threshold(report: ReleaseReadinessReport) -> bool:
@@ -126,11 +126,11 @@ class ReleaseManagerEngine(BaseService):
         report = await self._ready_report()
         if report is None:
             return None
-        project = await get_project_service(self.session).get_by_slug(_roboco_slug())
+        project = await get_project_service(self.session).get_by_slug(_robofleet_slug())
         if project is None or project.id is None:
             self.log.warning(
-                "release-manager: RoboCo project not resolvable; skipping",
-                slug=_roboco_slug(),
+                "release-manager: RoboFleet project not resolvable; skipping",
+                slug=_robofleet_slug(),
             )
             return None
         return await self._originate(report, cast("UUID", project.id))
@@ -243,7 +243,7 @@ class ReleaseManagerEngine(BaseService):
             )
 
     async def _production_assess(self) -> ReleaseReadinessReport | None:
-        """Real path: read-clone RoboCo, fetch CI, gather the snapshot, assess.
+        """Real path: read-clone RoboFleet, fetch CI, gather the snapshot, assess.
 
         Read-only and fail-safe: if the project / clone can't be resolved it
         returns None (propose nothing) rather than raising. The CI conclusion is
@@ -253,7 +253,7 @@ class ReleaseManagerEngine(BaseService):
         from robofleet.services.git import get_git_service
         from robofleet.services.workspace import get_workspace_service
 
-        slug = _roboco_slug()
+        slug = _robofleet_slug()
         project = await get_project_service(self.session).get_by_slug(slug)
         if project is None:
             return None

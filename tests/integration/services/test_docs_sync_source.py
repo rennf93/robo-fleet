@@ -60,9 +60,9 @@ async def _get_or_create_agent(
 async def _seed_project(db: AsyncSession) -> ProjectTable:
     project = ProjectTable(
         id=uuid4(),
-        name="RoboCo Website",
+        name="RoboFleet Website",
         slug=f"website-{uuid4().hex[:8]}",
-        git_url="https://github.com/rennf93/roboco-website.git",
+        git_url="https://github.com/rennf93/robo-fleet-website.git",
         assigned_cell=Team.BACKEND,
         created_by=SYSTEM_UUID,
     )

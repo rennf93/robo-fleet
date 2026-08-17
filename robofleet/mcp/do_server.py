@@ -1,4 +1,4 @@
-"""roboco-do MCP server — smart-wrapped content tools.
+"""robofleet-do MCP server — smart-wrapped content tools.
 
 Forwards to /api/v1/do/* on the orchestrator. Tools are role-scoped at *spawn*
 time: the orchestrator writes ``do_tools`` into the per-agent manifest and we
@@ -74,7 +74,7 @@ _CIRCUIT_REJECTION_KINDS: frozenset[str] = frozenset(
 
 
 # Dict-shaped `error.code` values (from FastAPI's exception handlers —
-# `roboco_exception_handler` / `http_exception_handler` / `generic_exception_handler`)
+# `robofleet_exception_handler`, `http_exception_handler`, `generic_exception_handler`)
 # mapped to the counted breaker kind they are semantically equivalent to. A
 # 422 / 500 / 4xx-exception storm is retry-storm-worthy but the response body
 # carries `error` as a DICT (not a string kind), so the breaker's string-only
@@ -143,7 +143,7 @@ def _classify_rejection(payload: dict[str, Any]) -> str | None:
        ``not_found``, ``transport_error``, ``circuit_open``) return None —
        preserves the prior contract that those don't touch the SDK.
     2. Exception-handler dict: ``error`` is a DICT
-       (``{code, message, details?}`` from ``roboco_exception_handler`` /
+       (``{code, message, details?}`` from ``robofleet_exception_handler`` /
        ``http_exception_handler`` / ``generic_exception_handler``). Map its
        ``code`` to a counted kind — auth/permission/denied → ``not_authorized``,
        ``INVALID_INPUT`` / validation → ``incomplete_input``, anything else
@@ -236,7 +236,7 @@ def _normalize_exception_envelope(
     return None
 
 
-mcp = FastMCP("roboco-do")
+mcp = FastMCP("robofleet-do")
 log = structlog.get_logger()
 
 
@@ -811,7 +811,7 @@ def propose_conversation_replies(items: list[dict[str, Any]]) -> dict[str, Any]:
 
     Call this exactly ONCE per exploration cycle, after reviewing the
     candidate conversations already gathered on this task (search results —
-    RoboCo is relevant but unmentioned). Each reply materializes its own held
+    RoboFleet is relevant but unmentioned). Each reply materializes its own held
     draft in the X post queue; the CEO reviews and approves/rejects each one
     individually.
 

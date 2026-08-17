@@ -45,7 +45,7 @@ class Product(TimestampMixin):
         min_length=1,
         max_length=50,
         pattern=r"^[a-z0-9-]+$",
-        description="URL-safe identifier (e.g. 'roboco')",
+        description="URL-safe identifier (e.g. 'robo-fleet')",
     )
     description: str | None = Field(default=None)
     cells: list[ProductCellMapping] = Field(default_factory=list)

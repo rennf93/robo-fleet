@@ -411,7 +411,7 @@ async def test_inject_board_brief_batch_umbrella_uses_batch_composer() -> None:
             title="Backend piece",
             description="Backend description.",
             acceptance_criteria=["backend ac"],
-            project=SimpleNamespace(name="roboco-api"),
+            project=SimpleNamespace(name="robofleet-api"),
             cell_projects=[],
         ),
     ]
@@ -430,7 +430,7 @@ async def test_inject_board_brief_batch_umbrella_uses_batch_composer() -> None:
     _sid, message = registry.delivered[0]
     assert "Ship things" in message
     assert "Backend piece" in message
-    assert "roboco-api" in message
+    assert "robofleet-api" in message
     assert "propose_batch" in message
 
 

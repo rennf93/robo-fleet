@@ -16,9 +16,9 @@ const { useProjects } = vi.hoisted(() => ({
     data: [
       {
         id: "p-1",
-        name: "roboco-panel",
-        slug: "roboco-panel",
-        git_url: "https://example.com/roboco-panel.git",
+        name: "robofleet-panel",
+        slug: "robofleet-panel",
+        git_url: "https://example.com/robofleet-panel.git",
         assigned_cell: "frontend",
         is_active: true,
         has_workspace: true,
@@ -50,10 +50,10 @@ const {
           title: "Video: release v0.19.0",
           status: "pending",
           occasion: "release",
-          script: "RoboCo v0.19.0 just shipped!",
+          script: "RoboFleet v0.19.0 just shipped!",
           platforms: ["x", "tiktok"],
-          x_caption: "RoboCo v0.19.0 is here!",
-          tiktok_caption: "New RoboCo drop!",
+          x_caption: "RoboFleet v0.19.0 is here!",
+          tiktok_caption: "New RoboFleet drop!",
           mp4_paths: {
             vertical: "/fake/vertical.mp4",
             square: "/fake/square.mp4",
@@ -144,9 +144,9 @@ describe("VideoPostQueue", () => {
     render(withQueryClient(<VideoPostQueue />));
     expect(await screen.findByText("release")).toBeInTheDocument();
     expect(
-      screen.getByDisplayValue("RoboCo v0.19.0 is here!"),
+      screen.getByDisplayValue("RoboFleet v0.19.0 is here!"),
     ).toBeInTheDocument();
-    expect(screen.getByDisplayValue("New RoboCo drop!")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("New RoboFleet drop!")).toBeInTheDocument();
   });
 
   it("renders a project badge when project_slug/project_name is present", async () => {
@@ -181,7 +181,7 @@ describe("VideoPostQueue", () => {
       await screen.findByText("Video: release v0.19.0"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("RoboCo v0.19.0 just shipped!"),
+      screen.getByText("RoboFleet v0.19.0 just shipped!"),
     ).toBeInTheDocument();
   });
 
@@ -193,10 +193,10 @@ describe("VideoPostQueue", () => {
         title: "Video: release v0.19.0",
         status: "pending",
         occasion: "release",
-        script: "RoboCo v0.19.0 just shipped!",
+        script: "RoboFleet v0.19.0 just shipped!",
         platforms: ["x", "tiktok"],
-        x_caption: "RoboCo v0.19.0 is here!",
-        tiktok_caption: "New RoboCo drop!",
+        x_caption: "RoboFleet v0.19.0 is here!",
+        tiktok_caption: "New RoboFleet drop!",
         mp4_paths: { vertical: "/fake/vertical.mp4" }, // square never rendered
       },
     ] as VideoPost[]);
@@ -226,7 +226,7 @@ describe("VideoPostQueue", () => {
       title: "Video: release v0.19.0",
       status: "pending",
       occasion: "release",
-      script: "RoboCo v0.19.0 just shipped!",
+      script: "RoboFleet v0.19.0 just shipped!",
       platforms: ["x", "tiktok"],
     };
     listPosts.mockResolvedValueOnce([
@@ -310,7 +310,7 @@ describe("VideoPostQueue", () => {
 
   it("disables Approve when the edited X caption exceeds 280 characters", async () => {
     render(withQueryClient(<VideoPostQueue />));
-    const textarea = await screen.findByDisplayValue("RoboCo v0.19.0 is here!");
+    const textarea = await screen.findByDisplayValue("RoboFleet v0.19.0 is here!");
     fireEvent.change(textarea, { target: { value: "x".repeat(281) } });
 
     expect(screen.getByText("281/280")).toBeInTheDocument();
@@ -327,7 +327,7 @@ describe("VideoPostQueue", () => {
 
     await waitFor(() =>
       expect(approve).toHaveBeenCalledWith("v-1", {
-        x_caption: "RoboCo v0.19.0 is here!",
+        x_caption: "RoboFleet v0.19.0 is here!",
       }),
     );
     resolveApproveRef.current?.({ status: "posted", posted: {}, detail: "ok" });
@@ -480,10 +480,10 @@ describe("VideoPostQueue", () => {
         title: "Video: release v0.19.0",
         status: "pending",
         occasion: "release",
-        script: "RoboCo v0.19.0 just shipped!",
+        script: "RoboFleet v0.19.0 just shipped!",
         platforms: ["x", "tiktok"],
-        x_caption: "RoboCo v0.19.0 is here!",
-        tiktok_caption: "New RoboCo drop!",
+        x_caption: "RoboFleet v0.19.0 is here!",
+        tiktok_caption: "New RoboFleet drop!",
         mp4_paths: { vertical: "/fake/vertical.mp4" },
         source_task_id: "auth-1",
         composition_id: "release-recap",
@@ -515,10 +515,10 @@ describe("VideoPostQueue", () => {
         title: "Video: release v0.19.0",
         status: "pending",
         occasion: "release",
-        script: "RoboCo v0.19.0 just shipped!",
+        script: "RoboFleet v0.19.0 just shipped!",
         platforms: ["x", "tiktok"],
-        x_caption: "RoboCo v0.19.0 is here!",
-        tiktok_caption: "New RoboCo drop!",
+        x_caption: "RoboFleet v0.19.0 is here!",
+        tiktok_caption: "New RoboFleet drop!",
         mp4_paths: { vertical: "/fake/vertical.mp4" },
         source_task_id: "auth-1",
         composition_id: "release-recap",
@@ -541,10 +541,10 @@ describe("VideoPostQueue", () => {
         title: "Video: release v0.19.0",
         status: "pending",
         occasion: "release",
-        script: "RoboCo v0.19.0 just shipped!",
+        script: "RoboFleet v0.19.0 just shipped!",
         platforms: ["x", "tiktok"],
-        x_caption: "RoboCo v0.19.0 is here!",
-        tiktok_caption: "New RoboCo drop!",
+        x_caption: "RoboFleet v0.19.0 is here!",
+        tiktok_caption: "New RoboFleet drop!",
         mp4_paths: { vertical: "/fake/vertical.mp4" },
         source_task_id: "auth-1",
         composition_id: "release-recap",

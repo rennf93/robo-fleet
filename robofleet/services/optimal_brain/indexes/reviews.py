@@ -70,7 +70,7 @@ class ReviewsIndexPlugin(BaseIndexPlugin):
         """Build source URI for review."""
         del kwargs  # Unused - URI uses doc_id only
         review_id = doc_id or "rev-unknown"
-        return f"roboco://reviews/{review_id}"
+        return f"robofleet://reviews/{review_id}"
 
     def _extract_pattern(self, file_path: str) -> str:
         """

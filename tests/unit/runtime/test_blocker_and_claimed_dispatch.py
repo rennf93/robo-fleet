@@ -329,7 +329,7 @@ def _task(**over: Any) -> dict[str, Any]:
         ("be-qa", "ready for QA review"),
         ("be-doc", "ready for documentation"),
         ("be-pm", "PM for backend team"),
-        ("main-pm", "MAIN PM at RoboCo"),
+        ("main-pm", "MAIN PM at RoboFleet"),
         ("product-owner", "You are on the Board"),
         ("auditor", "AUDIT"),
     ],

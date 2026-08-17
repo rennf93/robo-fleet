@@ -29,7 +29,7 @@ def _service() -> GitService:
 
 def _req(task_id: UUID | None) -> GitCommitRequest:
     return GitCommitRequest(
-        project_slug="roboco-api",
+        project_slug="robofleet-api",
         task_id=task_id,
         message="implement the dashboard layout and routing",
         commit_type="feat",

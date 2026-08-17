@@ -23,17 +23,17 @@ def _make_project(slug: str, uid: UUID) -> MagicMock:
 @pytest.mark.asyncio
 async def test_resolve_project_slug_accepts_slug() -> None:
     """A plain slug string resolves to the project's slug."""
-    project = _make_project("roboco", uuid4())
+    project = _make_project("robo-fleet", uuid4())
     mock_service = MagicMock()
     mock_service.get_by_slug = AsyncMock(return_value=project)
 
     with patch(
         "robofleet.api.utils.git.get_project_service", return_value=mock_service
     ):
-        result = await _resolve_project_slug("roboco", MagicMock())
+        result = await _resolve_project_slug("robo-fleet", MagicMock())
 
-    assert result == "roboco"
-    mock_service.get_by_slug.assert_awaited_once_with("roboco")
+    assert result == "robo-fleet"
+    mock_service.get_by_slug.assert_awaited_once_with("robo-fleet")
     mock_service.get.assert_not_called()
 
 
@@ -41,7 +41,7 @@ async def test_resolve_project_slug_accepts_slug() -> None:
 async def test_resolve_project_slug_accepts_uuid() -> None:
     """A UUID string resolves to the project's slug."""
     uid = uuid4()
-    project = _make_project("roboco", uid)
+    project = _make_project("robo-fleet", uid)
     mock_service = MagicMock()
     mock_service.get = AsyncMock(return_value=project)
 
@@ -50,7 +50,7 @@ async def test_resolve_project_slug_accepts_uuid() -> None:
     ):
         result = await _resolve_project_slug(str(uid), MagicMock())
 
-    assert result == "roboco"
+    assert result == "robo-fleet"
     mock_service.get.assert_awaited_once_with(UUID(str(uid)))
     mock_service.get_by_slug.assert_not_called()
 

@@ -129,7 +129,7 @@ class _FakeOps:
         self.calls.append("publish")
         if self._publish_raises is not None:
             raise RuntimeError(self._publish_raises)
-        return f"https://github.com/x/roboco/releases/tag/v{version}"
+        return f"https://github.com/x/robofleet/releases/tag/v{version}"
 
 
 @pytest.mark.asyncio
@@ -335,7 +335,7 @@ async def test_wait_for_ci_scoped_to_release_commit_not_branch_latest(
     monkeypatch.setattr(re.asyncio, "sleep", _no_sleep)
 
     ctx = _ReleaseContext(
-        slug="roboco-api",
+        slug="robofleet-api",
         prod_branch="master",
         root=tmp_path,
         git_url="x",
@@ -386,7 +386,7 @@ async def test_wait_for_ci_polls_through_rerun(
     monkeypatch.setattr(re.asyncio, "sleep", _no_sleep)
 
     ctx = _ReleaseContext(
-        slug="roboco-api",
+        slug="robofleet-api",
         prod_branch="master",
         root=tmp_path,
         git_url="x",
@@ -433,7 +433,7 @@ async def test_wait_for_ci_exhausts_window_on_persistent_failure(
     monkeypatch.setattr(re.asyncio, "sleep", _no_sleep)
 
     ctx = _ReleaseContext(
-        slug="roboco-api",
+        slug="robofleet-api",
         prod_branch="master",
         root=tmp_path,
         git_url="x",
@@ -502,7 +502,7 @@ def _init_release_repo(repo: Path, *, initial_version: str = "0.12.0") -> None:
 
 def _ops(session: object, root: Path) -> _GitReleaseOps:
     ctx = _ReleaseContext(
-        slug="roboco-api",
+        slug="robofleet-api",
         prod_branch="master",
         root=root,
         git_url="x",
@@ -606,7 +606,7 @@ async def test_release_clone_argv_uses_extraheader_not_url_token(
     """H11: the release-clone argv carries the PAT via ``-c http.extraheader``,
     never URL-embedded (``/proc/<pid>/cmdline`` would expose a URL token)."""
     token = "ghp_SECRETCLONE"
-    git_url = "https://github.com/org/roboco.git"
+    git_url = "https://github.com/org/robofleet.git"
     expected_basic = _basic_auth(token)
     git_prefix = ["-c", f"http.extraheader=Authorization: Basic {expected_basic}"]
     captured: list[list[str]] = []
@@ -618,7 +618,7 @@ async def test_release_clone_argv_uses_extraheader_not_url_token(
     monkeypatch.setattr(re.asyncio, "create_subprocess_exec", _exec)
     monkeypatch.setattr(settings, "workspaces_root", str(tmp_path))
 
-    await re._prepare_release_clone("roboco-api", git_url, git_prefix, "master")
+    await re._prepare_release_clone("robofleet-api", git_url, git_prefix, "master")
 
     clone_argv = next(a for a in captured if "clone" in a)
     assert f"https://{token}@" not in " ".join(clone_argv), (
@@ -642,7 +642,7 @@ async def test_release_push_argv_uses_extraheader_not_url_token(
     """H11: the release push argv carries the PAT via ``-c http.extraheader``
     and pushes to the bare URL — never ``https://TOKEN@host/...``."""
     token = "ghp_SECRETPUSH"
-    git_url = "https://github.com/org/roboco.git"
+    git_url = "https://github.com/org/robofleet.git"
     expected_basic = _basic_auth(token)
     git_prefix = ["-c", f"http.extraheader=Authorization: Basic {expected_basic}"]
     captured: list[list[str]] = []
@@ -666,7 +666,7 @@ async def test_release_push_argv_uses_extraheader_not_url_token(
     monkeypatch.setattr(re.asyncio, "create_subprocess_exec", _exec)
 
     ctx = _ReleaseContext(
-        slug="roboco-api",
+        slug="robofleet-api",
         prod_branch="master",
         root=tmp_path,
         git_url=git_url,
@@ -733,7 +733,7 @@ async def test_wait_for_ci_polls_the_prod_branch(
         lambda _session: SimpleNamespace(get_latest_ci_conclusion=_fake_get_ci),
     )
     ctx = _ReleaseContext(
-        slug="roboco-api",
+        slug="robofleet-api",
         prod_branch="master",
         root=tmp_path,
         git_url="x",
@@ -750,7 +750,7 @@ async def test_wait_for_ci_polls_the_prod_branch(
 # ---------------------------------------------------------------------------
 # Portability: the executor must bump whatever manifest the repo actually
 # ships, and scope the uv.lock edit to that repo's OWN package. Both were
-# hardcoded to RoboCo (pyproject-only, plus a literal `name = "roboco"`), so a
+# hardcoded to RoboFleet (pyproject-only, plus a literal `name = "robo-fleet"`), so a
 # third-party project got a version readiness had detected but the executor
 # could not bump, and a lockfile entry that was silently skipped.
 

@@ -134,7 +134,7 @@ export function CreateProductDialog() {
                 id="name"
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="RoboCo Platform"
+                placeholder="RoboFleet Platform"
               />
             </div>
 
@@ -147,7 +147,7 @@ export function CreateProductDialog() {
                 id="slug"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                placeholder="roboco-platform"
+                placeholder="robofleet-platform"
                 pattern="^[a-z0-9-]+$"
               />
               <p className="text-xs text-muted-foreground">

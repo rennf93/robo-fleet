@@ -10,7 +10,7 @@ Layer split:
     seed.py     - idempotent upsert of the single seeded CEO login user.
     routes.py   - the always-public status probe + the login/logout mount.
 
-Nothing here is imported by roboco.api.deps or roboco.api.websocket except
+Nothing here is imported by robofleet.api.deps or robofleet.api.websocket except
 the small shared surface (resolve_session_user, SESSION_COOKIE_NAME,
 get_jwt_strategy, cookie_transport) — this package never imports either of
 those modules, keeping the dependency direction one-way.

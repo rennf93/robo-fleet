@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-// HTML-structure smoke test for the RoboCo v0.27.0 release composition.
+// HTML-structure smoke test for the RoboFleet v0.27.0 release composition.
 // Extends the panel-demo register: panel chrome, typing reveal, four feature cards
 // with progress -> completed pill flips, cursor, stats overlay, toast,
 // outro, offline constraint, and the captions.json schema/limits.
@@ -87,7 +87,7 @@ describe("release-0.27.0 composition", () => {
     expect(html).toContain('id="toastBody"');
 
     expect(html).toContain("pk-outro");
-    expect(html).toContain("roboco.tech");
+    expect(html).toContain("robo-fleet.tech");
 
     expect(html).not.toMatch(/<script[^>]+src="https?:\/\//);
     expect(html).not.toMatch(/href="https?:\/\//);

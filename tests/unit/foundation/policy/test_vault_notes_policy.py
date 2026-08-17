@@ -12,14 +12,14 @@ _BODY = "# Buy milk\n\nGet 2% milk.\n"
 def test_hash_stable_across_intake_drafted_callout() -> None:
     with_callout = (
         _BODY
-        + "\n> [!info] RoboCo: drafted Vault note: buy milk (abcd1234) on 2026-07-11\n"
+        + "\n> [!info] RoboFleet: drafted note: buy milk (abcd1234) on 2026-07-11\n"
     )
     assert content_hash(_BODY) == content_hash(with_callout)
 
 
 def test_hash_stable_across_kb_quarantine_callout() -> None:
     with_callout = (
-        _BODY + "\n> [!warning] RoboCo: quarantined (injection pattern detected) "
+        _BODY + "\n> [!warning] RoboFleet: quarantined (injection pattern detected) "
         "on 2026-07-11\n"
     )
     assert content_hash(_BODY) == content_hash(with_callout)

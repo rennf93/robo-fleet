@@ -29,7 +29,7 @@ export function branchUrl(
 ): string | null {
   const base = repoWebUrl(gitUrl);
   if (!base || !branch) return null;
-  // roboco branch names are url-safe ([a-z0-9/_-]); slashes are kept so GitHub
+  // robo-fleet branch names are url-safe ([a-z0-9/_-]); slashes are kept so GitHub
   // resolves the full ref path.
   return `${base}/tree/${branch}`;
 }

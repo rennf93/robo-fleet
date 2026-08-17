@@ -23,7 +23,7 @@ async def test_revoke_then_check_round_trip(monkeypatch: pytest.MonkeyPatch) -> 
     assert await revocation.is_jti_revoked("abc") is True
     # The revoked key carries the namespace prefix.
     args, kwargs = fake.set.call_args
-    assert args[0].startswith("roboco:jwt_revoked:")
+    assert args[0].startswith("robofleet:jwt_revoked:")
     assert kwargs.get("ex") == _REVOKE_TTL
 
 

@@ -102,7 +102,7 @@ describe("release-recap composition", () => {
 
     // Outro headline moment.
     expect(html).toContain("pk-outro");
-    expect(html).toContain("roboco.tech");
+    expect(html).toContain("robo-fleet.tech");
 
     // No CDN / network fetch of any kind - the render is offline.
     expect(html).not.toMatch(/<script[^>]+src="https?:\/\//);

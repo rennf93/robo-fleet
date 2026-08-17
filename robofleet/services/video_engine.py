@@ -84,7 +84,7 @@ _CHANGELOG_BRIEF_CHARS = 4000
 # A flat SET NX (mirrors XPostService's identical short-critical-section
 # lock) keyed by occasion closes that window instead of letting a duplicate
 # authoring task slip through.
-_OCCASION_LOCK_PREFIX = "roboco:video_engine:occasion:"
+_OCCASION_LOCK_PREFIX = "robofleet:video_engine:occasion:"
 _OCCASION_LOCK_TTL_SECONDS = 60  # the check+insert completes in ms; crash backstop
 
 # Shared by every open_video_task caller (release/spotlight/on-demand) so the
@@ -241,11 +241,11 @@ class VideoEngine(BaseService):
 
     service_name = "video_engine"
 
-    async def _roboco_project(self) -> ProjectTable | None:
-        """The fixed RoboCo project the release/spotlight hooks author
+    async def _robofleet_project(self) -> ProjectTable | None:
+        """The fixed RoboFleet project the release/spotlight hooks author
         against (``self_heal_project_slug``). The on-demand caller instead
         supplies its own ``project_id`` — see ``resolve_authoring_project``."""
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def resolve_authoring_project(
@@ -256,7 +256,7 @@ class VideoEngine(BaseService):
 
         ``project_id`` (the on-demand ``/video/request`` caller, and the
         render loop's own per-task resolution) resolves by id; omitted (the
-        release/spotlight hooks), it falls back to the fixed RoboCo project.
+        release/spotlight hooks), it falls back to the fixed RoboFleet project.
         Both paths share the same two skip reasons, both logged: unresolvable
         project (warning — a config/data gap) vs. project not opted in (info
         — the operator hasn't flipped the per-project ``video_engine_enabled``
@@ -267,7 +267,7 @@ class VideoEngine(BaseService):
         project = (
             await get_project_service(self.session).get(project_id)
             if project_id is not None
-            else await self._roboco_project()
+            else await self._robofleet_project()
         )
         if project is None or project.id is None:
             self.log.warning(
@@ -354,7 +354,7 @@ class VideoEngine(BaseService):
 
         ``project_id`` scopes authoring to a specific project (the on-demand
         ``/video/request`` caller); omitted, the release/spotlight hooks
-        default to the fixed RoboCo project — see
+        default to the fixed RoboFleet project — see
         ``resolve_authoring_project``.
 
         ``brief`` is enriched (brand-voice + motion design-bar pointer

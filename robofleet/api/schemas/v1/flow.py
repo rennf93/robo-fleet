@@ -368,7 +368,7 @@ class PostPrReviewRequest(BaseModel):
         description=(
             "Structured per-criterion findings — each {file, line?, severity "
             "(blocker|major|minor|nit), expected, actual}. When provided, the "
-            "GitHub comment is generated from them in the RoboCo format."
+            "GitHub comment is generated from them in the RoboFleet format."
         ),
     )
 

@@ -33,7 +33,7 @@ async def test_create_branch_failure_removes_worktree() -> None:
     clone = Path("/tmp/ws")
 
     task = MagicMock(id=task_id, project_id=uuid4(), branch_name=None)
-    project = MagicMock(slug="roboco-api")
+    project = MagicMock(slug="robofleet-api")
 
     object.__setattr__(svc, "_resolve_parent_branch", AsyncMock(return_value=None))
     object.__setattr__(svc, "_resolve_team_dir", MagicMock(return_value="backend"))
@@ -74,7 +74,7 @@ async def test_successful_create_does_not_remove_worktree() -> None:
     clone = Path("/tmp/ws")
 
     task = MagicMock(id=task_id, project_id=uuid4(), branch_name=None)
-    project = MagicMock(slug="roboco-api")
+    project = MagicMock(slug="robofleet-api")
 
     object.__setattr__(svc, "_resolve_parent_branch", AsyncMock(return_value=None))
     object.__setattr__(svc, "_resolve_team_dir", MagicMock(return_value="backend"))

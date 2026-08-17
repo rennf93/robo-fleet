@@ -131,9 +131,9 @@
       "expected_post_fix_decision": "audit_layer_concern",
       "expected_post_fix_envelope_error": null,
       "fix_commit": "7a2d4e3",
-      "spec_invariant": "Spec layer does not model audit. Bug is a side-channel data integrity concern in roboco.services.audit; fix lives below the spec.",
+      "spec_invariant": "Spec layer does not model audit. Bug is a side-channel data integrity concern in robofleet.services.audit; fix lives below the spec.",
       "replay_kind": "audit_only_skip",
-      "skip_reason": "Audit-layer concern below the lifecycle spec. The fix is in roboco.services.audit; pinned by tests in tests/unit/services/test_audit.py and test_audit_real_query.py."
+      "skip_reason": "Audit-layer concern below the lifecycle spec. The fix is in robofleet.services.audit; pinned by tests in tests/unit/services/test_audit.py and test_audit_real_query.py."
     },
     {
       "id": "bug-9-notfounderror-500s",
@@ -148,9 +148,9 @@
       "expected_post_fix_decision": "audit_layer_concern",
       "expected_post_fix_envelope_error": null,
       "fix_commit": "e9d53fb",
-      "spec_invariant": "Spec layer does not model audit-event field population. Bug is a data-capture ordering concern in roboco.services.audit + roboco.services.task; fix lives below the spec.",
+      "spec_invariant": "Spec layer does not model audit-event field population. Bug is a data-capture ordering concern in robofleet.services.audit + robofleet.services.task; fix lives below the spec.",
       "replay_kind": "audit_only_skip",
-      "skip_reason": "Audit-layer concern below the lifecycle spec. The fix is in roboco.services.audit + roboco.services.task; pinned by tests in tests/unit/services/test_audit_agent_id.py."
+      "skip_reason": "Audit-layer concern below the lifecycle spec. The fix is in robofleet.services.audit + robofleet.services.task; pinned by tests in tests/unit/services/test_audit_agent_id.py."
     },
     {
       "id": "bug-a-claim-before-plan-check",

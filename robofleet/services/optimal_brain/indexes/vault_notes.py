@@ -2,7 +2,7 @@
 Vault Notes Index Plugin
 
 Indexes human-authored Obsidian vault notes (the CEO's own writing under
-``vault_kb_dirs``, default ``RoboCo/Notes``) so the fleet can retrieve them
+``vault_kb_dirs``, default ``RoboFleet/Notes``) so the fleet can retrieve them
 alongside learnings/playbooks. Mirrors the PlaybooksIndexPlugin shape; the
 embed + pgvector ingest/search machinery is inherited from BaseIndexPlugin.
 

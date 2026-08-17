@@ -1,6 +1,6 @@
-"""The ``roboco-conventions`` validator: tree-sitter placement + hygiene checks.
+"""The ``robofleet-conventions`` validator: tree-sitter placement + hygiene checks.
 
-A single Python CLI (``python -m roboco.conventions``) classifies each changed
+A single Python CLI (``python -m robofleet.conventions``) classifies each changed
 definition and flags forbidden placements, hygiene violations, and custom-rule
 matches against a project's effective conventions map. Precision over recall,
 fail loud: an ambiguous definition abstains; a validator that cannot run exits

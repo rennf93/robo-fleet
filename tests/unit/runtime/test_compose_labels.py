@@ -166,12 +166,12 @@ async def test_compose_label_args_present_when_project_resolved(
     monkeypatch.setattr(compose_labels, "_own_container_id", lambda: _FAKE_CONTAINER_ID)
     with patch(
         "asyncio.create_subprocess_exec",
-        AsyncMock(return_value=_proc(returncode=0, stdout=b"roboco-nas\n")),
+        AsyncMock(return_value=_proc(returncode=0, stdout=b"robofleet-nas\n")),
     ):
         result = await compose_labels.compose_label_args("be-dev-1")
     assert result == [
         "--label",
-        "com.docker.compose.project=roboco-nas",
+        "com.docker.compose.project=robofleet-nas",
         "--label",
         "com.docker.compose.service=be-dev-1",
         "--label",
@@ -191,10 +191,10 @@ async def test_hostname_fallback_id_reaches_docker_inspect(
     mountinfo.write_text("1 2 0:1 / / rw,relatime - ext4 /dev/root rw\n")
     monkeypatch.setattr(compose_labels, "_MOUNTINFO_PATH", str(mountinfo))
     monkeypatch.setenv("HOSTNAME", "545315347e2f")
-    create_exec = AsyncMock(return_value=_proc(returncode=0, stdout=b"roboco-nas\n"))
+    create_exec = AsyncMock(return_value=_proc(returncode=0, stdout=b"robofleet-nas\n"))
     with patch("asyncio.create_subprocess_exec", create_exec):
         result = await compose_labels.compose_label_args("be-dev-1")
-    assert "com.docker.compose.project=roboco-nas" in result
+    assert "com.docker.compose.project=robofleet-nas" in result
     assert create_exec.call_args.args[-1] == "545315347e2f"
 
 
@@ -229,10 +229,10 @@ async def test_transient_inspect_failure_retries_on_next_call(
 
     with patch(
         "asyncio.create_subprocess_exec",
-        AsyncMock(return_value=_proc(returncode=0, stdout=b"roboco-nas\n")),
+        AsyncMock(return_value=_proc(returncode=0, stdout=b"robofleet-nas\n")),
     ):
         second = await compose_labels.compose_label_args("be-dev-1")
-    assert "com.docker.compose.project=roboco-nas" in second
+    assert "com.docker.compose.project=robofleet-nas" in second
 
 
 @pytest.mark.asyncio
@@ -289,7 +289,7 @@ async def test_discovery_runs_docker_inspect_only_once(
     """Second/third call for a different service reuses the cached project —
     the whole point of caching it process-wide."""
     monkeypatch.setattr(compose_labels, "_own_container_id", lambda: _FAKE_CONTAINER_ID)
-    create_exec = AsyncMock(return_value=_proc(returncode=0, stdout=b"roboco-nas\n"))
+    create_exec = AsyncMock(return_value=_proc(returncode=0, stdout=b"robofleet-nas\n"))
     with patch("asyncio.create_subprocess_exec", create_exec):
         first = await compose_labels.compose_label_args("be-dev-1")
         second = await compose_labels.compose_label_args("fe-qa-1")
@@ -298,5 +298,5 @@ async def test_discovery_runs_docker_inspect_only_once(
     assert "com.docker.compose.service=be-dev-1" in first
     assert "com.docker.compose.service=fe-qa-1" in second
     # Both share the same resolved project.
-    assert "com.docker.compose.project=roboco-nas" in first
-    assert "com.docker.compose.project=roboco-nas" in second
+    assert "com.docker.compose.project=robofleet-nas" in first
+    assert "com.docker.compose.project=robofleet-nas" in second

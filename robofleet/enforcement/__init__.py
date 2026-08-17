@@ -1,7 +1,7 @@
 """
-Enforcement Layer for RoboCo
+Enforcement Layer for RoboFleet
 
-Provides rule enforcement for all RoboCo operations:
+Provides rule enforcement for all RoboFleet operations:
 - Notification permissions
 - Task lifecycle state machine
 - Task ownership rules

@@ -76,7 +76,7 @@ async def test_create_and_get_product_with_cells(product_client: dict) -> None:
     create = await product_client["client"].post(
         "/api/products",
         json={
-            "name": "RoboCo",
+            "name": "RoboFleet",
             "slug": slug,
             "cells": [
                 {"team": "backend", "project_id": str(product_client["project"].id)}
@@ -103,7 +103,7 @@ async def test_create_product_duplicate_slug_returns_409(
     slug = f"prod-{uuid4().hex[:6]}"
     first = await product_client["client"].post(
         "/api/products",
-        json={"name": "RoboCo", "slug": slug, "cells": []},
+        json={"name": "RoboFleet", "slug": slug, "cells": []},
         headers=_HDR,
     )
     assert first.status_code == HTTPStatus.CREATED, first.text
@@ -124,7 +124,7 @@ async def test_create_product_duplicate_team_cell_returns_409(
     create = await product_client["client"].post(
         "/api/products",
         json={
-            "name": "RoboCo",
+            "name": "RoboFleet",
             "slug": f"prod-{uuid4().hex[:6]}",
             "cells": [
                 {"team": "backend", "project_id": project_id},
@@ -143,7 +143,7 @@ async def test_create_product_unknown_project_cell_returns_422(
     create = await product_client["client"].post(
         "/api/products",
         json={
-            "name": "RoboCo",
+            "name": "RoboFleet",
             "slug": f"prod-{uuid4().hex[:6]}",
             "cells": [{"team": "backend", "project_id": str(uuid4())}],
         },
@@ -159,7 +159,7 @@ async def test_update_product_duplicate_team_cell_returns_409(
     slug = f"prod-{uuid4().hex[:6]}"
     create = await product_client["client"].post(
         "/api/products",
-        json={"name": "RoboCo", "slug": slug, "cells": []},
+        json={"name": "RoboFleet", "slug": slug, "cells": []},
         headers=_HDR,
     )
     assert create.status_code == HTTPStatus.CREATED, create.text
@@ -186,7 +186,7 @@ async def test_update_product_unknown_project_cell_returns_422(
     slug = f"prod-{uuid4().hex[:6]}"
     create = await product_client["client"].post(
         "/api/products",
-        json={"name": "RoboCo", "slug": slug, "cells": []},
+        json={"name": "RoboFleet", "slug": slug, "cells": []},
         headers=_HDR,
     )
     assert create.status_code == HTTPStatus.CREATED, create.text
@@ -206,7 +206,7 @@ async def test_delete_unreferenced_product_returns_204(
 ) -> None:
     create = await product_client["client"].post(
         "/api/products",
-        json={"name": "RoboCo", "slug": f"prod-{uuid4().hex[:6]}", "cells": []},
+        json={"name": "RoboFleet", "slug": f"prod-{uuid4().hex[:6]}", "cells": []},
         headers=_HDR,
     )
     assert create.status_code == HTTPStatus.CREATED, create.text
@@ -228,7 +228,7 @@ async def test_delete_product_referenced_by_task_returns_409(
     create = await product_client["client"].post(
         "/api/products",
         json={
-            "name": "RoboCo",
+            "name": "RoboFleet",
             "slug": f"prod-{uuid4().hex[:6]}",
             "cells": [
                 {"team": "backend", "project_id": str(product_client["project"].id)}

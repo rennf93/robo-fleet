@@ -1,6 +1,6 @@
 variable "project_id" {
   type        = string
-  description = "GCP project id hosting the RoboCo stack."
+  description = "GCP project id hosting the RoboFleet stack."
 }
 
 variable "region" {
@@ -22,7 +22,7 @@ variable "db_password" {
 
 variable "gcs_bucket" {
   type        = string
-  description = "Globally unique GCS bucket name for RoboCo state."
+  description = "Globally unique GCS bucket name for RoboFleet state."
 }
 
 variable "ar_repo" {

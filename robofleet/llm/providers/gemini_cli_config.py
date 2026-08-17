@@ -63,7 +63,7 @@ from robofleet.services.gateway.role_config import get_role_config
 GEMINI_SETTINGS_PATH = Path.home() / ".gemini" / "settings.json"
 # gemini loads ``$HOME/.gemini/GEMINI.md`` as a hierarchical user-memory file
 # (on top of any project-level GEMINI.md under cwd) regardless of --cwd — the
-# parity analogue of the grok path's global AGENTS.md. This is how the RoboCo
+# parity analogue of the grok path's global AGENTS.md. This is how the RoboFleet
 # role blueprint becomes gemini's system prompt without writing into (and
 # polluting) the agent's git workspace.
 GEMINI_MEMORY_PATH = Path.home() / ".gemini" / "GEMINI.md"
@@ -92,7 +92,7 @@ _AUTH_SELECTED_TYPE = "oauth-personal"
 # literal) — mirrors grok_cli_config.GROK_ARGS_PATH.
 GEMINI_ARGS_PATH = Path(
     os.environ.get("ROBOFLEET_GEMINI_ARGS_FILE")
-    or Path(tempfile.gettempdir()) / "roboco-gemini-args"
+    or Path(tempfile.gettempdir()) / "robofleet-gemini-args"
 )
 
 # Roles that legitimately run a shell. Review / board roles never do — mirrors

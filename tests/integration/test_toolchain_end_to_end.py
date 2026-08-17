@@ -34,7 +34,7 @@ def _service() -> WorkspaceService:
 
 
 def _make_workspace(tmp_path: Path) -> Path:
-    ws = tmp_path / "roboco" / "backend" / "be-dev-1"
+    ws = tmp_path / "robo-fleet" / "backend" / "be-dev-1"
     (ws / ".git").mkdir(parents=True)
     (ws / "pyproject.toml").write_text(_CONFLICTING_PYPROJECT)
     (ws / ".python-version").write_text("3.13\n")

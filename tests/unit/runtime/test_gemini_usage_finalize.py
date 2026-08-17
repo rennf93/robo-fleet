@@ -111,10 +111,10 @@ def test_gemini_usage_dir_branches_compose_vs_local(
 ) -> None:
     monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "")
     local = AgentOrchestrator._gemini_usage_dir("be-dev-1")
-    assert "roboco-gemini-usage" in str(local)
+    assert "robofleet-gemini-usage" in str(local)
     assert local.name == "be-dev-1"
 
-    monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "/volume1/roboco")
+    monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "/volume1/robofleet")
     monkeypatch.setattr(orch_mod, "GEMINI_USAGE_DATA_DIR", "/data/gemini-usage")
     assert str(AgentOrchestrator._gemini_usage_dir("be-dev-1")) == (
         "/data/gemini-usage/be-dev-1"
@@ -137,7 +137,7 @@ def test_gemini_usage_json_reads_the_real_local_dir(
     # writer mounts (mirrors _ensure_gemini_usage_dir's create path).
     monkeypatch.setattr(orch_mod, "PROJECT_HOST_PATH", "")
     monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
-    udir = tmp_path / "roboco-gemini-usage" / "be-dev-1"
+    udir = tmp_path / "robofleet-gemini-usage" / "be-dev-1"
     udir.mkdir(parents=True)
     (udir / "usage.json").write_text(
         json.dumps({"total_tokens": 55, "cost_usd": 0.1}), encoding="utf-8"
@@ -154,5 +154,5 @@ def test_ensure_gemini_usage_dir_creates_world_writable(
     monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
     orch = AgentOrchestrator.__new__(AgentOrchestrator)
     orch._ensure_gemini_usage_dir("be-dev-1")
-    target = tmp_path / "roboco-gemini-usage" / "be-dev-1"
+    target = tmp_path / "robofleet-gemini-usage" / "be-dev-1"
     assert target.is_dir()

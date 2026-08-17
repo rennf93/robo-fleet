@@ -119,7 +119,7 @@ const AGENT_GROUP_DEFS: {
 ];
 
 // Codex/Gemini/Kimi are V1 delivery-roles-only — no interactive Intake/
-// Secretary support (see roboco.llm.providers.codex / .gemini / .kimi). This
+// Secretary support (see robofleet.llm.providers.codex / .gemini / .kimi). This
 // group's per-agent picker excludes all three providers below instead of
 // offering a route that would silently misroute the persistent Intake/
 // Secretary session at spawn.

@@ -38,7 +38,7 @@ describe("applyTelegramTheme", () => {
     expect(el.style.getPropertyValue("--card")).toBe("#17212b");
     expect(el.style.getPropertyValue("--foreground")).toBe("#f5f5f5");
     expect(el.style.getPropertyValue("--muted-foreground")).toBe("#708499");
-    // The accent stays RoboCo's (#tg-shell skin) — button colors are
+    // The accent stays RoboFleet's (#tg-shell skin) — button colors are
     // deliberately not adopted.
     expect(el.style.getPropertyValue("--primary")).toBe("");
     expect(el.style.getPropertyValue("--primary-foreground")).toBe("");

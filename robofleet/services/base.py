@@ -1,7 +1,7 @@
 """
 Services Base Classes and Error Hierarchy
 
-Provides foundational abstractions for all RoboCo services:
+Provides foundational abstractions for all RoboFleet services:
 - BaseService: Session-based service with logging and error handling
 - SingletonService: Stateless singleton services
 - SingletonHolder: Generic singleton pattern

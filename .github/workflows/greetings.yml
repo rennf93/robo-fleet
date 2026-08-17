@@ -13,7 +13,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         issue_message: |
-            Thanks for opening your first issue on **RoboCo**!
+            Thanks for opening your first issue on **RoboFleet**!
 
             To help us triage quickly, please make sure your report includes:
             - A clear reproduction (steps, configuration, or a failing test)
@@ -28,7 +28,7 @@ jobs:
 
             Thanks again — a maintainer will be with you soon.
         pr_message: |
-            Thanks for opening your first pull request on **RoboCo**!
+            Thanks for opening your first pull request on **RoboFleet**!
 
             Quick checklist before review (most of these are enforced by CI, but worth a glance):
             - [ ] `make quality` — ruff format check, ruff check, mypy, pytest (≥80% coverage), and the rest of the gate

@@ -63,7 +63,7 @@ async def _fake_db_context(session: Any) -> Any:
 async def test_unindex_journal_entry_removes_chunks_and_tracking_row() -> None:
     """De-index calls the vector-store delete_by_source with the journal
     source URI, then drops the tracking row via the repository. Both calls
-    receive ``roboco://journals/{entry_id}`` and the JOURNALS index type."""
+    receive ``robofleet://journals/{entry_id}`` and the JOURNALS index type."""
     entry_id = uuid4()
     svc = _service_with_stub_journal_plugin()
     plugin: Any = svc._plugins[IndexType.JOURNALS]
@@ -75,7 +75,7 @@ async def test_unindex_journal_entry_removes_chunks_and_tracking_row() -> None:
     ):
         await svc.unindex_journal_entry(entry_id)
 
-    expected_source = f"roboco://journals/{entry_id}"
+    expected_source = f"robofleet://journals/{entry_id}"
     plugin._require_store.delete_by_source.assert_awaited_once_with(expected_source)
     # The tracking-row delete ran against the JOURNALS index + journal source.
     session.execute.assert_awaited_once()
@@ -166,7 +166,7 @@ async def test_unindex_journal_entry_swallows_tracking_row_failure() -> None:
 #
 # _check_for_updates detected new/modified auto-index-dir files by mtime but
 # never noticed a file removed from disk, so a deleted docs/rag or docs/map
-# file kept surfacing in roboco_kb_search forever. _scan_for_deleted_files
+# file kept surfacing in robofleet_kb_search forever. _scan_for_deleted_files
 # is the pure detection step (diffs self._file_mtimes against a fresh
 # rglob); _unindex_deleted_doc_file is the de-index action, mirroring
 # unindex_journal_entry's vector-store + tracking-row pattern above.
@@ -223,7 +223,7 @@ def test_scan_for_deleted_files_ignores_other_directories(tmp_path: Path) -> Non
 
 @pytest.mark.asyncio
 async def test_unindex_deleted_doc_file_removes_chunks_and_tracking_row() -> None:
-    """De-index calls the vector store with the roboco://docs/ source URI and
+    """De-index calls the vector store with the robofleet://docs/ source URI and
     drops the IndexedDocumentTable row keyed on the bare path — matching how
     DocsIndexPlugin.build_source_uri and _build_indexed_files independently
     format the same file's identity at write time."""
@@ -236,7 +236,7 @@ async def test_unindex_deleted_doc_file_removes_chunks_and_tracking_row() -> Non
         await svc._unindex_deleted_doc_file(file_path, "rag")
 
     plugin._require_store.delete_by_source.assert_awaited_once_with(
-        f"roboco://docs/{file_path}"
+        f"robofleet://docs/{file_path}"
     )
     session.execute.assert_awaited_once()
     stmt = session.execute.await_args.args[0]

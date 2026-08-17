@@ -1,9 +1,9 @@
 """Scenario: the Megaphone (Board Program) loop end to end.
 
 Mirrors test_periscope_loop.py's arm -> originate -> dedup shape (same
-RoboCo-project resolution — org scope means no per-project opt-in is needed
+RoboFleet-project resolution — org scope means no per-project opt-in is needed
 to RUN, but the exploration task's project_id still resolves against the
-RoboCo project, a hard TaskService invariant every non-coordination task
+RoboFleet project, a hard TaskService invariant every non-coordination task
 carries) PLUS the credentials gate (materialized drafts land in the X post
 queue; drafting for nobody to post is pointless) AND
 test_feature_spotlight.py's do_server wiring-regression check + real-route
@@ -77,9 +77,9 @@ def _seed_system_and_hom(stack: E2EStack) -> str:
         session.add(
             ProjectTable(
                 id=uuid4(),
-                name="RoboCo",
+                name="RoboFleet",
                 slug=slug,
-                git_url="https://example.com/roboco.git",
+                git_url="https://example.com/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,
@@ -213,7 +213,7 @@ def test_megaphone_loop_originates_dedups_proposes_and_holds_draft(
     assert row["status"] == "pending"
     assert row["assigned_to"] == _foundation.AGENTS["head-marketing"].uuid
     assert row["confirmed_by_human"] is False
-    assert row["project_id"] is not None  # resolves against the RoboCo project
+    assert row["project_id"] is not None  # resolves against the RoboFleet project
 
     # The dispatcher's own dev-work skip recognizes this exact task shape —
     # board_megaphone is board-dispatched (one-shot HoM spawn), never handed

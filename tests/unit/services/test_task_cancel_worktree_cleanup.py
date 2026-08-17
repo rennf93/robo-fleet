@@ -28,7 +28,7 @@ def _service() -> TaskService:
     return svc
 
 
-def _session(slug: str | None = "roboco-api") -> MagicMock:
+def _session(slug: str | None = "robofleet-api") -> MagicMock:
     # Build on a local MagicMock (sub-attr assignment is allowed there) then
     # callers assign the whole thing to ``svc.session`` — assigning
     # ``svc.session.execute`` directly trips mypy's method-assign on the typed
@@ -72,9 +72,9 @@ async def test_cancel_removes_worktree_for_assignee() -> None:
         assignee=MagicMock(slug="be-dev-1", team=Team.BACKEND),
     )
     short = str(task.id)[:8]
-    clone = Path("/data/workspaces/roboco-api/backend/be-dev-1")
+    clone = Path("/data/workspaces/robofleet-api/backend/be-dev-1")
 
-    svc.session = _session("roboco-api")
+    svc.session = _session("robofleet-api")
 
     git_service = MagicMock()
     git_service.delete_task_branch = AsyncMock()
@@ -96,10 +96,10 @@ async def test_cancel_removes_worktree_for_assignee() -> None:
         await svc._delete_task_branch_best_effort(task)
 
     git_service.delete_task_branch.assert_awaited_once_with(
-        "roboco-api", "feature/backend/abc12345"
+        "robofleet-api", "feature/backend/abc12345"
     )
     ws_svc.get_clone_root_path.assert_called_once_with(
-        "roboco-api", Team.BACKEND, "be-dev-1"
+        "robofleet-api", Team.BACKEND, "be-dev-1"
     )
     ws_svc.remove_worktree.assert_awaited_once()
     args = ws_svc.remove_worktree.await_args.args
@@ -121,7 +121,7 @@ async def test_cancel_skips_worktree_when_no_assignee() -> None:
     # branch is still deleted.
     svc = _service()
     task = _task(branch="feature/backend/abc12345", assignee=None)
-    svc.session = _session("roboco-api")
+    svc.session = _session("robofleet-api")
 
     git_service = MagicMock()
     git_service.delete_task_branch = AsyncMock()
@@ -182,13 +182,13 @@ async def test_worktree_cleanup_failure_does_not_raise() -> None:
         branch="feature/backend/abc12345",
         assignee=MagicMock(slug="be-dev-1", team=Team.BACKEND),
     )
-    svc.session = _session("roboco-api")
+    svc.session = _session("robofleet-api")
 
     git_service = MagicMock()
     git_service.delete_task_branch = AsyncMock()
     ws_svc = MagicMock()
     ws_svc.get_clone_root_path = MagicMock(
-        return_value=Path("/data/workspaces/roboco-api/backend/be-dev-1")
+        return_value=Path("/data/workspaces/robofleet-api/backend/be-dev-1")
     )
     ws_svc.remove_worktree = AsyncMock(side_effect=RuntimeError("boom"))
 

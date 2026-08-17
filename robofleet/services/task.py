@@ -661,14 +661,14 @@ PR_REVIEW_SOURCES = ("external_pr", "internal_pr")
 
 
 # Source tag for a self-healing fix task: a PENDING task the self-heal loop opens
-# when RoboCo's own CI regresses. It rides the normal lifecycle once the CEO
+# when RoboFleet's own CI regresses. It rides the normal lifecycle once the CEO
 # Approve-&-Starts it; the loop itself never starts/approves/merges it.
 SELF_HEAL_SOURCE = "self_heal"
 
 # Source tag for a multi-repo CI-watch fix task: opened when an OPTED-IN
 # project's CI regresses on its default branch. Like self_heal it rides the
 # normal delivery lifecycle (+ PR-review gate) and is never auto-merged; unlike
-# self_heal it can target any watched project, not just RoboCo's own repo.
+# self_heal it can target any watched project, not just RoboFleet's own repo.
 CI_WATCH_SOURCE = "ci_watch"
 
 # Source tag for a dependency-update task: opened by the dep-update bot when an
@@ -678,7 +678,7 @@ DEP_UPDATE_SOURCE = "dep_update"
 
 # Source tag for a docs-divergence sync task: opened by the docs-sync engine on a
 # successful release publish. Rides the normal delivery lifecycle and never
-# auto-merges; requires the roboco-website project to be registered.
+# auto-merges; requires the robo-fleet-website project to be registered.
 DOCS_SYNC_SOURCE = "docs_sync"
 
 # Source tag for an env-sync conflict task: opened by the EnvSyncEngine when the
@@ -1031,7 +1031,7 @@ LIBRARIAN_SOURCE = "board_librarian"
 
 # Source tag for a Barfly (Board Program) conversation-reply exploration
 # cycle: a PENDING task the barfly engine opens for the Head of Marketing,
-# carrying screened candidate X conversations (search results — RoboCo is
+# carrying screened candidate X conversations (search results — RoboFleet is
 # relevant but unmentioned) for the ``propose_conversation_replies`` content
 # verb. Org-scoped (spec §4: it searches X, not a repo) and, like
 # PERISCOPE_SOURCE/X_FEATURE_EXPLORATION_SOURCE, complete-at-propose: each
@@ -1058,7 +1058,7 @@ DOGFOOD_SOURCE = "board_dogfood"
 DOGFOOD_ITEM_SOURCE = "dogfood"
 
 # Source tag for an intake draft the vault-intake watcher originates from a
-# #roboco-tagged vault note. Unlike X_SOURCES/VIDEO_HELD_SOURCES this IS
+# #robo-fleet-tagged vault note. Unlike X_SOURCES/VIDEO_HELD_SOURCES this IS
 # dispatched — it rides the intake board-review path (PENDING, Product-Owner-
 # assigned, team=board, confirmed_by_human=True, exactly the "Board review &
 # Start" shape): the board reviews, the CEO's approve_and_start hands it to
@@ -2868,7 +2868,7 @@ class TaskService(BaseService):
         decomposition), handed to Main PM to delegate the code work to a cell.
         The contributor PR number + review-task id are carried in
         ``quick_context`` (so close-on-land and dedup don't need a parent walk).
-        ``branch_name`` is the roboco-owned branch already cut from the
+        ``branch_name`` is the robo-fleet-owned branch already cut from the
         contributor's fork head, so the delegated code subtask builds on the
         contributor's commits (we never push to the fork). ``confirmed_by_human``
         is True — the CEO authorized this supersede. Returns None if the review
@@ -2882,7 +2882,7 @@ class TaskService(BaseService):
             title=f"Supersede external PR #{pr_number}: finish + harden it ourselves",
             description=(
                 f"The org reviewed external PR #{pr_number} and is taking it over. "
-                f"A roboco-owned branch ('{branch_name}') has been cut from the "
+                f"A robo-fleet-owned branch ('{branch_name}') has been cut from the "
                 "contributor's commits. Delegate the work to the appropriate cell "
                 "to finish + harden it to our standards on that branch, open our "
                 "own PR, and merge it; the contributor PR is closed and linked on "
@@ -5338,7 +5338,7 @@ class TaskService(BaseService):
         try:
             # Land any workspace-authored docs server-side first, so the
             # indexer (which reads /app/docs) can see docs the agent wrote with
-            # Edit/Write in its own clone rather than through roboco_docs_write.
+            # Edit/Write in its own clone rather than through robofleet_docs_write.
             await self._capture_workspace_docs(task_id, documents, actor_agent_id)
 
             optimal = await get_optimal_service()
@@ -5351,14 +5351,14 @@ class TaskService(BaseService):
                     doc_paths.append(self._resolve_doc_abspath(rel_path))
 
             if doc_paths:
-                # Same "not yet merged" provenance as roboco_docs_write's own
+                # Same "not yet merged" provenance as robofleet_docs_write's own
                 # index call — this re-indexes the task's own in-flight docs
                 # (including ones authored via Edit/Write and captured by
-                # _capture_workspace_docs above, which bypass roboco_docs_write
+                # _capture_workspace_docs above, which bypass robofleet_docs_write
                 # entirely), so it must be marked live_write too.
                 count = await optimal.index_documentation(
                     doc_paths,
-                    project="roboco",
+                    project="robo-fleet",
                     provenance="live_write",
                     task_id=str(task_id),
                 )
@@ -5382,7 +5382,7 @@ class TaskService(BaseService):
     ) -> None:
         """Copy workspace-authored docs into ``/app/docs`` so they index.
 
-        Docs written through ``roboco_docs_write`` already live under
+        Docs written through ``robofleet_docs_write`` already live under
         ``DOCS_BASE_PATH`` on the orchestrator. Docs an agent wrote with
         Edit/Write live only in that agent's own clone, so resolving their path
         under ``/app/docs`` finds nothing and they never reach RAG (the
@@ -5616,7 +5616,7 @@ class TaskService(BaseService):
             now_iso = datetime.now(UTC).isoformat()
             synthetic_entry_id = uuid5(
                 NAMESPACE_URL,
-                f"roboco-lifecycle/{task_id}/{event_type}/{now_iso}",
+                f"robofleet-lifecycle/{task_id}/{event_type}/{now_iso}",
             )
 
             # Index to journals for lifecycle tracking

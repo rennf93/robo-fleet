@@ -3,8 +3,8 @@
 Moonshot ships an official terminal coding agent (the ``kimi`` / kimi-code CLI)
 authenticated by a Kimi subscription (OAuth device-code login), not a metered
 key — the same posture as Grok (SuperGrok), Codex (ChatGPT), and Gemini
-(Google OAuth). RoboCo runs Kimi agents on it the same way it runs those:
-the orchestrator's shared container assembly mounts the RoboCo MCP gateway
+(Google OAuth). RoboFleet runs Kimi agents on it the same way it runs those:
+the orchestrator's shared container assembly mounts the RoboFleet MCP gateway
 (``mcp-config.json``), the agent HMAC identity, and the git context; this
 provider adds the subscription auth mount (``~/.kimi-code``) and the runtime
 env the kimi-cli entrypoint reads, then launches the ``robofleet-agent-kimi``

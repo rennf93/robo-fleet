@@ -255,7 +255,7 @@ async def test_undecodable_message_is_acked_and_dead_lettered() -> None:
             "timestamp": "2026-06-30T00:00:00+00:00",
         }
     )
-    await bus._handle_message("roboco:stream:task", "1234-0", {b"data": malformed})
+    await bus._handle_message("robofleet:stream:task", "1234-0", {b"data": malformed})
 
     # ACKed exactly once — not left pending for reclaim to re-fail forever.
     assert len(fake.xack_calls) == 1
@@ -299,7 +299,7 @@ async def test_recover_stream_decodes_bytes_message_id_for_xclaim() -> None:
     fake = _FakeRecoverRedis(b"1782066556728-0")
     bus._redis = cast("Redis", fake)
 
-    await bus._recover_stream("roboco:stream:usage", idle_time_ms=0)
+    await bus._recover_stream("robofleet:stream:usage", idle_time_ms=0)
 
     assert fake.claimed_ids == ["1782066556728-0"]  # decoded, not "b'...'"
 

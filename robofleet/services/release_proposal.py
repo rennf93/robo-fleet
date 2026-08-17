@@ -54,7 +54,7 @@ class TaskAlreadyCompletedError(Exception):
 # approves. The TTL only backstops a crash; a background heartbeat refreshes
 # it while the execute owns the lock, and a fencing token makes the release
 # compare-and-del so a late first-finally can't delete a usurper's lock.
-_RELEASE_LOCK_PREFIX = "roboco:release_proposal:"
+_RELEASE_LOCK_PREFIX = "robofleet:release_proposal:"
 _RELEASE_LOCK_TTL_SECONDS = 3000  # 50 min > 40 min CI ceiling; crash backstop
 _RELEASE_LOCK_HEARTBEAT_SECONDS = 60.0
 # Only delete/extend the lock when its value still equals our fencing token.
@@ -360,7 +360,7 @@ class ReleaseProposalService(BaseService):
         """Hand the just-published release to the docs-sync engine for a
         docs-update task (best-effort — never raises into approve(); an
         origination failure must not affect the release's already-succeeded
-        publish). Off or a missing roboco-website project is itself a no-op
+        publish). Off or a missing robo-fleet-website project is itself a no-op
         inside the engine."""
         try:
             from robofleet.services.docs_sync_engine import get_docs_sync_engine

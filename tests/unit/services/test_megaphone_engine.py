@@ -7,7 +7,7 @@ is pointless) — the one guard PeriscopeEngine (a report, no X queue) doesn't
 carry.
 
 Mirrors test_periscope_engine.py: like periscope, the exploration task's
-``project_id`` still resolves against the RoboCo project (a hard
+``project_id`` still resolves against the RoboFleet project (a hard
 TaskService._require_target_or_umbrella invariant every non-coordination
 task carries) even though the program itself needs no per-project opt-in.
 """
@@ -60,7 +60,7 @@ if TYPE_CHECKING:
 
 SYSTEM_UUID = _foundation.AGENTS["system"].uuid
 HOM_UUID = _foundation.AGENTS["head-marketing"].uuid
-SLUG = "roboco"
+SLUG = "robo-fleet"
 ONE = 1
 
 
@@ -128,9 +128,9 @@ async def _seed(session: AsyncSession) -> None:
     await session.flush()
     session.add(
         ProjectTable(
-            name="RoboCo",
+            name="RoboFleet",
             slug=SLUG,
-            git_url="https://github.com/x/roboco.git",
+            git_url="https://github.com/x/robofleet.git",
             default_branch="master",
             protected_branches=["master"],
             assigned_cell=Team.BACKEND,
@@ -337,7 +337,7 @@ async def test_digest_context_lists_completed_tasks_this_week(
 
     context = await MegaphoneEngine(db_session).digest_context()
     assert "Ship the thing" in context
-    assert "RoboCo" in context
+    assert "RoboFleet" in context
 
 
 @pytest.mark.asyncio

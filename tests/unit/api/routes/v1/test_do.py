@@ -186,7 +186,7 @@ async def test_propose_feature_spotlight_defaults_wants_video_false() -> None:
         json={
             "feature_slug": "org-memory",
             "feature_title": "Organizational Memory Loop",
-            "body": "Did you know RoboCo agents learn from every task?",
+            "body": "Did you know RoboFleet agents learn from every task?",
         },
         headers=_HEADERS,
     )
@@ -212,7 +212,7 @@ async def test_propose_feature_spotlight_threads_wants_video_and_script() -> Non
         json={
             "feature_slug": "org-memory",
             "feature_title": "Organizational Memory Loop",
-            "body": "Did you know RoboCo agents learn from every task?",
+            "body": "Did you know RoboFleet agents learn from every task?",
             "wants_video": True,
             "video_script": "A custom voiceover script",
         },

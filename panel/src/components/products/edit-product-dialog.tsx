@@ -142,7 +142,7 @@ function EditProductForm({
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="RoboCo Platform"
+            placeholder="RoboFleet Platform"
           />
         </div>
 

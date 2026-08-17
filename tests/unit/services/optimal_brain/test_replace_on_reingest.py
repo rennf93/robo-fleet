@@ -50,7 +50,7 @@ async def test_reingest_replaces_source_chunks_atomically(
     committer wins with no duplicates).
     """
     plugin = StandardsIndexPlugin()
-    source = "roboco://standards/general/std-1"
+    source = "robofleet://standards/general/std-1"
     store = _wire_plugin(plugin, source, monkeypatch)
     store.replace_chunks = AsyncMock()
     doc = Document(content="x" * 250, source=source, metadata={})

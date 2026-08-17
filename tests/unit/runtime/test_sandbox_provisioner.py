@@ -141,13 +141,13 @@ async def test_provision_adds_compose_labels_when_orchestrator_is_compose_manage
     async def _fake_label_args(service: str) -> list[str]:
         return [
             "--label",
-            "com.docker.compose.project=roboco-nas",
+            "com.docker.compose.project=robofleet-nas",
             "--label",
             f"com.docker.compose.service={service}",
             "--label",
             "com.docker.compose.oneoff=False",
             "--label",
-            "com.docker.compose.config-hash=roboco-sidecar",
+            "com.docker.compose.config-hash=robofleet-sidecar",
         ]
 
     monkeypatch.setattr(sandbox_module, "compose_label_args", _fake_label_args)
@@ -159,7 +159,7 @@ async def test_provision_adds_compose_labels_when_orchestrator_is_compose_manage
     run_call = next(c for c in runner.calls if c[0] == "run")
     label_indices = [i for i, a in enumerate(run_call) if a == "--label"]
     labels = [run_call[i + 1] for i in label_indices]
-    assert "com.docker.compose.project=roboco-nas" in labels
+    assert "com.docker.compose.project=robofleet-nas" in labels
     expected_service = sandbox_module.SANDBOX_ENGINES["postgres"].container_name(
         "dev-3"
     )

@@ -45,7 +45,7 @@ class FileHashRegistry:
 
     def __init__(self, cache_file: Path | None = None):
         """Initialize with optional cache file path."""
-        self._cache_file = cache_file or Path(".roboco/file_hashes.json")
+        self._cache_file = cache_file or Path(".robofleet/file_hashes.json")
         self._hashes: dict[str, str] = {}
         self._load()
 
@@ -297,7 +297,7 @@ SKIP_DIRECTORIES = {
     ".venv",
     "venv",
     "__pycache__",
-    ".roboco",
+    ".robofleet",
     "node_modules",
     ".next",
     "dist",
@@ -385,7 +385,7 @@ class CodeIndexPlugin(BaseIndexPlugin):
     def build_source_uri(self, doc_id: str | None = None, **kwargs: Any) -> str:
         """Build source URI for code."""
         file_path = kwargs.get("file_path", doc_id or "unknown")
-        return f"roboco://code/{file_path}"
+        return f"robofleet://code/{file_path}"
 
     def _is_valid_code_file(self, file_path: Path) -> bool:
         """Check if file is a valid code file for indexing."""

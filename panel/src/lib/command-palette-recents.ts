@@ -1,7 +1,7 @@
 // localStorage-backed "recently opened" list for the command palette.
 // Read/written only from the browser; every call is a no-op on the server.
 
-const RECENTS_KEY = "roboco-cmd-recents";
+const RECENTS_KEY = "robofleet-cmd-recents";
 const RECENTS_CAP = 10;
 
 export type CommandRecentType = "task" | "agent" | "project" | "page";

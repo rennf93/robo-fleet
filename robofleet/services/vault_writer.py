@@ -7,7 +7,7 @@ from their own service layer and hand them to this module.
 
 Layout (``docs/internal/specs/2026-07-09-obsidian-vault.md`` §Vault layout)::
 
-    RoboCo/
+    RoboFleet/
       Tasks/<project-slug>/<title> (<id8>).md
       Archive/<year>/Tasks/<project-slug>/<title> (<id8>).md
       Journals/<agent-slug>/<date> <title> (<id8>).md
@@ -335,22 +335,22 @@ class VaultWriter:
     # --- paths ---------------------------------------------------------- #
 
     def _tasks_root(self) -> Path:
-        return self.root / "RoboCo" / "Tasks"
+        return self.root / "RoboFleet" / "Tasks"
 
     def _archive_root(self) -> Path:
-        return self.root / "RoboCo" / "Archive"
+        return self.root / "RoboFleet" / "Archive"
 
     def _reports_root(self) -> Path:
-        return self.root / "RoboCo" / "Reports"
+        return self.root / "RoboFleet" / "Reports"
 
     def _journals_root(self) -> Path:
-        return self.root / "RoboCo" / "Journals"
+        return self.root / "RoboFleet" / "Journals"
 
     def _a2a_root(self) -> Path:
-        return self.root / "RoboCo" / "A2A"
+        return self.root / "RoboFleet" / "A2A"
 
     def _agents_root(self) -> Path:
-        return self.root / "RoboCo" / "Agents"
+        return self.root / "RoboFleet" / "Agents"
 
     # --- tasks ------------------------------------------------------------ #
 

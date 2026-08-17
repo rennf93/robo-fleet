@@ -1,7 +1,7 @@
 """Resolve the Python interpreter a target project needs.
 
 Agents build arbitrary target projects whose Python requirement is independent
-of RoboCo's own 3.13 stack. This module derives the version to provision the
+of RoboFleet's own 3.13 stack. This module derives the version to provision the
 agent workspace with, from the target's ``pyproject.toml`` (``requires-python``)
 and ``.python-version``.
 

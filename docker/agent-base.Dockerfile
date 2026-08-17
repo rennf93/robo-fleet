@@ -57,7 +57,7 @@ RUN npm install -g @anthropic-ai/claude-code \
 RUN useradd -m -s /bin/bash agent
 
 # uv is required at runtime: mcp-config.json spawns every MCP server via
-# `uv run python -m roboco.mcp.<server>`. Without it, all 10 roboco MCP
+# `uv run python -m robofleet.mcp.<server>`. Without it, all 10 robo-fleet MCP
 # servers fail to start and the agent falls back to raw HTTP, losing every
 # guardrail and inline schema the MCP layer provides.
 COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv

@@ -205,14 +205,14 @@ def test_main_pm_triage_prompt_prepends_bounced_block_when_given() -> None:
     )
     assert prompt.startswith("## THIS ROOT BOUNCED")
     assert "[F-abcd1234] api.py:9" in prompt
-    assert "You are the MAIN PM at RoboCo" in prompt
+    assert "You are the MAIN PM at RoboFleet" in prompt
 
 
 def test_main_pm_triage_prompt_omits_block_when_empty() -> None:
     orch = _orch()
     prompt = orch._build_main_pm_triage_prompt(_task(), bounced_block="")
     assert "THIS ROOT BOUNCED" not in prompt
-    assert prompt.startswith("You are the MAIN PM at RoboCo")
+    assert prompt.startswith("You are the MAIN PM at RoboFleet")
 
 
 # ---------------------------------------------------------------------------

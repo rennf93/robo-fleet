@@ -73,7 +73,7 @@ async def _seed(session: AsyncSession, slug: str) -> ProjectTable:
     project = ProjectTable(
         name="Poll Pool Release Test",
         slug=slug,
-        git_url="https://github.com/x/roboco.git",
+        git_url="https://github.com/x/robofleet.git",
         git_token_encrypted=encrypt_token("ghp_fake_test_token"),
         default_branch="master",
         protected_branches=["master"],

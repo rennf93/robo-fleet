@@ -67,7 +67,10 @@ async def test_close_pull_request_scopes_task_lookup_by_project_id() -> None:
 
     # Task lookup returns None → NotFoundError, but we only care about the SQL
     # the lookup was issued with.
-    with _patch_project_service(MagicMock(slug="roboco")), pytest.raises(NotFoundError):
+    with (
+        _patch_project_service(MagicMock(slug="robo-fleet")),
+        pytest.raises(NotFoundError),
+    ):
         await svc.close_pull_request(_PR_NUMBER, project_id=project_id)
 
     assert len(recorder) == 1

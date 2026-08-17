@@ -489,7 +489,7 @@ def set_war_room_brief(task: HasMarkers, payload: dict[str, Any]) -> None:
 
 
 # --- Barfly conversation candidates + reply ref -----------------------------
-# The screened candidate X conversations (search results — RoboCo is relevant
+# The screened candidate X conversations (search results — RoboFleet is relevant
 # but unmentioned) the barfly engine gathers onto the exploration task it
 # opens: a list of {id, author_handle, text, engagement_note}. The Head of
 # Marketing picks from THIS list only via ``propose_conversation_replies``

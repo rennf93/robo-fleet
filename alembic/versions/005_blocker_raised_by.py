@@ -4,7 +4,7 @@ Revision ID: 005_blocker_raised_by
 Revises: 004_provider_routing
 Create Date: 2026-04-22
 
-Adds `tasks.blocker_raised_by` so `roboco_task_unblock` can restore the
+Adds `tasks.blocker_raised_by` so `robofleet_task_unblock` can restore the
 task to the agent who actually raised the block/escalation. Without this,
 escalations (which reassign the task to the escalation target for
 resolution) leave the dev's identity lost — unblocking just flips status

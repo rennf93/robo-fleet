@@ -56,7 +56,7 @@ def _drain_tasks(session: AsyncSession) -> list[asyncio.Task[object]]:
     The deferral helper stores the ``asyncio.create_task`` handles here so a
     test can await them deterministically instead of racing the event loop.
     """
-    return list(session.info.get("_roboco_drain_tasks", []))
+    return list(session.info.get("_robofleet_drain_tasks", []))
 
 
 async def _await_drain(session: AsyncSession) -> None:

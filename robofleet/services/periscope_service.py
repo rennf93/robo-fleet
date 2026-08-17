@@ -18,11 +18,11 @@ parentless BACKLOG task); ``reject_finding`` records the reason ("dismiss" —
 no task). Both are idempotent per finding.
 
 A finding carries no ``project_slug`` the way a roadmap item does (Periscope
-reads the market, not a repo). The target project resolves to RoboCo's own
+reads the market, not a repo). The target project resolves to RoboFleet's own
 project (``settings.self_heal_project_slug``, the same fallback
-``PeriscopeEngine._roboco_project`` already uses to anchor the exploration
+``PeriscopeEngine._robofleet_project`` already uses to anchor the exploration
 task itself) — a market signal is process/strategy input about the org, not
-about any one customer repo, and RoboCo is the only project every findings
+about any one customer repo, and RoboFleet is the only project every findings
 consumer has in common.
 """
 
@@ -189,7 +189,7 @@ class PeriscopeService(BaseService):
         self, finding: dict[str, Any], *, created_by: UUID
     ) -> TaskTable:
         """Turn one approved finding into a real Main-PM-owned root task,
-        anchored on the RoboCo project (see module docstring for why).
+        anchored on the RoboFleet project (see module docstring for why).
         ``team=Team.MAIN_PM`` (via ``BatchPlacement.team_override``), matching
         ``TaskService.approve_and_start`` — a market signal has no natural
         owning cell, so unlike ``RoadmapService._materialize`` there is no
@@ -197,10 +197,10 @@ class PeriscopeService(BaseService):
         from robofleet.seeds.initial_data import AGENT_UUIDS
         from robofleet.services.prompter import BatchPlacement, get_prompter_service
 
-        project = await self._roboco_project()
+        project = await self._robofleet_project()
         if project is None or project.id is None:
             raise ValueError(
-                "the RoboCo project (settings.self_heal_project_slug) is not "
+                "the RoboFleet project (settings.self_heal_project_slug) is not "
                 "resolvable — cannot anchor a materialized task"
             )
         draft = {
@@ -227,12 +227,12 @@ class PeriscopeService(BaseService):
             placement=BatchPlacement(team_override=Team.MAIN_PM),
         )
 
-    async def _roboco_project(self) -> Any:
-        """Mirrors ``PeriscopeEngine._roboco_project`` exactly — the same
+    async def _robofleet_project(self) -> Any:
+        """Mirrors ``PeriscopeEngine._robofleet_project`` exactly — the same
         fallback anchor a Periscope exploration task itself resolves against."""
         from robofleet.services.project import get_project_service
 
-        slug = (settings.self_heal_project_slug or "roboco-api").strip()
+        slug = (settings.self_heal_project_slug or "robofleet-api").strip()
         return await get_project_service(self.session).get_by_slug(slug)
 
     async def _record_learn(

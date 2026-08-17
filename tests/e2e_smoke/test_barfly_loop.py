@@ -127,9 +127,9 @@ def _seed_system_and_hom(stack: E2EStack) -> str:
         session.add(
             ProjectTable(
                 id=uuid4(),
-                name="RoboCo",
+                name="RoboFleet",
                 slug=slug,
-                git_url="https://example.com/roboco.git",
+                git_url="https://example.com/robofleet.git",
                 default_branch="master",
                 protected_branches=["master"],
                 assigned_cell=Team.BACKEND,

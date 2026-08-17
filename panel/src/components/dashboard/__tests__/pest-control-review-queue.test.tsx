@@ -36,7 +36,7 @@ const { listCycles, approveItem, rejectItem } = vi.hoisted(() => ({
               project_slug: "frontend-app",
               team: "frontend",
               priority: 3,
-              evidence: "roboco.tech task abc12345 bounced 3x, same file:line",
+              evidence: "robo-fleet.tech task abc12345 bounced 3x, same file:line",
               status: "proposed",
             },
           ],

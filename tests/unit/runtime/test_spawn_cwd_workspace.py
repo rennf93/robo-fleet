@@ -3,7 +3,7 @@ so Edit(README.md) and git add README.md resolve inside the workspace clone.
 
 Smoke run 3 showed Edit failing with 'Edit exists but is not enabled in this
 context' and commit failing with 'outside repository at <workspace>' — both
-caused by the container WORKDIR being /app (the roboco package) instead of
+caused by the container WORKDIR being /app (the robo-fleet package) instead of
 the agent's task workspace.
 """
 
@@ -17,7 +17,7 @@ from robofleet.models.runtime import OrchestratorAgentConfig, SpawnGitContext
 from robofleet.runtime.orchestrator import AgentOrchestrator
 
 
-def _make_dev_config(*, project_slug: str = "roboco-api") -> OrchestratorAgentConfig:
+def _make_dev_config(*, project_slug: str = "robofleet-api") -> OrchestratorAgentConfig:
     """Minimal AgentConfig for be-dev-1 with a known project slug."""
     return OrchestratorAgentConfig(
         agent_id="be-dev-1",
@@ -32,7 +32,7 @@ def _make_dev_config(*, project_slug: str = "roboco-api") -> OrchestratorAgentCo
 
 
 def _make_cell_pm_config(
-    *, project_slug: str = "roboco-api"
+    *, project_slug: str = "robofleet-api"
 ) -> OrchestratorAgentConfig:
     """Minimal AgentConfig for be-pm (cell_pm role) — no per-agent workspace."""
     return OrchestratorAgentConfig(
@@ -45,7 +45,7 @@ def _make_cell_pm_config(
 
 
 def _make_documenter_config(
-    *, project_slug: str = "roboco-api"
+    *, project_slug: str = "robofleet-api"
 ) -> OrchestratorAgentConfig:
     """Minimal AgentConfig for be-doc (documenter role)."""
     return OrchestratorAgentConfig(
@@ -58,7 +58,7 @@ def _make_documenter_config(
 
 
 def _make_product_owner_config(
-    *, project_slug: str = "roboco-api"
+    *, project_slug: str = "robofleet-api"
 ) -> OrchestratorAgentConfig:
     """Minimal AgentConfig for product-owner (product_owner role)."""
     return OrchestratorAgentConfig(
@@ -71,7 +71,7 @@ def _make_product_owner_config(
 
 
 def _make_head_marketing_config(
-    *, project_slug: str = "roboco-api"
+    *, project_slug: str = "robofleet-api"
 ) -> OrchestratorAgentConfig:
     """Minimal AgentConfig for head-marketing (head_marketing role)."""
     return OrchestratorAgentConfig(
@@ -177,14 +177,14 @@ class TestDeveloperSpawnCwdWorkspace:
 
     def test_cmd_contains_workdir_flag(self) -> None:
         """docker run for a developer includes -w <workspace_path>."""
-        config = _make_dev_config(project_slug="roboco-api")
+        config = _make_dev_config(project_slug="robofleet-api")
         cmd = _build_cmd("robofleet-agent-be-dev-1", config)
 
         assert "-w" in cmd, f"'-w' flag missing from docker run cmd: {cmd}"
         w_idx = cmd.index("-w")
         workdir = cmd[w_idx + 1]
         # Developer workspace: /data/workspaces/<project>/<team>/<agent>
-        expected = "/data/workspaces/roboco-api/backend/be-dev-1"
+        expected = "/data/workspaces/robofleet-api/backend/be-dev-1"
         assert workdir == expected, (
             f"Expected workdir '{expected}' but got '{workdir}'. Full cmd: {cmd}"
         )
@@ -229,7 +229,7 @@ class TestCellPmSpawnCwdNoWorkdir:
 
     def test_cmd_does_not_contain_workdir_flag(self) -> None:
         """docker run for a cell_pm omits -w so container falls back to /app."""
-        config = _make_cell_pm_config(project_slug="roboco-api")
+        config = _make_cell_pm_config(project_slug="robofleet-api")
         cmd = _build_cmd("robofleet-agent-be-pm", config)
 
         assert "-w" not in cmd, (
@@ -243,7 +243,7 @@ class TestDocumenterSpawnCwdCellWorkspace:
 
     def test_cmd_contains_cell_workspace_workdir(self) -> None:
         """docker run for a documenter uses -w <cell_workspace_path>."""
-        config = _make_documenter_config(project_slug="roboco-api")
+        config = _make_documenter_config(project_slug="robofleet-api")
         cmd = _build_cmd("robofleet-agent-be-doc", config)
 
         # Documenter allowlist scopes to cell_workspace_path:
@@ -251,7 +251,7 @@ class TestDocumenterSpawnCwdCellWorkspace:
         assert "-w" in cmd, f"'-w' flag missing from documenter docker run cmd: {cmd}"
         w_idx = cmd.index("-w")
         workdir = cmd[w_idx + 1]
-        expected = "/data/workspaces/roboco-api/backend"
+        expected = "/data/workspaces/robofleet-api/backend"
         assert workdir == expected, (
             f"Expected documenter workdir '{expected}' but got '{workdir}'. "
             f"Full cmd: {cmd}"
@@ -263,14 +263,14 @@ class TestProductOwnerSpawnCwdWorkspace:
 
     def test_cmd_contains_workdir_flag(self) -> None:
         """docker run for a product_owner includes -w <per-agent-workspace>."""
-        config = _make_product_owner_config(project_slug="roboco-api")
+        config = _make_product_owner_config(project_slug="robofleet-api")
         cmd = _build_cmd("robofleet-agent-product-owner", config)
 
         assert "-w" in cmd, (
             f"'-w' flag missing from product_owner docker run cmd: {cmd}"
         )
         workdir = _extract_workdir_from_cmd(cmd)
-        expected = "/data/workspaces/roboco-api/board/product-owner"
+        expected = "/data/workspaces/robofleet-api/board/product-owner"
         assert workdir == expected, (
             f"Expected product_owner workdir '{expected}' but got '{workdir}'. "
             f"Full cmd: {cmd}"
@@ -278,7 +278,7 @@ class TestProductOwnerSpawnCwdWorkspace:
 
     def test_workdir_matches_edit_allowlist_path(self) -> None:
         """The product_owner -w value matches its Edit allowlist prefix."""
-        project_slug = "roboco-api"
+        project_slug = "robofleet-api"
         workspace_path = f"/data/workspaces/{project_slug}/board/product-owner"
         cell_workspace_path = f"/data/workspaces/{project_slug}/board"
 
@@ -308,14 +308,14 @@ class TestHeadMarketingSpawnCwdWorkspace:
 
     def test_cmd_contains_workdir_flag(self) -> None:
         """docker run for a head_marketing includes -w <per-agent-workspace>."""
-        config = _make_head_marketing_config(project_slug="roboco-api")
+        config = _make_head_marketing_config(project_slug="robofleet-api")
         cmd = _build_cmd("robofleet-agent-head-marketing", config)
 
         assert "-w" in cmd, (
             f"'-w' flag missing from head_marketing docker run cmd: {cmd}"
         )
         workdir = _extract_workdir_from_cmd(cmd)
-        expected = "/data/workspaces/roboco-api/board/head-marketing"
+        expected = "/data/workspaces/robofleet-api/board/head-marketing"
         assert workdir == expected, (
             f"Expected head_marketing workdir '{expected}' but got '{workdir}'. "
             f"Full cmd: {cmd}"
@@ -323,7 +323,7 @@ class TestHeadMarketingSpawnCwdWorkspace:
 
     def test_workdir_matches_edit_allowlist_path(self) -> None:
         """The head_marketing -w value matches its Edit allowlist prefix."""
-        project_slug = "roboco-api"
+        project_slug = "robofleet-api"
         workspace_path = f"/data/workspaces/{project_slug}/board/head-marketing"
         cell_workspace_path = f"/data/workspaces/{project_slug}/board"
 

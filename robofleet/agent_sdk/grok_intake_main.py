@@ -6,8 +6,8 @@ held-open session is a :class:`GrokCliSession` (per-turn headless ``grok -p``,
 resuming one session id) instead of a ``ClaudeSDKClient``. ``~/.grok/config.toml``
 is rendered first to wire the intake agent's two action tools — ``propose_draft``
 (one task) and ``propose_batch`` (a sequenced MegaTask of several tasks) — as the
-``roboco-intake`` MCP server. Intake is a human-only interviewer with no gateway
-verbs; its only MCP server is ``roboco-intake``. The ``IntakeDriver``
+``robofleet-intake`` MCP server. Intake is a human-only interviewer with no gateway
+verbs; its only MCP server is ``robofleet-intake``. The ``IntakeDriver``
 loop, message source, and relay are reused unchanged — only the
 ``SessionFactory`` differs.
 """
@@ -46,7 +46,7 @@ _RECEIVER_PORT = 9000  # ROBOFLEET_SDK_PORT — the orchestrator delivers messag
 
 
 def _render_grok_config(base_url: str, session_id: str) -> None:
-    """Write ``~/.grok/config.toml`` wiring the ``roboco-intake`` MCP server.
+    """Write ``~/.grok/config.toml`` wiring the ``robofleet-intake`` MCP server.
 
     ``uv run --directory /app`` pins both the project env (the baked
     ``/app/.venv``) and the working directory to ``/app`` so ``-m
@@ -54,7 +54,7 @@ def _render_grok_config(base_url: str, session_id: str) -> None:
     clone that might shadow it (the ModuleNotFound lesson).
     """
     mcp_servers = {
-        "roboco-intake": {
+        "robofleet-intake": {
             "command": "uv",
             "args": [
                 "run",

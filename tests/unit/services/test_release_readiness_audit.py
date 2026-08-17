@@ -171,7 +171,9 @@ def test_gather_snapshot_reads_the_real_repo() -> None:
     assert snap.last_tag is None or re.fullmatch(r"v\d+\.\d+\.\d+", snap.last_tag)
     assert isinstance(snap.commits, list)
     assert "pyproject.toml" in snap.canonical_bump_files
-    assert snap.changelog_text  # CHANGELOG.md is non-empty
+    # CHANGELOG.md was removed from this repo (no separate changelog file for
+    # the hackathon), so gather_snapshot reads an empty changelog_text.
+    assert snap.changelog_text == ""
     assert snap.migration_head_count >= 1
 
 

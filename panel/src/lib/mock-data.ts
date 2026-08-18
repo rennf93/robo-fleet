@@ -64,7 +64,7 @@ export const TASK_IDS = {
 // Mock project IDs (all tasks require a project for git workflow)
 export const PROJECT_IDS = {
   robofleet: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  robo-fleetPanel: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+  robofleetPanel: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
 };
 
 // Timestamps - computed dynamically to stay relative

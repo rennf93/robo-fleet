@@ -3997,96 +3997,78 @@ class AgentOrchestrator:
             )
             return False
 
-    async def _generate_mcp_config(
+    async def _maybe_generate_adk_config(
         self,
+        provider_type: str | None,
         agent_id: str,
-        git_context: SpawnGitContext | None = None,
-        task_id: str | None = None,
-        *,
-        provider_type: str | None = None,
-    ) -> Path:
-        """Generate MCP config for an agent.
+        git_context: SpawnGitContext | None,
+        task_id: str | None,
+    ) -> Path | None:
+        """Return the ADK (Cloud Run Jobs) tool manifest path, or None.
 
-        Post-gateway: every state-changing tool routes through one of two
-        servers, and read-only views go through two more:
-
-        - robofleet-flow         intent verbs (lifecycle transitions)
-        - robofleet-do           content tools (commit, push, PR, journal,
-                              notify, message)
-        - robofleet-git-readonly status, log, diff, branch list
-        - robofleet-optimal      knowledge base, RAG, semantic search
-        - robofleet-docs         documentation file management (panel docs)
-        - playwright          browser tools (fe-qa/ux-qa, the ux-dev on
-                              a video-authoring task, and the PO on a
-                              dogfood-walk task — see below)
-
-        The agent's role is asserted by the orchestrator API on every
-        verb/tool call, so all roles get the same MCP surface from this
-        registration; verbs the agent's role can't run return a
-        not-authorized error rather than 404. Git context is forwarded
-        only as a fallback for tools that resolve project/branch from env.
+        ADK agents have no MCP servers: the gateway shim calls the
+        orchestrator HTTP directly. Instead of an mcpServers config, the tool
+        manifest (flow_tools + do_tools + the composed system_prompt inlined)
+        is written to a local file; the CloudRunJobsProvider uploads it to GCS
+        and sets ROBOFLEET_TOOL_MANIFEST_PATH to the gs:// URI; the entrypoint
+        fetches it and uses system_prompt as the LlmAgent instruction.
         """
-        # ADK agents (Cloud Run Jobs) have no MCP servers: the gateway shim
-        # calls the orchestrator HTTP directly. Instead of an mcpServers config,
-        # write the tool manifest (flow_tools + do_tools + the composed
-        # system_prompt inlined) to a local file. The CloudRunJobsProvider
-        # uploads it to GCS and sets ROBOFLEET_TOOL_MANIFEST_PATH to the gs:// URI;
-        # the entrypoint fetches it and uses system_prompt as the LlmAgent
-        # instruction. Early-return keeps the docker/ANTHROPIC mcpServers path
-        # below byte-for-byte unchanged.
-        if provider_type == ModelProvider.ADK_CLOUD_RUN.value:
-            # Provision the per-agent clone onto the Filestore NFS share BEFORE
-            # the Cloud Run Job starts. The docker path does this via
-            # _ensure_worktree_before_spawn (called from _prepare_agent_spawn);
-            # the ADK branch early-returns above that call, so mirror the clone
-            # provisioning here for roles that carry a workspace. Skipped for
-            # no-workspace roles (qa / cell_pm / main_pm / auditor /
-            # pr_reviewer) and for spawns without a real project_slug.
-            adk_role = get_agent_role(agent_id) or ""
-            adk_project = (
-                git_context.project_slug
-                if git_context and git_context.project_slug
-                else None
-            )
-            if adk_project and (
-                adk_role in AgentOrchestrator._ROLES_WITH_AGENT_WORKSPACE
-                or adk_role in AgentOrchestrator._ROLES_WITH_CELL_WORKSPACE
-            ):
-                from robofleet.db.base import get_db_context
-                from robofleet.services.workspace import WorkspaceService
+        if provider_type != ModelProvider.ADK_CLOUD_RUN.value:
+            return None
+        # Provision the per-agent clone onto the Filestore NFS share BEFORE
+        # the Cloud Run Job starts. The docker path does this via
+        # _ensure_worktree_before_spawn (called from _prepare_agent_spawn);
+        # the ADK branch early-returns above that call, so mirror the clone
+        # provisioning here for roles that carry a workspace. Skipped for
+        # no-workspace roles (qa / cell_pm / main_pm / auditor /
+        # pr_reviewer) and for spawns without a real project_slug.
+        adk_role = get_agent_role(agent_id) or ""
+        adk_project = (
+            git_context.project_slug
+            if git_context and git_context.project_slug
+            else None
+        )
+        if adk_project and (
+            adk_role in AgentOrchestrator._ROLES_WITH_AGENT_WORKSPACE
+            or adk_role in AgentOrchestrator._ROLES_WITH_CELL_WORKSPACE
+        ):
+            from robofleet.db.base import get_db_context
+            from robofleet.services.workspace import WorkspaceService
 
-                async with get_db_context() as db:
-                    ws = WorkspaceService(db)
-                    await ws.ensure_workspace(adk_project, agent_id)
-            return await self._generate_adk_manifest(agent_id, git_context, task_id)
+            async with get_db_context() as db:
+                ws = WorkspaceService(db)
+                await ws.ensure_workspace(adk_project, agent_id)
+        return await self._generate_adk_manifest(agent_id, git_context, task_id)
 
-        # MCP servers run inside agent containers, need to connect to the
-        # orchestrator API. Prefer an explicit settings.api_url override —
-        # production sets it to the container hostname, and the eval harness
-        # patches it to its disposable in-process stack (see runner.py's
-        # _bench_environment) so a spawned container's MCP servers resolve to
-        # the throwaway orchestrator, never the real production one. Fall back
-        # to the PROJECT_HOST_PATH / settings.port logic when it is unset.
+    @staticmethod
+    def _resolve_mcp_api_url() -> str:
+        """Resolve the orchestrator URL the agent's MCP servers call.
+
+        Prefer an explicit settings.api_url override — production sets it to
+        the container hostname, and the eval harness patches it to its
+        disposable in-process stack (see runner.py's _bench_environment) so a
+        spawned container's MCP servers resolve to the throwaway orchestrator,
+        never the real production one. Fall back to the PROJECT_HOST_PATH /
+        settings.port logic when it is unset.
+        """
         if settings.api_url:
-            api_url = settings.api_url
-        elif PROJECT_HOST_PATH:
-            api_url = "http://robofleet-orchestrator:8000"
-        else:
-            api_url = f"http://127.0.0.1:{settings.port}"
+            return settings.api_url
+        if PROJECT_HOST_PATH:
+            return "http://robofleet-orchestrator:8000"
+        return f"http://127.0.0.1:{settings.port}"
 
-        agent_role = get_agent_role(agent_id) or ""
-        # Gateway v1 endpoints declare X-Agent-ID as Annotated[UUID, Header(...)],
-        # so the MCP server has to forward the agent's UUID — not the slug — or
-        # every gateway call 422s on header parse. Resolve via AGENT_UUIDS map;
-        # if the slug isn't in the map (custom agents), fall back to the slug
-        # and let the API surface the unknown-agent error.
-        # Also used as the CLI arg for the three ApiClient-based servers
-        # (optimal/docs/search) below — their spawn token (issue_agent_token)
-        # is signed over the UUID, so ApiClient's X-Agent-ID must match or
-        # verify_agent_token 401s with "signature mismatch" even though
-        # get_agent_role/get_agent_team resolve either form fine.
-        agent_uuid = AGENT_UUIDS.get(agent_id, agent_id)
+    @staticmethod
+    def _build_mcp_env(
+        api_url: str,
+        agent_role: str,
+        agent_uuid: str,
+        git_context: SpawnGitContext | None,
+    ) -> dict[str, str]:
+        """Build the shared MCP env block forwarded to every server.
 
+        Git context is forwarded only as a fallback for tools that resolve
+        project/branch from env.
+        """
         mcp_env: dict[str, str] = {
             "ROBOFLEET_API_URL": api_url,
             "ROBOFLEET_ORCHESTRATOR_URL": api_url,
@@ -4119,14 +4101,22 @@ class AgentOrchestrator:
             # (below) to use /app/.venv as-is and start instantly.
             "UV_PROJECT_ENVIRONMENT": "/app/.venv",
         }
-
-        # Add git context if available
         if git_context:
             if git_context.project_slug:
                 mcp_env["ROBOFLEET_PROJECT_SLUG"] = git_context.project_slug
             if git_context.branch_name:
                 mcp_env["ROBOFLEET_BRANCH"] = git_context.branch_name
+        return mcp_env
 
+    async def _build_mcp_servers(
+        self,
+        agent_id: str,
+        agent_role: str,
+        agent_uuid: str,
+        mcp_env: dict[str, str],
+        task_id: str | None,
+    ) -> dict[str, dict[str, Any]]:
+        """Build the mcpServers dict (the four shared servers + role-scoped appends)."""
         mcp_servers: dict[str, dict[str, Any]] = {
             # Intent verbs — every role-scoped lifecycle transition.
             "robofleet-flow": {
@@ -4186,24 +4176,80 @@ class AgentOrchestrator:
             video_authoring=video_authoring,
             dogfood_walk=dogfood_walk,
         )
+        return mcp_servers
 
-        config: dict[str, Any] = {"mcpServers": mcp_servers}
+    @staticmethod
+    def _mcp_config_dir() -> Path:
+        """Resolve the shared MCP config directory.
 
-        # Write to shared config directory (mounted in both orchestrator and agents)
-        # When running in container: /app/mcp-configs -> host's ./data/mcp-configs
-        # When running on host: use temp directory
+        In container: /app/mcp-configs -> host's ./data/mcp-configs.
+        On host: temp directory.
+        """
         if DATA_HOST_PATH:
-            # Running in container - use shared mounted directory
             config_dir = Path("/app/mcp-configs")
             config_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            # Running on host - use temp directory
-            config_dir = Path(tempfile.gettempdir())
+            return config_dir
+        return Path(tempfile.gettempdir())
+
+    async def _generate_mcp_config(
+        self,
+        agent_id: str,
+        git_context: SpawnGitContext | None = None,
+        task_id: str | None = None,
+        *,
+        provider_type: str | None = None,
+    ) -> Path:
+        """Generate MCP config for an agent.
+
+        Post-gateway: every state-changing tool routes through one of two
+        servers, and read-only views go through two more:
+
+        - robofleet-flow         intent verbs (lifecycle transitions)
+        - robofleet-do           content tools (commit, push, PR, journal,
+                              notify, message)
+        - robofleet-git-readonly status, log, diff, branch list
+        - robofleet-optimal      knowledge base, RAG, semantic search
+        - robofleet-docs         documentation file management (panel docs)
+        - playwright          browser tools (fe-qa/ux-qa, the ux-dev on
+                              a video-authoring task, and the PO on a
+                              dogfood-walk task — see below)
+
+        The agent's role is asserted by the orchestrator API on every
+        verb/tool call, so all roles get the same MCP surface from this
+        registration; verbs the agent's role can't run return a
+        not-authorized error rather than 404. Git context is forwarded
+        only as a fallback for tools that resolve project/branch from env.
+        """
+        adk_path = await self._maybe_generate_adk_config(
+            provider_type, agent_id, git_context, task_id
+        )
+        if adk_path is not None:
+            return adk_path
+
+        api_url = self._resolve_mcp_api_url()
+        agent_role = get_agent_role(agent_id) or ""
+        # Gateway v1 endpoints declare X-Agent-ID as Annotated[UUID, Header(...)],
+        # so the MCP server has to forward the agent's UUID — not the slug — or
+        # every gateway call 422s on header parse. Resolve via AGENT_UUIDS map;
+        # if the slug isn't in the map (custom agents), fall back to the slug
+        # and let the API surface the unknown-agent error.
+        # Also used as the CLI arg for the three ApiClient-based servers
+        # (optimal/docs/search) below — their spawn token (issue_agent_token)
+        # is signed over the UUID, so ApiClient's X-Agent-ID must match or
+        # verify_agent_token 401s with "signature mismatch" even though
+        # get_agent_role/get_agent_team resolve either form fine.
+        agent_uuid = AGENT_UUIDS.get(agent_id, agent_id)
+
+        mcp_env = self._build_mcp_env(api_url, agent_role, agent_uuid, git_context)
+        mcp_servers = await self._build_mcp_servers(
+            agent_id, agent_role, agent_uuid, mcp_env, task_id
+        )
+        config: dict[str, Any] = {"mcpServers": mcp_servers}
 
         # basename-sanitized like _grok_usage_json: agent ids are orchestrator-
         # issued slugs, but the filename must not be able to traverse anyway.
         safe_agent_id = os.path.basename(agent_id)
-        config_path = config_dir / f"robofleet-mcp-{safe_agent_id}.json"
+        config_path = self._mcp_config_dir() / f"robofleet-mcp-{safe_agent_id}.json"
         config_path.write_text(json.dumps(config, indent=2))
 
         return config_path
@@ -7229,37 +7275,38 @@ class AgentOrchestrator:
                 tokens = (tin, tout, cr, cw)
         return tokens
 
-    async def _resolve_final_turns_tools(self, agent_id: str) -> tuple[int, int]:
-        """Resolve final ``(turns, tool_calls)`` for a stopping agent.
+    async def _provider_final_turns_tools(
+        self, agent_id: str, provider: str | None
+    ) -> tuple[int, int] | None:
+        """Provider-dispatched turns/tool_calls, or None for the Anthropic SDK path.
 
-        Primary source is the live SDK ``/usage/status`` (which carries both).
-        For ``turns`` only there is a durable Claude-transcript fallback (unique
-        assistant-message count) for short-lived agents whose SDK counts race
-        teardown; ``tool_calls`` has no transcript equivalent and stays 0 ("n/a")
-        when the SDK misses. Grok and Gemini agents have neither — returns
-        ``(0, 0)``. Codex and Kimi agents each have a real per-turn count
-        (from their own usage.json) but no tool-call signal — returns
-        ``(turns, 0)``. Best-effort: any failure degrades to zeros, never
-        blocks finalize.
+        Grok and Gemini agents have neither — returns ``(0, 0)``. Codex and
+        Kimi agents each have a real per-turn count (from their own usage.json)
+        but no tool-call signal — returns ``(turns, 0)``. Provider-backed
+        (Cloud Run Job) turns/tool_calls were POSTed to /api/v1/usage/report and
+        SET on the open spawn-session row; read them back here so finalize does
+        not overwrite the pushed values with zeros.
         """
         from robofleet.models.base import ModelProvider
 
-        provider = self.get_provider_for_agent(agent_id)
         if provider in (ModelProvider.GROK.value, ModelProvider.GEMINI.value):
             return (0, 0)
         if provider == ModelProvider.OPENAI.value:
             return (self._codex_usage_turns(agent_id), 0)
         if provider == ModelProvider.KIMI.value:
             return (self._kimi_usage_turns(agent_id), 0)
-        # Provider-backed (Cloud Run Job): turns/tool_calls were POSTed to
-        # /api/v1/usage/report and SET on the open spawn-session row. Read them
-        # back here so finalize does not overwrite the pushed values with zeros.
         if provider == ModelProvider.ADK_CLOUD_RUN.value:
             counts = await self._cloudrun_session_counts(agent_id)
             if counts is not None:
                 return (counts[4], counts[5])
             return (0, 0)
+        return None
 
+    async def _sdk_turns_tool_calls(self, agent_id: str) -> tuple[int, int]:
+        """Fetch final ``(turns, tool_calls)`` from the live SDK ``/usage/status``.
+
+        Best-effort: any failure degrades to ``(0, 0)``, never raises.
+        """
         turns = tool_calls = 0
         sdk_url = f"http://robofleet-agent-{agent_id}:{SDK_PORT}/usage/status"
         try:
@@ -7277,8 +7324,30 @@ class AgentOrchestrator:
                 agent_id=agent_id,
                 error=str(sdk_exc),
             )
+        return turns, tool_calls
 
+    async def _resolve_final_turns_tools(self, agent_id: str) -> tuple[int, int]:
+        """Resolve final ``(turns, tool_calls)`` for a stopping agent.
+
+        Primary source is the live SDK ``/usage/status`` (which carries both).
+        For ``turns`` only there is a durable Claude-transcript fallback (unique
+        assistant-message count) for short-lived agents whose SDK counts race
+        teardown; ``tool_calls`` has no transcript equivalent and stays 0 ("n/a")
+        when the SDK misses. Grok and Gemini agents have neither — returns
+        ``(0, 0)``. Codex and Kimi agents each have a real per-turn count
+        (from their own usage.json) but no tool-call signal — returns
+        ``(turns, 0)``. Best-effort: any failure degrades to zeros, never
+        blocks finalize.
+        """
+        provider = self.get_provider_for_agent(agent_id)
+        provider_counts = await self._provider_final_turns_tools(agent_id, provider)
+        if provider_counts is not None:
+            return provider_counts
+
+        turns, tool_calls = await self._sdk_turns_tool_calls(agent_id)
         if not turns:
+            # Claude-transcript fallback (unique assistant-message count) for
+            # short-lived agents whose SDK counts race teardown.
             *_tokens, t = self._usage_from_transcript(
                 agent_id, self._claude_session_id_for(agent_id)
             )

@@ -129,12 +129,21 @@ class CloudRunJobsProvider(AgentProvider):
         self._host = host
         self._image = image or ""
 
-    async def spawn(
+    async def _spawn_env_vars(
         self,
         config: AgentConfig,
-        initial_prompt: str | None = None,
-        agent_settings_path: Path | None = None,
-    ) -> SpawnResult:
+        initial_prompt: str | None,
+        workspace_cwd: str | None,
+    ) -> list[run_v2.EnvVar]:
+        """Build the full Cloud Run Job env var list for ``config``.
+
+        Resolves agent identity (role/team/UUID, the HMAC token signed over the
+        UUID not the slug so the gateway's X-Agent-ID parses) and the orchestrator
+        api_url, then conditionally appends the Gemini API key, the uploaded
+        tool manifest URI, the decrypted git PAT, and ROBOFLEET_WORKSPACE_DIR
+        for workspace roles. Best-effort throughout: a missing lookup skips the
+        env var rather than crashing spawn.
+        """
         from robofleet.agents_config import (
             get_agent_role as _get_role,
         )
@@ -145,9 +154,6 @@ class CloudRunJobsProvider(AgentProvider):
             issue_agent_token,
         )
         from robofleet.seeds.initial_data import AGENT_UUIDS
-
-        name = _job_name(config.agent_id)
-        client = _jobs_client()
 
         # Agent identity: sign the HMAC token over the UUID (not the slug) so
         # the gateway's X-Agent-ID (Annotated[UUID, Header]) parses and the
@@ -161,8 +167,6 @@ class CloudRunJobsProvider(AgentProvider):
             team,
             ttl_seconds=settings.agent_token_ttl_seconds,
         )
-
-        # api_url resolution mirrors the MCP env block (orchestrator.py).
         api_url = _resolve_api_url()
 
         env_vars = [
@@ -209,25 +213,23 @@ class CloudRunJobsProvider(AgentProvider):
         # "ROBOFLEET_GIT_TOKEN not set" on push, never a crash).
         await _append_git_token_env(env_vars, config)
 
-        # Workspace cwd + ROBOFLEET_WORKSPACE_DIR env (developer / product_owner /
-        # head_marketing / documenter). The git/file FunctionTools in
-        # git_tools._worktree() read ROBOFLEET_WORKSPACE_DIR to resolve every
-        # read_file / write_file / git op; setting both working_dir (so the
-        # process cwd IS the workspace) and the env var (so the tools resolve
-        # even if cwd drifts) keeps the two in lockstep. Roles without a
-        # workspace (qa / cell_pm / main_pm / auditor / pr_reviewer) omit both:
-        # git_tools falls back to cwd gracefully (Part 1). _resolve_workspace_cwd
-        # is a staticmethod on AgentOrchestrator; lazy import avoids the
-        # cloudrun_jobs -> orchestrator -> cloudrun_jobs circular import.
-        from robofleet.runtime.orchestrator import AgentOrchestrator
-
-        workspace_cwd = AgentOrchestrator._resolve_workspace_cwd(config)
-        container_kwargs: dict[str, Any] = {"image": self._image, "env": env_vars}
+        # Setting both working_dir (so the process cwd IS the workspace) and
+        # the env var (so the tools resolve even if cwd drifts) keeps the two
+        # in lockstep. Roles without a workspace omit both: git_tools falls
+        # back to cwd gracefully (Part 1).
         if workspace_cwd is not None:
-            container_kwargs["working_dir"] = workspace_cwd
             env_vars.append(
                 run_v2.EnvVar(name="ROBOFLEET_WORKSPACE_DIR", value=workspace_cwd)
             )
+        return env_vars
+
+    def _build_task_template(
+        self, env_vars: list[run_v2.EnvVar], workspace_cwd: str | None
+    ) -> run_v2.TaskTemplate:
+        """Assemble the TaskTemplate (container, volumes, VPC connector)."""
+        container_kwargs: dict[str, Any] = {"image": self._image, "env": env_vars}
+        if workspace_cwd is not None:
+            container_kwargs["working_dir"] = workspace_cwd
         volumes: list[run_v2.Volume] = []
         # Filestore NFS workspace volume (GCP only). Mounted at the workspaces
         # root so the agent's per-agent clone resolves to the shared Filestore.
@@ -265,19 +267,45 @@ class CloudRunJobsProvider(AgentProvider):
                 connector=settings.gcp_vpc_connector_name,
                 egress=_VPC_EGRESS_PRIVATE_RANGES_ONLY,
             )
+        return template
 
-        job = run_v2.Job(template=run_v2.ExecutionTemplate(template=template))
-        # Idempotent create-or-update: create first, fall back to update if the
-        # job already exists from a prior spawn of the same agent.
+    @staticmethod
+    async def _create_or_update_job(
+        client: run_v2.JobsClient, name: str, job: run_v2.Job
+    ) -> None:
+        """Idempotent create-or-update: create first, fall back to update if the
+        job already exists from a prior spawn of the same agent.
+        """
         try:
             req = run_v2.CreateJobRequest(
-                parent=_parent(), job_id=name.split("/")[-1], job=job
+                parent=_parent(), job_id=name.rsplit("/", maxsplit=1)[-1], job=job
             )
             await asyncio.to_thread(client.create_job, request=req)
         except Exception:
             update_job = run_v2.Job(name=name, template=job.template)
             req = run_v2.UpdateJobRequest(job=update_job)
             await asyncio.to_thread(client.update_job, request=req)
+
+    async def spawn(
+        self,
+        config: AgentConfig,
+        initial_prompt: str | None = None,
+        agent_settings_path: Path | None = None,
+    ) -> SpawnResult:
+        name = _job_name(config.agent_id)
+        client = _jobs_client()
+
+        # _resolve_workspace_cwd is a staticmethod on AgentOrchestrator; lazy
+        # import avoids the cloudrun_jobs -> orchestrator -> cloudrun_jobs
+        # circular import.
+        from robofleet.runtime.orchestrator import AgentOrchestrator
+
+        workspace_cwd = AgentOrchestrator._resolve_workspace_cwd(config)
+
+        env_vars = await self._spawn_env_vars(config, initial_prompt, workspace_cwd)
+        template = self._build_task_template(env_vars, workspace_cwd)
+        job = run_v2.Job(template=run_v2.ExecutionTemplate(template=template))
+        await self._create_or_update_job(client, name, job)
         op = await asyncio.to_thread(
             client.run_job, request=run_v2.RunJobRequest(name=name)
         )

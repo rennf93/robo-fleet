@@ -50,7 +50,6 @@ dependencies = [
     "tree-sitter",
     "tree-sitter-python",
     "tree-sitter-typescript",
-    "claude-agent-sdk",
     "fastapi-guard>=7.6.0",  # HTTP security middleware + per-route decorators (import: guard); floor matches the guard-core pairing below
     "guard-core[redis]>=3.12.0",  # SecurityConfig/decorator models + protocols; redis extra for enable_redis=True (build_security_config sets it unconditionally); floor: 3.12.0 rejects body-based return_pattern rules that 7.6.0 relies on to read the body at all
     "fastapi-users[sqlalchemy]",  # Cloud auth: cookie session for the seeded CEO login
@@ -262,9 +261,9 @@ select = [
 # git context, spawner attribution) — a bundle dataclass would just relocate
 # the same six fields behind one hop at the fleet's hottest call surface.
 "robofleet/runtime/orchestrator.py" = ["PTH119", "PLR0913"]
-# The intake driver/entrypoint lazily import the heavy `claude-agent-sdk` (and
-# uvicorn) so the modules import without those installed and don't pay the cost
-# until a live container runs them — same rationale as the dirs above.
+# The intake/secretary entrypoints lazily import the heavy `uvicorn` so the
+# modules import without it installed and don't pay the cost until a live
+# container runs them — same rationale as the dirs above.
 "robofleet/agent_sdk/*.py" = ["PLC0415"]
 # Lifecycle validators: foundation/_validate_lifecycle is imported from the
 # bottom of policy/lifecycle.py at module-load time, so the validators must
@@ -354,7 +353,6 @@ module = [
     "toon.*",
     "sse_starlette.*",
     "asyncpg.*",
-    "claude_agent_sdk.*",  # third-party SDK, ships no type stubs
     "google.cloud.*",  # namespace pkg, storage submodule ships no py.typed at root
 ]
 ignore_missing_imports = true

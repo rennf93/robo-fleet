@@ -78,7 +78,13 @@ async def test_main_runs_and_reports_usage(
             new_message: Any = None,
             **_: Any,
         ) -> Any:
-            runs.append({"user_id": user_id, "session_id": session_id})
+            runs.append(
+                {
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "new_message": new_message,
+                }
+            )
             yield _FakeEvent()
 
     monkeypatch.setattr("robofleet.agent.adk_entry.Runner", _FakeRunner)

@@ -142,6 +142,53 @@ async def test_call_do_posts_to_do_route(
     assert "X-Agent-Token" not in captured["headers"]
 
 
+@pytest.mark.asyncio
+async def test_specialized_shims_send_server_schema_field_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The specialized shim functions must send the field names the server
+    Pydantic schemas require, not names derived from the function params.
+
+    ADK declares a tool's params FROM the function signature, so the param
+    name and the wire field name are the same. A mismatch (e.g. _note param
+    ``content`` while NoteRequest requires ``text``) is a double-bind: the
+    server 422s on the wrong field, and ADK rejects omitting it. This pins
+    the three specialized tools whose server schemas require specific names.
+    """
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://orch:8000")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "77777777-7777-7777-7777-777777777777")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "tok")
+    posts: list[dict[str, Any]] = []
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
+        posts.append({"url": url, "json": kw.get("json", {})})
+        return httpx.Response(200, json={"status": "ok"})
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    from robofleet.agent.gateway_shim import _i_am_blocked, _note, _progress
+
+    await _note("note", "claiming task 660d59ce")
+    await _i_am_blocked("660d59ce", "rate limited", blocker_type="external")
+    await _progress("660d59ce", "wrote README", plan_step="1")
+
+    note_body = next(p["json"] for p in posts if p["url"].endswith("/do/note"))
+    assert note_body["text"] == "claiming task 660d59ce"
+    assert "content" not in note_body
+
+    blocked_body = next(
+        p["json"] for p in posts if p["url"].endswith("/flow/developer/i_am_blocked")
+    )
+    assert blocked_body["task_id"] == "660d59ce"
+    assert blocked_body["reason"] == "rate limited"
+    assert blocked_body["blocker_type"] == "external"
+
+    progress_body = next(p["json"] for p in posts if p["url"].endswith("/do/progress"))
+    assert progress_body["task_id"] == "660d59ce"
+    assert progress_body["message"] == "wrote README"
+    assert "content" not in progress_body
+
+
 def test_build_gateway_tools_wraps_manifest(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

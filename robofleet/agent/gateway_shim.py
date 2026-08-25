@@ -186,15 +186,28 @@ async def _unclaim(task_id: str = "") -> dict[str, Any]:
     return await call_verb("unclaim", {"task_id": task_id} if task_id else {})
 
 
-async def _i_am_blocked(reason: str) -> dict[str, Any]:
-    """Signal you are blocked. Pass a short reason."""
-    return await call_verb("i_am_blocked", {"reason": reason})
+async def _i_am_blocked(
+    task_id: str, reason: str, blocker_type: str = "", what_needed: str = ""
+) -> dict[str, Any]:
+    """Signal you are blocked. task_id is required. Pass a short reason;
+    optionally blocker_type (one of external|internal|question|dependency)
+    and what_needed (what would unblock you)."""
+    body: dict[str, Any] = {"task_id": task_id, "reason": reason}
+    if blocker_type:
+        body["blocker_type"] = blocker_type
+    if what_needed:
+        body["what_needed"] = what_needed
+    return await call_verb("i_am_blocked", body)
 
 
-async def _note(scope: str, content: str) -> dict[str, Any]:
-    """Write a journal/note entry. scope is e.g. 'handoff' or 'reflect';
-    content is the text."""
-    return await call_do("note", {"scope": scope, "content": content})
+async def _note(scope: str, text: str, task_id: str = "") -> dict[str, Any]:
+    """Write a journal/note entry. scope is e.g. 'note', 'handoff' or 'reflect';
+    text is the entry content. Pass task_id when you have an active task so the
+    note links to it; omit it for the pre-claim tracing note."""
+    body: dict[str, Any] = {"scope": scope, "text": text}
+    if task_id:
+        body["task_id"] = task_id
+    return await call_do("note", body)
 
 
 async def _commit(message: str, files: list[str] | None = None) -> dict[str, Any]:
@@ -205,9 +218,18 @@ async def _commit(message: str, files: list[str] | None = None) -> dict[str, Any
     return await call_do("commit", body)
 
 
-async def _progress(content: str) -> dict[str, Any]:
-    """Record a progress update. Pass the update text."""
-    return await call_do("progress", {"content": content})
+async def _progress(
+    task_id: str, message: str, plan_step: str = "", percentage: int | None = None
+) -> dict[str, Any]:
+    """Record a progress update. task_id is required. message is the update
+    text. Optionally pass plan_step (a sub_task id or its 1-based order) to
+    mark that step complete, or percentage (0-100) for tasks with no checklist."""
+    body: dict[str, Any] = {"task_id": task_id, "message": message}
+    if plan_step:
+        body["plan_step"] = plan_step
+    if percentage is not None:
+        body["percentage"] = percentage
+    return await call_do("progress", body)
 
 
 # Verb/tool name -> specialized function with a real signature.

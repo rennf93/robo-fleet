@@ -1,7 +1,18 @@
 import type { NextConfig } from "next";
 import path from "path";
 
-// const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+// The orchestrator the panel proxies its API calls to. On the docker-compose
+// deploy nginx is the single entry point and routes /api/* to the
+// orchestrator, so no proxy is needed there. On GCP (Cloud Run) the panel is a
+// separate service with no nginx in front, so the panel's own Next server
+// proxies /api/* to the orchestrator's public URL via the rewrites below
+// (cookie-based cloud auth flows through the proxy, no CORS needed).
+// ROBOFLEET_API_URL is the orchestrator's public Cloud Run URL, set in the
+// panel service manifest. Falls back to the compose internal name + localhost.
+const BACKEND_URL =
+  process.env.ROBOFLEET_API_URL ||
+  process.env.INTERNAL_API_URL ||
+  "http://localhost:8000";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -13,19 +24,26 @@ const nextConfig: NextConfig = {
   // never lands at `.next/standalone/server.js` and `node server.js` fails.
   outputFileTracingRoot: path.join(__dirname),
 
-  // // Proxy API calls to the backend to avoid CORS issues
-  // async rewrites() {
-  //   return [
-  //     {
-  //       source: "/api/:path*",
-  //       destination: `${BACKEND_URL}/api/:path*`,
-  //     },
-  //     {
-  //       source: "/ws/:path*",
-  //       destination: `${BACKEND_URL}/ws/:path*`,
-  //     },
-  //   ];
-  // },
+  // Proxy API calls to the orchestrator to avoid CORS issues. The Next server
+  // (output: standalone, `node server.js`) forwards /api/* to BACKEND_URL,
+  // carrying the browser's cloud-auth session cookie through to the
+  // orchestrator. /ws/* is also proxied for completeness; Next production
+  // rewrites do not upgrade HTTP to WebSocket, so live WS updates fall back to
+  // the panel's existing HTTP-polling path (every stream consumer degrades to
+  // polling when the socket is down).
+  async rewrites() {
+    const base = BACKEND_URL.replace(/\/$/, "");
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${base}/api/:path*`,
+      },
+      {
+        source: "/ws/:path*",
+        destination: `${base}/ws/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

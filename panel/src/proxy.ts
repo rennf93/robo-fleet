@@ -5,9 +5,15 @@ import type { NextRequest } from "next/server";
 // bundle). Runs inside the panel container and reaches the orchestrator over
 // the docker-internal network (robofleet_default), not through nginx — a request
 // back out through the panel's own public origin would be a container calling
-// itself over the internet. Defaults to the compose service name.
+// itself over the internet. Defaults to the compose service name. On GCP
+// (Cloud Run) the panel is a separate service with no docker-internal name,
+// so ROBOFLEET_API_URL (the orchestrator's public Cloud Run URL) is the
+// reachable address; the /api suffix is appended for that case.
 const INTERNAL_API_URL =
-  process.env.INTERNAL_API_URL || "http://robofleet-orchestrator:8000/api";
+  process.env.INTERNAL_API_URL ||
+  (process.env.ROBOFLEET_API_URL
+    ? `${process.env.ROBOFLEET_API_URL.replace(/\/$/, "")}/api`
+    : "http://robofleet-orchestrator:8000/api");
 
 // Must match robofleet.api.auth.backend.SESSION_COOKIE_NAME.
 const SESSION_COOKIE_NAME = "robofleet_session";

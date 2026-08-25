@@ -178,6 +178,12 @@ class CloudRunJobsProvider(AgentProvider):
             run_v2.EnvVar(name="ROBOFLEET_AGENT_MODEL", value=_GEMINI_MODEL),
             run_v2.EnvVar(name="ROBOFLEET_AGENT_TOKEN", value=token),
             run_v2.EnvVar(name="ROBOFLEET_AGENT_ROLE", value=role),
+            # The token is HMAC-signed over (id, role, team), and the gateway
+            # verifier checks the X-Agent-* headers match the values embedded
+            # in the token. The shim only sends X-Agent-Team when this env is
+            # set, so omitting it makes every verb 401 with "Header values do
+            # not match" (team "" != the signed team) with no other symptom.
+            run_v2.EnvVar(name="ROBOFLEET_AGENT_TEAM", value=team),
             run_v2.EnvVar(name="ROBOFLEET_ORCHESTRATOR_URL", value=api_url),
             run_v2.EnvVar(name="ROBOFLEET_API_URL", value=api_url),
             run_v2.EnvVar(

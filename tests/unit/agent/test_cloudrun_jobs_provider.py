@@ -127,6 +127,11 @@ async def test_spawn_env_identity_token_signed_over_uuid(
     assert env["ROBOFLEET_AGENT_ID"] == _UUID
     assert env["ROBOFLEET_AGENT_TOKEN"] == _TOKEN
     assert env["ROBOFLEET_AGENT_ROLE"] == _ROLE
+    # Team env must be set: the token is signed over (id, role, team) and the
+    # gateway verifier rejects a token whose embedded team has no matching
+    # X-Agent-Team header. Without this env the shim omits the header and every
+    # verb 401s with "Header values do not match".
+    assert env["ROBOFLEET_AGENT_TEAM"] == _TEAM
     assert env["ROBOFLEET_ORCHESTRATOR_URL"] == "http://orch:8000"
     assert env["ROBOFLEET_API_URL"] == "http://orch:8000"
     assert env["ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS"] == "120.0"

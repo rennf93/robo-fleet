@@ -1674,16 +1674,23 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _apply_filestore_workspaces_root(self) -> "Settings":
-        """When ``gcp_filestore_share`` is armed it overrides workspaces_root.
+        """Pin ``workspaces_root`` to the Filestore mount path when GCP is armed.
 
-        Filestore NFS share path IS the workspaces root when GCP is armed;
-        the plain ``/data/workspaces`` default (or env override) is unchanged
-        when the GCP field is empty. ``WorkspaceService.ensure_workspace``
-        already does plain git clones on the path; NFS just needs the mount
-        present at deploy time (no code change there).
+        ``gcp_filestore_share`` carries the NFS share NAME (e.g. ``workspaces``),
+        not a filesystem path, yet the orchestrator and every agent Job mount
+        that share at the fixed path ``/data/workspaces`` (see
+        ``infra/orchestrator-service.yaml`` / ``infra/agent-job-template.yaml``
+        ``mountPath``). Clones and per-task worktrees MUST land on that shared
+        NFS mount so the orchestrator and the agent container see the same tree;
+        using the share name as ``workspaces_root`` resolves to a relative
+        ``workspaces/`` in the orchestrator's private ephemeral FS, which the
+        agent Job cannot reach and which is not the mount. The default
+        ``workspaces_root`` is already ``/data/workspaces``, so this only
+        restores it when an operator has pointed it elsewhere; an empty
+        ``gcp_filestore_share`` leaves everything unchanged.
         """
         if self.gcp_filestore_share:
-            self.workspaces_root = self.gcp_filestore_share
+            self.workspaces_root = "/data/workspaces"
         return self
 
     workspace_auto_clone: bool = Field(
@@ -1753,6 +1760,16 @@ class Settings(BaseSettings):
             "Tag for pre-built agent images (e.g. 'latest' or '0.17.0'). Empty "
             "leaves the tag implicit (':latest'); only meaningful with "
             "agent_image_registry set."
+        ),
+    )
+    agent_image_skip_ensure: bool = Field(
+        default=False,
+        description=(
+            "Skip the startup docker pull/build of agent images. Set on runtimes "
+            "with no docker socket (Cloud Run): agents there spawn as Cloud Run "
+            "Jobs that reference the registry image by name and pull it on the "
+            "job's own execution, so the orchestrator never needs the image "
+            "locally. The local/docker path is unchanged when False."
         ),
     )
 

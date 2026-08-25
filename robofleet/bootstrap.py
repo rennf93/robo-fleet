@@ -23,6 +23,7 @@ from robofleet.events import (
     set_event_context,
 )
 from robofleet.runtime import AgentOrchestrator, set_reasoning_stream_callback
+from robofleet.services.llm import seed_adk_cloud_run_routing
 from robofleet.services.notification import NotificationService
 
 logger = structlog.get_logger()
@@ -93,6 +94,22 @@ async def main(
 
     if not skip_db:
         await bootstrap_database()
+
+    # On the GCP deploy the only delivery spawn path is ADK_CLOUD_RUN (Google
+    # ADK Runner on Gemini, as Cloud Run Jobs). Seed the GLOBAL routing that
+    # points the fleet at it + the provider row migration 094 deliberately
+    # left unseeded. Idempotent; a no-op once seeded and on non-GCP boots
+    # (gcp_project_id is empty). Best-effort: a seed failure must not block
+    # startup (the orchestrator still boots; routing just falls to legacy
+    # Anthropic, which fails on GCP at spawn time, not at boot).
+    if settings.gcp_project_id:
+        try:
+            await seed_adk_cloud_run_routing()
+        except Exception as e:  # pragma: no cover - best-effort seed
+            logger.warning(
+                "ADK_CLOUD_RUN routing seed failed; delivery spawns will fall back",
+                error=str(e),
+            )
 
     if skip_orchestrator:
         logger.info("Orchestrator skipped, exiting")

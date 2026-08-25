@@ -1457,8 +1457,13 @@ class AgentOrchestrator:
         """Start the orchestrator."""
         self._running = True
 
-        # Ensure agent image is built
-        await self._ensure_agent_image()
+        # Ensure agent image is built. Skipped on dockerless runtimes (Cloud
+        # Run): agents there spawn as Cloud Run Jobs that reference the
+        # registry image by name, so the orchestrator has no local image to
+        # pull and no docker socket to pull with. Raising here would propagate
+        # to asyncio.run(main) and crash-loop the whole process.
+        if not settings.agent_image_skip_ensure:
+            await self._ensure_agent_image()
 
         # Restore any WaitingRecord rows left by a prior orchestrator run so
         # agents that were WAITING_LONG at shutdown can still be resolved.
@@ -2751,7 +2756,11 @@ class AgentOrchestrator:
             agent_id, task_id, cwd_path, sandbox_services
         )
 
-        await self._ensure_agent_image(agent_id)
+        # Skipped on dockerless runtimes (Cloud Run): the agent image is
+        # pulled server-side by the Cloud Run Job, so there is no local
+        # image to ensure and no docker socket. Mirrors the startup guard.
+        if not settings.agent_image_skip_ensure:
+            await self._ensure_agent_image(agent_id)
         mcp_config_path = await self._generate_mcp_config(
             agent_id,
             git_context,

@@ -1128,3 +1128,75 @@ class ModelRoutingService(BaseService):
 def get_model_routing_service(session: AsyncSession) -> ModelRoutingService:
     """Get a ModelRoutingService instance."""
     return ModelRoutingService(session)
+
+
+# Default Gemini model the GCP fleet runs on. The hackathon stack mandates
+# Gemini via the Gemini API; 2.5-flash balances cost against the structured
+# envelopes the lifecycle verbs require.
+_ADK_DEFAULT_MODEL = "gemini-2.5-flash"
+
+
+async def seed_adk_cloud_run_routing(
+    default_model: str = _ADK_DEFAULT_MODEL,
+) -> None:
+    """Seed the GLOBAL routing that points the fleet at the ADK_CLOUD_RUN
+    backend (Google ADK Runner on Gemini, spawned as Cloud Run Jobs).
+
+    On the GCP deploy this is the only delivery spawn path: there is no
+    Anthropic/Claude-CLI runtime (stripped, Leg D1) and no docker socket, so
+    every delivery agent must resolve to ADK_CLOUD_RUN or the spawn guard
+    raises (no registered backend for the resolved provider). The migration
+    that added the enum value (094) deliberately seeded NO providers-table
+    row, expecting routing to be wired here at startup rather than via a
+    static seed.
+
+    Idempotent: safe on every boot. Re-runs find the provider row + GLOBAL
+    assignment already present and no-op (the upsert is an insert-or-update by
+    (scope, scope_value), so it just re-stamps the same row). AGENT_SLUG pins
+    and compound ROLE(:complexity) overrides are untouched, so an operator
+    can still pin a specific agent elsewhere after this runs.
+
+    The ADK provider row carries no auth token: the Gemini API key is injected
+    into each agent Cloud Run Job's env (ROBOFLEET_GEMINI_API_KEY), not through
+    the routing auth_token, so decrypt is never needed.
+    """
+    from robofleet.db.base import get_db_context
+
+    async with get_db_context() as db:
+        # Ensure the ADK_CLOUD_RUN provider row exists and is enabled.
+        existing = (
+            await db.execute(
+                select(ProviderConfigTable).where(
+                    ProviderConfigTable.type == ModelProvider.ADK_CLOUD_RUN
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            row = ProviderConfigTable(
+                name="Google ADK (Cloud Run)",
+                type=ModelProvider.ADK_CLOUD_RUN,
+                base_url=None,
+                auth_token_encrypted=None,
+                enabled=True,
+            )
+            db.add(row)
+            await db.flush()
+            _log.info(
+                "Seeded ADK_CLOUD_RUN provider row",
+                provider_id=str(row.id),
+            )
+        elif not existing.enabled:
+            existing.enabled = True
+            await db.flush()
+
+        # Upsert a GLOBAL assignment routing every agent to ADK_CLOUD_RUN.
+        routing = ModelRoutingService(db)
+        await routing.upsert_assignment(
+            scope=AssignmentScope.GLOBAL,
+            scope_value=None,
+            model_name=default_model,
+            provider_type_override=ModelProvider.ADK_CLOUD_RUN,
+        )
+        # upsert_assignment flushes but does not commit; get_db_context
+        # commits the whole seed on clean context exit.
+    _log.info("Seeded GLOBAL ADK_CLOUD_RUN routing", model=default_model)

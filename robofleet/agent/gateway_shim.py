@@ -19,6 +19,7 @@ from typing import Any, cast
 
 import httpx
 from google.adk.tools import FunctionTool
+from urllib.parse import urlparse
 
 # product_owner/head_marketing share the /flow/board segment (flow_board.py).
 _BOARD_ROLES = {"product_owner", "head_marketing"}
@@ -29,10 +30,26 @@ _INTENT_TO_PUBLIC: dict[str, str] = {"pass_review": "pass", "fail_review": "fail
 
 _DEFAULT_BASE = "http://robofleet-orchestrator:8000"
 _DEFAULT_MANIFEST = "/app/tool-manifest.json"
+# Public orchestrator URL used when the injected ROBOFLEET_ORCHESTRATOR_URL is
+# non-routable from a Cloud Run Job. The orchestrator deploys without
+# ROBOFLEET_API_URL set, so the provider's _resolve_api_url falls back to a
+# loopback/mesh address (127.0.0.1 / robofleet-orchestrator:8000) that a Cloud
+# Run Job container cannot reach (it is not on the docker mesh). Overridable
+# via ROBOFLEET_PUBLIC_API_URL so a non-default deploy does not bake in.
+_PUBLIC_FALLBACK = os.environ.get(
+    "ROBOFLEET_PUBLIC_API_URL",
+    "https://robofleet-orchestrator-813757481440.us-central1.run.app",
+)
+
+
+def _non_routable(base: str) -> bool:
+    host = (urlparse(base).hostname or "").lower()
+    return host in ("localhost", "robofleet-orchestrator") or host.startswith("127.")
 
 
 def _base() -> str:
-    return os.environ.get("ROBOFLEET_ORCHESTRATOR_URL", _DEFAULT_BASE)
+    base = os.environ.get("ROBOFLEET_ORCHESTRATOR_URL", _DEFAULT_BASE)
+    return _PUBLIC_FALLBACK if _non_routable(base) else base
 
 
 def _segment() -> str:
@@ -123,9 +140,92 @@ def _load_manifest_from_gcs(gs_uri: str) -> dict[str, Any]:
     return cast("dict[str, Any]", json.loads(blob.download_as_text()))
 
 
+# The orchestrator manifest carries only verb names (no JSON-schema), so a
+# generic ``async def _fn(**kwargs)`` would make ADK declare every verb with an
+# empty parameter set and the model could never pass task_id to i_will_work_on.
+# ADK's JSON-schema declaration path rebuilds the schema from the function's
+# real code params (not an overridden __signature__), so verbs that take args
+# need a real named signature. These specialized functions carry real typed
+# params; every other verb stays no-arg via the generic maker below, which is
+# correct for give_me_work / i_am_idle / open_pr / sync_branch / etc.
+async def _i_will_work_on(
+    task_id: str,
+    plan: str,
+    steps: list[dict[str, str]],
+    technical_considerations: list[str],
+    risks: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Claim a task (pending -> claimed -> in_progress) and start work. Pass the
+    task_id from give_me_work's response, plus the same rich plan a PM authors
+    so the task's Plan tab is filled: ``plan`` is the approach (>=150 chars
+    describing HOW you will implement), ``steps`` is a non-empty execution
+    checklist of {"title","description"} with each description >=60 chars,
+    ``technical_considerations`` is a list of strings, and ``risks`` is a list
+    of {"risk","mitigation"}. The orchestrator rejects a thin plan.
+    """
+    return await call_verb(
+        "i_will_work_on",
+        {
+            "task_id": task_id,
+            "plan": plan,
+            "steps": steps,
+            "technical_considerations": technical_considerations,
+            "risks": risks,
+        },
+    )
+
+
+async def _resume(task_id: str) -> dict[str, Any]:
+    """Resume a paused task. Pass the task_id."""
+    return await call_verb("resume", {"task_id": task_id})
+
+
+async def _unclaim(task_id: str = "") -> dict[str, Any]:
+    """Release a claimed task back to the pool. Pass the task_id (or omit for the current task)."""
+    return await call_verb("unclaim", {"task_id": task_id} if task_id else {})
+
+
+async def _i_am_blocked(reason: str) -> dict[str, Any]:
+    """Signal you are blocked. Pass a short reason."""
+    return await call_verb("i_am_blocked", {"reason": reason})
+
+
+async def _note(scope: str, content: str) -> dict[str, Any]:
+    """Write a journal/note entry. scope is e.g. 'handoff' or 'reflect'; content is the text."""
+    return await call_do("note", {"scope": scope, "content": content})
+
+
+async def _commit(message: str, files: list[str] | None = None) -> dict[str, Any]:
+    """Commit staged files. Pass the commit message; optionally the file paths."""
+    body: dict[str, Any] = {"message": message}
+    if files:
+        body["files"] = files
+    return await call_do("commit", body)
+
+
+async def _progress(content: str) -> dict[str, Any]:
+    """Record a progress update. Pass the update text."""
+    return await call_do("progress", {"content": content})
+
+
+# Verb/tool name -> specialized function with a real signature.
+_SPECIALIZED: dict[str, Any] = {
+    "i_will_work_on": _i_will_work_on,
+    "resume": _resume,
+    "unclaim": _unclaim,
+    "i_am_blocked": _i_am_blocked,
+    "note": _note,
+    "commit": _commit,
+    "progress": _progress,
+}
+
+
 def _make_flow_tool(verb: str) -> FunctionTool:
     public = _INTENT_TO_PUBLIC.get(verb, verb)
-
+    specialized = _SPECIALIZED.get(verb) or _SPECIALIZED.get(public)
+    if specialized is not None:
+        specialized.__name__ = public
+        return FunctionTool(specialized)
     async def _fn(**kwargs: Any) -> dict[str, Any]:
         return await call_verb(verb, kwargs)
 
@@ -134,6 +234,10 @@ def _make_flow_tool(verb: str) -> FunctionTool:
 
 
 def _make_do_tool(tool: str) -> FunctionTool:
+    specialized = _SPECIALIZED.get(tool)
+    if specialized is not None:
+        specialized.__name__ = tool
+        return FunctionTool(specialized)
     async def _fn(**kwargs: Any) -> dict[str, Any]:
         return await call_do(tool, kwargs)
 

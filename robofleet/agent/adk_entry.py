@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import sys
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +24,7 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from robofleet.agent.gateway_shim import _load_manifest, build_gateway_tools
+from robofleet.agent.gateway_shim import _base, _load_manifest, build_gateway_tools
 from robofleet.agent.git_tools import build_git_tools
 
 _MODEL = os.environ.get("ROBOFLEET_AGENT_MODEL", "gemini-3.5-flash")
@@ -35,18 +37,43 @@ _RATE_LIMIT_EXIT = 75
 _AUTH_EXIT = 78
 
 
+# ADK's inject_session_state treats {var} as a required session-state ref and
+# raises KeyError when it's missing. The composed system_prompt carries
+# {team}/{project}/{task_id} etc. that compose_prompt leaves as literals
+# (harmless under the Claude Code CLI, which does no template substitution,
+# but fatal under ADK). {var?} is ADK's optional syntax: a missing var
+# substitutes '' instead of raising. Marking every placeholder optional lets
+# the orchestrator ship the shared template unfilled and the agent degrade
+# cleanly. The proper fix is to fill them at compose time, but that lives in
+# the orchestrator (deployable only via a rebuild); this keeps the agent image
+# self-sufficient.
+_TEMPLATE_VAR_PATTERN = re.compile(r"{+[^{}]*}+")
+
+
+def _make_optional(template: str) -> str:
+    def _sub(m: re.Match[str]) -> str:
+        inner = m.group().lstrip("{").rstrip("}").strip()
+        if not inner or inner.endswith("?") or inner.startswith("artifact."):
+            return m.group()
+        return "{" + inner + "?}"
+
+    return _TEMPLATE_VAR_PATTERN.sub(_sub, template)
+
+
 def _instruction() -> str:
     """Resolve the LlmAgent instruction text.
 
     Fallback chain: manifest ``system_prompt`` -> /app/system-prompt.md -> "".
+    Every ``{var}`` placeholder is marked optional so an unfilled orchestrator
+    placeholder degrades to '' under ADK instead of crashing the run.
     """
     manifest = _load_manifest()
     text = manifest.get("system_prompt")
     if isinstance(text, str) and text:
-        return text
+        return _make_optional(text)
     prompt_path = Path(_SYSTEM_PROMPT_PATH)
     if prompt_path.exists():
-        return prompt_path.read_text()
+        return _make_optional(prompt_path.read_text())
     return ""
 
 
@@ -62,9 +89,7 @@ def _headers() -> dict[str, str]:
 
 
 async def _post_usage(usage: dict[str, Any], exit_reason: str) -> None:
-    base = os.environ.get(
-        "ROBOFLEET_ORCHESTRATOR_URL", "http://robofleet-orchestrator:8000"
-    )
+    base = _base()
     payload = {**usage, "exit_reason": exit_reason}
     async with httpx.AsyncClient(timeout=10.0) as client:
         await client.post(
@@ -94,6 +119,24 @@ def _accumulate(usage: dict[str, Any], event: Any) -> None:
         usage["tokens_cache_read"] = getattr(u, "cached_content_token_count", 0) or 0
 
 
+def _log_event(event: Any) -> None:
+    """Print a one-line trace of each runner event to stdout for diagnosis."""
+    content = getattr(event, "content", None)
+    parts = getattr(content, "parts", None) or []
+    for p in parts:
+        if getattr(p, "function_call", None):
+            fc = p.function_call
+            args = getattr(fc, "args", {}) or {}
+            print(f"TOOL_CALL name={getattr(fc,'name','?')} args={dict(args)}", flush=True)
+        if getattr(p, "function_response", None):
+            fr = p.function_response
+            resp = getattr(fr, "response", {}) or {}
+            print(f"TOOL_RESP name={getattr(fr,'name','?')} {str(resp)[:300]}", flush=True)
+        txt = getattr(p, "text", None)
+        if txt:
+            print(f"TEXT {str(txt)[:400]}", flush=True)
+
+
 def _classify(exc: BaseException) -> int | None:
     name = type(exc).__name__
     msg = str(exc)
@@ -104,20 +147,55 @@ def _classify(exc: BaseException) -> int | None:
     return None
 
 
-async def main() -> int:
-    instruction = _instruction()
-    initial = os.environ.get("ROBOFLEET_INITIAL_PROMPT", "")
-    tools: list[Any] = build_gateway_tools() + build_git_tools()
-    agent = LlmAgent(
-        name="robofleet_agent",
-        model=_MODEL,
-        instruction=instruction,
-        tools=tools,
+async def _dump_crash(exc: BaseException) -> None:
+    """Best-effort: write the crash traceback to GCS so it is readable from a
+    host that cannot reach Cloud Logging. Never raises; a write failure is
+    swallowed so the real exit path is untouched. The object is overwritten
+    each run so the latest crash is what we read.
+    """
+    bucket = os.environ.get(
+        "ROBOFLEET_GCS_BUCKET", "robofleet-deploy-813757481440-state"
     )
-    session_service = InMemorySessionService()
-    runner = Runner(agent=agent, app_name=_APP_NAME, session_service=session_service)
-    session = await session_service.create_session(app_name=_APP_NAME, user_id="agent")
+    agent = os.environ.get("ROBOFLEET_AGENT_ID", "unknown")
+    blob_path = f"diag/crash-{agent}.txt"
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    payload = (
+        f"agent={agent} role={os.environ.get('ROBOFLEET_AGENT_ROLE','?')} "
+        f"model={_MODEL}\n\n{tb}\n"
+    )
+    try:
+        import google.cloud.storage
+
+        google.cloud.storage.Client().bucket(bucket).blob(blob_path).upload_from_string(
+            payload
+        )
+    except Exception:
+        # The crash dump is diagnostic only; never let it mask the real exit.
+        pass
+
+
+async def main() -> int:
     usage = _new_usage()
+    try:
+        instruction = _instruction()
+        initial = os.environ.get("ROBOFLEET_INITIAL_PROMPT", "")
+        tools: list[Any] = build_gateway_tools() + build_git_tools()
+        agent = LlmAgent(
+            name="robofleet_agent",
+            model=_MODEL,
+            instruction=instruction,
+            tools=tools,
+        )
+        session_service = InMemorySessionService()
+        runner = Runner(
+            agent=agent, app_name=_APP_NAME, session_service=session_service
+        )
+        session = await session_service.create_session(
+            app_name=_APP_NAME, user_id="agent"
+        )
+    except Exception as exc:
+        await _dump_crash(exc)
+        raise
     try:
         async for event in runner.run_async(
             user_id="agent",
@@ -125,12 +203,14 @@ async def main() -> int:
             new_message=types.Content(parts=[types.Part(text=initial)]),
         ):
             _accumulate(usage, event)
+            _log_event(event)
     except Exception as exc:
         code = _classify(exc)
         if code is not None:
             reason = "rate_limited" if code == _RATE_LIMIT_EXIT else "auth"
             await _post_usage(usage, exit_reason=reason)
             return code
+        await _dump_crash(exc)
         raise
     await _post_usage(usage, exit_reason="normal")
     return 0

@@ -33,7 +33,10 @@ if TYPE_CHECKING:
 # Model id ADK agents run on Cloud Run. The orchestrator does not pin a CLI
 # here (no shell-out); this is the Gemini model id the agent container's ADK
 # runtime is configured against.
-_GEMINI_MODEL = "gemini-3.5-flash"
+# gemini-3.5-flash 404s on Vertex (preview gating); gemini-2.5-flash is GA on
+# both the Gemini API (AI Studio) and Vertex AI, so it is the safe default for a
+# Vertex-backed Cloud Run agent. Overridable per-spawn via ROBOFLEET_AGENT_MODEL.
+_GEMINI_MODEL = os.environ.get("ROBOFLEET_AGENT_MODEL_DEFAULT", "gemini-2.5-flash")
 
 # Job max runtime. Cloud Run Jobs caps an execution at this wall-clock.
 _JOB_TIMEOUT_SECONDS = 1800
@@ -186,13 +189,33 @@ class CloudRunJobsProvider(AgentProvider):
                 value=str(settings.flow_verb_slow_timeout_seconds),
             ),
         ]
-        # Gemini API key so the ADK LlmAgent can authenticate to the Gemini API.
-        # ADK's google-genai Client reads GEMINI_API_KEY from the environment;
-        # without it the agent Cloud Run Job cannot call the model. The
-        # orchestrator holds it as ROBOFLEET_GEMINI_API_KEY (a Cloud Run
-        # env-secret backed by Secret Manager secret robofleet-gemini-api-key)
-        # and forwards it here under the bare name genai expects.
-        if settings.gemini_api_key:
+        # Model auth. Two paths:
+        # ① Vertex AI (preferred on GCP): ADK's google.genai.Client auto-detects
+        #   Vertex when GOOGLE_GENAI_USE_VERTEXAI=1 plus project/location are set,
+        #   authenticating via the Job's runtime service account ADC (no API key),
+        #   so the agent bills the project's GCP credit instead of a separate
+        #   AI Studio prepayment that can deplete. aiplatform.googleapis.com must
+        #   be enabled and the runtime SA must hold a Vertex User role.
+        # ② Gemini API key fallback (local dev / non-Vertex): ADK's Client reads
+        #   GEMINI_API_KEY from the environment. The orchestrator holds it as
+        #   ROBOFLEET_GEMINI_API_KEY (a Cloud Run env-secret backed by Secret
+        #   Manager secret robofleet-gemini-api-key) and forwards it here under
+        #   the bare name genai expects.
+        if settings.gcp_project_id:
+            env_vars.append(
+                run_v2.EnvVar(name="GOOGLE_GENAI_USE_VERTEXAI", value="1")
+            )
+            env_vars.append(
+                run_v2.EnvVar(
+                    name="GOOGLE_CLOUD_PROJECT", value=settings.gcp_project_id
+                )
+            )
+            env_vars.append(
+                run_v2.EnvVar(
+                    name="GOOGLE_CLOUD_LOCATION", value=settings.gcp_region or "us-central1"
+                )
+            )
+        elif settings.gemini_api_key:
             env_vars.append(
                 run_v2.EnvVar(name="GEMINI_API_KEY", value=settings.gemini_api_key)
             )

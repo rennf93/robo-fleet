@@ -141,13 +141,13 @@ def _load_manifest_from_gcs(gs_uri: str) -> dict[str, Any]:
 
 
 # The orchestrator manifest carries only verb names (no JSON-schema), so a
-# generic ``async def _fn(**kwargs)`` would make ADK declare every verb with an
-# empty parameter set and the model could never pass task_id to i_will_work_on.
-# ADK's JSON-schema declaration path rebuilds the schema from the function's
-# real code params (not an overridden __signature__), so verbs that take args
-# need a real named signature. These specialized functions carry real typed
-# params; every other verb stays no-arg via the generic maker below, which is
-# correct for give_me_work / i_am_idle / open_pr / sync_branch / etc.
+# generic ``async def _fn(**kwargs)`` declares an EMPTY parameter set and ADK
+# strips every arg the model passes. ADK builds the tool schema from the
+# function's real code params, so any verb that takes args needs a real named
+# signature with the exact server-schema field names. Only truly no-arg verbs
+# (give_me_work, i_am_idle, triage) stay on the generic maker below. Every
+# specialized function's docstring IS the ADK tool description, so it names the
+# required fields.
 async def _i_will_work_on(
     task_id: str,
     plan: str,
@@ -232,15 +232,378 @@ async def _progress(
     return await call_do("progress", body)
 
 
+async def _open_pr(task_id: str) -> dict[str, Any]:
+    """Open the pull request for your current task. task_id is required
+    (from give_me_work / i_will_work_on). Call after you have committed and
+    pushed the branch."""
+    return await call_verb("open_pr", {"task_id": task_id})
+
+
+async def _sync_branch(task_id: str, stash: bool = False) -> dict[str, Any]:
+    """Rebase your task branch onto its base branch (git-only, no DB state
+    change). task_id is required. Pass stash=True to auto-stash uncommitted
+    edits and pop them back after, instead of refusing on a dirty workspace."""
+    body: dict[str, Any] = {"task_id": task_id}
+    if stash:
+        body["stash"] = True
+    return await call_verb("sync_branch", body)
+
+
+async def _i_am_done(
+    task_id: str,
+    notes: str = "",
+    resolved_findings: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Submit your finished task for QA review (in_progress -> awaiting_qa).
+    task_id is required. notes is an optional summary of what you did.
+    resolved_findings is an optional list of {finding_id, commit?, note?}
+    naming each open ledger finding you addressed (required when open
+    findings exist). Call after open_pr."""
+    body: dict[str, Any] = {"task_id": task_id, "notes": notes}
+    if resolved_findings:
+        body["resolved_findings"] = resolved_findings
+    return await call_verb("i_am_done", body)
+
+
+async def _claim_review(task_id: str) -> dict[str, Any]:
+    """Claim a task for QA review (awaiting_qa -> claimed). task_id required."""
+    return await call_verb("claim_review", {"task_id": task_id})
+
+
+async def _pass_review(
+    task_id: str,
+    notes: str,
+    criteria_verified: list[dict[str, Any]] | None = None,
+    ac_verdicts: list[str] | None = None,
+) -> dict[str, Any]:
+    """Pass QA review (awaiting_qa -> awaiting_documentation). task_id and
+    substantive notes are required. criteria_verified is mandatory when the
+    task has acceptance criteria: one {criterion, evidence} entry per
+    criterion, criterion matching an AC by id or exact text, evidence concrete
+    (file:line, test name). Every criterion must be covered."""
+    body: dict[str, Any] = {"task_id": task_id, "notes": notes}
+    if criteria_verified is not None:
+        body["criteria_verified"] = criteria_verified
+    if ac_verdicts is not None:
+        body["ac_verdicts"] = ac_verdicts
+    return await call_verb("pass_review", body)
+
+
+async def _fail_review(
+    task_id: str,
+    findings: list[dict[str, Any]] | None = None,
+    issues: list[str] | None = None,
+) -> dict[str, Any]:
+    """Fail QA review back to the developer (awaiting_qa -> needs_revision).
+    task_id required. Pass structured findings (list of {file?, line?, severity
+    blocker|major|minor|nit, expected, actual, fix?, evidence?}) and/or legacy
+    issues (list of strings). At least one of findings/issues is required."""
+    body: dict[str, Any] = {"task_id": task_id}
+    if findings:
+        body["findings"] = findings
+    if issues:
+        body["issues"] = issues
+    return await call_verb("fail_review", body)
+
+
+async def _claim_pr_review(task_id: str) -> dict[str, Any]:
+    """Claim an inbound external/fork PR for review. task_id required."""
+    return await call_verb("claim_pr_review", {"task_id": task_id})
+
+
+async def _post_pr_review(
+    task_id: str,
+    body: str,
+    event: str = "REQUEST_CHANGES",
+    findings: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Post a review on an inbound PR. task_id and a review body are required.
+    event is APPROVE, REQUEST_CHANGES, or COMMENT (default REQUEST_CHANGES).
+    REQUEST_CHANGES needs >=1 finding; APPROVE may not carry a blocker/major
+    finding. findings is a list of {file, line?, severity, expected, actual}."""
+    payload: dict[str, Any] = {"task_id": task_id, "body": body, "event": event}
+    if findings:
+        payload["findings"] = findings
+    return await call_verb("post_pr_review", payload)
+
+
+async def _claim_gate_review(task_id: str) -> dict[str, Any]:
+    """Claim an in-path assembled-PR gate review. task_id required."""
+    return await call_verb("claim_gate_review", {"task_id": task_id})
+
+
+async def _pr_pass(task_id: str, notes: str) -> dict[str, Any]:
+    """Pass the in-path PR gate (awaiting_pr_review -> awaiting_pm_review).
+    task_id and notes required."""
+    return await call_verb("pr_pass", {"task_id": task_id, "notes": notes})
+
+
+async def _pr_fail(
+    task_id: str,
+    findings: list[dict[str, Any]] | None = None,
+    issues: list[str] | None = None,
+) -> dict[str, Any]:
+    """Fail the in-path PR gate (awaiting_pr_review -> needs_revision).
+    task_id required, plus findings and/or issues (at least one)."""
+    body: dict[str, Any] = {"task_id": task_id}
+    if findings:
+        body["findings"] = findings
+    if issues:
+        body["issues"] = issues
+    return await call_verb("pr_fail", body)
+
+
+async def _claim_doc_task(task_id: str) -> dict[str, Any]:
+    """Claim a documentation task. task_id required."""
+    return await call_verb("claim_doc_task", {"task_id": task_id})
+
+
+async def _i_documented(task_id: str, notes: str, files: list[str]) -> dict[str, Any]:
+    """Mark documentation complete (awaiting_documentation -> awaiting_pm_review).
+    task_id, notes, and the list of doc files written are all required."""
+    return await call_verb(
+        "i_documented", {"task_id": task_id, "notes": notes, "files": files}
+    )
+
+
+async def _complete(task_id: str, notes: str) -> dict[str, Any]:
+    """PM: mark a reviewed task completed (awaiting_pm_review -> completed).
+    task_id and notes required."""
+    return await call_verb("complete", {"task_id": task_id, "notes": notes})
+
+
+async def _request_changes(
+    task_id: str,
+    findings: list[dict[str, Any]] | None = None,
+    issues: list[str] | None = None,
+) -> dict[str, Any]:
+    """PM: reject a task back to the dev (awaiting_pm_review -> needs_revision).
+    task_id required, plus findings and/or issues (at least one)."""
+    body: dict[str, Any] = {"task_id": task_id}
+    if findings:
+        body["findings"] = findings
+    if issues:
+        body["issues"] = issues
+    return await call_verb("request_changes", body)
+
+
+async def _submit_up(
+    task_id: str,
+    notes: str,
+    resolved_findings: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """PM: open the cell->root assembled PR and submit for PR-gate review.
+    task_id and notes required; resolved_findings optional (list of
+    {finding_id, commit?, note?})."""
+    body: dict[str, Any] = {"task_id": task_id, "notes": notes}
+    if resolved_findings:
+        body["resolved_findings"] = resolved_findings
+    return await call_verb("submit_up", body)
+
+
+async def _submit_root(
+    task_id: str,
+    notes: str,
+    resolved_findings: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """PM: open the root->master assembled PR and submit for PR-gate review.
+    task_id and notes required; resolved_findings optional."""
+    body: dict[str, Any] = {"task_id": task_id, "notes": notes}
+    if resolved_findings:
+        body["resolved_findings"] = resolved_findings
+    return await call_verb("submit_root", body)
+
+
+async def _unblock(task_id: str, reason: str, restore: bool = True) -> dict[str, Any]:
+    """PM: clear a block on a task (reason >=10 chars, recorded as a
+    journal:decision). restore=True (default) re-queues it for the dev."""
+    return await call_verb(
+        "unblock", {"task_id": task_id, "reason": reason, "restore": restore}
+    )
+
+
+async def _escalate_up(task_id: str, reason: str) -> dict[str, Any]:
+    """PM: escalate a task up to the next PM. task_id and reason required."""
+    return await call_verb("escalate_up", {"task_id": task_id, "reason": reason})
+
+
+async def _escalate_to_ceo(task_id: str, reason: str) -> dict[str, Any]:
+    """PM: escalate a task to the CEO. task_id and reason required."""
+    return await call_verb(
+        "escalate_to_ceo", {"task_id": task_id, "reason": reason}
+    )
+
+
+async def _reassign(task_id: str, new_assignee: str) -> dict[str, Any]:
+    """PM: reassign a task to another developer slug in your own cell.
+    task_id and new_assignee required."""
+    return await call_verb(
+        "reassign", {"task_id": task_id, "new_assignee": new_assignee}
+    )
+
+
+async def _declare_coverage(task_id: str, criteria: list[str]) -> dict[str, Any]:
+    """PM: stamp which parent acceptance criteria a child covers. task_id is
+    the CHILD to stamp; criteria are the parent's ACs by id or exact text."""
+    return await call_verb(
+        "declare_coverage", {"task_id": task_id, "criteria": criteria}
+    )
+
+
+async def _i_will_plan(
+    task_id: str,
+    plan: str,
+    approach: str,
+    sub_tasks: list[dict[str, str]] | None = None,
+    technical_considerations: list[str] | None = None,
+    risks: list[dict[str, str]] | None = None,
+    open_questions: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """PM: claim a coordination root and start planning (claimed -> in_progress).
+    task_id required. plan is a short summary (<=2000 chars). approach is the
+    HOW (>=150 chars). sub_tasks is a list of {title, description}. Optional:
+    technical_considerations (list[str]), risks (list of {risk, mitigation}),
+    open_questions (list of {question, ...})."""
+    body: dict[str, Any] = {
+        "task_id": task_id,
+        "plan": plan,
+        "approach": approach,
+    }
+    if sub_tasks:
+        body["sub_tasks"] = sub_tasks
+    if technical_considerations:
+        body["technical_considerations"] = technical_considerations
+    if risks:
+        body["risks"] = risks
+    if open_questions:
+        body["open_questions"] = open_questions
+    return await call_verb("i_will_plan", body)
+
+
+async def _delegate(
+    parent_task_id: str,
+    title: str,
+    description: str,
+    assigned_to: str,
+    team: str,
+    task_type: str,
+    nature: str,
+    estimated_complexity: str,
+    acceptance_criteria: list[str],
+    covers_parent_criteria: list[str] | None = None,
+    intends_to_touch: list[str] | None = None,
+    adds_migration: bool = False,
+    touches_shared: bool = False,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    """PM: create and assign a child subtask. parent_task_id, title, description
+    (>=20 chars), assigned_to (dev slug), team, task_type, nature,
+    estimated_complexity (low|medium|high|critical), and a non-empty
+    acceptance_criteria list (<=7 items) are required. Optional:
+    covers_parent_criteria (parent AC ids this subtask owns),
+    intends_to_touch (file globs for collision sequencing), adds_migration,
+    touches_shared, project_id."""
+    body: dict[str, Any] = {
+        "parent_task_id": parent_task_id,
+        "title": title,
+        "description": description,
+        "assigned_to": assigned_to,
+        "team": team,
+        "task_type": task_type,
+        "nature": nature,
+        "estimated_complexity": estimated_complexity,
+        "acceptance_criteria": acceptance_criteria,
+        "adds_migration": adds_migration,
+        "touches_shared": touches_shared,
+    }
+    if covers_parent_criteria:
+        body["covers_parent_criteria"] = covers_parent_criteria
+    if intends_to_touch:
+        body["intends_to_touch"] = intends_to_touch
+    if project_id:
+        body["project_id"] = project_id
+    return await call_verb("delegate", body)
+
+
+async def _evidence(task_id: str) -> dict[str, Any]:
+    """Fetch the assembled evidence brief for a task (AC coverage, prior
+    findings, commits, handoff). task_id required."""
+    return await call_do("evidence", {"task_id": task_id})
+
+
+async def _dm(
+    recipient: str, text: str, task_id: str = "", skill: str = ""
+) -> dict[str, Any]:
+    """Send a direct A2A message to a same-cell peer (agent slug). recipient
+    and text are required. task_id links it to a task; skill tags the thread."""
+    body: dict[str, Any] = {"recipient": recipient, "text": text}
+    if task_id:
+        body["task_id"] = task_id
+    if skill:
+        body["skill"] = skill
+    return await call_do("dm", body)
+
+
+async def _draft_playbook(
+    title: str,
+    problem: str,
+    procedure: str,
+    tags: list[str] | None = None,
+    source_task_id: str = "",
+) -> dict[str, Any]:
+    """Draft a curated playbook (when-to-use + procedure) for the KB. title,
+    problem, and procedure are required. Optional tags and source_task_id."""
+    body: dict[str, Any] = {"title": title, "problem": problem, "procedure": procedure}
+    if tags:
+        body["tags"] = tags
+    if source_task_id:
+        body["source_task_id"] = source_task_id
+    return await call_do("draft_playbook", body)
+
+
+async def _waive_finding(finding_id: str, note: str) -> dict[str, Any]:
+    """Auditor: waive a minor/nit finding (blocker/major must be fixed, never
+    waived). finding_id and a note explaining why are required."""
+    return await call_verb("waive_finding", {"finding_id": finding_id, "note": note})
+
+
 # Verb/tool name -> specialized function with a real signature.
 _SPECIALIZED: dict[str, Any] = {
     "i_will_work_on": _i_will_work_on,
     "resume": _resume,
     "unclaim": _unclaim,
     "i_am_blocked": _i_am_blocked,
+    "open_pr": _open_pr,
+    "sync_branch": _sync_branch,
+    "i_am_done": _i_am_done,
+    "claim_review": _claim_review,
+    "pass_review": _pass_review,
+    "fail_review": _fail_review,
+    "claim_pr_review": _claim_pr_review,
+    "post_pr_review": _post_pr_review,
+    "claim_gate_review": _claim_gate_review,
+    "pr_pass": _pr_pass,
+    "pr_fail": _pr_fail,
+    "claim_doc_task": _claim_doc_task,
+    "i_documented": _i_documented,
+    "complete": _complete,
+    "request_changes": _request_changes,
+    "submit_up": _submit_up,
+    "submit_root": _submit_root,
+    "unblock": _unblock,
+    "escalate_up": _escalate_up,
+    "escalate_to_ceo": _escalate_to_ceo,
+    "reassign": _reassign,
+    "declare_coverage": _declare_coverage,
+    "i_will_plan": _i_will_plan,
+    "delegate": _delegate,
+    "waive_finding": _waive_finding,
     "note": _note,
     "commit": _commit,
     "progress": _progress,
+    "evidence": _evidence,
+    "dm": _dm,
+    "draft_playbook": _draft_playbook,
 }
 
 

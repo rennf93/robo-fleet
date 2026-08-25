@@ -131,12 +131,17 @@ async def test_spawn_env_identity_token_signed_over_uuid(
     assert env["ROBOFLEET_API_URL"] == "http://orch:8000"
     assert env["ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS"] == "120.0"
     assert env["ROBOFLEET_FLOW_VERB_SLOW_TIMEOUT_SECONDS"] == "900"
-    # Existing 4 env vars still present.
+    # Existing 4 env vars still present. Default model is the Vertex-GA
+    # gemini-2.5-flash (gemini-3.5-flash 404s on Vertex preview gating).
     assert env["ROBOFLEET_INITIAL_PROMPT"] == "do the work"
-    assert env["ROBOFLEET_AGENT_MODEL"] == "gemini-3.5-flash"
+    assert env["ROBOFLEET_AGENT_MODEL"] == "gemini-2.5-flash"
     # No git context -> no ROBOFLEET_GIT_TOKEN.
     assert "ROBOFLEET_GIT_TOKEN" not in env
-    # No gemini_api_key set -> no GEMINI_API_KEY injected.
+    # gcp_project_id set -> Vertex path wins over the API-key fallback, so
+    # the Vertex env is injected and no GEMINI_API_KEY is present.
+    assert env["GOOGLE_GENAI_USE_VERTEXAI"] == "1"
+    assert env["GOOGLE_CLOUD_PROJECT"] == "test-proj"
+    assert env["GOOGLE_CLOUD_LOCATION"] == "us-central1"
     assert "GEMINI_API_KEY" not in env
 
 
@@ -144,11 +149,13 @@ async def test_spawn_env_identity_token_signed_over_uuid(
 async def test_spawn_injects_gemini_api_key_when_set(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """ROBOFLEET_GEMINI_API_KEY is forwarded as GEMINI_API_KEY into the agent
-    Cloud Run Job so the ADK LlmAgent can authenticate to the Gemini API."""
+    """The API-key fallback path: when Vertex is NOT armed (gcp_project_id
+    unset), ROBOFLEET_GEMINI_API_KEY is forwarded as GEMINI_API_KEY into the
+    agent Cloud Run Job so the ADK LlmAgent authenticates to the Gemini API.
+    When gcp_project_id IS set the Vertex branch wins and no key is sent;
+    that precedence is covered by test_spawn_env_identity_token_signed_over_uuid."""
     monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
-    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
-    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", None)
     monkeypatch.setattr("robofleet.config.settings.gemini_api_key", "AIza-fake-key")
     _patch_identity(monkeypatch)
     fake = _patch_client(monkeypatch)
@@ -159,6 +166,8 @@ async def test_spawn_injects_gemini_api_key_when_set(
     assert fake.captured is not None
     env = _env_map(fake.captured.job)
     assert env["GEMINI_API_KEY"] == "AIza-fake-key"
+    # Vertex path must NOT fire when gcp_project_id is unset.
+    assert "GOOGLE_GENAI_USE_VERTEXAI" not in env
 
 
 @pytest.mark.asyncio

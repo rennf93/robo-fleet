@@ -252,6 +252,18 @@ class CloudRunJobsProvider(AgentProvider):
         container_kwargs: dict[str, Any] = {"image": self._image, "env": env_vars}
         if workspace_cwd is not None:
             container_kwargs["working_dir"] = workspace_cwd
+        # Cloud Run Jobs default to 512MiB memory when no limits are set. The
+        # ADK runtime imports google-adk + google-genai + google-cloud-storage
+        # plus the robofleet gateway shim (which pulls the full service graph),
+        # and that import set OOMs at 512MiB before main() reaches its first
+        # except handler: the container is SIGKILLed, so no crash dump and no
+        # usage post land (out_tokens=0, NonZeroExitCode, no diagnostic). 2Gi
+        # matches the orchestrator's proven-working envelope.
+        # ponytail: fixed default; add a gcp_agent_memory setting if a fleet
+        # ever needs per-role tuning.
+        container_kwargs["resources"] = run_v2.ResourceRequirements(
+            limits={"cpu": "1000m", "memory": "2Gi"}
+        )
         volumes: list[run_v2.Volume] = []
         # Filestore NFS workspace volume (GCP only). Mounted at the workspaces
         # root so the agent's per-agent clone resolves to the shared Filestore.

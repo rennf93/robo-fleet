@@ -80,11 +80,15 @@ def test_redis_url_uses_memorystore_host_over_redis_host(
 def test_workspaces_root_uses_filestore_when_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """gcp_filestore_share overrides workspaces_root when set."""
-    monkeypatch.setenv("ROBOFLEET_GCP_FILESTORE_SHARE", "/mnt/fileshare/workspaces")
+    """gcp_filestore_share pins workspaces_root to the NFS mount path
+    (/data/workspaces), NOT the share name. The share name carried by
+    ROBOFLEET_GCP_FILESTORE_SHARE is the Filestore share label, not a
+    filesystem path; using it as workspaces_root resolved to a relative
+    path on the orchestrator's ephemeral FS instead of the shared mount."""
+    monkeypatch.setenv("ROBOFLEET_GCP_FILESTORE_SHARE", "workspaces")
 
     s = Settings()
-    assert s.workspaces_root == "/mnt/fileshare/workspaces"
+    assert s.workspaces_root == "/data/workspaces"
 
 
 def test_workspaces_root_default_when_filestore_unset(

@@ -180,8 +180,39 @@ async def _dump_crash(exc: BaseException) -> None:
         pass
 
 
+async def _diag(label: str, detail: str = "") -> None:
+    """Best-effort GCS heartbeat / status line for a host that cannot reach
+    Cloud Logging. Writes one short line to ``diag/run-{agent}.txt``
+    (overwritten each run). Paired with _dump_crash: _dump_crash covers
+    unclassified exceptions, but the classified exit path (rate_limit/auth)
+    returns without a traceback, and an OOM-SIGKILL never reaches either, so
+    a STARTED heartbeat is the only signal that main() began at all.
+    """
+    bucket = os.environ.get(
+        "ROBOFLEET_GCS_BUCKET", "robofleet-deploy-813757481440-state"
+    )
+    agent = os.environ.get("ROBOFLEET_AGENT_ID", "unknown")
+    blob_path = f"diag/run-{agent}.txt"
+    payload = (
+        f"{label} model={_MODEL} role={os.environ.get('ROBOFLEET_AGENT_ROLE', '?')}"
+    )
+    if detail:
+        payload = f"{payload} {detail[:500]}"
+    try:
+        import google.cloud.storage  # lazy: only needed on the Cloud Run path
+
+        google.cloud.storage.Client().bucket(bucket).blob(blob_path).upload_from_string(
+            payload
+        )
+    except Exception:
+        pass
+
+
 async def main() -> int:
     usage = _new_usage()
+    # Heartbeat: proves main() began (an OOM-SIGKILL during import leaves no
+    # diag/run blob at all, which is itself the OOM signal).
+    await _diag("STARTED")
     try:
         instruction = _instruction()
         initial = os.environ.get("ROBOFLEET_INITIAL_PROMPT", "")
@@ -202,6 +233,7 @@ async def main() -> int:
     except Exception as exc:
         await _dump_crash(exc)
         raise
+    await _diag("RUNNER_READY", f"tools={len(agent.tools)}")
     try:
         async for event in runner.run_async(
             user_id="agent",
@@ -214,6 +246,13 @@ async def main() -> int:
         code = _classify(exc)
         if code is not None:
             reason = "rate_limited" if code == _RATE_LIMIT_EXIT else "auth"
+            # GCS diag BEFORE _post_usage: the usage post can fail (orchestrator
+            # unreachable), and this is the only signal for a classified exit
+            # since it returns without a _dump_crash traceback.
+            await _diag(
+                "CLASSIFIED",
+                f"exit={code} reason={reason} exc={type(exc).__name__}: {exc}",
+            )
             await _post_usage(usage, exit_reason=reason)
             return code
         await _dump_crash(exc)

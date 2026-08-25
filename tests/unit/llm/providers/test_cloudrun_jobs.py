@@ -27,7 +27,7 @@ async def test_spawn_submits_job_execution(monkeypatch: pytest.MonkeyPatch) -> N
 
     assert result.instance_id.startswith("projects/")
     assert result.agent_state == "active"
-    assert result.extra["model"] == "gemini-3.5-flash"
+    assert result.extra["model"] == "gemini-2.5-flash"
     job = result.extra["job"]
     assert isinstance(job, str)
     assert job.endswith("/jobs/robofleet-agent-be-dev-1")

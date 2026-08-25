@@ -127,11 +127,17 @@ def _log_event(event: Any) -> None:
         if getattr(p, "function_call", None):
             fc = p.function_call
             args = getattr(fc, "args", {}) or {}
-            print(f"TOOL_CALL name={getattr(fc,'name','?')} args={dict(args)}", flush=True)
+            print(
+                f"TOOL_CALL name={getattr(fc, 'name', '?')} args={dict(args)}",
+                flush=True,
+            )
         if getattr(p, "function_response", None):
             fr = p.function_response
             resp = getattr(fr, "response", {}) or {}
-            print(f"TOOL_RESP name={getattr(fr,'name','?')} {str(resp)[:300]}", flush=True)
+            print(
+                f"TOOL_RESP name={getattr(fr, 'name', '?')} {str(resp)[:300]}",
+                flush=True,
+            )
         txt = getattr(p, "text", None)
         if txt:
             print(f"TEXT {str(txt)[:400]}", flush=True)
@@ -160,11 +166,11 @@ async def _dump_crash(exc: BaseException) -> None:
     blob_path = f"diag/crash-{agent}.txt"
     tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
     payload = (
-        f"agent={agent} role={os.environ.get('ROBOFLEET_AGENT_ROLE','?')} "
+        f"agent={agent} role={os.environ.get('ROBOFLEET_AGENT_ROLE', '?')} "
         f"model={_MODEL}\n\n{tb}\n"
     )
     try:
-        import google.cloud.storage
+        import google.cloud.storage  # lazy: only needed on the Cloud Run path
 
         google.cloud.storage.Client().bucket(bucket).blob(blob_path).upload_from_string(
             payload

@@ -16,10 +16,10 @@ import os
 import uuid
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import urlparse
 
 import httpx
 from google.adk.tools import FunctionTool
-from urllib.parse import urlparse
 
 # product_owner/head_marketing share the /flow/board segment (flow_board.py).
 _BOARD_ROLES = {"product_owner", "head_marketing"}
@@ -181,7 +181,8 @@ async def _resume(task_id: str) -> dict[str, Any]:
 
 
 async def _unclaim(task_id: str = "") -> dict[str, Any]:
-    """Release a claimed task back to the pool. Pass the task_id (or omit for the current task)."""
+    """Release a claimed task back to the pool. Pass the task_id, or
+    omit for the current task."""
     return await call_verb("unclaim", {"task_id": task_id} if task_id else {})
 
 
@@ -191,7 +192,8 @@ async def _i_am_blocked(reason: str) -> dict[str, Any]:
 
 
 async def _note(scope: str, content: str) -> dict[str, Any]:
-    """Write a journal/note entry. scope is e.g. 'handoff' or 'reflect'; content is the text."""
+    """Write a journal/note entry. scope is e.g. 'handoff' or 'reflect';
+    content is the text."""
     return await call_do("note", {"scope": scope, "content": content})
 
 
@@ -226,6 +228,7 @@ def _make_flow_tool(verb: str) -> FunctionTool:
     if specialized is not None:
         specialized.__name__ = public
         return FunctionTool(specialized)
+
     async def _fn(**kwargs: Any) -> dict[str, Any]:
         return await call_verb(verb, kwargs)
 
@@ -238,6 +241,7 @@ def _make_do_tool(tool: str) -> FunctionTool:
     if specialized is not None:
         specialized.__name__ = tool
         return FunctionTool(specialized)
+
     async def _fn(**kwargs: Any) -> dict[str, Any]:
         return await call_do(tool, kwargs)
 

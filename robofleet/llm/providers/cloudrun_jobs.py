@@ -202,9 +202,7 @@ class CloudRunJobsProvider(AgentProvider):
         #   Manager secret robofleet-gemini-api-key) and forwards it here under
         #   the bare name genai expects.
         if settings.gcp_project_id:
-            env_vars.append(
-                run_v2.EnvVar(name="GOOGLE_GENAI_USE_VERTEXAI", value="1")
-            )
+            env_vars.append(run_v2.EnvVar(name="GOOGLE_GENAI_USE_VERTEXAI", value="1"))
             env_vars.append(
                 run_v2.EnvVar(
                     name="GOOGLE_CLOUD_PROJECT", value=settings.gcp_project_id
@@ -212,7 +210,8 @@ class CloudRunJobsProvider(AgentProvider):
             )
             env_vars.append(
                 run_v2.EnvVar(
-                    name="GOOGLE_CLOUD_LOCATION", value=settings.gcp_region or "us-central1"
+                    name="GOOGLE_CLOUD_LOCATION",
+                    value=settings.gcp_region or "us-central1",
                 )
             )
         elif settings.gemini_api_key:

@@ -265,6 +265,10 @@ select = [
 # modules import without it installed and don't pay the cost until a live
 # container runs them — same rationale as the dirs above.
 "robofleet/agent_sdk/*.py" = ["PLC0415"]
+# ADK entrypoint lazy-imports google.cloud.storage inside _dump_crash so a
+# crash dump never requires the optional GCS dep at agent load time and an
+# upload failure is swallowed — same rationale as the agent_sdk lazy imports.
+"robofleet/agent/adk_entry.py" = ["PLC0415"]
 # Lifecycle validators: foundation/_validate_lifecycle is imported from the
 # bottom of policy/lifecycle.py at module-load time, so the validators must
 # defer their inverse imports until call time to avoid a cycle.

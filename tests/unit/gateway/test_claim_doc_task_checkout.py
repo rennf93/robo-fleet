@@ -130,6 +130,7 @@ async def test_claim_doc_task_checks_out_branch() -> None:
         dev_notes="done",
         acceptance_criteria_status=[],
         work_session_id=uuid4(),
+        active_claimant_id=None,
     )
     t_claimed = MagicMock(
         **{
@@ -182,6 +183,7 @@ async def test_claim_doc_task_checkout_failure_does_not_break_claim() -> None:
         dev_notes="d",
         acceptance_criteria_status=[],
         work_session_id=uuid4(),
+        active_claimant_id=None,
     )
     t_claimed = MagicMock(**{**t_initial.__dict__, "assigned_to": doc_id})
     task_svc = AsyncMock()

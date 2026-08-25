@@ -183,7 +183,9 @@ async def test_specialized_shims_send_server_schema_field_names(
     await _i_am_done("660d59ce", notes="done")
     await _claim_review("660d59ce")
     await _pass_review(
-        "660d59ce", "looks good", criteria_verified=[{"criterion": "ac1", "evidence": "f:1"}]
+        "660d59ce",
+        "looks good",
+        criteria_verified=[{"criterion": "ac1", "evidence": "f:1"}],
     )
 
     note_body = next(p["json"] for p in posts if p["url"].endswith("/do/note"))
@@ -202,19 +204,27 @@ async def test_specialized_shims_send_server_schema_field_names(
     assert progress_body["message"] == "wrote README"
     assert "content" not in progress_body
 
-    open_pr_body = next(p["json"] for p in posts if p["url"].endswith("/flow/developer/open_pr"))
+    open_pr_body = next(
+        p["json"] for p in posts if p["url"].endswith("/flow/developer/open_pr")
+    )
     assert open_pr_body == {"task_id": "660d59ce"}
 
-    done_body = next(p["json"] for p in posts if p["url"].endswith("/flow/developer/i_am_done"))
+    done_body = next(
+        p["json"] for p in posts if p["url"].endswith("/flow/developer/i_am_done")
+    )
     assert done_body["task_id"] == "660d59ce"
     assert done_body["notes"] == "done"
 
     # Role is "developer" so QA verbs route to /flow/developer/* here; the
     # segment is the agent's own role, not the verb's canonical role.
-    claim_body = next(p["json"] for p in posts if p["url"].endswith("/flow/developer/claim_review"))
+    claim_body = next(
+        p["json"] for p in posts if p["url"].endswith("/flow/developer/claim_review")
+    )
     assert claim_body == {"task_id": "660d59ce"}
 
-    pass_body = next(p["json"] for p in posts if p["url"].endswith("/flow/developer/pass"))
+    pass_body = next(
+        p["json"] for p in posts if p["url"].endswith("/flow/developer/pass")
+    )
     assert pass_body["task_id"] == "660d59ce"
     assert pass_body["criteria_verified"][0]["criterion"] == "ac1"
 
@@ -232,17 +242,46 @@ async def test_every_manifest_arg_verb_is_specialized(
 
     # Arg-taking verbs that the minimal E2E cycle + common delivery tools hit.
     must_be_specialized = {
-        "i_will_work_on", "open_pr", "i_am_done", "i_am_blocked", "unclaim",
-        "resume", "sync_branch", "claim_review", "pass_review", "fail_review",
-        "claim_pr_review", "post_pr_review", "claim_gate_review", "pr_pass",
-        "pr_fail", "claim_doc_task", "i_documented", "complete",
-        "request_changes", "submit_up", "submit_root", "unblock",
-        "escalate_up", "escalate_to_ceo", "reassign", "declare_coverage",
-        "i_will_plan", "delegate", "waive_finding", "note", "commit",
-        "progress", "evidence", "dm", "draft_playbook",
+        "i_will_work_on",
+        "open_pr",
+        "i_am_done",
+        "i_am_blocked",
+        "unclaim",
+        "resume",
+        "sync_branch",
+        "claim_review",
+        "pass_review",
+        "fail_review",
+        "claim_pr_review",
+        "post_pr_review",
+        "claim_gate_review",
+        "pr_pass",
+        "pr_fail",
+        "claim_doc_task",
+        "i_documented",
+        "complete",
+        "request_changes",
+        "submit_up",
+        "submit_root",
+        "unblock",
+        "escalate_up",
+        "escalate_to_ceo",
+        "reassign",
+        "declare_coverage",
+        "i_will_plan",
+        "delegate",
+        "waive_finding",
+        "note",
+        "commit",
+        "progress",
+        "evidence",
+        "dm",
+        "draft_playbook",
     }
     missing = must_be_specialized - set(_SPECIALIZED)
-    assert not missing, f"unspecialized arg-taking verbs (ADK would strip args): {missing}"
+    assert not missing, (
+        f"unspecialized arg-taking verbs (ADK would strip args): {missing}"
+    )
 
 
 def test_build_gateway_tools_wraps_manifest(

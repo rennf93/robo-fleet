@@ -70,6 +70,7 @@ async def test_claim_doc_task_returns_evidence() -> None:
         dev_notes="",
         acceptance_criteria=[],
         acceptance_criteria_status=[],
+        active_claimant_id=None,
     )
     after = MagicMock(**{**t.__dict__, "assigned_to": doc_id})
     task_svc = AsyncMock()

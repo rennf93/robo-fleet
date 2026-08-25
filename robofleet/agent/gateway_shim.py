@@ -429,9 +429,7 @@ async def _escalate_up(task_id: str, reason: str) -> dict[str, Any]:
 
 async def _escalate_to_ceo(task_id: str, reason: str) -> dict[str, Any]:
     """PM: escalate a task to the CEO. task_id and reason required."""
-    return await call_verb(
-        "escalate_to_ceo", {"task_id": task_id, "reason": reason}
-    )
+    return await call_verb("escalate_to_ceo", {"task_id": task_id, "reason": reason})
 
 
 async def _reassign(task_id: str, new_assignee: str) -> dict[str, Any]:
@@ -452,6 +450,7 @@ async def _declare_coverage(task_id: str, criteria: list[str]) -> dict[str, Any]
 
 async def _i_will_plan(
     task_id: str,
+    *,
     plan: str,
     approach: str,
     sub_tasks: list[dict[str, str]] | None = None,
@@ -482,6 +481,7 @@ async def _i_will_plan(
 
 async def _delegate(
     parent_task_id: str,
+    *,
     title: str,
     description: str,
     assigned_to: str,

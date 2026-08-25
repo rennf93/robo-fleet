@@ -68,6 +68,7 @@ async def test_claim_review_returns_evidence_inline() -> None:
         acceptance_criteria_status=[
             {"criterion": "AC1", "referencing_artifact_id": "abc123"},
         ],
+        active_claimant_id=None,
     )
     t_claimed = MagicMock(
         **{**t_initial.__dict__, "assigned_to": qa_id, "status": "claimed"},
@@ -138,6 +139,7 @@ async def test_claim_review_marks_evidence_inspected() -> None:
         dev_notes="",
         acceptance_criteria=[],
         acceptance_criteria_status=[],
+        active_claimant_id=None,
     )
     t_claimed = MagicMock(**{**t.__dict__, "assigned_to": qa_id})
     task_svc = AsyncMock()

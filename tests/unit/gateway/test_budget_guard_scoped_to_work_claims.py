@@ -86,6 +86,7 @@ async def test_claim_review_succeeds_at_cap() -> None:
         branch_name="feature/backend/abc",
         batch_id=None,
         project=_over_cap_project(),
+        active_claimant_id=None,
     )
     task_svc.get.return_value = t
     task_svc.agent_for.return_value = MagicMock(role="qa", slug="be-qa")
@@ -121,6 +122,7 @@ async def test_claim_gate_review_succeeds_at_cap() -> None:
         branch_name="feature/main_pm/root",
         batch_id=None,
         project=_over_cap_project(),
+        active_claimant_id=None,
     )
     task_svc.get.return_value = t
     task_svc.agent_for.return_value = MagicMock(
@@ -163,6 +165,7 @@ async def test_claim_doc_task_succeeds_at_cap() -> None:
         dependency_ids=[],
         batch_id=None,
         project=_over_cap_project(),
+        active_claimant_id=None,
     )
     task_svc.get.return_value = t
     task_svc.agent_for.return_value = MagicMock(role="documenter", team="backend")

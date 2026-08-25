@@ -46,6 +46,7 @@ def _gate_task(*, dependency_ids: list[Any] | None = None) -> Any:
         pr_url="https://example/pr/139",
         branch_name="feature/main_pm/root",
         batch_id=None,
+        active_claimant_id=None,
     )
 
 

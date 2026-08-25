@@ -314,7 +314,11 @@ select = [
 "robofleet/llm/providers/base.py" = ["ARG002"]
 # ADK gateway shim: lazy `google.cloud.storage` import is Cloud-Run-only, kept
 # out of the local-dev import path the same way cloudrun_jobs.py sanctions it.
-"robofleet/agent/gateway_shim.py" = ["PLC0415"]
+# PLR0913: the specialized verb wrappers (_delegate, _i_will_plan) mirror the
+# verb request schemas as top-level typed params so ADK exposes each as a
+# discrete tool-schema field (same rationale as mcp/** and gateway/**); args
+# are keyword-only so PLR0917 doesn't fire, PLR0913 (total count) is ignored.
+"robofleet/agent/gateway_shim.py" = ["PLC0415", "PLR0913"]
 # Collision-builder test helpers mirror the builder's many keyword inputs
 # (parent/project/intends/migration/shared/sequence) — bundling them would
 # hurt readability more than the arg count hurts.

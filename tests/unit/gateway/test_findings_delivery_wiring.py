@@ -109,6 +109,7 @@ async def test_claim_review_evidence_carries_prior_findings(
         dev_notes="",
         acceptance_criteria=[],
         acceptance_criteria_status=[],
+        active_claimant_id=None,
     )
     t_claimed = MagicMock(**{**t_initial.__dict__, "assigned_to": qa_id})
     task_svc = AsyncMock()
@@ -176,6 +177,7 @@ async def test_claim_gate_review_evidence_carries_prior_findings(
         parent_task_id=None,
         batch_id=None,
         acceptance_criteria=["AC1"],
+        active_claimant_id=None,
     )
     t_claimed = MagicMock(**{**t.__dict__, "assigned_to": reviewer_id})
     task_svc = AsyncMock()

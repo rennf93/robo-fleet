@@ -315,6 +315,7 @@ def _qa_task(task_id: Any) -> MagicMock:
             {"criterion": "AC1", "referencing_artifact_id": "abc123"},
         ],
         parent_task_id=None,
+        active_claimant_id=None,
     )
 
 
@@ -565,6 +566,7 @@ def _doc_task(task_id: Any, branch: str) -> MagicMock:
         dev_notes="done",
         acceptance_criteria_status=[],
         work_session_id=uuid4(),
+        active_claimant_id=None,
     )
 
 
@@ -667,6 +669,7 @@ def _gate_task() -> MagicMock:
         batch_id=None,
         description=None,
         acceptance_criteria=[],
+        active_claimant_id=None,
     )
 
 

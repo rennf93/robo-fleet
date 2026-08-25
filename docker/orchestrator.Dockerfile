@@ -29,7 +29,9 @@ ENV UV_HTTP_TIMEOUT=300 \
 # own — otherwise the venv symlinks into /root/.local/share/uv/python/... and
 # breaks when COPY --from=builder only copies /app.
 COPY pyproject.toml uv.lock README.md /app/
-RUN uv sync --frozen --no-dev --no-install-project
+# --extra dev: orchestrator runs the pre-submit quality gate itself, so the
+# image must carry ruff/mypy/xenon (the dev extra), not a --no-dev runtime venv.
+RUN uv sync --frozen --extra dev --no-install-project
 
 # Project layer
 COPY robofleet /app/robofleet
@@ -37,7 +39,7 @@ COPY agents /app/agents
 COPY docs /app/docs
 COPY alembic.ini /app/
 COPY alembic /app/alembic
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --extra dev
 
 # ---- Runner -----------------------------------------------------------------
 FROM python:3.13-slim-bookworm AS runner

@@ -10,6 +10,7 @@
 substitutions:
   _AR_HOST: ""
   _AR_REPO: ""
+  _SHORT_SHA: "manual"
 
 steps:
   - id: orchestrator
@@ -19,7 +20,7 @@ steps:
       - -f
       - docker/orchestrator.Dockerfile
       - -t
-      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-orchestrator:${SHORT_SHA}
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-orchestrator:${_SHORT_SHA}
       - -t
       - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-orchestrator:latest
       - .
@@ -31,7 +32,7 @@ steps:
       - -f
       - docker/panel.Dockerfile
       - -t
-      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:${SHORT_SHA}
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:${_SHORT_SHA}
       - -t
       - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:latest
       - .
@@ -43,17 +44,17 @@ steps:
       - -f
       - docker/agent-adk.Dockerfile
       - -t
-      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-agent-adk:${SHORT_SHA}
+      - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-agent-adk:${_SHORT_SHA}
       - -t
       - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-agent-adk:latest
       - .
 
 images:
-  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-orchestrator:${SHORT_SHA}
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-orchestrator:${_SHORT_SHA}
   - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-orchestrator:latest
-  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:${SHORT_SHA}
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:${_SHORT_SHA}
   - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:latest
-  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-agent-adk:${SHORT_SHA}
+  - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-agent-adk:${_SHORT_SHA}
   - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-agent-adk:latest
 
 options:

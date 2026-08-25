@@ -7,9 +7,15 @@ resource "google_sql_database_instance" "robofleet" {
   database_version = "POSTGRES_16"
   region           = var.region
   settings {
+    edition           = "ENTERPRISE"
     tier              = "db-custom-2-7680"
     disk_size         = 20
     availability_type = "REGIONAL"
+    ip_configuration {
+      ipv4_enabled       = false
+      private_network    = google_compute_network.robofleet.id
+      enable_private_path_for_google_cloud_services = true
+    }
     backup_configuration {
       enabled = true
     }
@@ -37,16 +43,18 @@ resource "google_redis_instance" "robofleet" {
   region         = var.region
   tier           = "BASIC"
   memory_size_gb = 1
-  redis_version  = "REDIS_7_X"
-  auth_enabled   = true
+  redis_version  = "REDIS_7_0"
+  # ponytail: no-auth is safe here, Redis is private-VPC only (not internet-reachable)
+  auth_enabled   = false
   connect_mode   = "PRIVATE_SERVICE_ACCESS"
+  authorized_network = google_compute_network.robofleet.id
 
   depends_on = [google_service_networking_connection.private_service_access]
 }
 
 resource "google_filestore_instance" "robofleet" {
   name     = "robofleet-workspaces"
-  location = var.region
+  location = "${var.region}-a"
   tier     = "BASIC_HDD"
   file_shares {
     name        = "workspaces"

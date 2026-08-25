@@ -19,6 +19,6 @@ echo "Submitting Cloud Build to project ${PROJECT}, region ${REGION}, repo ${REP
 gcloud builds submit . \
   --config cloudbuild.yaml \
   --project="${PROJECT}" \
-  --substitutions=_AR_HOST="${AR_HOST}",_AR_REPO="${REPO}"
+  --substitutions=_AR_HOST="${AR_HOST}",_AR_REPO="${REPO}",_PROJECT_ID="${PROJECT}",_SHORT_SHA="$(git rev-parse --short HEAD)"
 
 echo "Built robofleet-orchestrator, robofleet-panel, robofleet-agent-adk into ${AR_HOST}/${PROJECT}/${REPO}."

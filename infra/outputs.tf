@@ -3,6 +3,11 @@ output "cloudsql_connection_name" {
   description = "Cloud SQL connection name (project:region:instance)."
 }
 
+output "cloudsql_private_ip" {
+  value       = google_sql_database_instance.robofleet.private_ip_address
+  description = "Cloud SQL private IP, reached over the VPC connector (TCP)."
+}
+
 output "memorystore_host" {
   value       = google_redis_instance.robofleet.host
   description = "Memorystore for Redis IP."

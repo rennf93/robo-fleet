@@ -131,3 +131,8 @@ docs/internal/
 
 # Local uv python pin (machine-specific)
 .python-version
+
+# Terraform local vars (contains db password) - never commit
+*.tfvars
+infra/.terraform/
+infra/terraform.tfstate*

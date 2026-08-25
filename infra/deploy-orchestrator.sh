@@ -25,16 +25,26 @@ REPO="${ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO:-robo-fleet}"
 CONNECTOR="${ROBOFLEET_GCP_VPC_CONNECTOR_NAME:-robofleet-connector}"
 AR_HOST="${REGION}-docker.pkg.dev"
 
+# Orchestrator self URL: the service's own public Cloud Run URL, derived from
+# the project number (stable: https://<svc>-<projnum>.<region>.run.app). The
+# manifest sets ROBOFLEET_API_URL / _ORCHESTRATOR_URL to this; the
+# orchestrator's internal self-calls AND spawned agent Cloud Run Jobs resolve
+# their callback from settings.api_url, so it must be this public URL
+# (localhost:8000 is unreachable from a separate agent job container).
+PROJECT_NUMBER="$(gcloud projects describe "${PROJECT}" --format='value(projectNumber)')"
+ORCH_SELF_URL="https://robofleet-orchestrator-${PROJECT_NUMBER}.${REGION}.run.app"
+
 cd "$(dirname "$0")/.."
 
 # --- Read terraform outputs ---
 TF_DIR="infra"
 CLOUDSQL_INSTANCE="$(terraform -chdir=${TF_DIR} output -raw cloudsql_connection_name)"
+CLOUDSQL_PRIVATE_IP="$(terraform -chdir=${TF_DIR} output -raw cloudsql_private_ip)"
 MEMORYSTORE_HOST="$(terraform -chdir=${TF_DIR} output -raw memorystore_host)"
 FILESTORE_IP="$(terraform -chdir=${TF_DIR} output -raw filestore_ip)"
 FILESTORE_SHARE="$(terraform -chdir=${TF_DIR} output -raw filestore_share)"
 GCS_BUCKET="$(terraform -chdir=${TF_DIR} output -raw gcs_bucket)"
-VPC_CONNECTOR_PATH="projects/${PROJECT}/regions/${REGION}/connectors/${CONNECTOR}"
+VPC_CONNECTOR_PATH="projects/${PROJECT}/locations/${REGION}/connectors/${CONNECTOR}"
 
 echo "terraform outputs:"
 echo "  cloudsql:    ${CLOUDSQL_INSTANCE}"
@@ -44,7 +54,7 @@ echo "  gcs bucket:  ${GCS_BUCKET}"
 echo "  vpc conn:    ${VPC_CONNECTOR_PATH}"
 
 # --- Substitute placeholders into a temp manifest ---
-TMP_MANIFEST="$(mktemp --suffix=.yaml)"
+TMP_MANIFEST="$(mktemp)"
 trap 'rm -f "${TMP_MANIFEST}"' EXIT
 
 sed \
@@ -53,11 +63,16 @@ sed \
   -e "s|__AR_HOST__|${AR_HOST}|g" \
   -e "s|__AR_REPO__|${REPO}|g" \
   -e "s|__CLOUDSQL_INSTANCE__|${CLOUDSQL_INSTANCE}|g" \
+  -e "s|__CLOUDSQL_PRIVATE_IP__|${CLOUDSQL_PRIVATE_IP}|g" \
   -e "s|__MEMORYSTORE_HOST__|${MEMORYSTORE_HOST}|g" \
   -e "s|__FILESTORE_IP__|${FILESTORE_IP}|g" \
   -e "s|__FILESTORE_SHARE__|${FILESTORE_SHARE}|g" \
   -e "s|__GCS_BUCKET__|${GCS_BUCKET}|g" \
   -e "s|__VPC_CONNECTOR_PATH__|${VPC_CONNECTOR_PATH}|g" \
+  -e "s|__ORCH_SELF_URL__|${ORCH_SELF_URL}|g" \
+  -e "s|__DATABASE_PASSWORD__|${ROBOFLEET_DATABASE_PASSWORD:?set ROBOFLEET_DATABASE_PASSWORD}|g" \
+  -e "s|__CLOUD_AUTH_EMAIL__|${ROBOFLEET_CLOUD_AUTH_EMAIL:?set ROBOFLEET_CLOUD_AUTH_EMAIL}|g" \
+  -e "s|__CLOUD_AUTH_PASSWORD__|${ROBOFLEET_CLOUD_AUTH_PASSWORD:?set ROBOFLEET_CLOUD_AUTH_PASSWORD}|g" \
   "${TF_DIR}/orchestrator-service.yaml" > "${TMP_MANIFEST}"
 
 echo "Replacing robofleet-orchestrator service..."
@@ -65,16 +80,29 @@ gcloud run services replace "${TMP_MANIFEST}" \
   --region="${REGION}" \
   --project="${PROJECT}"
 
-# --- Set the non-Secret-Manager passwords + cloud auth creds via env vars ---
-# These are not in the 4-seed Secret Manager set; they are set as plaintext env
-# vars. For a production deploy, move them into Secret Manager and switch the
-# manifest to secretRef.
-echo "Updating env vars (passwords, cloud auth creds)..."
-gcloud run services update robofleet-orchestrator \
-  --region="${REGION}" \
-  --project="${PROJECT}" \
-  --update-env-vars="^@^ROBOFLEET_DATABASE_PASSWORD=${ROBOFLEET_DATABASE_PASSWORD:?set ROBOFLEET_DATABASE_PASSWORD}@ROBOFLEET_REDIS_PASSWORD=${ROBOFLEET_REDIS_PASSWORD:?set ROBOFLEET_REDIS_PASSWORD}@ROBOFLEET_CLOUD_AUTH_EMAIL=${ROBOFLEET_CLOUD_AUTH_EMAIL:?set ROBOFLEET_CLOUD_AUTH_EMAIL}@ROBOFLEET_CLOUD_AUTH_PASSWORD=${ROBOFLEET_CLOUD_AUTH_PASSWORD:?set ROBOFLEET_CLOUD_AUTH_PASSWORD}"
+# The DB password, cloud-auth email/password, and the 4 Secret Manager secrets
+# are all inlined in the manifest (placeholders above + inline secretKeyRef), so
+# a single `gcloud run services replace` deploys a boot-healthy revision. No
+# post-replace --update-env-vars / --set-secrets step is needed (and would
+# conflict with the inline secretKeyRef entries).
 
 echo "Deployed robofleet-orchestrator to ${REGION}."
+
+# Allow unauthenticated: spawned agent Cloud Run Jobs, the orchestrator's own
+# internal self-calls (auto-submit, self-PATCH), and the HTTPS load balancer
+# all reach this service over its public URL. Without --allow-unauthenticated
+# the Cloud Run IAM gate 403s them before the app layer (cloud auth for humans,
+# the HMAC X-Agent-ID token for agents/system) can authenticate. cloud auth +
+# HMAC remain the real gates; IAM allUsers:run.invoker only lifts the
+# platform-level gate so requests reach the app.
+echo "Granting allUsers roles/run.invoker (allow-unauthenticated)..."
+gcloud run services add-iam-policy-binding robofleet-orchestrator \
+  --member=allUsers \
+  --role=roles/run.invoker \
+  --region="${REGION}" \
+  --project="${PROJECT}" >/dev/null
+
+echo "Deployed robofleet-orchestrator to ${REGION}."
+echo "URL: ${ORCH_SELF_URL}"
 echo "Verify: gcloud run services describe robofleet-orchestrator --region=${REGION} --project=${PROJECT}"
-echo "Health: gcloud run services describe robofleet-orchestrator --region=${REGION} --project=${PROJECT} --format='value(status.url)'"
+echo "Health: curl -fsS ${ORCH_SELF_URL}/health"

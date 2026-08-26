@@ -455,11 +455,16 @@ def test_block_clouds_argless_route_still_resolves_route_config() -> None:
     route_id = _guard_test_block_clouds_route._guard_route_id
     route_config = security.guard_deco.get_route_config(route_id)
     assert route_config is not None
-    # guard-core 3.13.0 widened the argless @block_clouds() default to all six
-    # supported providers (adds DigitalOcean/Linode/Vultr). Production
-    # build_security_config never sets block_cloud_providers and applies no
-    # @block_clouds() decorator, so the wider default has no production effect;
-    # this test asserts the library's documented argless default as-is.
+    # guard-core 3.13.0 widens the argless @block_clouds() default from
+    # {AWS,GCP,Azure} to all six supported providers (adds
+    # DigitalOcean/Linode/Vultr). robo-fleet applies the argless decorator to
+    # ~52 route files, so each widens from 3 to 6 blocked providers: a
+    # deliberate tightening (the "Fortified Enterprise Fleet" posture) and the
+    # CEO-documented consequence of the 3.13.0 upgrade. It is deployment-inert:
+    # build_security_config arms no cloud IP store, so CloudProviderCheck's
+    # is_cloud_ip has no ranges to match (the full E2E cycle ran on GCP under
+    # 3.12.0's 3-provider block and passed). This test asserts the library's
+    # documented argless default as-is.
     assert route_config.block_cloud_providers == {
         "AWS",
         "GCP",

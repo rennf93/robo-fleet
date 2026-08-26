@@ -86,6 +86,16 @@ spec:
               value: "false"
             - name: ROBOFLEET_GCP_FILESTORE_SHARE
               value: "__FILESTORE_SHARE__"
+            # The three below are what CloudRunJobsProvider reads to attach the
+            # same NFS volume + VPC connector to every agent Job. Without them
+            # a Job gets a workingDir on Filestore but no mount, and Cloud Run
+            # fails the container exec before the entrypoint runs.
+            - name: ROBOFLEET_GCP_FILESTORE_IP
+              value: "__FILESTORE_IP__"
+            - name: ROBOFLEET_GCP_FILESTORE_NFS_PATH
+              value: "/__FILESTORE_SHARE__"
+            - name: ROBOFLEET_GCP_VPC_CONNECTOR_NAME
+              value: "__VPC_CONNECTOR_PATH__"
             - name: ROBOFLEET_GCP_GCS_BUCKET
               value: "__GCS_BUCKET__"
             - name: ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO
@@ -159,6 +169,10 @@ spec:
             - name: ROBOFLEET_GATEWAY_HEALTH_ENABLED
               value: "true"
             - name: ROBOFLEET_OVERLOAD_BREAK_ENABLED
+              value: "true"
+            # Hard $ cap per task / per project-month (null budget = no cap; the
+            # CEO sets monthly_budget_usd on the project from the panel).
+            - name: ROBOFLEET_TASK_BUDGETS_ENABLED
               value: "true"
 
             # --- Secrets (Secret Manager, inline via secretKeyRef) ---

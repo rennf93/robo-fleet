@@ -268,7 +268,19 @@ class CloudRunJobsProvider(AgentProvider):
     ) -> run_v2.TaskTemplate:
         """Assemble the TaskTemplate (container, volumes, VPC connector)."""
         container_kwargs: dict[str, Any] = {"image": self._image, "env": env_vars}
+        nfs_armed = bool(settings.gcp_filestore_ip and settings.gcp_filestore_nfs_path)
         if workspace_cwd is not None:
+            # The workspace lives on the shared Filestore mount. Without the
+            # NFS volume the cwd does not exist inside the Job container, and
+            # Cloud Run fails the exec BEFORE the entrypoint runs ("Application
+            # exec likely failed", zero output, no crash dump, no diag blob).
+            # Fail loud at spawn instead of burning a silent retry loop.
+            if not nfs_armed:
+                raise ProviderError(
+                    f"workspace cwd {workspace_cwd!r} needs the Filestore NFS "
+                    "volume: set ROBOFLEET_GCP_FILESTORE_IP and "
+                    "ROBOFLEET_GCP_FILESTORE_NFS_PATH on the orchestrator"
+                )
             container_kwargs["working_dir"] = workspace_cwd
         # Cloud Run Jobs default to 512MiB memory when no limits are set. The
         # ADK runtime imports google-adk + google-genai + google-cloud-storage
@@ -287,7 +299,7 @@ class CloudRunJobsProvider(AgentProvider):
         # root so the agent's per-agent clone resolves to the shared Filestore.
         # Guarded: local-dev (ip/path empty) gets no volume, byte-for-byte
         # unchanged from the prior shape.
-        if settings.gcp_filestore_ip and settings.gcp_filestore_nfs_path:
+        if nfs_armed:
             container_kwargs["volume_mounts"] = [
                 run_v2.VolumeMount(
                     mount_path=settings.workspaces_root,

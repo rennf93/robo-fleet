@@ -156,3 +156,31 @@ def test_worktree_env_var_wins_over_cwd_when_set(
     from robofleet.agent.git_tools import _worktree
 
     assert _worktree() == explicit.resolve()
+
+
+@pytest.mark.asyncio
+async def test_delete_and_move_file_stage_through_git_commit(worktree: Path) -> None:
+    """A dev must be able to remove and relocate files: without these tools a
+    QA 'delete the stray root copy' finding loops forever (write_file cannot
+    remove anything)."""
+    from robofleet.agent.git_tools import (
+        delete_file,
+        git_commit,
+        git_status,
+        move_file,
+        write_file,
+    )
+
+    await write_file("stray.py", "X = 1\n")
+    await write_file("old/name.py", "Y = 2\n")
+    await git_commit("seed")
+    assert (await delete_file("stray.py"))["status"] == "ok"
+    assert (await move_file("old/name.py", "pkg/name.py"))["status"] == "ok"
+    assert not (worktree / "stray.py").exists()
+    assert (worktree / "pkg" / "name.py").read_text() == "Y = 2\n"
+    assert (await git_commit("cleanup"))["status"] == "ok"
+    assert (await git_status())["status_text"] == ""
+    # Guards: traversal + missing file.
+    assert (await delete_file("../escape.py"))["status"] == "error"
+    assert (await delete_file("nope.py"))["status"] == "error"
+    assert (await move_file("nope.py", "x.py"))["status"] == "error"

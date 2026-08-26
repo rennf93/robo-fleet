@@ -76,6 +76,32 @@ async def write_file(rel_path: str, content: str) -> dict[str, Any]:
     return _ok(path=str(rel_path))
 
 
+async def delete_file(rel_path: str) -> dict[str, Any]:
+    """Delete a file inside the worktree (git_commit stages the removal)."""
+    try:
+        target = _resolve(rel_path)
+    except PermissionError as exc:
+        return _err(str(exc))
+    if not target.is_file():
+        return _err(f"not a file: {rel_path}")
+    target.unlink()
+    return _ok(path=str(rel_path))
+
+
+async def move_file(src_path: str, dst_path: str) -> dict[str, Any]:
+    """Move/rename a file inside the worktree (git_commit stages it as a rename)."""
+    try:
+        src = _resolve(src_path)
+        dst = _resolve(dst_path)
+    except PermissionError as exc:
+        return _err(str(exc))
+    if not src.is_file():
+        return _err(f"not a file: {src_path}")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    src.rename(dst)
+    return _ok(src=str(src_path), dst=str(dst_path))
+
+
 async def git_commit(message: str) -> dict[str, Any]:
     """Stage all changes and commit with ``message``."""
     _git(["add", "-A"])
@@ -113,6 +139,8 @@ def build_git_tools() -> list[FunctionTool]:
     return [
         _wrap(read_file, "read_file"),
         _wrap(write_file, "write_file"),
+        _wrap(delete_file, "delete_file"),
+        _wrap(move_file, "move_file"),
         _wrap(git_commit, "git_commit"),
         _wrap(git_status, "git_status"),
         _wrap(git_push, "git_push"),

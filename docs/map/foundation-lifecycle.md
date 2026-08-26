@@ -150,7 +150,7 @@ foundation-lifecycle
 ```
 
 ## Dependencies
-- Internal: robofleet.foundation.identity (Role, Team), robofleet.foundation.policy.journaling (ReadTier, ROLE_READ_TIERS, PROTECTED_JOURNALS), robofleet.seeds.initial_data (AGENT_UUIDS, DEFAULT_AGENTS) for slug/team validators, robofleet.agents_config (can_a2a_direct, get_a2a_route_hint, get_agent_cell/role/team), robofleet.config.settings (SLA key resolution), robofleet.exceptions (RobocoError, TaskLifecycleError)
+- Internal: robofleet.foundation.identity (Role, Team), robofleet.foundation.policy.journaling (ReadTier, ROLE_READ_TIERS, PROTECTED_JOURNALS), robofleet.seeds.initial_data (AGENT_UUIDS, DEFAULT_AGENTS) for slug/team validators, robofleet.agents_config (can_a2a_direct, get_a2a_route_hint, get_agent_cell/role/team), robofleet.config.settings (SLA key resolution), robofleet.exceptions (RobofleetError, TaskLifecycleError)
 - External: dataclasses (frozen dataclasses), enum.StrEnum, collections.deque (BFS validator), itertools.pairwise (intent chain validator), typing (Literal, TYPE_CHECKING, Callable, Any)
 
 ## Entry Points

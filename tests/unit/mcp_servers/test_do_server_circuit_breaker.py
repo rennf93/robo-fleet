@@ -270,7 +270,7 @@ def test_verb_extracted_from_path(do_module: types.ModuleType) -> None:
 
 
 def test_dict_shaped_error_normalized_to_envelope(do_module: types.ModuleType) -> None:
-    """A RobocoError.to_dict()-shaped response must not TypeError the breaker.
+    """A RobofleetError.to_dict()-shaped response must not TypeError the breaker.
 
     A dict-shaped `error` is a retry-storm-worthy rejection (the orchestrator's
     exception handlers surface this shape on 4xx/5xx), so the breaker must count

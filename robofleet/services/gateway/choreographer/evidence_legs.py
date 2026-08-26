@@ -23,7 +23,7 @@ layers:
   bound (``settings.git_command_timeout_seconds``, 30s by default — usually
   SHORTER than a leg's own budget, making this the most common real-world
   timeout shape for a single hung git call). It is a ``GitError`` /
-  ``RobocoError`` subclass, NOT a ``TimeoutError`` subclass, and is raised
+  ``RobofleetError`` subclass, NOT a ``TimeoutError`` subclass, and is raised
   from INSIDE the coroutine (the subprocess itself gave up), not by
   ``wait_for``'s cancellation. Any OTHER ``GitError`` (a real command
   failure — bad ref, auth, network refusal, not a timeout) still propagates

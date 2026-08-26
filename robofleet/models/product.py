@@ -7,13 +7,13 @@ from uuid import UUID, uuid4
 from pydantic import ConfigDict, Field, field_validator
 
 from robofleet.foundation.identity import CELL_TEAMS, Team
-from robofleet.models.base import RobocoBase, TimestampMixin
+from robofleet.models.base import RobofleetBase, TimestampMixin
 
 
-class ProductCellMapping(RobocoBase):
+class ProductCellMapping(RobofleetBase):
     """One cell -> Project assignment within a Product."""
 
-    # Deliberate deviation from a bare ``project.py`` mirror: ``RobocoBase``
+    # Deliberate deviation from a bare ``project.py`` mirror: ``RobofleetBase``
     # sets ``use_enum_values=True``, which coerces ``team`` to the plain string
     # ``"backend"``. We need ``team`` to stay a real ``Team`` enum so the
     # ``m.team is Team.BACKEND`` check and the validator's ``v.value`` error
@@ -52,7 +52,7 @@ class Product(TimestampMixin):
     created_by: UUID = Field(..., description="Who registered the product")
 
 
-class ProductCreate(RobocoBase):
+class ProductCreate(RobofleetBase):
     """Service-layer create DTO."""
 
     name: str = Field(..., min_length=1, max_length=100)
@@ -61,7 +61,7 @@ class ProductCreate(RobocoBase):
     cells: list[ProductCellMapping] = Field(default_factory=list)
 
 
-class ProductUpdate(RobocoBase):
+class ProductUpdate(RobofleetBase):
     """Service-layer update DTO (all fields optional)."""
 
     name: str | None = None

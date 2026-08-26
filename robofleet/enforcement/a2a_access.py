@@ -6,10 +6,10 @@ Uses the same communication matrix as notifications.
 """
 
 from robofleet.agents_config import can_a2a_direct, get_a2a_route_hint
-from robofleet.exceptions import RobocoError
+from robofleet.exceptions import RobofleetError
 
 
-class A2AAccessDeniedError(RobocoError):
+class A2AAccessDeniedError(RobofleetError):
     """Raised when A2A communication is not permitted."""
 
     def __init__(

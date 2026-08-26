@@ -588,7 +588,7 @@ source_modules = ["robofleet.services"]
 forbidden_modules = ["robofleet.api.routes"]
 
 # =============================================================================
-# Roboco Commit Validator
+# RoboFleet Commit Validator
 # =============================================================================
 [tool.robofleet.commits]
 subject_min_chars = 20

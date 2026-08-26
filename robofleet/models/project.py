@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 from pydantic import Field, field_validator
 
 from robofleet.foundation.policy.board_programs import validate_board_programs_field
-from robofleet.models.base import RobocoBase, Team, TimestampMixin
+from robofleet.models.base import RobofleetBase, Team, TimestampMixin
 from robofleet.models.env_branches import normalize_environments
 from robofleet.models.sandbox import (
     SANDBOX_ENGINE_FEATURES,
@@ -316,7 +316,7 @@ class Project(TimestampMixin):
     is_active: bool = Field(default=True, description="Whether project is active")
 
 
-class ProjectCreate(RobocoBase):
+class ProjectCreate(RobofleetBase):
     """Schema for creating/registering a new project."""
 
     name: str = Field(..., min_length=1, max_length=100)
@@ -355,7 +355,7 @@ class ProjectCreate(RobocoBase):
     monthly_budget_usd: float | None = Field(default=None, gt=0)
 
 
-class ProjectUpdate(RobocoBase):
+class ProjectUpdate(RobofleetBase):
     """Schema for updating a project."""
 
     name: str | None = None

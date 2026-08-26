@@ -11,7 +11,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from robofleet.models.base import Complexity, RobocoBase, TaskStatus, Team
+from robofleet.models.base import Complexity, RobofleetBase, TaskStatus, Team
 
 
 class KanbanBoardType(StrEnum):
@@ -30,7 +30,7 @@ class KanbanBoardType(StrEnum):
 # =============================================================================
 
 
-class KanbanCard(RobocoBase):
+class KanbanCard(RobofleetBase):
     """A card on the kanban board representing a task."""
 
     id: UUID
@@ -57,7 +57,7 @@ class KanbanCard(RobocoBase):
     swimlane_key: str | None = None
 
 
-class KanbanColumn(RobocoBase):
+class KanbanColumn(RobofleetBase):
     """A column on the kanban board."""
 
     id: str
@@ -68,7 +68,7 @@ class KanbanColumn(RobocoBase):
     wip_limit: int | None = None  # Work in progress limit
 
 
-class KanbanSwimlane(RobocoBase):
+class KanbanSwimlane(RobofleetBase):
     """A swimlane for grouping cards."""
 
     id: str
@@ -76,7 +76,7 @@ class KanbanSwimlane(RobocoBase):
     columns: list[KanbanColumn] = Field(default_factory=list)
 
 
-class KanbanBoard(RobocoBase):
+class KanbanBoard(RobofleetBase):
     """A complete kanban board view."""
 
     id: str

@@ -19,7 +19,7 @@ from pydantic import Field
 
 from robofleet.models.base import (
     HandoffStatus,
-    RobocoBase,
+    RobofleetBase,
     TimestampMixin,
 )
 
@@ -28,7 +28,7 @@ from robofleet.models.base import (
 # =============================================================================
 
 
-class CodeSample(RobocoBase):
+class CodeSample(RobofleetBase):
     """A code sample to include in documentation."""
 
     title: str = Field(..., description="Title/description of the sample")
@@ -39,7 +39,7 @@ class CodeSample(RobocoBase):
     )
 
 
-class DocumentationItem(RobocoBase):
+class DocumentationItem(RobofleetBase):
     """A specific documentation deliverable."""
 
     doc_type: str = Field(
@@ -53,7 +53,7 @@ class DocumentationItem(RobocoBase):
     )
 
 
-class ConversationRef(RobocoBase):
+class ConversationRef(RobofleetBase):
     """Reference to an important conversation."""
 
     message_id: UUID = Field(..., description="Message ID")
@@ -182,7 +182,7 @@ class DocumenterHandoff(TimestampMixin):
 # =============================================================================
 
 
-class HandoffCreate(RobocoBase):
+class HandoffCreate(RobofleetBase):
     """Schema for creating a new handoff."""
 
     task_id: UUID

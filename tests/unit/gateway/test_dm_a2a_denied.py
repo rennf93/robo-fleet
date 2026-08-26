@@ -3,7 +3,7 @@
 Original bug: be-qa called dm(recipient='qa-all', ...) — 'qa-all' is a
 channel slug, not an agent slug. A2A enforcement raised
 A2AAccessDeniedError. It propagated past dm(), past content_actions,
-and got caught by FastAPI's middleware which renders RobocoError.to_dict()
+and got caught by FastAPI's middleware which renders RobofleetError.to_dict()
 as `{'error': {'code': ..., 'message': ..., 'details': ...}}`.
 
 do_server's circuit-breaker check then did
@@ -79,7 +79,7 @@ async def test_dm_a2a_denied_returns_envelope_not_authorized() -> None:
 
     assert env.error == "not_authorized", (
         f"A2A denial must surface as not_authorized envelope, got {env.error!r}. "
-        "If it escapes to FastAPI middleware, RobocoError.to_dict() renders the "
+        "If it escapes to FastAPI middleware, RobofleetError.to_dict() renders the "
         "error as a dict and the do_server circuit breaker crashes."
     )
     assert env.message is not None

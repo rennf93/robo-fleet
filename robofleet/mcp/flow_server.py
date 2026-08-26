@@ -104,7 +104,7 @@ _CIRCUIT_REJECTION_KINDS: frozenset[str] = frozenset(
 # ``not_authorized`` (#161). The NOT_FOUND family maps to None — parity with
 # the string-error contract that a `not_found` rejection does NOT count
 # (retrying a missing resource won't help until state changes). Unknown codes
-# fall through to a substring branch so a new RobocoError code still lands on a
+# fall through to a substring branch so a new RobofleetError code still lands on a
 # counted kind without a map update.
 _DICT_ERROR_CODE_MAP: dict[str, str | None] = {
     "AUTHENTICATION_REQUIRED": "not_authorized",
@@ -455,7 +455,7 @@ def _record_and_check_circuit(
     the original payload. The breaker is a safety net; it must never
     break the gateway path.
     """
-    # Gateway envelopes use a string `error` (kind); RobocoError-derived
+    # Gateway envelopes use a string `error` (kind); RobofleetError-derived
     # exceptions surface a dict-shaped error via FastAPI's middleware, and
     # 422 validation failures carry a `detail` list with no `error` field
     # at all. Classify all three rejection shapes so a storm of 500s or 422s

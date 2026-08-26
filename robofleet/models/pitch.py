@@ -16,7 +16,7 @@ from uuid import UUID, uuid4
 from pydantic import Field, field_validator
 
 from robofleet.foundation.identity import CELL_TEAMS, Team
-from robofleet.models.base import RobocoBase, TimestampMixin
+from robofleet.models.base import RobofleetBase, TimestampMixin
 
 
 class PitchStatus(StrEnum):
@@ -58,7 +58,7 @@ class Pitch(TimestampMixin):
     seed_task_id: UUID | None = None
 
 
-class PitchCreate(RobocoBase):
+class PitchCreate(RobofleetBase):
     """Service-layer create DTO."""
 
     title: str = Field(..., min_length=1, max_length=200)

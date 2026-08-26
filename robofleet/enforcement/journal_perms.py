@@ -23,7 +23,7 @@ from robofleet.agents_config import (
     get_agent_cell,
     get_agent_role,
 )
-from robofleet.exceptions import RobocoError
+from robofleet.exceptions import RobofleetError
 from robofleet.foundation.identity import Role
 from robofleet.foundation.policy.journaling import (
     PROTECTED_JOURNALS,
@@ -40,7 +40,7 @@ __all__ = [
 ]
 
 
-class JournalAccessDeniedError(RobocoError):
+class JournalAccessDeniedError(RobofleetError):
     """Raised when an agent doesn't have permission to read a journal."""
 
     def __init__(

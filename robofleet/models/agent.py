@@ -14,7 +14,7 @@ from robofleet.models.base import (
     AgentRole,
     AgentStatus,
     ModelProvider,
-    RobocoBase,
+    RobofleetBase,
     Team,
     TimestampMixin,
 )
@@ -24,7 +24,7 @@ from robofleet.models.base import (
 # =============================================================================
 
 
-class ModelConfig(RobocoBase):
+class ModelConfig(RobofleetBase):
     """Configuration for the LLM model an agent uses."""
 
     provider: ModelProvider = Field(
@@ -42,7 +42,7 @@ class ModelConfig(RobocoBase):
     max_tokens: int = Field(default=4096, ge=1)
 
 
-class AgentPermissions(RobocoBase):
+class AgentPermissions(RobofleetBase):
     """Permissions for an agent."""
 
     can_notify: bool = Field(
@@ -51,7 +51,7 @@ class AgentPermissions(RobocoBase):
     )
 
 
-class AgentMetrics(RobocoBase):
+class AgentMetrics(RobofleetBase):
     """Performance metrics for an agent."""
 
     tasks_completed: int = Field(default=0, ge=0)
@@ -141,7 +141,7 @@ class Agent(TimestampMixin):
 # =============================================================================
 
 
-class AgentCreate(RobocoBase):
+class AgentCreate(RobofleetBase):
     """Schema for creating a new agent."""
 
     name: str = Field(..., min_length=1, max_length=100)
@@ -154,7 +154,7 @@ class AgentCreate(RobocoBase):
     description: str | None = None
 
 
-class AgentUpdate(RobocoBase):
+class AgentUpdate(RobofleetBase):
     """Schema for updating an agent."""
 
     name: str | None = None

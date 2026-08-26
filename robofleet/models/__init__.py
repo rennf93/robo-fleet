@@ -21,7 +21,7 @@ from robofleet.models.base import (
     NotificationPriority,
     NotificationType,
     # Base types
-    RobocoBase,
+    RobofleetBase,
     SubstituteReason,
     # Enums
     TaskNature,
@@ -96,7 +96,7 @@ __all__ = [
     "NotificationType",
     "ProgressUpdate",
     "RawStream",
-    "RobocoBase",
+    "RobofleetBase",
     "SubstituteReason",
     "Task",
     "TaskCreate",

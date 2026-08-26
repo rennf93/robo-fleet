@@ -119,7 +119,7 @@ def test_flow_authentication_required_is_not_authorized(
 def test_flow_unknown_code_falls_back_to_substring(
     flow_module: types.ModuleType,
 ) -> None:
-    """A new RobocoError code still classifies via the substring fallback."""
+    """A new RobofleetError code still classifies via the substring fallback."""
     assert (
         flow_module._classify_dict_error_code("A2A_ACCESS_DENIED") == "not_authorized"
     )

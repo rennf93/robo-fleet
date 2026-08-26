@@ -235,7 +235,7 @@ async def test_evidence_no_branch_skips_git_calls() -> None:
 # claim_doc_task / claim_gate_review). Every timeout-shaped test is
 # parametrized over both real timeout shapes: asyncio's own
 # cancellation-converted TimeoutError, and GitTimeoutError (_run_git's own
-# internal subprocess bound — a GitError/RobocoError subclass, NOT a
+# internal subprocess bound — a GitError/RobofleetError subclass, NOT a
 # TimeoutError subclass, and the most common real-world single-hung-git-call
 # shape since it defaults to a SHORTER window than a leg's own budget).
 # ---------------------------------------------------------------------------

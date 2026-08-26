@@ -13,7 +13,7 @@ from pydantic import Field
 
 from robofleet.models.base import (
     MessageType,
-    RobocoBase,
+    RobofleetBase,
     TimestampMixin,
 )
 
@@ -22,7 +22,7 @@ from robofleet.models.base import (
 # =============================================================================
 
 
-class RawStream(RobocoBase):
+class RawStream(RobofleetBase):
     """
     WebSocket payload - ephemeral.
 

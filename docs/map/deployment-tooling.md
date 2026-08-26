@@ -15,7 +15,7 @@ This slice is the packaging, build, and runtime-tooling layer of RoboFleet: the 
 | robofleet/bootstrap.py | Async bootstrap: DB init, Redis event bus, websocket bridge, orchestrator construction, uvicorn API server task, wait-for-ready poll, optional agent spawn, graceful shutdown | 161 |
 | robofleet/cli.py | argparse CLI wrapper around bootstrap.main / db-only; the ENTRYPOINT invoked by `python -m robofleet.cli` | 59 |
 | robofleet/logging.py | structlog setup (dev ConsoleRenderer / prod JSONRenderer), secret-redaction processor, rotating file handler under /data/logs, LogContext context-manager | 252 |
-| robofleet/exceptions.py | Exception hierarchy (RobocoError base + NotFound/Validation/InvalidState/Permission/Auth/Task/TaskLifecycle/Agent/Notification/Service/Database/Git/MergeConflict/GitCommand/GitTimeout); includes TaskLifecycle transition hints and git-secret scrubbing | 497 |
+| robofleet/exceptions.py | Exception hierarchy (RobofleetError base + NotFound/Validation/InvalidState/Permission/Auth/Task/TaskLifecycle/Agent/Notification/Service/Database/Git/MergeConflict/GitCommand/GitTimeout); includes TaskLifecycle transition hints and git-secret scrubbing | 497 |
 | docker/orchestrator.Dockerfile | Multi-stage build: uv venv builder (python:3.13-slim) + runner with docker-cli/git/make/node/npm/pnpm, ENTRYPOINT python -m robofleet.cli | 99 |
 | docker/agent-base.Dockerfile | Shared agent runtime: uv venv + Node 22 + @anthropic-ai/claude-code, agent user, hook scripts, safe.directory *, ENTRYPOINT claude | 108 |
 | docker/agent-prompter.Dockerfile | Intake (Prompter) — persistent Claude Agent SDK session, ENTRYPOINT python -m robofleet.agent_sdk.intake_main | 17 |
@@ -76,7 +76,7 @@ This slice is the packaging, build, and runtime-tooling layer of RoboFleet: the 
 | get_logger | function | robofleet/logging.py:192 | Return a configured structlog BoundLogger |
 | LogContext | class | robofleet/logging.py:210 | Context manager binding/unbinding contextvars for scoped log context |
 | log_operation | function | robofleet/logging.py:231 | Build a structured-log context dict for an operation |
-| RobocoError | class | robofleet/exceptions.py:13 | Base exception with message/code/details and to_dict() for API responses |
+| RobofleetError | class | robofleet/exceptions.py:13 | Base exception with message/code/details and to_dict() for API responses |
 | NotFoundError | class | robofleet/exceptions.py:50 | Resource not found (code NOT_FOUND) |
 | ValidationError | class | robofleet/exceptions.py:77 | Input validation failure (code VALIDATION_ERROR) |
 | InvalidStateError | class | robofleet/exceptions.py:98 | Operation not allowed in current state (code INVALID_STATE) |

@@ -14,7 +14,7 @@ from pydantic import Field
 from robofleet.models.base import (
     NotificationPriority,
     NotificationType,
-    RobocoBase,
+    RobofleetBase,
     TimestampMixin,
 )
 
@@ -84,7 +84,7 @@ class Notification(TimestampMixin):
 # =============================================================================
 
 
-class NotificationCreate(RobocoBase):
+class NotificationCreate(RobofleetBase):
     """Schema for creating a new notification."""
 
     type: NotificationType

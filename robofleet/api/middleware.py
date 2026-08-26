@@ -30,7 +30,7 @@ from robofleet.exceptions import (
     InvalidStateError,
     NotFoundError,
     PermissionDeniedError,
-    RobocoError,
+    RobofleetError,
     ValidationError,
 )
 from robofleet.foundation.policy.flow_timeouts import SLOW_VERBS as _SLOW_VERBS
@@ -213,7 +213,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 # =============================================================================
 
 
-def get_status_code(exc: RobocoError) -> int:
+def get_status_code(exc: RobofleetError) -> int:
     """Map exception type to HTTP status code."""
     status_map = {
         NotFoundError: 404,
@@ -227,13 +227,13 @@ def get_status_code(exc: RobocoError) -> int:
         if isinstance(exc, exc_type):
             return status
 
-    # Default for other RobocoError subclasses
+    # Default for other RobofleetError subclasses
     return 400
 
 
 async def robofleet_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Handle RobocoError exceptions."""
-    robofleet_exc = cast("RobocoError", exc)
+    """Handle RobofleetError exceptions."""
+    robofleet_exc = cast("RobofleetError", exc)
     status_code = get_status_code(robofleet_exc)
 
     # Add correlation ID to error details
@@ -255,10 +255,10 @@ async def robofleet_exception_handler(request: Request, exc: Exception) -> JSONR
 
 
 # `robofleet.services.base.ServiceError` is a parallel exception hierarchy that
-# does NOT inherit from `RobocoError` (it extends `Exception` directly), so
+# does NOT inherit from `RobofleetError` (it extends `Exception` directly), so
 # `robofleet_exception_handler` never sees it and the requests fall through to
 # `generic_exception_handler` as 500s. Map its subclasses to the same status
-# codes used in the RobocoError handler so route-layer try/except blocks can
+# codes used in the RobofleetError handler so route-layer try/except blocks can
 # surface clean 4xx codes whether the service raises from `robofleet.exceptions`
 # or `robofleet.services.base`.
 _SERVICE_ERROR_STATUS: dict[type[ServiceError], int] = {
@@ -533,13 +533,13 @@ def setup_middleware(app: FastAPI) -> None:
     Exception handler priority:
     1. RequestValidationError - 422s; log body + per-field errors
     2. HTTPException - most common, converts to string error codes
-    3. RobocoError - custom domain exceptions
+    3. RobofleetError - custom domain exceptions
     4. Exception - catch-all for unexpected errors
     """
     # Exception handlers (order: specific to general)
     app.add_exception_handler(RequestValidationError, request_validation_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)
-    app.add_exception_handler(RobocoError, robofleet_exception_handler)
+    app.add_exception_handler(RobofleetError, robofleet_exception_handler)
     app.add_exception_handler(ServiceError, service_exception_handler)
     app.add_exception_handler(RateLimitError, rate_limit_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)

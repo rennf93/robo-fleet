@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 from pydantic import Field
 
-from robofleet.models.base import RobocoBase, TimestampMixin
+from robofleet.models.base import RobofleetBase, TimestampMixin
 
 
 class WorkSessionStatus(StrEnum):
@@ -89,7 +89,7 @@ class WorkSession(TimestampMixin):
     )
 
 
-class WorkSessionCreate(RobocoBase):
+class WorkSessionCreate(RobofleetBase):
     """Schema for creating a work session."""
 
     project_id: UUID
@@ -100,7 +100,7 @@ class WorkSessionCreate(RobocoBase):
     target_branch: str
 
 
-class WorkSessionUpdate(RobocoBase):
+class WorkSessionUpdate(RobofleetBase):
     """Schema for updating a work session."""
 
     status: WorkSessionStatus | None = None

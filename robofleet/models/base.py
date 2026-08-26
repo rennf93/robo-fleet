@@ -254,7 +254,7 @@ class AssignmentScope(StrEnum):
 # =============================================================================
 
 
-class RobocoBase(BaseModel):
+class RobofleetBase(BaseModel):
     """
     Base model for all RoboFleet models.
 
@@ -287,7 +287,7 @@ SessionID = Annotated[UUID, Field(description="Unique session identifier")]
 GroupID = Annotated[UUID, Field(description="Unique group identifier")]
 
 
-class TimestampMixin(RobocoBase):
+class TimestampMixin(RobofleetBase):
     """Mixin for models that track creation and update times."""
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

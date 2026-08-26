@@ -5,10 +5,10 @@ Validates task ownership and claim rules.
 """
 
 from robofleet.agents_config import get_agent_role, get_agent_team
-from robofleet.exceptions import RobocoError
+from robofleet.exceptions import RobofleetError
 
 
-class TaskOwnershipError(RobocoError):
+class TaskOwnershipError(RobofleetError):
     """Raised when a task ownership rule is violated."""
 
     def __init__(

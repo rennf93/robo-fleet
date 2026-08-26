@@ -18,7 +18,7 @@ from uuid import uuid4
 
 from pydantic import ConfigDict, Field
 
-from robofleet.models.base import RobocoBase
+from robofleet.models.base import RobofleetBase
 
 # =============================================================================
 # ENUMS
@@ -47,14 +47,14 @@ class A2ATaskState(StrEnum):
 # =============================================================================
 
 
-class AgentProvider(RobocoBase):
+class AgentProvider(RobofleetBase):
     """Provider information for an agent."""
 
     organization: str = Field(..., description="Organization name")
     url: str | None = Field(default=None, description="Organization URL")
 
 
-class AgentCapabilities(RobocoBase):
+class AgentCapabilities(RobofleetBase):
     """Capabilities supported by an agent."""
 
     streaming: bool = Field(default=False, description="Supports SSE streaming")
@@ -66,7 +66,7 @@ class AgentCapabilities(RobocoBase):
     )
 
 
-class SecurityScheme(RobocoBase):
+class SecurityScheme(RobofleetBase):
     """Security scheme for authentication."""
 
     type: str = Field(..., description="Scheme type (apiKey, http, oauth2)")
@@ -80,7 +80,7 @@ class SecurityScheme(RobocoBase):
     )
 
 
-class AgentSkill(RobocoBase):
+class AgentSkill(RobofleetBase):
     """A capability unit an agent can perform."""
 
     id: str = Field(..., description="Unique skill identifier")
@@ -100,7 +100,7 @@ class AgentSkill(RobocoBase):
     )
 
 
-class AgentCard(RobocoBase):
+class AgentCard(RobofleetBase):
     """
     A2A Agent Card - The agent's public identity and capabilities.
 
@@ -173,14 +173,14 @@ class AgentCard(RobocoBase):
 # =============================================================================
 
 
-class TextPart(RobocoBase):
+class TextPart(RobofleetBase):
     """Plain text content part."""
 
     type: Literal["text"] = "text"
     text: str = Field(..., description="Text content")
 
 
-class FilePart(RobocoBase):
+class FilePart(RobofleetBase):
     """File reference content part."""
 
     type: Literal["file"] = "file"
@@ -189,14 +189,14 @@ class FilePart(RobocoBase):
     )
 
 
-class DataPart(RobocoBase):
+class DataPart(RobofleetBase):
     """Structured JSON data content part."""
 
     type: Literal["data"] = "data"
     data: dict[str, Any] = Field(..., description="Structured data")
 
 
-class ArtifactPart(RobocoBase):
+class ArtifactPart(RobofleetBase):
     """Reference to a generated artifact."""
 
     type: Literal["artifact"] = "artifact"
@@ -209,7 +209,7 @@ Part = Annotated[
 ]
 
 
-class A2AMessage(RobocoBase):
+class A2AMessage(RobofleetBase):
     """
     A2A Message - A communication turn between agents.
 
@@ -238,7 +238,7 @@ class A2AMessage(RobocoBase):
 # =============================================================================
 
 
-class A2ATaskStatus(RobocoBase):
+class A2ATaskStatus(RobofleetBase):
     """Status container for an A2A task."""
 
     state: A2ATaskState = Field(..., description="Current lifecycle state")
@@ -251,7 +251,7 @@ class A2ATaskStatus(RobocoBase):
     )
 
 
-class A2AArtifact(RobocoBase):
+class A2AArtifact(RobofleetBase):
     """An output artifact produced by a task."""
 
     id: str = Field(default_factory=lambda: str(uuid4()), description="Artifact ID")
@@ -262,7 +262,7 @@ class A2AArtifact(RobocoBase):
     )
 
 
-class A2ATask(RobocoBase):
+class A2ATask(RobofleetBase):
     """
     A2A Task - A unit of work with lifecycle management.
 
@@ -294,7 +294,7 @@ class A2ATask(RobocoBase):
 # =============================================================================
 
 
-class SendMessageConfiguration(RobocoBase):
+class SendMessageConfiguration(RobofleetBase):
     """Configuration for SendMessage request."""
 
     accepted_output_modes: list[str] = Field(
@@ -323,7 +323,7 @@ class SendMessageConfiguration(RobocoBase):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class SendMessageRequest(RobocoBase):
+class SendMessageRequest(RobofleetBase):
     """Request payload for SendMessage JSON-RPC method."""
 
     message: A2AMessage = Field(..., description="Message to send")
@@ -335,13 +335,13 @@ class SendMessageRequest(RobocoBase):
     )
 
 
-class SendMessageResponse(RobocoBase):
+class SendMessageResponse(RobofleetBase):
     """Response payload for SendMessage JSON-RPC method."""
 
     task: A2ATask = Field(..., description="Created or updated task")
 
 
-class GetTaskRequest(RobocoBase):
+class GetTaskRequest(RobofleetBase):
     """Request payload for GetTask JSON-RPC method."""
 
     name: str = Field(..., description="Task resource name (tasks/{id})")
@@ -354,7 +354,7 @@ class GetTaskRequest(RobocoBase):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class ListTasksRequest(RobocoBase):
+class ListTasksRequest(RobofleetBase):
     """Request payload for ListTasks JSON-RPC method."""
 
     page_size: int = Field(
@@ -371,7 +371,7 @@ class ListTasksRequest(RobocoBase):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class ListTasksResponse(RobocoBase):
+class ListTasksResponse(RobofleetBase):
     """Response payload for ListTasks JSON-RPC method."""
 
     tasks: list[A2ATask] = Field(..., description="Task list")
@@ -382,7 +382,7 @@ class ListTasksResponse(RobocoBase):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class CancelTaskRequest(RobocoBase):
+class CancelTaskRequest(RobofleetBase):
     """Request payload for CancelTask JSON-RPC method."""
 
     name: str = Field(..., description="Task resource name (tasks/{id})")
@@ -465,7 +465,7 @@ class A2AMessageKind(StrEnum):
     SYSTEM = "system"  # System-generated (e.g., "conversation closed")
 
 
-class A2AConversation(RobocoBase):
+class A2AConversation(RobofleetBase):
     """
     Persistent A2A conversation between two agents.
 
@@ -509,7 +509,7 @@ class A2AConversation(RobocoBase):
         return agent_slug in (self.agent_a, self.agent_b)
 
 
-class A2AChatMessage(RobocoBase):
+class A2AChatMessage(RobofleetBase):
     """
     Individual message in persistent A2A conversation.
 
@@ -556,7 +556,7 @@ class A2AChatMessage(RobocoBase):
     edit_history: list[dict[str, Any]] = Field(default_factory=list)
 
 
-class A2AInboxSummary(RobocoBase):
+class A2AInboxSummary(RobofleetBase):
     """Summary of pending A2A for an agent."""
 
     total_unread: int = Field(default=0, description="Total unread messages")
@@ -571,7 +571,7 @@ class A2AInboxSummary(RobocoBase):
     )
 
 
-class A2AConversationSummary(RobocoBase):
+class A2AConversationSummary(RobofleetBase):
     """Summary of an A2A conversation for list views."""
 
     id: str
@@ -587,7 +587,7 @@ class A2AConversationSummary(RobocoBase):
     )
 
 
-class A2AConversationAdminSummary(RobocoBase):
+class A2AConversationAdminSummary(RobofleetBase):
     """Conversation summary for the CEO's cross-agent live view (no single-
     participant perspective — unlike A2AConversationSummary, this carries
     both slugs rather than one "other_agent")."""
@@ -605,7 +605,7 @@ class A2AConversationAdminSummary(RobocoBase):
     updated_at: datetime
 
 
-class A2APair(RobocoBase):
+class A2APair(RobofleetBase):
     """Unique agent pair for frontend display."""
 
     agent_a: str
@@ -617,7 +617,7 @@ class A2APair(RobocoBase):
     last_activity: datetime | None = None
 
 
-class A2AAdminPairSummary(RobocoBase):
+class A2AAdminPairSummary(RobofleetBase):
     """One CEO-visible org-chart pair for the A2A switchboard.
 
     Joins the static allowed-pair matrix (robofleet.agents_config.A2A_ALLOWED_PAIRS

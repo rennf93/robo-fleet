@@ -28,7 +28,7 @@ from robofleet.exceptions import (
     InvalidStateError,
     NotFoundError,
     PermissionDeniedError,
-    RobocoError,
+    RobofleetError,
     ValidationError,
 )
 from robofleet.services.base import (
@@ -76,8 +76,8 @@ def test_get_status_code_for_auth() -> None:
 
 
 def test_get_status_code_for_generic() -> None:
-    """Unknown RobocoError subclass defaults to 400."""
-    assert get_status_code(RobocoError("x", code="other")) == HTTPStatus.BAD_REQUEST
+    """Unknown RobofleetError subclass defaults to 400."""
+    assert get_status_code(RobofleetError("x", code="other")) == HTTPStatus.BAD_REQUEST
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +160,7 @@ def test_http_exception_handler_returns_standardized_format() -> None:
 
 
 # `robofleet.services.base.ServiceError` is a parallel exception hierarchy
-# (it does NOT inherit from RobocoError), so a separate handler maps it
+# (it does NOT inherit from RobofleetError), so a separate handler maps it
 # to clean 4xx codes instead of letting the generic 500 handler eat it.
 
 

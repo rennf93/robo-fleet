@@ -10,7 +10,7 @@ from typing import Any, ClassVar
 from uuid import UUID
 
 
-class RobocoError(Exception):
+class RobofleetError(Exception):
     """
     Base exception for all RoboFleet errors.
 
@@ -47,7 +47,7 @@ class RobocoError(Exception):
 # =============================================================================
 
 
-class NotFoundError(RobocoError):
+class NotFoundError(RobofleetError):
     """Resource not found."""
 
     def __init__(
@@ -74,7 +74,7 @@ class NotFoundError(RobocoError):
 # =============================================================================
 
 
-class ValidationError(RobocoError):
+class ValidationError(RobofleetError):
     """Input validation failed."""
 
     def __init__(
@@ -95,7 +95,7 @@ class ValidationError(RobocoError):
         )
 
 
-class InvalidStateError(RobocoError):
+class InvalidStateError(RobofleetError):
     """Operation not allowed in current state."""
 
     def __init__(
@@ -125,7 +125,7 @@ class InvalidStateError(RobocoError):
 # =============================================================================
 
 
-class PermissionDeniedError(RobocoError):
+class PermissionDeniedError(RobofleetError):
     """Agent does not have permission for this action."""
 
     def __init__(
@@ -148,7 +148,7 @@ class PermissionDeniedError(RobocoError):
         )
 
 
-class AuthenticationError(RobocoError):
+class AuthenticationError(RobofleetError):
     """Authentication failed."""
 
     def __init__(
@@ -168,7 +168,7 @@ class AuthenticationError(RobocoError):
 # =============================================================================
 
 
-class TaskError(RobocoError):
+class TaskError(RobofleetError):
     """Base class for task-related errors."""
 
     def __init__(
@@ -270,7 +270,7 @@ class TaskLifecycleError(TaskError):
 # =============================================================================
 
 
-class AgentError(RobocoError):
+class AgentError(RobofleetError):
     """Base class for agent-related errors."""
 
     def __init__(
@@ -295,7 +295,7 @@ class AgentError(RobocoError):
 # =============================================================================
 
 
-class NotificationError(RobocoError):
+class NotificationError(RobofleetError):
     """Base class for notification errors."""
 
     def __init__(
@@ -312,7 +312,7 @@ class NotificationError(RobocoError):
 # =============================================================================
 
 
-class ServiceError(RobocoError):
+class ServiceError(RobofleetError):
     """External service error."""
 
     def __init__(

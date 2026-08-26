@@ -13,7 +13,7 @@ from pydantic import Field
 
 from robofleet.models.base import (
     JournalEntryType,
-    RobocoBase,
+    RobofleetBase,
     TimestampMixin,
 )
 
@@ -319,7 +319,7 @@ def create_general_entry(params: GeneralEntryParams) -> JournalEntry:
 # =============================================================================
 
 
-class JournalEntryCreate(RobocoBase):
+class JournalEntryCreate(RobofleetBase):
     """Schema for creating a new journal entry."""
 
     journal_id: UUID

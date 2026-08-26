@@ -52,7 +52,7 @@ _T = TypeVar("_T")
 # Every timeout-shaped test is parametrized over both real timeout shapes:
 # asyncio's own cancellation-converted TimeoutError, and GitTimeoutError
 # (GitService._run_git's own internal subprocess bound — a GitError/
-# RobocoError subclass, NOT a TimeoutError subclass, and the most common
+# RobofleetError subclass, NOT a TimeoutError subclass, and the most common
 # real-world single-hung-git-call shape since it defaults to a SHORTER
 # window, 30s, than a leg's own budget).
 _TIMEOUT_EXCEPTIONS = (

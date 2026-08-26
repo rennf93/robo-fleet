@@ -109,7 +109,7 @@ async def test_timeout_expired_becomes_git_timeout_error(tmp_path: Path) -> None
     """Mirrors _run_git's own TimeoutExpired -> GitTimeoutError conversion
     (git.py) so run_bounded_leg catches this uniformly with every other
     git-touching leg, instead of a raw subprocess.TimeoutExpired propagating
-    uncaught to the RobocoError handler."""
+    uncaught to the RobofleetError handler."""
     svc = _service()
     _wire_resolution(svc, tmp_path)
 

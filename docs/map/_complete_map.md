@@ -946,7 +946,7 @@ This slice is the packaging, build, and runtime-tooling layer of RoboFleet: the 
 | robofleet/bootstrap.py | Async bootstrap: DB init, Redis event bus, websocket bridge, orchestrator construction, uvicorn API server task, wait-for-ready poll, optional agent spawn, graceful shutdown | 161 |
 | robofleet/cli.py | argparse CLI wrapper around bootstrap.main / db-only; the ENTRYPOINT invoked by `python -m robofleet.cli` | 59 |
 | robofleet/logging.py | structlog setup (dev ConsoleRenderer / prod JSONRenderer), secret-redaction processor, rotating file handler under /data/logs, LogContext context-manager | 252 |
-| robofleet/exceptions.py | Exception hierarchy (RobocoError base + NotFound/Validation/InvalidState/Permission/Auth/Task/TaskLifecycle/Agent/Notification/Service/Database/Git/MergeConflict/GitCommand/GitTimeout); includes TaskLifecycle transition hints and git-secret scrubbing | 497 |
+| robofleet/exceptions.py | Exception hierarchy (RobofleetError base + NotFound/Validation/InvalidState/Permission/Auth/Task/TaskLifecycle/Agent/Notification/Service/Database/Git/MergeConflict/GitCommand/GitTimeout); includes TaskLifecycle transition hints and git-secret scrubbing | 497 |
 | docker/orchestrator.Dockerfile | Multi-stage build: uv venv builder (python:3.13-slim) + runner with docker-cli/git/make/node/npm/pnpm, ENTRYPOINT python -m robofleet.cli | 99 |
 | docker/agent-base.Dockerfile | Shared agent runtime: uv venv + Node 22 + @anthropic-ai/claude-code, agent user, hook scripts, safe.directory *, ENTRYPOINT claude | 108 |
 | docker/agent-prompter.Dockerfile | Intake (Prompter) — persistent Claude Agent SDK session, ENTRYPOINT python -m robofleet.agent_sdk.intake_main | 17 |
@@ -1007,7 +1007,7 @@ This slice is the packaging, build, and runtime-tooling layer of RoboFleet: the 
 | get_logger | function | robofleet/logging.py:192 | Return a configured structlog BoundLogger |
 | LogContext | class | robofleet/logging.py:210 | Context manager binding/unbinding contextvars for scoped log context |
 | log_operation | function | robofleet/logging.py:231 | Build a structured-log context dict for an operation |
-| RobocoError | class | robofleet/exceptions.py:13 | Base exception with message/code/details and to_dict() for API responses |
+| RobofleetError | class | robofleet/exceptions.py:13 | Base exception with message/code/details and to_dict() for API responses |
 | NotFoundError | class | robofleet/exceptions.py:50 | Resource not found (code NOT_FOUND) |
 | ValidationError | class | robofleet/exceptions.py:77 | Input validation failure (code VALIDATION_ERROR) |
 | InvalidStateError | class | robofleet/exceptions.py:98 | Operation not allowed in current state (code INVALID_STATE) |
@@ -2040,7 +2040,7 @@ foundation-lifecycle
 ```
 
 ## Dependencies
-- Internal: robofleet.foundation.identity (Role, Team), robofleet.foundation.policy.journaling (ReadTier, ROLE_READ_TIERS, PROTECTED_JOURNALS), robofleet.seeds.initial_data (AGENT_UUIDS, DEFAULT_AGENTS) for slug/team validators, robofleet.agents_config (can_a2a_direct, get_a2a_route_hint, get_agent_cell/role/team), robofleet.config.settings (SLA key resolution), robofleet.exceptions (RobocoError, TaskLifecycleError)
+- Internal: robofleet.foundation.identity (Role, Team), robofleet.foundation.policy.journaling (ReadTier, ROLE_READ_TIERS, PROTECTED_JOURNALS), robofleet.seeds.initial_data (AGENT_UUIDS, DEFAULT_AGENTS) for slug/team validators, robofleet.agents_config (can_a2a_direct, get_a2a_route_hint, get_agent_cell/role/team), robofleet.config.settings (SLA key resolution), robofleet.exceptions (RobofleetError, TaskLifecycleError)
 - External: dataclasses (frozen dataclasses), enum.StrEnum, collections.deque (BFS validator), itertools.pairwise (intent chain validator), typing (Literal, TYPE_CHECKING, Callable, Any)
 
 ## Entry Points
@@ -5087,14 +5087,14 @@ Default-off, CEO-gated at two independent points (the flags, then per-clip appro
 
 ## Purpose
 
-The Pydantic/dataclass domain surface of RoboFleet — the typed contract the API, services, orchestrator, and agent runtimes all speak. These are **not** the ORM tables (`robofleet/db/tables.py` owns persistence); models here are request/response schemas, domain aggregates, runtime DTOs, and enums that get crossed into SQLAlchemy rows by the service layer. Validation (`RobocoBase`: `extra="forbid"`, `validate_assignment`, `use_enum_values`) lives here, and several files (`agents.py`, `runtime.py`, `optimal.py`, `metrics.py`, `llm.py`, `audit.py`, `dashboard.py`, `transcription.py`, `extraction.py`, `permissions.py`) are pure dataclasses/StrEnums with no Pydantic model at all — runtime value types the orchestrator and services pass around.
+The Pydantic/dataclass domain surface of RoboFleet — the typed contract the API, services, orchestrator, and agent runtimes all speak. These are **not** the ORM tables (`robofleet/db/tables.py` owns persistence); models here are request/response schemas, domain aggregates, runtime DTOs, and enums that get crossed into SQLAlchemy rows by the service layer. Validation (`RobofleetBase`: `extra="forbid"`, `validate_assignment`, `use_enum_values`) lives here, and several files (`agents.py`, `runtime.py`, `optimal.py`, `metrics.py`, `llm.py`, `audit.py`, `dashboard.py`, `transcription.py`, `extraction.py`, `permissions.py`) are pure dataclasses/StrEnums with no Pydantic model at all — runtime value types the orchestrator and services pass around.
 
 ## Files
 
 | Path | Role | approx LOC |
 |------|------|------------|
 | `__init__.py` | Public re-export surface (`Agent`, `Task`, `Notification`, `Journal`, `CommitRef`, enums, `get_column_config`, …) | 149 |
-| `base.py` | All shared StrEnums (`TaskStatus`, `TaskType`, `AgentStatus`, `ModelProvider`, `JournalEntryType`, …) + `RobocoBase`/`TimestampMixin` + `AgentRole`/`Team` aliases to `foundation.identity` | 275 |
+| `base.py` | All shared StrEnums (`TaskStatus`, `TaskType`, `AgentStatus`, `ModelProvider`, `JournalEntryType`, …) + `RobofleetBase`/`TimestampMixin` + `AgentRole`/`Team` aliases to `foundation.identity` | 275 |
 | `task.py` | `Task` aggregate + `CommitRef`/`DocRef`/`ProgressUpdate`/`Checkpoint`/`SubTask`/`TaskPlan` + `TaskCreate`/`TaskUpdate`/`TaskCreateRequest` | 502 |
 | `a2a.py` | A2A protocol wire models (`AgentCard`, `A2ATask`, `A2AMessage`, parts) + persistent conversation models (`A2AConversation`, `A2AChatMessage`) + state mappers | 592 |
 | `agents.py` | Agent **runtime** domain types — per-role phase enums (`DevTaskPhase`, `QATaskPhase`, `CellPMPhase`, …), `AgentConfig`/`AgentState`, `TaskContext`/`ReviewContext`/`DocContext`, `AuditFlag`/`AuditReport` | 405 |
@@ -5187,7 +5187,7 @@ The Pydantic/dataclass domain surface of RoboFleet — the typed contract the AP
 | `GATED_KINDS` | frozenset | secretary.py:34 | High-impact directives that bounce back for CEO confirmation |
 | `KanbanBoard` | Pydantic model | kanban.py:79 | Board view with columns/swimlanes; `get_column_config` per board_type |
 | `DocumenterHandoff` | Pydantic model | handoff.py:69 | Dev→Doc handoff (RESERVED — not yet wired in service layer) |
-| `RobocoBase` | Pydantic BaseModel | base.py:238 | Base config: `extra="forbid"`, `validate_assignment`, `use_enum_values` |
+| `RobofleetBase` | Pydantic BaseModel | base.py:238 | Base config: `extra="forbid"`, `validate_assignment`, `use_enum_values` |
 | `TimestampMixin` | Pydantic model | base.py:271 | `created_at`/`updated_at` mixin |
 | `AgentConfig` | Pydantic model | agents.py:27 | Runtime agent config (distinct from API `Agent`); convenience `provider`/`model` props |
 | `LLMUsage` | dataclass | llm.py:34 | Token accounting incl. cache creation/read |
@@ -5195,7 +5195,7 @@ The Pydantic/dataclass domain surface of RoboFleet — the typed contract the AP
 
 ## Data Flow
 
-API request bodies → Pydantic `*Create`/`*Update` schemas (validation boundary, `extra="forbid"`) → route handlers → services. Services translate between these models and the SQLAlchemy ORM tables in `robofleet/db/tables.py` (e.g. `TaskTable`, `WorkSessionTable`, `ProjectTable`, `NotificationTable`, `JournalTable`, `JournalEntryTable`, `AgentTable`, `PlaybookTable`, `ProductTable`, `PitchTable`): the ORM row is the persistence shape; the Pydantic model is the contract shape. Several ORM tables load back into a model via `model_config = ConfigDict(from_attributes=True)` (`Playbook` at playbook.py:20, `Product`/`ProductCellMapping` via `RobocoBase`). Runtime-only DTOs (`AgentInstance`, `WaitingRecord`, `SpawnGitContext`, `Event`, `ExtractionResult`, `StreamBuffer`, the metrics/observability dataclasses, `AuditFlag`/`AuditReport`) never touch the DB directly — they are orchestrator/service in-process values. Enum parity between model and ORM is enforced by the test gate (`enum` columns in `tables.py` reference the same `StrEnum` classes from `base.py`/`foundation.identity`). `agent.py` `Agent` is the API/persistence model; `agents.py` `AgentConfig` is the runtime analogue used by the agent implementations — the comment at agents.py:7 calls this split out explicitly. Validation lives almost entirely on the Pydantic schemas (`min_length`, `ge`/`le`, `pattern`, `model_validator`); the dataclass models are intentionally validation-light.
+API request bodies → Pydantic `*Create`/`*Update` schemas (validation boundary, `extra="forbid"`) → route handlers → services. Services translate between these models and the SQLAlchemy ORM tables in `robofleet/db/tables.py` (e.g. `TaskTable`, `WorkSessionTable`, `ProjectTable`, `NotificationTable`, `JournalTable`, `JournalEntryTable`, `AgentTable`, `PlaybookTable`, `ProductTable`, `PitchTable`): the ORM row is the persistence shape; the Pydantic model is the contract shape. Several ORM tables load back into a model via `model_config = ConfigDict(from_attributes=True)` (`Playbook` at playbook.py:20, `Product`/`ProductCellMapping` via `RobofleetBase`). Runtime-only DTOs (`AgentInstance`, `WaitingRecord`, `SpawnGitContext`, `Event`, `ExtractionResult`, `StreamBuffer`, the metrics/observability dataclasses, `AuditFlag`/`AuditReport`) never touch the DB directly — they are orchestrator/service in-process values. Enum parity between model and ORM is enforced by the test gate (`enum` columns in `tables.py` reference the same `StrEnum` classes from `base.py`/`foundation.identity`). `agent.py` `Agent` is the API/persistence model; `agents.py` `AgentConfig` is the runtime analogue used by the agent implementations — the comment at agents.py:7 calls this split out explicitly. Validation lives almost entirely on the Pydantic schemas (`min_length`, `ge`/`le`, `pattern`, `model_validator`); the dataclass models are intentionally validation-light.
 
 ## Mermaid
 
@@ -5268,12 +5268,12 @@ models/
 │   ├── secretary.py       DirectiveKind, DirectiveStatus, GATED_KINDS
 │   └── playbook.py        Playbook, PlaybookCreate, PlaybookUpdate
 └── base
-    └── base.py            RobocoBase, TimestampMixin, all shared StrEnums, AgentRole/Team aliases, Annotated ID types
+    └── base.py            RobofleetBase, TimestampMixin, all shared StrEnums, AgentRole/Team aliases, Annotated ID types
 ```
 
 ## Dependencies
 
-- **Pydantic** (`BaseModel`, `ConfigDict`, `Field`, `model_validator`, `field_validator`) — every `RobocoBase` subclass.
+- **Pydantic** (`BaseModel`, `ConfigDict`, `Field`, `model_validator`, `field_validator`) — every `RobofleetBase` subclass.
 - **stdlib** `dataclasses`, `enum.StrEnum`, `datetime`, `uuid`, `typing` — the pure-dataclass files.
 - **`robofleet.foundation.identity`** — `base.py:21` imports `identity` and aliases `AgentRole = identity.Role`, `Team = identity.Team`. `product.py` and `pitch.py` import `CELL_TEAMS`/`Team` directly from `foundation.identity`.
 - **`robofleet.agents_config`** — `permissions.py:11` imports `ROLE_PERMISSION_LEVELS` to build `ROLE_LEVELS` at import time.
@@ -5286,7 +5286,7 @@ models/
 
 - `from robofleet.models import …` — the canonical import surface (`__init__.py` re-exports the API/Pydantic models + enums + `get_column_config`).
 - Direct module imports for the dataclass-only files: `from robofleet.models.runtime import AgentInstance, WaitingRecord, MODEL_MAP`, `from robofleet.models.events import Event, EventType`, `from robofleet.models.metrics import BottleneckReport, ReworkReport, Scorecard`, `from robofleet.models.optimal import SearchResult, RAGResponse`, `from robofleet.models.agents import AgentConfig, DevTaskPhase`, `from robofleet.models.llm_catalog import MODEL_CATALOG, provider_type_for_model`.
-- `robofleet.models.base` — import `RobocoBase`, `TimestampMixin`, and any shared enum when building a new model.
+- `robofleet.models.base` — import `RobofleetBase`, `TimestampMixin`, and any shared enum when building a new model.
 
 ## Config Flags
 
@@ -5295,7 +5295,7 @@ None — pure models, no flags. (The `Project` model *carries* opt-in fields `ci
 ## Gotchas
 
 - `AgentRole` and `Team` are **not defined in `models/base.py`** — they are `identity.Role` / `identity.Team` aliased at base.py:23–24. The comment says "Removed in Phase 4 housekeeping after every consumer is migrated." SQLAlchemy `sa.Enum(AgentRole, name="agentrole")` still works because Python identity is preserved. New code should import from `robofleet.foundation.identity` directly.
-- `ProductCellMapping` deliberately overrides `use_enum_values=False` (product.py:22) so `team` stays a real `Team` enum for `is`-checks and the validator's `.value` error — the only model that deviates from `RobocoBase`'s `use_enum_values=True`.
+- `ProductCellMapping` deliberately overrides `use_enum_values=False` (product.py:22) so `team` stays a real `Team` enum for `is`-checks and the validator's `.value` error — the only model that deviates from `RobofleetBase`'s `use_enum_values=True`.
 - `Task` mutations are not done on the model; `task.py:337` directs callers to `TaskService` (`claim`, `start`, `block`, `complete`, …). Same pattern for `Notification`, `Journal`, `WorkSession` — service-owned state.
 - `TaskCreate` has **no silent defaults** for `task_type` / `nature` / `estimated_complexity` (task.py:350 docstring) — mirrors `foundation.policy.task_completeness.TASK_AT_CREATE`. The 2026-05-08 trace of agents omitting `task_type` and deadlocking the lifecycle is the reason.
 - `TaskCreate._exactly_one_target` (task.py:405) enforces exactly one of `project_id` / `product_id` / `cell_projects`. Old callers passing `cell_projects` alongside either of the others now fail.
@@ -5354,7 +5354,7 @@ Logic-touching commits:
 
 ## Health
 
-The models package is coherent and well-layered: a single `RobocoBase` config drives consistency, enums are centralized in `base.py` (with the `AgentRole`/`Team` alias-to-`foundation.identity` migration clearly commented), and the API/Pydantic vs runtime/dataclass split is explicit (`agent.py` vs `agents.py`, with a docstring calling it out). The recent MegaTask per-cell-map change is small, additive, and validator-guarded; the main follow-on risk is migration 052 parity and test assertions on the renamed validator message — both mechanical. Two long-standing cleanliness items linger: `handoff.py` is a reserved-but-unwired model (file header says so), and several files (`dashboard.py`, `transcription.py`, `extraction.py`) are pure dataclasses that read as service-layer DTOs rather than domain models — harmless but slightly muddies the "models = typed contract surface" framing. Enum parity with the ORM (`tables.py`) is enforced by the test gate. No blocking issues; the package is in good shape.
+The models package is coherent and well-layered: a single `RobofleetBase` config drives consistency, enums are centralized in `base.py` (with the `AgentRole`/`Team` alias-to-`foundation.identity` migration clearly commented), and the API/Pydantic vs runtime/dataclass split is explicit (`agent.py` vs `agents.py`, with a docstring calling it out). The recent MegaTask per-cell-map change is small, additive, and validator-guarded; the main follow-on risk is migration 052 parity and test assertions on the renamed validator message — both mechanical. Two long-standing cleanliness items linger: `handoff.py` is a reserved-but-unwired model (file header says so), and several files (`dashboard.py`, `transcription.py`, `extraction.py`) are pure dataclasses that read as service-layer DTOs rather than domain models — harmless but slightly muddies the "models = typed contract surface" framing. Enum parity with the ORM (`tables.py`) is enforced by the test gate. No blocking issues; the package is in good shape.
 
 ## Purpose
 The DB layer is async SQLAlchemy 2.0 over PostgreSQL+asyncpg, with pgvector for the in-house RAG engine. Schema evolution is owned by an Alembic chain (001→086) that runs on every boot via `init_db()`; `Base.metadata.create_all` is no longer the source of truth — migration 017 reconciled the drift the other way. The ORM tables live in one fat module `robofleet/db/tables.py` (~2.5k lines, 38+ tables — not recomputed for this delta, several 077-086 migrations add columns to existing tables rather than new ones).
@@ -5792,7 +5792,7 @@ The FastAPI application shell, request pipeline, and real-time WebSocket fan-out
 
 ## Data Flow
 
-**HTTP request**: nginx → ASGI `app` → `CorrelationIdMiddleware` (binds correlation_id + path/method to structlog) → `RequestLoggingMiddleware` (start timer) → route. Route resolves `CurrentAgentContext` via `get_agent_context` (headers + HMAC verify + identity/role/team resolution), plus service deps from `get_choreographer`/`get_content_actions`. When `ROBOFLEET_CLOUD_AUTH_ENABLED` is off (default) this is byte-for-byte the historical header-trust path (`_header_trust_agent_context`). When on, `_cloud_auth_agent_context` enforces a dual path: a request carrying a valid `X-Agent-Token` HMAC (any role — the agent fleet + the orchestrator's own `system` self-PATCH) is verified then delegated to the same header-trust resolution; a request with no valid token and a non-CEO role claim is rejected outright (closes the LAN header-spoof hole); the CEO alone may instead authenticate via the `robofleet_session` cookie (`resolve_session_user`, `robofleet.api.auth.session`), which is re-minted on every authenticated request (`_slide_session_cookie`) for a sliding 30-day window. On exception, the handler chain maps: `RequestValidationError` → 422 (scrubbed log + UUID remediation hint), `HTTPException` → standardized error code, `RobocoError` → domain status, `ServiceError` → parallel-hierarchy status, `RateLimitError` → 429 + `Retry-After`, `Exception` → 500. Response gains `X-Correlation-ID` + `X-Response-Time-Ms`. When `ROBOFLEET_GUARD_ENABLED` is on, `SecurityMiddleware` (mounted last in `create_app`, so outermost) runs before any of this: rate/size/WAF/custom-validator checks either block the request (enforce mode) or only log the detection (`guard_passive_mode`, the calibration posture) ahead of the correlation-id middleware; off by default, the whole path is unchanged.
+**HTTP request**: nginx → ASGI `app` → `CorrelationIdMiddleware` (binds correlation_id + path/method to structlog) → `RequestLoggingMiddleware` (start timer) → route. Route resolves `CurrentAgentContext` via `get_agent_context` (headers + HMAC verify + identity/role/team resolution), plus service deps from `get_choreographer`/`get_content_actions`. When `ROBOFLEET_CLOUD_AUTH_ENABLED` is off (default) this is byte-for-byte the historical header-trust path (`_header_trust_agent_context`). When on, `_cloud_auth_agent_context` enforces a dual path: a request carrying a valid `X-Agent-Token` HMAC (any role — the agent fleet + the orchestrator's own `system` self-PATCH) is verified then delegated to the same header-trust resolution; a request with no valid token and a non-CEO role claim is rejected outright (closes the LAN header-spoof hole); the CEO alone may instead authenticate via the `robofleet_session` cookie (`resolve_session_user`, `robofleet.api.auth.session`), which is re-minted on every authenticated request (`_slide_session_cookie`) for a sliding 30-day window. On exception, the handler chain maps: `RequestValidationError` → 422 (scrubbed log + UUID remediation hint), `HTTPException` → standardized error code, `RobofleetError` → domain status, `ServiceError` → parallel-hierarchy status, `RateLimitError` → 429 + `Retry-After`, `Exception` → 500. Response gains `X-Correlation-ID` + `X-Response-Time-Ms`. When `ROBOFLEET_GUARD_ENABLED` is on, `SecurityMiddleware` (mounted last in `create_app`, so outermost) runs before any of this: rate/size/WAF/custom-validator checks either block the request (enforce mode) or only log the detection (`guard_passive_mode`, the calibration posture) ahead of the correlation-id middleware; off by default, the whole path is unchanged.
 
 **Lifespan startup**: `init_db` (alembic upgrade + create_all fallback) → `apply_persisted_feature_flags` (panel settings overlay, best-effort) → `TranscriptionService.start()` + `ExtractionPipeline` → `get_optimal_service()` (BLOCKS 30-90s for RAG) → `LearningPropagationService.initialize(optimal)`. `app.state.*` holds singletons. **Shutdown**: stop orchestrator (drains bg DB writes) → `close_optimal_service` → `close_db`. The orchestrator-stop-before-DB order is load-bearing.
 
@@ -5863,7 +5863,7 @@ robofleet/api/
 ├── middleware.py
 │   ├── CorrelationIdMiddleware
 │   ├── RequestLoggingMiddleware
-│   ├── exception handlers (RequestValidationError, HTTPException, RobocoError,
+│   ├── exception handlers (RequestValidationError, HTTPException, RobofleetError,
 │   │                        ServiceError, RateLimitError, Exception)
 │   ├── _scrub_secrets / _uuid_field_remediation
 │   └── setup_middleware()
@@ -5891,7 +5891,7 @@ robofleet/api/
 
 ## Dependencies
 
-**Internal**: `robofleet.config.settings`; `robofleet.db.base` (init_db/close_db/get_db/get_session_factory); `robofleet.db.tables.AgentTable`; `robofleet.foundation.identity` (BOARD_ROLES/DEV_ROLES/PM_ROLES/Role); `robofleet.models` (AgentRole/Team); `robofleet.runtime.AgentOrchestrator`; `robofleet.agents_config` (CEO_AGENT_ID, verify_agent_token, AGENT_ROLE_MAP/AGENT_TEAM_MAP, ALL_DOCS, _resolve_to_slug); `robofleet.events` (Event/EventType/get_event_bus); `robofleet.exceptions` (RobocoError tree); `robofleet.services.base` (ServiceError tree); `robofleet.services.exceptions.RateLimitError`; `robofleet.services.{permissions,task,work_session,git,workspace,journal,a2a,product,notification,notification_delivery,audit,settings,extraction,learning,optimal,transcription}`; `robofleet.services.gateway.{choreographer,content_actions,evidence_repo}`; `robofleet.services.repositories` (resolve_agent_uuid/resolve_agent_identity); `robofleet.api.schemas.{optimal.PaginationParams,common.ErrorCode}`; ~40 `robofleet.api.routes.*` routers; `robofleet.api.routes.v1.*` flow modules.
+**Internal**: `robofleet.config.settings`; `robofleet.db.base` (init_db/close_db/get_db/get_session_factory); `robofleet.db.tables.AgentTable`; `robofleet.foundation.identity` (BOARD_ROLES/DEV_ROLES/PM_ROLES/Role); `robofleet.models` (AgentRole/Team); `robofleet.runtime.AgentOrchestrator`; `robofleet.agents_config` (CEO_AGENT_ID, verify_agent_token, AGENT_ROLE_MAP/AGENT_TEAM_MAP, ALL_DOCS, _resolve_to_slug); `robofleet.events` (Event/EventType/get_event_bus); `robofleet.exceptions` (RobofleetError tree); `robofleet.services.base` (ServiceError tree); `robofleet.services.exceptions.RateLimitError`; `robofleet.services.{permissions,task,work_session,git,workspace,journal,a2a,product,notification,notification_delivery,audit,settings,extraction,learning,optimal,transcription}`; `robofleet.services.gateway.{choreographer,content_actions,evidence_repo}`; `robofleet.services.repositories` (resolve_agent_uuid/resolve_agent_identity); `robofleet.api.schemas.{optimal.PaginationParams,common.ErrorCode}`; ~40 `robofleet.api.routes.*` routers; `robofleet.api.routes.v1.*` flow modules.
 
 **External**: `fastapi` (FastAPI, APIRouter, WebSocket, HTTPException, Depends, Header, status), `starlette.middleware.base.BaseHTTPMiddleware`, `starlette` responses, `sqlalchemy` (select, async session), `structlog`, `pydantic` (via schemas), `asyncio`, `uuid`, `json`, `time`, `contextlib`. (`httpx` was REMOVED from websocket.py in the baseline→head diff — the self-call `validate_channel_access` is gone.)
 
@@ -6106,7 +6106,7 @@ The FastAPI surface of RoboFleet: every HTTP route under `robofleet/api/routes/`
 | `CurrentAgentContext` | dep | api/deps.py:376 | Resolves agent from headers + HMAC, injects `AgentContext`. |
 | `_require_ceo` | dep | routes/orchestrator.py:37 | Router-level CEO-HMAC guard on orchestrator control routes. |
 | `_validated_agent_id` | fn | routes/orchestrator.py:99 | Path-injection guard (rejects empty/`.`/`..`/`/`/`\`/NUL) then normalizes via `_resolve_to_slug` — spawn/stop/status/resolve-wait/mark-waiting accept either a DB UUID or a slug and address the runtime container by the resolved slug; an unknown UUID passes through unchanged. |
-| `setup_middleware` | fn | api/middleware.py | Register exception handlers (422 scrub, HTTP, RobocoError, generic). |
+| `setup_middleware` | fn | api/middleware.py | Register exception handlers (422 scrub, HTTP, RobofleetError, generic). |
 | `request_validation_handler` | fn | api/middleware.py:407 | Log 422 body (secrets scrubbed) + uuid remediate hint. |
 | `_scrub_secrets` | fn | api/middleware.py:389 | Deep-redact known secret fields from logged 422 bodies. |
 | `StrList` | type | schemas/v1/flow.py:20 | `list[str]` with `coerce_str_list` BeforeValidator (XML-nested LLM lists). |
@@ -6116,7 +6116,7 @@ The FastAPI surface of RoboFleet: every HTTP route under `robofleet/api/routes/`
 | `router` (flow_dev) | router | v1/flow_dev.py:24 | `/api/v1/flow/developer` router, `require_dev` dep. |
 
 ## Data Flow
-Request hits nginx (port 3000) -> FastAPI app (`api/app.py`) registers routers under `/api/*` plus `/api/v1/flow/*` and `/api/v1/do/*`. Middleware chain (CorrelationId -> RequestLogging) attaches a correlation ID and logs; exception handlers intercept 422/HTTP/RobocoError/generic. Router-level `Depends` resolves `DbSession` + agent context (HMAC-verified from `X-Agent-*` headers) and, on agent-gateway routes, the role guard. The thin handler pulls a service via `Depends` (TaskService, Choreographer, ContentActions, GitService, OptimalService, ReleaseProposalService...) and returns a typed Pydantic response; flow/do verbs return the Choreographer `Envelope` via `envelope_to_response`. SSE (`EventSourceResponse`) is used for live-chat streams and a2a send-stream.
+Request hits nginx (port 3000) -> FastAPI app (`api/app.py`) registers routers under `/api/*` plus `/api/v1/flow/*` and `/api/v1/do/*`. Middleware chain (CorrelationId -> RequestLogging) attaches a correlation ID and logs; exception handlers intercept 422/HTTP/RobofleetError/generic. Router-level `Depends` resolves `DbSession` + agent context (HMAC-verified from `X-Agent-*` headers) and, on agent-gateway routes, the role guard. The thin handler pulls a service via `Depends` (TaskService, Choreographer, ContentActions, GitService, OptimalService, ReleaseProposalService...) and returns a typed Pydantic response; flow/do verbs return the Choreographer `Envelope` via `envelope_to_response`. SSE (`EventSourceResponse`) is used for live-chat streams and a2a send-stream.
 
 ## Mermaid
 ```mermaid
@@ -6310,7 +6310,7 @@ The `robofleet/mcp` package is the agent-side MCP gateway: a set of `FastMCP` se
 | `mcp` (secretary) | `FastMCP` | `secretary_server.py:30` | Server instance `robofleet-secretary`. |
 | `StrList` | type alias | `flow_server.py:39` | `Annotated[list[str], BeforeValidator(coerce_str_list)]` — tolerates Claude SDK's nested XML-ish tool-input shapes before MCP validation rejects. |
 | `_CIRCUIT_REJECTION_KINDS` | frozenset | `flow_server.py:66`, `do_server.py:50` | The 4 breaker-counted kinds: `tracing_gap`, `invalid_state`, `not_authorized`, `incomplete_input`. |
-| `_DICT_ERROR_CODE_MAP` | dict | `flow_server.py:89`, `do_server.py:73` | Exact code→kind map for known RobocoError codes (e.g. `AUTHENTICATION_REQUIRED`→`not_authorized`). Unknown codes fall through to a substring branch for forward-compat. Added in 536bbb64 to fix AUTHENTICATION_REQUIRED mis-routing (#161). |
+| `_DICT_ERROR_CODE_MAP` | dict | `flow_server.py:89`, `do_server.py:73` | Exact code→kind map for known RobofleetError codes (e.g. `AUTHENTICATION_REQUIRED`→`not_authorized`). Unknown codes fall through to a substring branch for forward-compat. Added in 536bbb64 to fix AUTHENTICATION_REQUIRED mis-routing (#161). |
 | `_classify_dict_error_code` | func | `flow_server.py:110`, `do_server.py:94` | Map a dict-shaped `error.code` to a counted breaker kind: consults `_DICT_ERROR_CODE_MAP` first (exact), then substring fallback for unknown codes; NOT_FOUND → None. |
 | `_remediate_for_kind` | func | `flow_server.py:130`, `do_server.py:150` | Synthesize a directed recovery hint string for each counted kind (not_found / incomplete_input / not_authorized / invalid_state). Used by `_normalize_exception_envelope`. |
 | `_normalize_exception_envelope` | func | `flow_server.py:164`, `do_server.py:180` | Lift a dict-`error` exception-handler body or 422 `detail` list into Envelope wire format (string kind + message + remediate + missing). Returns None when payload is already a valid Envelope. Added in 0d714b6c (#232). |
@@ -6612,7 +6612,7 @@ No other commits in this slice since baseline.
 | Title | File:Line | Claim | Severity |
 |-------|-----------|-------|----------|
 | Breaker substitution could mask a real, fixable rejection | `flow_server.py:394`, `do_server.py:349` | **Partially mitigated (536bbb64):** the circuit_open envelope is now a dict-copy of the SDK's envelope with the original rejection nested as `inner` (preserving its kind/message/remediate). The agent sees `circuit_open` at the top level but the underlying rejection survives for ops debugging. The core risk remains: if the breaker trips on a mis-counted storm, the agent stops instead of retrying. | medium |
-| Dict-error classification substring fallback → mis-routing risk for unknown codes | `flow_server.py:110`, `do_server.py:94` | **Partially mitigated (536bbb64):** `_classify_dict_error_code` now consults `_DICT_ERROR_CODE_MAP` first (exact match for all known RobocoError codes, closing the AUTHENTICATION_REQUIRED mis-routing bug #161). Only codes NOT in the map fall through to the substring branch. A novel code that accidentally contains `DENIED`/`AUTH`/`PERMISSION` but is semantically different would still mis-route. Risk is now confined to future unknown codes only. | low |
+| Dict-error classification substring fallback → mis-routing risk for unknown codes | `flow_server.py:110`, `do_server.py:94` | **Partially mitigated (536bbb64):** `_classify_dict_error_code` now consults `_DICT_ERROR_CODE_MAP` first (exact match for all known RobofleetError codes, closing the AUTHENTICATION_REQUIRED mis-routing bug #161). Only codes NOT in the map fall through to the substring branch. A novel code that accidentally contains `DENIED`/`AUTH`/`PERMISSION` but is semantically different would still mis-route. Risk is now confined to future unknown codes only. | low |
 | 404 synthesis assumptions | `flow_server.py:272`, `do_server.py:238` | **Partially mitigated (536bbb64 #61):** a third 404 case was added: a 404 with a *descriptive* `detail` string (not the bare FastAPI default `"Not Found"`) is now surfaced as `not_found`, not `invalid_state`. Residual risk: a future route that returns a bare 404 with no `detail`/`error` field for a real resource-not-found would still synthesize `invalid_state`. The two carve-outs (`error` field → as-is; descriptive `detail` → `not_found`) cover the known cases. | low |
 | `_register_tools` raises at import if manifest missing — local dev breakage | `flow_server.py:965`, `do_server.py:896` | **Mitigated (536bbb64):** `ROBOFLEET_ALLOW_FULL_TOOLSET` env var added as a dev/test escape hatch that bypasses the `RuntimeError` and registers the full tool set. Production behaviour is unchanged (ROBOFLEET_ALLOW_FULL_TOOLSET is not set in the orchestrator manifest). The mitigant must not leak into production containers. | low |
 | `propose_batch` well-formed filter could silently drop intended drafts | `intake_server.py:146` | **Partially mitigated (536bbb64 #163):** `_draft_title` now accepts `name` as a fallback for `title`, and `_normalize_batch_drafts` normalizes `name`-only drafts onto `title` before posting. Residual risk: a draft using a different key (e.g. `label`) is still dropped silently; the `dropped` count is sent but the CEO may not notice. | low |

@@ -180,7 +180,7 @@ function CockpitShell() {
       <div className="p-3 pb-28">
         <header className="flex items-center justify-between px-1 pb-3 pt-1">
         <span className="tg-brand text-[13px] tracking-[0.3em] text-foreground">
-          ROBOCO<span className="tg-cursor text-primary">_</span>
+          ROBOFLEET<span className="tg-cursor text-primary">_</span>
         </span>
         <button
           type="button"

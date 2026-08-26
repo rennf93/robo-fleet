@@ -108,7 +108,7 @@ The FastAPI surface of RoboFleet: every HTTP route under `robofleet/api/routes/`
 | `_validated_agent_id` | fn | utils/orchestrator.py:70 (re-imported into routes/orchestrator.py, extracted 2026-08-08, finding F-6342aeab) | Path-injection guard (rejects empty/`.`/`..`/`/`/`\`/NUL) then normalizes via `_resolve_to_slug` — spawn/stop/status/resolve-wait/mark-waiting accept either a DB UUID or a slug and address the runtime container by the resolved slug; an unknown UUID passes through unchanged. |
 | `_build_manual_spawn_prompt` | fn | utils/orchestrator.py:102 (re-imported into routes/orchestrator.py) | Builds the initial prompt for a CEO-triggered manual (panel) spawn — points the agent at the task id/title/status and trusts the gateway envelope's `next`/`remediate` for the actual claim verb. |
 | `_resolve_manual_spawn_prompt` | fn | utils/orchestrator.py:126 (re-imported into routes/orchestrator.py) | Best-effort task-aware prompt for a manual panel spawn; falls back to the raw `ceo_message` unchanged on any lookup failure (bad `task_id`, DB hiccup, missing task) so enrichment never blocks a CEO-requested spawn. |
-| `setup_middleware` | fn | api/middleware.py | Register exception handlers (422 scrub, HTTP, RobocoError, generic). |
+| `setup_middleware` | fn | api/middleware.py | Register exception handlers (422 scrub, HTTP, RobofleetError, generic). |
 | `request_validation_handler` | fn | api/middleware.py:407 | Log 422 body (secrets scrubbed) + uuid remediate hint. |
 | `_scrub_secrets` | fn | api/middleware.py:389 | Deep-redact known secret fields from logged 422 bodies. |
 | `StrList` | type | schemas/v1/flow.py:20 | `list[str]` with `coerce_str_list` BeforeValidator (XML-nested LLM lists). |
@@ -118,7 +118,7 @@ The FastAPI surface of RoboFleet: every HTTP route under `robofleet/api/routes/`
 | `router` (flow_dev) | router | v1/flow_dev.py:24 | `/api/v1/flow/developer` router, `require_dev` dep. |
 
 ## Data Flow
-Request hits nginx (port 3000) -> FastAPI app (`api/app.py`) registers routers under `/api/*` plus `/api/v1/flow/*` and `/api/v1/do/*`. Middleware chain (CorrelationId -> RequestLogging) attaches a correlation ID and logs; exception handlers intercept 422/HTTP/RobocoError/generic. Router-level `Depends` resolves `DbSession` + agent context (HMAC-verified from `X-Agent-*` headers) and, on agent-gateway routes, the role guard. The thin handler pulls a service via `Depends` (TaskService, Choreographer, ContentActions, GitService, OptimalService, ReleaseProposalService...) and returns a typed Pydantic response; flow/do verbs return the Choreographer `Envelope` via `envelope_to_response`. SSE (`EventSourceResponse`) is used for live-chat streams and a2a send-stream.
+Request hits nginx (port 3000) -> FastAPI app (`api/app.py`) registers routers under `/api/*` plus `/api/v1/flow/*` and `/api/v1/do/*`. Middleware chain (CorrelationId -> RequestLogging) attaches a correlation ID and logs; exception handlers intercept 422/HTTP/RobofleetError/generic. Router-level `Depends` resolves `DbSession` + agent context (HMAC-verified from `X-Agent-*` headers) and, on agent-gateway routes, the role guard. The thin handler pulls a service via `Depends` (TaskService, Choreographer, ContentActions, GitService, OptimalService, ReleaseProposalService...) and returns a typed Pydantic response; flow/do verbs return the Choreographer `Envelope` via `envelope_to_response`. SSE (`EventSourceResponse`) is used for live-chat streams and a2a send-stream.
 
 ## Mermaid
 ```mermaid

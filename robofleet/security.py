@@ -80,7 +80,7 @@ async def _process_usage_rules_fail_open(
 
 setattr(BehavioralProcessor, "process_usage_rules", _process_usage_rules_fail_open)
 
-# Route-level return_pattern rules (behavior_analysis() decorators). Roboco
+# Route-level return_pattern rules (behavior_analysis() decorators). RoboFleet
 # has none of these today (every route-level rule is rule_type="frequency",
 # handled above), but a future one would hit the same unguarded redis call.
 _orig_process_return_rules = BehavioralProcessor.process_return_rules

@@ -5304,7 +5304,7 @@ class ContentActions:
             )
         # Catch A2A access denials and return an Envelope. If the
         # error escapes here it's caught by FastAPI's middleware and
-        # rendered as RobocoError.to_dict() — a dict-shaped 'error'
+        # rendered as RobofleetError.to_dict() — a dict-shaped 'error'
         # field that breaks do_server's circuit-breaker frozenset
         # check (a TypeError: unhashable type: 'dict').
         from robofleet.enforcement.a2a_access import A2AAccessDeniedError

@@ -14,7 +14,7 @@ from pydantic import Field, model_validator
 
 from robofleet.models.base import (
     Complexity,
-    RobocoBase,
+    RobofleetBase,
     TaskNature,
     TaskStatus,
     TaskType,
@@ -28,7 +28,7 @@ from robofleet.models.product import ProductCellMapping
 # =============================================================================
 
 
-class CommitRef(RobocoBase):
+class CommitRef(RobofleetBase):
     """Reference to a git commit."""
 
     hash: str = Field(..., min_length=7, max_length=40, description="Git commit hash")
@@ -39,7 +39,7 @@ class CommitRef(RobocoBase):
     )
 
 
-class DocRef(RobocoBase):
+class DocRef(RobofleetBase):
     """Reference to a document."""
 
     path: str = Field(..., description="Path to document")
@@ -68,7 +68,7 @@ class DocRef(RobocoBase):
     )
 
 
-class ProgressUpdate(RobocoBase):
+class ProgressUpdate(RobofleetBase):
     """A progress update on a task."""
 
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -79,7 +79,7 @@ class ProgressUpdate(RobocoBase):
     )
 
 
-class Checkpoint(RobocoBase):
+class Checkpoint(RobofleetBase):
     """A saved state checkpoint for task recovery."""
 
     id: UUID = Field(default_factory=uuid4)
@@ -92,7 +92,7 @@ class Checkpoint(RobocoBase):
     notes: str | None = Field(default=None, description="Additional notes")
 
 
-class SubTask(RobocoBase):
+class SubTask(RobofleetBase):
     """A sub-task within a task plan."""
 
     id: UUID = Field(default_factory=uuid4)
@@ -106,7 +106,7 @@ class SubTask(RobocoBase):
     notes: str | None = None
 
 
-class TaskPlan(RobocoBase):
+class TaskPlan(RobofleetBase):
     """Implementation plan for a task."""
 
     approach: str = Field(..., description="High-level approach description")
@@ -380,7 +380,7 @@ class Task(TimestampMixin):
 # =============================================================================
 
 
-class TaskCreate(RobocoBase):
+class TaskCreate(RobofleetBase):
     """Schema for creating a new task.
 
     Mirrors :data:`robofleet.foundation.policy.task_completeness.TASK_AT_CREATE`
@@ -451,7 +451,7 @@ class TaskCreate(RobocoBase):
         return self
 
 
-class TaskUpdate(RobocoBase):
+class TaskUpdate(RobofleetBase):
     """Schema for updating a task."""
 
     title: str | None = None

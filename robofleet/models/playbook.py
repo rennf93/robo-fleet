@@ -11,10 +11,10 @@ from uuid import UUID, uuid4
 
 from pydantic import ConfigDict, Field
 
-from robofleet.models.base import PlaybookStatus, RobocoBase
+from robofleet.models.base import PlaybookStatus, RobofleetBase
 
 
-class Playbook(RobocoBase):
+class Playbook(RobofleetBase):
     """A curated procedure, at any point in the draft -> approved/archived flow."""
 
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
@@ -40,7 +40,7 @@ class Playbook(RobocoBase):
     archived_at: datetime | None = None
 
 
-class PlaybookCreate(RobocoBase):
+class PlaybookCreate(RobofleetBase):
     """Service-layer create DTO — the slug is derived from the title by the service."""
 
     title: str = Field(..., min_length=1, max_length=200)
@@ -52,7 +52,7 @@ class PlaybookCreate(RobocoBase):
     source_task_id: UUID | None = None
 
 
-class PlaybookUpdate(RobocoBase):
+class PlaybookUpdate(RobofleetBase):
     """Partial update DTO (all fields optional)."""
 
     title: str | None = Field(default=None, min_length=1, max_length=200)

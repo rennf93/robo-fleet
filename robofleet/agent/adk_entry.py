@@ -208,6 +208,28 @@ async def _diag(label: str, detail: str = "") -> None:
         pass
 
 
+def _on_tool_error(
+    tool: Any, args: dict[str, Any], tool_context: Any, error: Exception
+) -> dict[str, Any]:
+    """Turn a tool failure into a tool RESPONSE instead of a dead run.
+
+    ADK raises straight out of the runner when the model calls a tool name
+    that is not registered (a hallucinated ``robofleet_git_status`` / ``bash``
+    killed real Cloud Run executions, which then burned a full container
+    restart + re-doing the work on the retry) or when a tool itself raises.
+    Handing the error back as the function response lets the model read the
+    available-tools list and self-correct in the next turn.
+    """
+    return {
+        "error": type(error).__name__,
+        "message": str(error)[:2000],
+        "tool": getattr(tool, "name", None),
+        "args": args,
+        "invocation_id": getattr(tool_context, "invocation_id", None),
+        "remediate": "Call one of the registered tools by its exact name.",
+    }
+
+
 async def main() -> int:
     usage = _new_usage()
     # Heartbeat: proves main() began (an OOM-SIGKILL during import leaves no
@@ -222,6 +244,7 @@ async def main() -> int:
             model=_MODEL,
             instruction=instruction,
             tools=tools,
+            on_tool_error_callback=_on_tool_error,
         )
         session_service = InMemorySessionService()
         runner = Runner(

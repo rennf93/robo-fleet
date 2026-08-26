@@ -183,3 +183,45 @@ async def test_main_propagates_unknown_exception(
 
     with pytest.raises(RuntimeError, match="boom"):
         await main()
+
+
+def test_on_tool_error_returns_response_instead_of_raising() -> None:
+    """An unknown tool name (or a raising tool) becomes a function RESPONSE the
+    model can read and recover from, not a dead run + Cloud Run retry."""
+    from robofleet.agent.adk_entry import _on_tool_error
+
+    err = ValueError("Tool 'bash' not found.\nAvailable tools: note, evidence")
+    resp = _on_tool_error(
+        tool=object(), args={"cmd": "ls"}, tool_context=object(), error=err
+    )
+    assert resp["error"] == "ValueError"
+    assert "Available tools: note, evidence" in resp["message"]
+    assert resp["remediate"]
+
+
+@pytest.mark.asyncio
+async def test_main_wires_on_tool_error_callback(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _setup_env(monkeypatch, tmp_path)
+    captured: dict[str, Any] = {}
+
+    class _FakeAgent:
+        def __init__(self, **kw: Any) -> None:
+            captured.update(kw)
+            self.tools = kw.get("tools", [])
+
+    class _FakeRunner:
+        def __init__(self, **_: Any) -> None:
+            pass
+
+        async def run_async(self, **_: Any) -> Any:
+            yield _FakeEvent()
+
+    monkeypatch.setattr("robofleet.agent.adk_entry.LlmAgent", _FakeAgent)
+    monkeypatch.setattr("robofleet.agent.adk_entry.Runner", _FakeRunner)
+    monkeypatch.setattr(httpx.AsyncClient, "post", _fake_post_ok)
+    from robofleet.agent.adk_entry import _on_tool_error, main
+
+    assert await main() == 0
+    assert captured["on_tool_error_callback"] is _on_tool_error

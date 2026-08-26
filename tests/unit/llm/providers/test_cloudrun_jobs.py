@@ -18,6 +18,7 @@ async def test_spawn_submits_job_execution(monkeypatch: pytest.MonkeyPatch) -> N
     fake_client.create_job = MagicMock(return_value=MagicMock())
     fake_client.run_job = MagicMock(return_value=fake_op)
     monkeypatch.setattr(mod, "_jobs_client", lambda: fake_client)
+    monkeypatch.setattr(mod, "_rotate_secret", lambda _sid, _v: None)
     # A dev spawn resolves a Filestore workspace cwd, which the provider
     # refuses to set without the NFS volume (see the guard tests below).
     monkeypatch.setattr(mod.settings, "gcp_filestore_ip", "10.0.0.5")

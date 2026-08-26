@@ -16,11 +16,13 @@ orchestrator itself never touches GCS.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 from typing import TYPE_CHECKING, Any
 
 import structlog
-from google.cloud import run_v2
+from google.api_core.exceptions import AlreadyExists
+from google.cloud import run_v2, secretmanager
 
 from robofleet.config import settings
 from robofleet.llm.providers.base import AgentProvider, ProviderError, SpawnResult
@@ -57,6 +59,66 @@ def _jobs_client() -> run_v2.JobsClient:
 
 def _executions_client() -> run_v2.ExecutionsClient:
     return run_v2.ExecutionsClient()
+
+
+def _secrets_client() -> secretmanager.SecretManagerServiceClient:
+    return secretmanager.SecretManagerServiceClient()
+
+
+def _rotate_secret(secret_id: str, value: str) -> None:
+    """Store ``value`` as the only enabled version of ``secret_id``.
+
+    Creates the secret on first use, adds a fresh version, then destroys every
+    older enabled version so a leaked handle cannot replay a previous token.
+    ponytail: versions are never pruned on retirement; the next spawn of the
+    same agent rotates them, which is enough for one-secret-per-agent.
+    """
+    client = _secrets_client()
+    parent = f"projects/{settings.gcp_project_id}"
+    name = f"{parent}/secrets/{secret_id}"
+    with contextlib.suppress(AlreadyExists):
+        client.create_secret(
+            request={
+                "parent": parent,
+                "secret_id": secret_id,
+                "secret": {"replication": {"automatic": {}}},
+            }
+        )
+    new = client.add_secret_version(
+        request={"parent": name, "payload": {"data": value.encode()}}
+    )
+    for version in client.list_secret_versions(
+        request={"parent": name, "filter": "state:ENABLED"}
+    ):
+        if version.name != new.name:
+            client.destroy_secret_version(request={"name": version.name})
+
+
+async def _secret_env(
+    name: str, value: str, agent_id: str, suffix: str
+) -> run_v2.EnvVar:
+    """An env var carrying a secret: a Secret Manager reference on GCP.
+
+    A plain ``value`` on a Cloud Run Job is readable by any project viewer in
+    the console (the execution's Variables tab), so on GCP the value goes
+    into a per-agent secret (rotated every spawn) and the Job references it;
+    Cloud Run resolves ``latest`` when the execution starts. Only a deploy
+    with no GCP project (local dev) keeps the plain value.
+    """
+    if not settings.gcp_project_id:
+        return run_v2.EnvVar(name=name, value=value)
+    slug = agent_id.replace("_", "-")
+    secret_id = f"{settings.gcp_secret_manager_prefix}-agent-{slug}-{suffix}"
+    try:
+        await asyncio.to_thread(_rotate_secret, secret_id, value)
+    except Exception as exc:
+        raise ProviderError(f"could not store {name} in Secret Manager: {exc}") from exc
+    return run_v2.EnvVar(
+        name=name,
+        value_source=run_v2.EnvVarSource(
+            secret_key_ref=run_v2.SecretKeySelector(secret=secret_id, version="latest")
+        ),
+    )
 
 
 async def _execution_name(op: Any, client: run_v2.JobsClient, job_name: str) -> str:
@@ -149,7 +211,11 @@ async def _append_git_token_env(
         )
         return
     if token:
-        env_vars.append(run_v2.EnvVar(name="ROBOFLEET_GIT_TOKEN", value=token))
+        env_vars.append(
+            await _secret_env(
+                "ROBOFLEET_GIT_TOKEN", token, config.agent_id, "git-token"
+            )
+        )
 
 
 class CloudRunJobsProvider(AgentProvider):
@@ -205,7 +271,9 @@ class CloudRunJobsProvider(AgentProvider):
             run_v2.EnvVar(name="ROBOFLEET_INITIAL_PROMPT", value=initial_prompt or ""),
             run_v2.EnvVar(name="ROBOFLEET_AGENT_ID", value=agent_uuid),
             run_v2.EnvVar(name="ROBOFLEET_AGENT_MODEL", value=_GEMINI_MODEL),
-            run_v2.EnvVar(name="ROBOFLEET_AGENT_TOKEN", value=token),
+            await _secret_env(
+                "ROBOFLEET_AGENT_TOKEN", token, config.agent_id, "agent-token"
+            ),
             run_v2.EnvVar(name="ROBOFLEET_AGENT_ROLE", value=role),
             # The token is HMAC-signed over (id, role, team), and the gateway
             # verifier checks the X-Agent-* headers match the values embedded
@@ -260,7 +328,12 @@ class CloudRunJobsProvider(AgentProvider):
             )
         elif settings.gemini_api_key:
             env_vars.append(
-                run_v2.EnvVar(name="GEMINI_API_KEY", value=settings.gemini_api_key)
+                await _secret_env(
+                    "GEMINI_API_KEY",
+                    settings.gemini_api_key,
+                    config.agent_id,
+                    "gemini-api-key",
+                )
             )
         # The orchestrator writes the ADK tool manifest to config.mcp_config_path
         # (via _generate_adk_manifest); upload THAT to GCS, not the Claude-Code

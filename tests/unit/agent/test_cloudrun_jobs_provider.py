@@ -68,6 +68,19 @@ def _env_map(job: run_v2.Job) -> dict[str, str]:
     return {e.name: e.value for e in envs}
 
 
+def _secret_refs(job: run_v2.Job) -> dict[str, tuple[str, str]]:
+    """name -> (secret id, version) for every secret-backed env var."""
+    envs = job.template.template.containers[0].env
+    return {
+        e.name: (
+            e.value_source.secret_key_ref.secret,
+            e.value_source.secret_key_ref.version,
+        )
+        for e in envs
+        if e.value_source.secret_key_ref.secret
+    }
+
+
 def _config(
     git_context: SpawnGitContext | None = None,
     mcp_config_path: Path | None = None,
@@ -109,6 +122,12 @@ def _patch_client(
             "robofleet.config.settings.gcp_filestore_nfs_path", "/workspaces"
         )
     fake = _FakeJobsClient()
+    # Secret rotation is recorded, never sent to Secret Manager.
+    fake.rotated: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        "robofleet.llm.providers.cloudrun_jobs._rotate_secret",
+        lambda secret_id, value: fake.rotated.append((secret_id, value)),
+    )
     monkeypatch.setattr(
         "robofleet.llm.providers.cloudrun_jobs._jobs_client", lambda: fake
     )
@@ -143,7 +162,14 @@ async def test_spawn_env_identity_token_signed_over_uuid(
     assert calls["team"] == _TEAM
     # AGENT_ID is the UUID (gateway X-Agent-ID is Annotated[UUID, Header]).
     assert env["ROBOFLEET_AGENT_ID"] == _UUID
-    assert env["ROBOFLEET_AGENT_TOKEN"] == _TOKEN
+    # The signed token never rides the Job as a plain value on GCP: it is a
+    # Secret Manager reference, rotated at spawn.
+    assert env["ROBOFLEET_AGENT_TOKEN"] == ""
+    assert _secret_refs(fake.captured.job)["ROBOFLEET_AGENT_TOKEN"] == (
+        "robofleet-agent-be-dev-1-agent-token",
+        "latest",
+    )
+    assert ("robofleet-agent-be-dev-1-agent-token", _TOKEN) in fake.rotated
     assert env["ROBOFLEET_AGENT_ROLE"] == _ROLE
     # Team env must be set: the token is signed over (id, role, team) and the
     # gateway verifier rejects a token whose embedded team has no matching
@@ -359,7 +385,12 @@ async def test_spawn_wires_git_token_from_project_pat(
 
     assert fake.captured is not None
     env = _env_map(fake.captured.job)
-    assert env["ROBOFLEET_GIT_TOKEN"] == "ghp_decrypted_pat"
+    assert env["ROBOFLEET_GIT_TOKEN"] == ""
+    assert _secret_refs(fake.captured.job)["ROBOFLEET_GIT_TOKEN"] == (
+        "robofleet-agent-be-dev-1-git-token",
+        "latest",
+    )
+    assert ("robofleet-agent-be-dev-1-git-token", "ghp_decrypted_pat") in fake.rotated
 
 
 @pytest.mark.asyncio
@@ -511,3 +542,52 @@ async def test_spawn_sets_per_task_worktree_for_documenter(
     expected = "/data/workspaces/robo-fleet/backend/be-dev-1/.worktrees/b154f3be"
     assert container.working_dir == expected
     assert _env_map(fake.captured.job)["ROBOFLEET_WORKSPACE_DIR"] == expected
+
+
+def test_rotate_secret_creates_adds_and_destroys_older_versions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from unittest.mock import MagicMock
+
+    from google.api_core.exceptions import AlreadyExists
+    from robofleet.llm.providers import cloudrun_jobs as mod
+
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "p")
+    client = MagicMock()
+    client.create_secret.side_effect = AlreadyExists("exists")
+    new = MagicMock()
+    new.name = "projects/p/secrets/s/versions/3"
+    client.add_secret_version.return_value = new
+    old = MagicMock()
+    old.name = "projects/p/secrets/s/versions/2"
+    client.list_secret_versions.return_value = [old, new]
+    monkeypatch.setattr(mod, "_secrets_client", lambda: client)
+
+    mod._rotate_secret("s", "tok")
+
+    client.add_secret_version.assert_called_once()
+    assert client.add_secret_version.call_args.kwargs["request"]["payload"] == {
+        "data": b"tok"
+    }
+    client.destroy_secret_version.assert_called_once_with(
+        request={"name": "projects/p/secrets/s/versions/2"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_secret_env_is_plain_only_without_gcp_project(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from robofleet.llm.providers import cloudrun_jobs as mod
+
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "")
+    env = await mod._secret_env("X", "v", "be-dev-1", "x")
+    assert env.value == "v"
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "p")
+
+    def _boom(_sid: str, _v: str) -> None:
+        raise RuntimeError("secret manager down")
+
+    monkeypatch.setattr(mod, "_rotate_secret", _boom)
+    with pytest.raises(mod.ProviderError, match="Secret Manager"):
+        await mod._secret_env("X", "v", "be-dev-1", "x")

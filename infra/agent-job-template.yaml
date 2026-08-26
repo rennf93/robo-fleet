@@ -15,7 +15,9 @@
 #   ROBOFLEET_AGENT_ROLE                -> role slug (developer, qa, cell_pm, ...)
 #   ROBOFLEET_AGENT_TOKEN               -> HMAC token issued by the orchestrator
 #                                       at spawn (issue_agent_token over the
-#                                       UUID); NOT a Secret Manager ref.
+#                                       UUID); on GCP the provider stores it in
+#                                       a per-agent Secret Manager secret and the
+#                                       Job carries a secretKeyRef, never the value.
 #   ROBOFLEET_INITIAL_PROMPT            -> the composed task prompt
 #   ROBOFLEET_TOOL_MANIFEST_PATH        -> gs://<bucket>/manifests/<agent-id>.json
 #   ROBOFLEET_GIT_TOKEN                 -> per-project decrypted PAT (the provider

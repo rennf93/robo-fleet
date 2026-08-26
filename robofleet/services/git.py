@@ -4503,6 +4503,12 @@ class GitService(BaseService):
         if not commands:
             return GateResult(passed=True, skipped=True)
         workspace = await self.get_workspace(project.slug, actor_agent_id)
+        # The task's diff lives in its per-task worktree (the spawn cwd), not
+        # the clone root, which stays parked on the base branch: linting the
+        # clone root passed a file that tripped CI the moment it merged.
+        worktree = self._worktree_for_task(workspace, task.id)
+        if worktree.is_dir():
+            workspace = worktree
         return await run_quality_commands(workspace, commands)
 
     @staticmethod

@@ -12,9 +12,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 if TYPE_CHECKING:
     import pathlib
+import uuid
 from uuid import uuid4
 
 import pytest
+from robofleet.services import git as git_mod
 from robofleet.services.gateway import quality_gate
 from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
 from robofleet.services.gateway.choreographer._impl import _IAmDoneContext
@@ -258,3 +260,36 @@ async def test_gate_is_fail_open_on_infrastructure_error() -> None:
         side_effect=RuntimeError("workspace not found")
     )
     assert await _choreo(git)._check_quality_gate(_ctx()) is None
+
+
+@pytest.mark.asyncio
+async def test_pre_submit_gate_runs_in_the_task_worktree(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The gate must lint the per-task worktree (where the diff is), falling
+    back to the clone root only when no worktree exists."""
+    task = SimpleNamespace(id=uuid.uuid4())
+    svc = GitService.__new__(GitService)
+    monkeypatch.setattr(
+        svc, "_project_for_task", AsyncMock(return_value=SimpleNamespace(slug="p"))
+    )
+    monkeypatch.setattr(
+        GitService, "_fast_gate_commands", staticmethod(lambda _p: [("lint", "true")])
+    )
+    monkeypatch.setattr(svc, "get_workspace", AsyncMock(return_value=tmp_path))
+    seen: list[pathlib.Path] = []
+
+    async def _fake_run(
+        workspace: pathlib.Path, _commands: list[tuple[str, str]]
+    ) -> GateResult:
+        seen.append(workspace)
+        return GateResult(passed=True)
+
+    monkeypatch.setattr(git_mod, "run_quality_commands", _fake_run)
+
+    await svc.run_pre_submit_quality_gate(uuid.uuid4(), task)
+    assert seen[-1] == tmp_path  # no worktree yet -> clone root
+    wt = tmp_path / ".worktrees" / str(task.id)[:8]
+    wt.mkdir(parents=True)
+    await svc.run_pre_submit_quality_gate(uuid.uuid4(), task)
+    assert seen[-1] == wt

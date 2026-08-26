@@ -69,6 +69,7 @@ from robofleet.models.optimal import (
 from robofleet.models.optimal import (
     IndexDecisionParams,
     IndexErrorParams,
+    RAGResponse,
 )
 from robofleet.models.permissions import KBAction
 from robofleet.security import (
@@ -306,6 +307,52 @@ async def find_similar(
 # =============================================================================
 
 
+def _rag_index_types(request: RAGQueryRequest) -> list[IndexType] | None:
+    """Parse the requested index_types, or None when unset."""
+    if not request.index_types:
+        return None
+    try:
+        return [IndexType(t) for t in request.index_types]
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid index type: {e}",
+        ) from e
+
+
+async def _run_rag_query(
+    request: RAGQueryRequest, context: QueryContext
+) -> RAGResponse:
+    """Execute the OptimalService RAG query under a 60s timeout, mapping
+    timeout/runtime/unexpected errors onto the matching HTTP status."""
+    import asyncio
+
+    rag_timeout = 60.0
+    try:
+        async with asyncio.timeout(rag_timeout):
+            service = await get_optimal_service()
+            return await service.query(
+                query=request.query,
+                context=context,
+                top_k=request.top_k,
+            )
+    except TimeoutError as e:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=f"RAG query timed out after {rag_timeout}s",
+        ) from e
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"RAG service error: {e}",
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"RAG query failed: {e}",
+        ) from e
+
+
 @router.post("/rag/query", response_model=RAGQueryResponse)
 @guard_deco.rate_limit(requests=30, window=60)
 @guard_deco.max_request_size(size_bytes=65536)
@@ -320,54 +367,14 @@ async def rag_query(
 
     Retrieves relevant context and generates an answer.
     """
-    import asyncio
-
-    # Build query context
-    index_types = None
-    if request.index_types:
-        try:
-            index_types = [IndexType(t) for t in request.index_types]
-        except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid index type: {e}",
-            ) from e
-
     context = QueryContext(
         project=request.project,
         task_id=request.task_id,
         agent_id=agent.agent_id,
-        index_types=index_types,
+        index_types=_rag_index_types(request),
     )
 
-    # RAG queries take longer due to LLM call - 60 second timeout
-    rag_timeout = 60.0
-    try:
-        async with asyncio.timeout(rag_timeout):
-            service = await get_optimal_service()
-            response = await service.query(
-                query=request.query,
-                context=context,
-                top_k=request.top_k,
-            )
-    except TimeoutError as e:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail=f"RAG query timed out after {rag_timeout}s",
-        ) from e
-    except RuntimeError as e:
-        # Service not initialized or other runtime errors
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"RAG service error: {e}",
-        ) from e
-    except Exception as e:
-        # Catch-all for unexpected errors
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"RAG query failed: {e}",
-        ) from e
-
+    response = await _run_rag_query(request, context)
     gaps = getattr(response, "gaps", [])
 
     # Total outage: every index timed out, no citations returned.

@@ -67,6 +67,12 @@ spec:
               value: "__PROJECT_ID__"
             - name: ROBOFLEET_GCP_REGION
               value: "__REGION__"
+            # Vertex MODEL location, separate from the Cloud Run Job region
+            # above. gemini-3.5-flash's canonical Vertex endpoint is global
+            # (regional availability was preview/unstable Aug 2026); the Job
+            # region stays us-central1.
+            - name: ROBOFLEET_GCP_VERTEX_MODEL_LOCATION
+              value: "global"
             - name: ROBOFLEET_GCP_CLOUDSQL_INSTANCE
               value: "__CLOUDSQL_INSTANCE__"
             - name: ROBOFLEET_GCP_MEMORYSTORE_HOST

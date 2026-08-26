@@ -33,10 +33,13 @@ if TYPE_CHECKING:
 # Model id ADK agents run on Cloud Run. The orchestrator does not pin a CLI
 # here (no shell-out); this is the Gemini model id the agent container's ADK
 # runtime is configured against.
-# gemini-3.5-flash 404s on Vertex (preview gating); gemini-2.5-flash is GA on
-# both the Gemini API (AI Studio) and Vertex AI, so it is the safe default for a
-# Vertex-backed Cloud Run agent. Overridable per-spawn via ROBOFLEET_AGENT_MODEL.
-_GEMINI_MODEL = os.environ.get("ROBOFLEET_AGENT_MODEL_DEFAULT", "gemini-2.5-flash")
+# gemini-3.5-flash is the hackathon-required model (Gemini 3.5+ via Vertex AI).
+# Its canonical Vertex endpoint is the GLOBAL location (regional availability
+# is preview and flipped 404<->200 day to day during Aug 2026), so the deploy
+# points the Vertex MODEL location at global via gcp_vertex_model_location,
+# while the Cloud Run Job region (gcp_region) stays a real region. Overridable
+# per-spawn via ROBOFLEET_AGENT_MODEL.
+_GEMINI_MODEL = os.environ.get("ROBOFLEET_AGENT_MODEL_DEFAULT", "gemini-3.5-flash")
 
 # Job max runtime. Cloud Run Jobs caps an execution at this wall-clock.
 _JOB_TIMEOUT_SECONDS = 1800
@@ -217,7 +220,16 @@ class CloudRunJobsProvider(AgentProvider):
             env_vars.append(
                 run_v2.EnvVar(
                     name="GOOGLE_CLOUD_LOCATION",
-                    value=settings.gcp_region or "us-central1",
+                    # The Vertex MODEL location (where the LLM is served), not
+                    # the Cloud Run Job region (gcp_region, which must stay a
+                    # real region). gemini-3.5-flash is global-only, so the
+                    # deploy sets gcp_vertex_model_location=global; unset falls
+                    # back to the Job region for regional models.
+                    value=(
+                        settings.gcp_vertex_model_location
+                        or settings.gcp_region
+                        or "us-central1"
+                    ),
                 )
             )
         elif settings.gemini_api_key:

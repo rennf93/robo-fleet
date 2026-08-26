@@ -136,10 +136,12 @@ async def test_spawn_env_identity_token_signed_over_uuid(
     assert env["ROBOFLEET_API_URL"] == "http://orch:8000"
     assert env["ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS"] == "120.0"
     assert env["ROBOFLEET_FLOW_VERB_SLOW_TIMEOUT_SECONDS"] == "900"
-    # Existing 4 env vars still present. Default model is the Vertex-GA
-    # gemini-2.5-flash (gemini-3.5-flash 404s on Vertex preview gating).
+    # Default model is gemini-3.5-flash (the hackathon-required Gemini 3.5+
+    # via Vertex AI); it is served on the global Vertex endpoint, so the
+    # deploy sets gcp_vertex_model_location=global (see the global-location
+    # test below). Unset here, GOOGLE_CLOUD_LOCATION falls back to gcp_region.
     assert env["ROBOFLEET_INITIAL_PROMPT"] == "do the work"
-    assert env["ROBOFLEET_AGENT_MODEL"] == "gemini-2.5-flash"
+    assert env["ROBOFLEET_AGENT_MODEL"] == "gemini-3.5-flash"
     # No git context -> no ROBOFLEET_GIT_TOKEN.
     assert "ROBOFLEET_GIT_TOKEN" not in env
     # gcp_project_id set -> Vertex path wins over the API-key fallback, so
@@ -148,6 +150,38 @@ async def test_spawn_env_identity_token_signed_over_uuid(
     assert env["GOOGLE_CLOUD_PROJECT"] == "test-proj"
     assert env["GOOGLE_CLOUD_LOCATION"] == "us-central1"
     assert "GEMINI_API_KEY" not in env
+
+
+@pytest.mark.asyncio
+async def test_spawn_vertex_location_global_for_gemini_3_5_flash(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """gemini-3.5-flash's canonical Vertex endpoint is the GLOBAL location
+    (regional availability was preview/unstable through Aug 2026); the deploy
+    sets gcp_vertex_model_location=global so GOOGLE_CLOUD_LOCATION resolves to
+    "global" while the Cloud Run Job region (gcp_region, used for the job parent
+    path) stays us-central1."""
+    monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("robofleet.config.settings.flow_verb_timeout_seconds", 120.0)
+    monkeypatch.setattr("robofleet.config.settings.flow_verb_slow_timeout_seconds", 900)
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr(
+        "robofleet.config.settings.gcp_vertex_model_location", "global"
+    )
+    _patch_identity(monkeypatch)
+    fake = _patch_client(monkeypatch)
+
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
+    await provider.spawn(_config(), initial_prompt="do the work")
+
+    env = _env_map(fake.captured.job)
+    # The model LLM is served from the global Vertex endpoint.
+    assert env["ROBOFLEET_AGENT_MODEL"] == "gemini-3.5-flash"
+    assert env["GOOGLE_CLOUD_LOCATION"] == "global"
+    # The Job's own region (the create-request parent path) is unaffected by
+    # the model location: still us-central1, not "global".
+    assert fake.captured.parent == "projects/test-proj/locations/us-central1"
 
 
 @pytest.mark.asyncio

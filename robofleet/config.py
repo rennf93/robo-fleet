@@ -228,6 +228,15 @@ class Settings(BaseSettings):
     # ==========================================================================
     gcp_project_id: str = Field(default="", description="Google Cloud project id.")
     gcp_region: str = Field(default="", description="Google Cloud region.")
+    gcp_vertex_model_location: str = Field(
+        default="",
+        description=(
+            "Vertex AI location for the agent LLM model, separate from the Cloud "
+            "Run Job region (gcp_region). Empty falls back to gcp_region. Set to "
+            "'global' to use the canonical Vertex endpoint for gemini-3.5-flash, "
+            "whose regional availability was preview/unstable through Aug 2026."
+        ),
+    )
     gemini_api_key: str = Field(
         default="",
         description="Gemini API key forwarded into ADK agent Cloud Run Jobs as "

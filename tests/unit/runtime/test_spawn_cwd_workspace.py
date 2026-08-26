@@ -238,20 +238,19 @@ class TestCellPmSpawnCwdNoWorkdir:
         )
 
 
-class TestDocumenterSpawnCwdCellWorkspace:
-    """Documenter container must start in the cell-workspace path."""
+class TestDocumenterSpawnCwdAgentWorkspace:
+    """Documenter container must start in its own clone (per-task worktree
+    when the task has a branch), never the cell dir, which is not a checkout."""
 
-    def test_cmd_contains_cell_workspace_workdir(self) -> None:
-        """docker run for a documenter uses -w <cell_workspace_path>."""
+    def test_cmd_contains_agent_workspace_workdir(self) -> None:
+        """docker run for a branchless documenter spawn uses -w <clone root>."""
         config = _make_documenter_config(project_slug="robofleet-api")
         cmd = _build_cmd("robofleet-agent-be-doc", config)
 
-        # Documenter allowlist scopes to cell_workspace_path:
-        # /data/workspaces/<project>/<team>
         assert "-w" in cmd, f"'-w' flag missing from documenter docker run cmd: {cmd}"
         w_idx = cmd.index("-w")
         workdir = cmd[w_idx + 1]
-        expected = "/data/workspaces/robofleet-api/backend"
+        expected = "/data/workspaces/robofleet-api/backend/be-doc"
         assert workdir == expected, (
             f"Expected documenter workdir '{expected}' but got '{workdir}'. "
             f"Full cmd: {cmd}"

@@ -52,6 +52,8 @@ class _FakeJobsClient:
 
     def __init__(self) -> None:
         self.captured: run_v2.CreateJobRequest | None = None
+        # (secret id, value) pairs the provider asked Secret Manager to rotate.
+        self.rotated: list[tuple[str, str]] = []
 
     def create_job(self, *, request: run_v2.CreateJobRequest) -> None:
         self.captured = request
@@ -123,7 +125,6 @@ def _patch_client(
         )
     fake = _FakeJobsClient()
     # Secret rotation is recorded, never sent to Secret Manager.
-    fake.rotated: list[tuple[str, str]] = []
     monkeypatch.setattr(
         "robofleet.llm.providers.cloudrun_jobs._rotate_secret",
         lambda secret_id, value: fake.rotated.append((secret_id, value)),

@@ -12432,7 +12432,10 @@ Start by:
         elif role == "pm":
             candidates = [f"{prefix}-pm"]
         elif role == "pr_reviewer":
-            candidates = [f"{prefix}-pr-reviewer"]
+            # Cell's own reviewer first; the shared overflow reviewer
+            # cell-pr-reviewer-2 (team BOARD) backs up every cell so a
+            # pile-up of gate PRs never stalls waiting on one reviewer.
+            candidates = [f"{prefix}-pr-reviewer", "cell-pr-reviewer-2"]
         else:
             return None
 

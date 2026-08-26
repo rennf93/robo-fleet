@@ -244,6 +244,16 @@ AGENTS: dict[str, AgentRow] = {
         Team.UX_UI,
         _u("00000000-0000-0000-0003-000000000006"),
     ),
+    # Overflow cell-gate reviewer - team BOARD (not cell-scoped) so every
+    # cell's gate can fall back to it when the cell's own reviewer is busy
+    # (multiple PRs piled at the gate). Routed as the second candidate in
+    # _select_agent_for_cell's pr_reviewer branch.
+    "cell-pr-reviewer-2": AgentRow(
+        "cell-pr-reviewer-2",
+        Role.PR_REVIEWER,
+        Team.BOARD,
+        _u("00000000-0000-0000-0004-000000000008"),
+    ),
 }
 
 

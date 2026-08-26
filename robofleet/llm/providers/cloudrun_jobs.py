@@ -59,7 +59,7 @@ def _executions_client() -> run_v2.ExecutionsClient:
     return run_v2.ExecutionsClient()
 
 
-def _execution_name(op: Any, client: run_v2.JobsClient, job_name: str) -> str:
+async def _execution_name(op: Any, client: run_v2.JobsClient, job_name: str) -> str:
     """Resolve the full execution resource name a ``run_job`` call started.
 
     ``run_job`` returns a long-running Operation whose ``metadata`` IS the
@@ -74,7 +74,9 @@ def _execution_name(op: Any, client: run_v2.JobsClient, job_name: str) -> str:
     name = getattr(meta, "name", None)
     if isinstance(name, str) and name.startswith("projects/"):
         return name
-    job = client.get_job(request=run_v2.GetJobRequest(name=job_name))
+    job = await asyncio.to_thread(
+        client.get_job, request=run_v2.GetJobRequest(name=job_name)
+    )
     short = getattr(getattr(job, "latest_created_execution", None), "name", "")
     if isinstance(short, str) and short:
         return (
@@ -397,7 +399,7 @@ class CloudRunJobsProvider(AgentProvider):
         op = await asyncio.to_thread(
             client.run_job, request=run_v2.RunJobRequest(name=name)
         )
-        execution_name = _execution_name(op, client, name)
+        execution_name = await _execution_name(op, client, name)
         return SpawnResult(
             instance_id=execution_name,
             extra={"job": name, "model": _GEMINI_MODEL},

@@ -94,23 +94,25 @@ def test_task_template_refuses_workspace_cwd_without_nfs(
     assert not template.containers[0].working_dir
 
 
-def test_execution_name_prefers_operation_metadata() -> None:
+@pytest.mark.asyncio
+async def test_execution_name_prefers_operation_metadata() -> None:
     op = MagicMock()
     op.metadata.name = "projects/p/locations/r/jobs/j/executions/e1"
     client = MagicMock()
-    assert mod._execution_name(op, client, "projects/p/locations/r/jobs/j") == (
+    assert await mod._execution_name(op, client, "projects/p/locations/r/jobs/j") == (
         "projects/p/locations/r/jobs/j/executions/e1"
     )
     client.get_job.assert_not_called()
 
 
-def test_execution_name_falls_back_to_latest_created_execution() -> None:
+@pytest.mark.asyncio
+async def test_execution_name_falls_back_to_latest_created_execution() -> None:
     # A bare Operation (no usable metadata) -> ask the Job for its newest
     # execution; the field is a short id that must be re-qualified.
     op = object()
     client = MagicMock()
     client.get_job.return_value.latest_created_execution.name = "j-abc12"
-    assert mod._execution_name(op, client, "projects/p/locations/r/jobs/j") == (
+    assert await mod._execution_name(op, client, "projects/p/locations/r/jobs/j") == (
         "projects/p/locations/r/jobs/j/executions/j-abc12"
     )
 

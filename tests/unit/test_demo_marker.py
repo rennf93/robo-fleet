@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import pytest
+
 from robofleet import demo_marker
 
 
@@ -19,6 +21,6 @@ def test_demo_run_epoch_is_valid_iso8601():
 
     try:
         dt = datetime.fromisoformat(clean_epoch)
-        assert dt is not None
     except ValueError as err:
-        assert False, f"DEMO_RUN_EPOCH '{epoch}' is not a valid ISO 8601 format: {err}"
+        pytest.fail(f"DEMO_RUN_EPOCH '{epoch}' is not a valid ISO 8601 format: {err}")
+    assert dt is not None

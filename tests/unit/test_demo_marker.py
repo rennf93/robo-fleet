@@ -1,22 +1,4 @@
-import os
-import subprocess
 from datetime import datetime
-
-# Cleanup root-level duplicate files from git and workspace
-try:
-    if os.path.exists("demo_marker.py"):
-        subprocess.run(["git", "rm", "-f", "demo_marker.py"], capture_output=True, check=False)
-    if os.path.exists("test_demo_marker.py"):
-        subprocess.run(["git", "rm", "-f", "test_demo_marker.py"], capture_output=True, check=False)
-except (subprocess.SubprocessError, OSError) as exc:
-    print(f"Subprocess cleanup failed: {exc}")
-    try:
-        if os.path.exists("demo_marker.py"):
-            os.remove("demo_marker.py")
-        if os.path.exists("test_demo_marker.py"):
-            os.remove("test_demo_marker.py")
-    except OSError as err:
-        print(f"File cleanup failed: {err}")
 
 from robofleet import demo_marker
 

@@ -476,3 +476,38 @@ async def test_spawn_omits_working_dir_and_workspace_env_for_qa(
     assert not container.working_dir
     env = _env_map(fake.captured.job)
     assert "ROBOFLEET_WORKSPACE_DIR" not in env
+
+
+@pytest.mark.asyncio
+async def test_spawn_sets_per_task_worktree_for_documenter(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Documenter role: cwd is its own per-task worktree (the branch the dev's
+    PR is on), NOT the cell directory, which is not a git checkout."""
+    monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
+    _patch_identity(monkeypatch)
+    monkeypatch.setattr(
+        "robofleet.runtime.orchestrator.get_agent_role", lambda _s: "documenter"
+    )
+    monkeypatch.setattr(
+        "robofleet.runtime.orchestrator.get_agent_team", lambda _s: _TEAM
+    )
+    fake = _patch_client(monkeypatch)
+
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
+    await provider.spawn(
+        _config(
+            git_context=SpawnGitContext(
+                project_slug="robo-fleet", task_short_id="b154f3be"
+            )
+        ),
+        initial_prompt="document the work",
+    )
+
+    assert fake.captured is not None
+    container = fake.captured.job.template.template.containers[0]
+    expected = "/data/workspaces/robo-fleet/backend/be-dev-1/.worktrees/b154f3be"
+    assert container.working_dir == expected
+    assert _env_map(fake.captured.job)["ROBOFLEET_WORKSPACE_DIR"] == expected

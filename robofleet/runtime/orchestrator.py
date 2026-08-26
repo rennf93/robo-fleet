@@ -809,10 +809,10 @@ def _agent_cwd_path(
 
 
 def _cell_workspace_path(project_slug: str, team: str) -> str:
-    """Cell-level workspace path (documenter scope).
+    """Cell-level workspace path (the docker-path QA/Docs read allowlist).
 
-    Same rationale as ``_agent_workspace_path``; documenters work at the cell
-    branch, not a per-agent dev branch.
+    Not a git checkout (it holds the per-agent clones), so it is never a
+    spawn cwd; documenters edit in their own per-task worktree.
     """
     return f"/data/workspaces/{project_slug}/{team}"
 
@@ -3473,10 +3473,13 @@ class AgentOrchestrator:
         else:
             cmd.extend(["-e", "ROBOFLEET_GATEWAY_ENABLED=false"])
 
+    # Documenters edit the SAME per-task worktree the dev's branch lives in:
+    # the old cell-level path (/data/workspaces/<project>/<team>) is not a git
+    # checkout at all, so a documenter's README/docs edits landed nowhere and
+    # i_documented passed with nothing on the PR (rehearsal b154f3be).
     _ROLES_WITH_AGENT_WORKSPACE: ClassVar[frozenset[str]] = frozenset(
-        {"developer", "product_owner", "head_marketing"}
+        {"developer", "documenter", "product_owner", "head_marketing"}
     )
-    _ROLES_WITH_CELL_WORKSPACE: ClassVar[frozenset[str]] = frozenset({"documenter"})
 
     @staticmethod
     def _resolve_workspace_cwd(config: AgentConfig) -> str | None:
@@ -3495,8 +3498,6 @@ class AgentOrchestrator:
             # clone root. _agent_cwd_path is the SAME formula the Edit/Write
             # allowlist is built from, so -w and the allowlist match exactly.
             return _agent_cwd_path(project, team, config.agent_id, config.git_context)
-        if role in AgentOrchestrator._ROLES_WITH_CELL_WORKSPACE:
-            return _cell_workspace_path(project, team)
         return None
 
     @staticmethod
@@ -3509,8 +3510,8 @@ class AgentOrchestrator:
         # Dockerfile) shadows the workspace and every file op fails.
         #
         # Workspace selection lives in _resolve_workspace_cwd:
-        # - developer / product_owner / head_marketing: per-agent workspace
-        # - documenter: cell workspace
+        # - developer / documenter / product_owner / head_marketing: per-agent
+        #   workspace (per-task worktree when the task has a branch)
         # - qa / cell_pm / main_pm / auditor: no write workspace → omit -w
         workspace = AgentOrchestrator._resolve_workspace_cwd(config)
         if workspace is not None:
@@ -4037,10 +4038,7 @@ class AgentOrchestrator:
             if git_context and git_context.project_slug
             else None
         )
-        if adk_project and (
-            adk_role in AgentOrchestrator._ROLES_WITH_AGENT_WORKSPACE
-            or adk_role in AgentOrchestrator._ROLES_WITH_CELL_WORKSPACE
-        ):
+        if adk_project and adk_role in AgentOrchestrator._ROLES_WITH_AGENT_WORKSPACE:
             from robofleet.db.base import get_db_context
             from robofleet.services.workspace import WorkspaceService
 

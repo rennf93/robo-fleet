@@ -33,6 +33,7 @@ from robofleet.api.schemas.tasks import (
     SubstituteRequest,
     TaskCountResponse,
     TaskFindingsResponse,
+    TaskGovernanceReportResponse,
     TaskResponse,
     TaskSummaryResponse,
     TaskUpdate,
@@ -73,6 +74,7 @@ from robofleet.security import (
 from robofleet.services.audit import get_audit_service
 from robofleet.services.base import ServiceError
 from robofleet.services.gateway.choreographer.collision import build_collision_context
+from robofleet.services.governance import get_governance_service
 from robofleet.services.journal import get_journal_service
 from robofleet.services.notification_delivery import (
     EscalationError,
@@ -990,6 +992,26 @@ async def get_task_collision_map(
             for s in (ctx or [])
         ],
     )
+
+
+@router.get("/{task_id}/governance", response_model=TaskGovernanceReportResponse)
+async def get_task_governance(
+    task_id: UUID,
+    db: DbSession,
+    _agent: CurrentAgentContext,
+) -> TaskGovernanceReportResponse:
+    """The governance report for a task: the full quality-gate chain
+    (conventions -> self-verification -> QA -> PR-gate -> PM review -> CEO
+    approval), revision-findings summary, conventions verdict, and rework
+    count. Read-only feed for the panel's Governance tab.
+    """
+    service = get_governance_service(db)
+    report = await service.get_report(task_id)
+    if report is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+    return report
 
 
 # =============================================================================

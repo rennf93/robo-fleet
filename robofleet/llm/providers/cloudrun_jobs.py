@@ -59,6 +59,30 @@ def _executions_client() -> run_v2.ExecutionsClient:
     return run_v2.ExecutionsClient()
 
 
+def _execution_name(op: Any, client: run_v2.JobsClient, job_name: str) -> str:
+    """Resolve the full execution resource name a ``run_job`` call started.
+
+    ``run_job`` returns a long-running Operation whose ``metadata`` IS the
+    ``run_v2.Execution`` (the Operation object itself has no ``name``; the
+    earlier ``getattr(op, "name", "")`` was always empty and left a
+    placeholder ``.../executions/1`` handle behind, so every later
+    ``health_check`` / ``execution_outcome`` hit a non-existent execution and
+    the orchestrator never retired the instance). Falls back to the Job's
+    ``latest_created_execution`` (a short id) when the metadata is missing.
+    """
+    meta = getattr(op, "metadata", None)
+    name = getattr(meta, "name", None)
+    if isinstance(name, str) and name.startswith("projects/"):
+        return name
+    job = client.get_job(request=run_v2.GetJobRequest(name=job_name))
+    short = getattr(getattr(job, "latest_created_execution", None), "name", "")
+    if isinstance(short, str) and short:
+        return (
+            short if short.startswith("projects/") else f"{job_name}/executions/{short}"
+        )
+    raise ProviderError(f"could not resolve the execution started for {job_name}")
+
+
 def _parent() -> str:
     return f"projects/{settings.gcp_project_id}/locations/{settings.gcp_region}"
 
@@ -373,7 +397,7 @@ class CloudRunJobsProvider(AgentProvider):
         op = await asyncio.to_thread(
             client.run_job, request=run_v2.RunJobRequest(name=name)
         )
-        execution_name = getattr(op, "name", "") or f"{name}/executions/1"
+        execution_name = _execution_name(op, client, name)
         return SpawnResult(
             instance_id=execution_name,
             extra={"job": name, "model": _GEMINI_MODEL},
@@ -397,15 +421,12 @@ class CloudRunJobsProvider(AgentProvider):
 
         Returns ``None`` while still running, ``0`` if the execution succeeded,
         ``1`` if it failed. Read from the Execution's ``conditions`` repeated
-        field: the ``Ready`` condition's ``state`` is ``CONDITION_SUCCEEDED``
-        on a clean finish and ``CONDITION_FAILED`` on a non-zero task exit. A
-        completed execution with no Ready condition is treated as failed
-        (safer; the prior behaviour treated every finish as a crash anyway).
-        Field shape verified against the installed ``google-cloud-run`` proto:
-        ``Execution.conditions`` (plural, repeated ``run_v2.Condition``),
-        ``Condition.type_`` (Python alias for the ``type`` field), and
-        ``Condition.State`` enum members
-        ``CONDITION_SUCCEEDED`` / ``CONDITION_FAILED``.
+        field: an Execution carries ``Started`` / ``Completed`` /
+        ``ContainerReady`` / ``ResourcesAvailable`` (verified live; ``Ready``
+        exists on Jobs and Services, never on an Execution), and ``Completed``
+        is ``CONDITION_SUCCEEDED`` on a clean finish and ``CONDITION_FAILED``
+        on a non-zero task exit. A completed execution with no ``Completed``
+        condition is treated as failed.
         """
         client = _executions_client()
         exe = await asyncio.to_thread(
@@ -415,12 +436,12 @@ class CloudRunJobsProvider(AgentProvider):
         if exe.completion_time is None:
             return None  # still running
         for cond in exe.conditions:
-            if getattr(cond, "type_", "") == "Ready":
+            if getattr(cond, "type_", "") == "Completed":
                 if cond.state == run_v2.Condition.State.CONDITION_SUCCEEDED:
                     return 0
                 if cond.state == run_v2.Condition.State.CONDITION_FAILED:
                     return 1
-        return 1  # completed but no Ready condition -> treat as failed
+        return 1  # completed but no Completed condition -> treat as failed
 
     async def stop(self, instance_id: str, graceful: bool = True) -> None:
         client = _executions_client()

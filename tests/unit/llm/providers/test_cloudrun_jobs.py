@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from google.cloud import run_v2
 from robofleet.llm.providers import cloudrun_jobs as mod
 
 
@@ -10,7 +11,10 @@ from robofleet.llm.providers import cloudrun_jobs as mod
 async def test_spawn_submits_job_execution(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_client = MagicMock()
     fake_op = MagicMock()
-    fake_op.name = "projects/p/locations/e/jobs/robofleet-agent-x/executions/abc123"
+    # run_job's Operation has no .name; its metadata is the Execution.
+    fake_op.metadata.name = (
+        "projects/p/locations/e/jobs/robofleet-agent-x/executions/abc123"
+    )
     fake_client.create_job = MagicMock(return_value=MagicMock())
     fake_client.run_job = MagicMock(return_value=fake_op)
     monkeypatch.setattr(mod, "_jobs_client", lambda: fake_client)
@@ -88,3 +92,51 @@ def test_task_template_refuses_workspace_cwd_without_nfs(
     template = _provider()._build_task_template([], None)
     assert not template.volumes
     assert not template.containers[0].working_dir
+
+
+def test_execution_name_prefers_operation_metadata() -> None:
+    op = MagicMock()
+    op.metadata.name = "projects/p/locations/r/jobs/j/executions/e1"
+    client = MagicMock()
+    assert mod._execution_name(op, client, "projects/p/locations/r/jobs/j") == (
+        "projects/p/locations/r/jobs/j/executions/e1"
+    )
+    client.get_job.assert_not_called()
+
+
+def test_execution_name_falls_back_to_latest_created_execution() -> None:
+    # A bare Operation (no usable metadata) -> ask the Job for its newest
+    # execution; the field is a short id that must be re-qualified.
+    op = object()
+    client = MagicMock()
+    client.get_job.return_value.latest_created_execution.name = "j-abc12"
+    assert mod._execution_name(op, client, "projects/p/locations/r/jobs/j") == (
+        "projects/p/locations/r/jobs/j/executions/j-abc12"
+    )
+
+
+@pytest.mark.asyncio
+async def test_execution_outcome_reads_completed_condition(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _exe(state: int | None) -> MagicMock:
+        exe = MagicMock()
+        exe.completion_time = None if state is None else "2026-08-26T19:11:23Z"
+        cond = MagicMock()
+        cond.type_ = "Completed"
+        cond.state = state
+        ready = MagicMock()
+        ready.type_ = "Started"
+        ready.state = run_v2.Condition.State.CONDITION_SUCCEEDED
+        exe.conditions = [ready, cond]
+        return exe
+
+    client = MagicMock()
+    monkeypatch.setattr(mod, "_executions_client", lambda: client)
+    provider = _provider()
+    client.get_execution.return_value = _exe(None)
+    assert await provider.execution_outcome("x") is None
+    client.get_execution.return_value = _exe(run_v2.Condition.State.CONDITION_SUCCEEDED)
+    assert await provider.execution_outcome("x") == 0
+    client.get_execution.return_value = _exe(run_v2.Condition.State.CONDITION_FAILED)
+    assert await provider.execution_outcome("x") == 1

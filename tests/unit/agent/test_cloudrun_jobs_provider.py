@@ -37,8 +37,14 @@ _TEAM = "backend"
 _TOKEN = "signed-hmac-token"
 
 
-class _FakeOp:
+class _FakeExecution:
     name: str = "projects/test/locations/us/jobs/robofleet-agent-be-dev-1/executions/1"
+
+
+class _FakeOp:
+    """run_job's Operation: no .name, the metadata is the Execution."""
+
+    metadata: _FakeExecution = _FakeExecution()
 
 
 class _FakeJobsClient:

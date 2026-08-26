@@ -82,6 +82,12 @@ def _headers() -> dict[str, str]:
         "X-Agent-ID": os.environ["ROBOFLEET_AGENT_ID"],
         "X-Agent-Role": os.environ["ROBOFLEET_AGENT_ROLE"],
     }
+    # The HMAC token is signed over (id, role, team): without the team header
+    # the usage POST 401s ("Header values do not match") and the run's tokens
+    # never reach the ledger, so spend reads $0 and budget caps never fire.
+    team = os.environ.get("ROBOFLEET_AGENT_TEAM", "")
+    if team:
+        h["X-Agent-Team"] = team
     tok = os.environ.get("ROBOFLEET_AGENT_TOKEN", "")
     if tok and tok != "UNSIGNED":
         h["X-Agent-Token"] = tok

@@ -232,3 +232,19 @@ async def test_main_wires_on_tool_error_callback(
 
     assert await main() == 0
     assert captured["on_tool_error_callback"] is _on_tool_error
+
+
+def test_headers_carry_team_for_usage_post(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The usage POST must send X-Agent-Team: the token is signed over
+    (id, role, team) and the gateway 401s a team-less request."""
+    from robofleet.agent.adk_entry import _headers
+
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "77777777-7777-7777-7777-777777777777")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "developer")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TEAM", "backend")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "signed")
+    h = _headers()
+    assert h["X-Agent-Team"] == "backend"
+    assert h["X-Agent-Token"] == "signed"
+    monkeypatch.delenv("ROBOFLEET_AGENT_TEAM")
+    assert "X-Agent-Team" not in _headers()

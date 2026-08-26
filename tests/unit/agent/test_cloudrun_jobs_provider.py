@@ -173,6 +173,7 @@ async def test_spawn_vertex_location_global_for_gemini_3_5_flash(
     provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(_config(), initial_prompt="do the work")
 
+    assert fake.captured is not None
     env = _env_map(fake.captured.job)
     # The model LLM is served from the global Vertex endpoint.
     assert env["ROBOFLEET_AGENT_MODEL"] == "gemini-3.5-flash"

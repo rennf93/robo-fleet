@@ -317,7 +317,12 @@ async def db_session(_test_database_url: str) -> AsyncIterator[AsyncSession]:
     """Yield an `AsyncSession` bound to the migrated test DB.
 
     Each test gets its own session and connection; teardown rolls back any
-    uncommitted state and disposes the engine to keep connection counts low.
+    uncommitted state, then truncates every table so the next test starts from
+    a clean DB. Truncation is needed because some service code commits through
+    the shared session (the choreographer claim-durability guard in qa/doc/
+    pr_gate), so rollback alone can't undo committed rows between tests. Safe:
+    tests run sequentially (no xdist in the gate), the test DB is per-process,
+    and no fixture seeds cross-test data.
     """
     # No pool_pre_ping: a fresh per-test engine can't have stale connections, and
     # pre-ping on asyncpg leaves an un-awaited Connection._cancel coroutine that
@@ -331,6 +336,18 @@ async def db_session(_test_database_url: str) -> AsyncIterator[AsyncSession]:
             yield session
         finally:
             await session.rollback()
+    async with engine.begin() as conn:
+        names = await conn.execute(
+            text(
+                "SELECT string_agg(format('%I', tablename), ', ') "
+                "FROM pg_tables WHERE schemaname = 'public'"
+            )
+        )
+        table_list = names.scalar()
+        if table_list:
+            await conn.execute(
+                text(f"TRUNCATE TABLE {table_list} RESTART IDENTITY CASCADE")
+            )
     await engine.dispose()
 
 

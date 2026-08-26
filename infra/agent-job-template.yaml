@@ -62,6 +62,7 @@ spec:
                 # Gemini API key (forwarded by CloudRunJobsProvider from
                 # ROBOFLEET_GEMINI_API_KEY) so the ADK LlmAgent can authenticate
                 # to the Gemini API.
+                # On GCP the provider injects this as a secretKeyRef, never a value.
                 - name: GEMINI_API_KEY
                   value: "__GEMINI_API_KEY__"
                 - name: ROBOFLEET_INITIAL_PROMPT
@@ -75,7 +76,9 @@ spec:
                 - name: ROBOFLEET_API_URL
                   value: "__ORCHESTRATOR_URL__"
 
-                # --- Agent auth (issued HMAC token, NOT a Secret Manager ref) ---
+                # --- Agent auth (issued HMAC token; on GCP the provider stores it in
+                #     a per-agent Secret Manager secret and the Job references it
+                #     via secretKeyRef, so a real Job never carries the value) ---
                 # The orchestrator signs ROBOFLEET_AGENT_TOKEN at spawn via
                 # issue_agent_token(uuid, role, team) and injects it as a plain
                 # env var. The raw signing secret stays server-side; the agent

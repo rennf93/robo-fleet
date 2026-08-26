@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from robofleet.config import settings
+from robofleet.llm.providers.base import ProviderError
 from robofleet.llm.providers.cloudrun_jobs import CloudRunJobsProvider
 from robofleet.models.runtime import OrchestratorAgentConfig as AgentConfig
 from robofleet.models.runtime import SpawnGitContext
@@ -89,7 +91,17 @@ def _patch_identity(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     return calls
 
 
-def _patch_client(monkeypatch: pytest.MonkeyPatch) -> _FakeJobsClient:
+def _patch_client(
+    monkeypatch: pytest.MonkeyPatch, *, nfs: bool = True
+) -> _FakeJobsClient:
+    # A developer spawn resolves a Filestore workspace cwd, and the provider
+    # refuses to build a Job with that cwd but no NFS volume; arm the volume
+    # unless the test set its own values (or opted out via nfs=False).
+    if nfs and not settings.gcp_filestore_ip:
+        monkeypatch.setattr("robofleet.config.settings.gcp_filestore_ip", "10.0.0.5")
+        monkeypatch.setattr(
+            "robofleet.config.settings.gcp_filestore_nfs_path", "/workspaces"
+        )
     fake = _FakeJobsClient()
     monkeypatch.setattr(
         "robofleet.llm.providers.cloudrun_jobs._jobs_client", lambda: fake
@@ -252,7 +264,8 @@ async def test_spawn_filestore_volume_and_vpc_when_gcp_armed(
 async def test_spawn_no_volume_vpc_when_gcp_unset(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Local-dev: no Filestore volume, no VpcAccess when GCP fields empty."""
+    """Local-dev, no-workspace role: no Filestore volume, no VpcAccess when the
+    GCP fields are empty (a workspace role is refused instead, see below)."""
     monkeypatch.setattr("robofleet.config.settings.api_url", None)
     monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
     monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
@@ -260,7 +273,10 @@ async def test_spawn_no_volume_vpc_when_gcp_unset(
     monkeypatch.setattr("robofleet.config.settings.gcp_filestore_nfs_path", "")
     monkeypatch.setattr("robofleet.config.settings.gcp_vpc_connector_name", "")
     _patch_identity(monkeypatch)
-    fake = _patch_client(monkeypatch)
+    monkeypatch.setattr(
+        "robofleet.runtime.orchestrator.get_agent_role", lambda _s: "qa"
+    )
+    fake = _patch_client(monkeypatch, nfs=False)
 
     provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
     await provider.spawn(_config(), initial_prompt="do the work")
@@ -272,6 +288,27 @@ async def test_spawn_no_volume_vpc_when_gcp_unset(
     # api_url falls back to localhost:port (no PROJECT_HOST_PATH in test env).
     env = _env_map(fake.captured.job)
     assert env["ROBOFLEET_ORCHESTRATOR_URL"].startswith("http://127.0.0.1:")
+
+
+@pytest.mark.asyncio
+async def test_spawn_refuses_developer_workspace_without_nfs(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A workspace cwd on an unmounted Filestore path makes Cloud Run fail the
+    container exec before the entrypoint runs (exit 1, zero output): the
+    provider refuses at spawn instead of a silent exec-retry loop."""
+    monkeypatch.setattr("robofleet.config.settings.api_url", "http://orch:8000")
+    monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
+    monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
+    monkeypatch.setattr("robofleet.config.settings.gcp_filestore_ip", "")
+    monkeypatch.setattr("robofleet.config.settings.gcp_filestore_nfs_path", "")
+    _patch_identity(monkeypatch)
+    fake = _patch_client(monkeypatch, nfs=False)
+
+    provider = CloudRunJobsProvider(host=object(), image="gcr.io/robofleet/agent")
+    with pytest.raises(ProviderError, match="ROBOFLEET_GCP_FILESTORE_IP"):
+        await provider.spawn(_config(), initial_prompt="do the work")
+    assert fake.captured is None
 
 
 def container_has_no_mounts(container: run_v2.Container) -> bool:

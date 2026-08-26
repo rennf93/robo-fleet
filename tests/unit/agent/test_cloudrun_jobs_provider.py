@@ -166,9 +166,7 @@ async def test_spawn_vertex_location_global_for_gemini_3_5_flash(
     monkeypatch.setattr("robofleet.config.settings.flow_verb_slow_timeout_seconds", 900)
     monkeypatch.setattr("robofleet.config.settings.gcp_project_id", "test-proj")
     monkeypatch.setattr("robofleet.config.settings.gcp_region", "us-central1")
-    monkeypatch.setattr(
-        "robofleet.config.settings.gcp_vertex_model_location", "global"
-    )
+    monkeypatch.setattr("robofleet.config.settings.gcp_vertex_model_location", "global")
     _patch_identity(monkeypatch)
     fake = _patch_client(monkeypatch)
 

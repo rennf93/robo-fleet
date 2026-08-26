@@ -194,9 +194,16 @@ def test_on_tool_error_returns_response_instead_of_raising() -> None:
     resp = _on_tool_error(
         tool=object(), args={"cmd": "ls"}, tool_context=object(), error=err
     )
+    assert resp is not None
     assert resp["error"] == "ValueError"
     assert "Available tools: note, evidence" in resp["message"]
     assert resp["remediate"]
+    # A dead orchestrator is not a hallucinated tool: let ADK re-raise it.
+    transport = httpx.ConnectError("orchestrator unreachable")
+    assert (
+        _on_tool_error(tool=object(), args={}, tool_context=object(), error=transport)
+        is None
+    )
 
 
 @pytest.mark.asyncio

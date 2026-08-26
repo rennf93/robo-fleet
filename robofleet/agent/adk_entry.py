@@ -210,7 +210,7 @@ async def _diag(label: str, detail: str = "") -> None:
 
 def _on_tool_error(
     tool: Any, args: dict[str, Any], tool_context: Any, error: Exception
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     """Turn a tool failure into a tool RESPONSE instead of a dead run.
 
     ADK raises straight out of the runner when the model calls a tool name
@@ -218,8 +218,13 @@ def _on_tool_error(
     killed real Cloud Run executions, which then burned a full container
     restart + re-doing the work on the retry) or when a tool itself raises.
     Handing the error back as the function response lets the model read the
-    available-tools list and self-correct in the next turn.
+    available-tools list and self-correct in the next turn. A transport
+    failure talking to the orchestrator is systemic, not a bad tool name:
+    returning None makes ADK re-raise it so the run still dies fast instead
+    of the model retrying a dead gateway for many turns.
     """
+    if isinstance(error, httpx.HTTPError):
+        return None
     return {
         "error": type(error).__name__,
         "message": str(error)[:2000],

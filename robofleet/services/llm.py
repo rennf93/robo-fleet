@@ -1130,10 +1130,13 @@ def get_model_routing_service(session: AsyncSession) -> ModelRoutingService:
     return ModelRoutingService(session)
 
 
-# Default Gemini model the GCP fleet runs on. The hackathon stack mandates
-# Gemini via the Gemini API; 2.5-flash balances cost against the structured
-# envelopes the lifecycle verbs require.
-_ADK_DEFAULT_MODEL = "gemini-2.5-flash"
+# Default Gemini model the GCP fleet runs on. The hackathon rules mandate
+# Gemini 3.5+ via Vertex AI; gemini-3.5-flash is the canonical model (served
+# on the global Vertex endpoint, see gcp_vertex_model_location). This seeds
+# only the routing-table display row; the actual spawn model is injected as
+# ROBOFLEET_AGENT_MODEL by CloudRunJobsProvider (_GEMINI_MODEL default
+# gemini-3.5-flash), which the ADK LlmAgent reads in adk_entry.py.
+_ADK_DEFAULT_MODEL = "gemini-3.5-flash"
 
 
 async def seed_adk_cloud_run_routing(

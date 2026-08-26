@@ -5,17 +5,18 @@ from datetime import datetime
 # Cleanup root-level duplicate files from git and workspace
 try:
     if os.path.exists("demo_marker.py"):
-        subprocess.run(["git", "rm", "-f", "demo_marker.py"], capture_output=True)
+        subprocess.run(["git", "rm", "-f", "demo_marker.py"], capture_output=True, check=False)
     if os.path.exists("test_demo_marker.py"):
-        subprocess.run(["git", "rm", "-f", "test_demo_marker.py"], capture_output=True)
-except Exception:
+        subprocess.run(["git", "rm", "-f", "test_demo_marker.py"], capture_output=True, check=False)
+except (subprocess.SubprocessError, OSError) as exc:
+    print(f"Subprocess cleanup failed: {exc}")
     try:
         if os.path.exists("demo_marker.py"):
             os.remove("demo_marker.py")
         if os.path.exists("test_demo_marker.py"):
             os.remove("test_demo_marker.py")
-    except Exception:
-        pass
+    except OSError as err:
+        print(f"File cleanup failed: {err}")
 
 from robofleet import demo_marker
 
@@ -37,5 +38,5 @@ def test_demo_run_epoch_is_valid_iso8601():
     try:
         dt = datetime.fromisoformat(clean_epoch)
         assert dt is not None
-    except ValueError as e:
-        assert False, f"DEMO_RUN_EPOCH '{epoch}' is not a valid ISO 8601 format: {e}"
+    except ValueError as err:
+        assert False, f"DEMO_RUN_EPOCH '{epoch}' is not a valid ISO 8601 format: {err}"

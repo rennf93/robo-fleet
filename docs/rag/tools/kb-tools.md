@@ -26,6 +26,14 @@ robofleet_kb_search(
 robofleet_rag_query(query="How does authentication work?", top_k=5)
 ```
 
+Both `robofleet_kb_search` and `robofleet_rag_query` fan out across every registered index concurrently with a **per-index 15s timeout** (inner to the route's 30s outer bound). If an index does not finish, the others still return their results and the response carries a `gaps` list naming the timed-out indexes (e.g. `["journals unavailable: timed out after 15s"]`), empty when all indexes completed. A slow index no longer discards the whole result set.
+
+When `gaps` is non-empty, the MCP tool response includes the `gaps` list and a `hint` string: `"Partial results: N index(es) timed out (name1, ...). Results may be incomplete."` (or "Answer may be incomplete" for `robofleet_rag_query`). When there are no gaps, both are omitted - the response is identical to the pre-change shape. The "No results / try mentor" hint is suppressed on a partial-results response so it isn't mistaken for a no-match query.
+
+At the HTTP level, a **total outage** (every index timed out, no results returned) returns a 504 error envelope, not HTTP 200 - partial degradation never masks a total outage. A search that completes with zero results and no gaps is still a 200 (a legitimate "nothing matched", not a failure).
+
+See `docs/backend/services/optimal-per-index-timeout.md` for the service contract and `docs/backend/api/optimal-gaps-surface.md` for the route/schema/ MCP surface.
+
 ## Mentor (Conversational)
 
 ```python
@@ -60,9 +68,9 @@ robofleet_docs_read(path="backend/api/endpoints.md")
 
 **SMART DEDUPLICATION**: `robofleet_docs_write` searches RAG for similar existing docs. If high-similarity match found, updates instead of creating duplicate.
 
-**LIVE-WRITE PROVENANCE**: a doc indexed via `robofleet_docs_write` (or captured from your workspace at `i_documented`) is written mid-task, before your task's PR merges — it may describe an API/contract that doesn't exist yet on the deployed tree. It's indexed with `provenance: "live_write"`, and any `robofleet_kb_search` / `robofleet_ask_mentor` / `robofleet_rag_query` hit built from it comes back with an appended line: `[caveat: written during in-flight work — verify the contract exists on the deployed tree/git before relying on it]`. Docs picked up by the repo-tree scan (`docs/rag`, `docs/map`, or a manual/startup reindex) carry `provenance: "repo_tree"` instead and render with no caveat.
+**LIVE-WRITE PROVENANCE**: a doc indexed via `robofleet_docs_write` (or captured from your workspace at `i_documented`) is written mid-task, before your task's PR merges - it may describe an API/contract that doesn't exist yet on the deployed tree. It's indexed with `provenance: "live_write"`, and any `robofleet_kb_search` / `robofleet_ask_mentor` / `robofleet_rag_query` hit built from it comes back with an appended line: `[caveat: written during in-flight work - verify the contract exists on the deployed tree/git before relying on it]`. Docs picked up by the repo-tree scan (`docs/rag`, `docs/map`, or a manual/startup reindex) carry `provenance: "repo_tree"` instead and render with no caveat.
 
-**The caveat does NOT auto-clear on merge.** There is no lifecycle hook wiring a task's PR merge back into the KB, and the periodic re-scan only walks `docs/rag` + `docs/map` — siblings of the team dirs `robofleet_docs_write` actually targets, so it never revisits a `live_write` doc. The marker persists until that doc's content is re-indexed from the repo tree — a startup reindex, or the operator-only `robofleet_reindex_all` escape hatch — merged or not. So read a caveated hit as "verify against git", not "this is unmerged": don't assume a caveat's absence means merged, and don't assume its presence means still-open. Check the referenced PR/branch before building against it either way.
+**The caveat does NOT auto-clear on merge.** There is no lifecycle hook wiring a task's PR merge back into the KB, and the periodic re-scan only walks `docs/rag` + `docs/map` - siblings of the team dirs `robofleet_docs_write` actually targets, so it never revisits a `live_write` doc. The marker persists until that doc's content is re-indexed from the repo tree - a startup reindex, or the operator-only `robofleet_reindex_all` escape hatch - merged or not. So read a caveated hit as "verify against git", not "this is unmerged": don't assume a caveat's absence means merged, and don't assume its presence means still-open. Check the referenced PR/branch before building against it either way.
 
 ## Bulk Indexing
 

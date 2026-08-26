@@ -59,6 +59,24 @@ def test_get_worktree_path_rejects_none_team(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.parametrize("bad", ["..", "../../etc", "a/b", "a\\b", "bad\x00id", "."])
+def test_get_worktree_path_rejects_unsafe_task_short_id(
+    tmp_path: Path, bad: str
+) -> None:
+    # task_short_id used to be only empty-checked; a traversal segment (or one
+    # smuggled through a NUL/separator) must be rejected the same as the other
+    # three path segments.
+    svc = _service(tmp_path)
+    with pytest.raises(WorkspaceError, match="unsafe task short id"):
+        svc.get_worktree_path("guard-core", Team.BACKEND, "be-dev-1", bad)
+
+
+def test_get_worktree_path_rejects_empty_task_short_id(tmp_path: Path) -> None:
+    svc = _service(tmp_path)
+    with pytest.raises(WorkspaceError, match="task_short_id is empty"):
+        svc.get_worktree_path("guard-core", Team.BACKEND, "be-dev-1", "")
+
+
 def test_get_worktree_path_accepts_string_team(tmp_path: Path) -> None:
     svc = _service(tmp_path)
     wt = svc.get_worktree_path("guard-core", "backend", "be-dev-1", "a3c40fe7")

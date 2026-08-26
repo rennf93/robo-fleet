@@ -622,12 +622,19 @@ class WorkspaceService:
                 "Add the agent to AGENT_TEAM_MAP in robofleet/agents_config.py."
             )
         team_str = team.value if isinstance(team, Team) else str(team)
-        return (
+        path = (
             self.root
             / _safe_segment(project_slug, "project slug")
             / _safe_segment(team_str, "team")
             / _safe_segment(agent_slug, "agent slug")
         )
+        # Segments are already traversal-safe (_safe_segment), but resolve +
+        # check containment explicitly — CodeQL's path-injection query does
+        # not credit the segment guard alone as a sink barrier.
+        resolved = path.resolve()
+        if not resolved.is_relative_to(Path(self.root).resolve()):
+            raise WorkspaceError(f"workspace path escapes root: {path}")
+        return path
 
     def get_clone_root_path(
         self,
@@ -662,6 +669,7 @@ class WorkspaceService:
                 f"Cannot resolve worktree path for {agent_slug}: "
                 "task_short_id is empty."
             )
+        task_short_id = _safe_segment(task_short_id, "task short id")
         clone_root = self.get_clone_root_path(project_slug, team, agent_slug)
         return clone_root / ".worktrees" / task_short_id
 

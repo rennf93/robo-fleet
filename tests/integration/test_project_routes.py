@@ -363,7 +363,7 @@ async def test_delete_project_success(project_client: AsyncClient) -> None:
 async def test_set_workspace_path_not_found(project_client: AsyncClient) -> None:
     response = await project_client.post(
         f"/api/projects/{uuid4()}/workspace",
-        json={"workspace_path": "/data/foo"},
+        json={"workspace_path": "/data/workspaces/foo"},
         headers=_HDR,
     )
     assert response.status_code == HTTPStatus.NOT_FOUND
@@ -375,7 +375,7 @@ async def test_set_workspace_path_via_slug_not_found(
 ) -> None:
     response = await project_client.post(
         "/api/projects/ghost-slug/workspace",
-        json={"workspace_path": "/data/foo"},
+        json={"workspace_path": "/data/workspaces/foo"},
         headers=_HDR,
     )
     assert response.status_code == HTTPStatus.NOT_FOUND
@@ -387,7 +387,7 @@ async def test_set_workspace_path_success(project_client: AsyncClient) -> None:
     pid = create.json()["id"]
     response = await project_client.post(
         f"/api/projects/{pid}/workspace",
-        json={"workspace_path": "/data/wow"},
+        json={"workspace_path": "/data/workspaces/wow"},
         headers=_HDR,
     )
     # Service may return 200 or 404 depending on workspace logic
@@ -573,7 +573,7 @@ async def test_set_workspace_path_via_slug_success(
     await project_client.post("/api/projects", json=payload, headers=_HDR)
     response = await project_client.post(
         f"/api/projects/{payload['slug']}/workspace",
-        json={"workspace_path": "/data/wow"},
+        json={"workspace_path": "/data/workspaces/wow"},
         headers=_HDR,
     )
     assert response.status_code in (HTTPStatus.OK, HTTPStatus.NOT_FOUND)

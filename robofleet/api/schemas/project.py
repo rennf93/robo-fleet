@@ -5,12 +5,14 @@ Request/response models for project endpoints.
 """
 
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import cast as typing_cast
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from robofleet.config import settings
 from robofleet.models.base import Team
 
 if TYPE_CHECKING:
@@ -232,6 +234,18 @@ class SetWorkspaceRequest(BaseModel):
     """Request to set project workspace path."""
 
     workspace_path: str
+
+    @field_validator("workspace_path")
+    @classmethod
+    def _validate_workspace_path(cls, v: str) -> str:
+        if not v or "\x00" in v:
+            raise ValueError("workspace_path must be a non-empty path with no NUL byte")
+        if ".." in Path(v).parts:
+            raise ValueError("workspace_path must not contain '..' segments")
+        root = Path(settings.workspaces_root).resolve()
+        if not Path(v).resolve().is_relative_to(root):
+            raise ValueError(f"workspace_path must resolve under {root}")
+        return v
 
 
 class SyncStateRequest(BaseModel):

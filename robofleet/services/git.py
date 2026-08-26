@@ -610,6 +610,23 @@ class GitService(BaseService):
             return None
         return await self._token_for_project(parts[0])
 
+    @staticmethod
+    def _contained_project_workspace(project_slug: str, project: ProjectTable) -> Path:
+        """Resolve ``project.workspace_path`` for the no-agent lookup.
+
+        ``workspace_path`` is API-settable (PM-gated ``POST .../workspace``)
+        with no path validation, so an operator/steered-PM value could point
+        outside this project's tree. Trust it only when it resolves under
+        ``{workspaces_root}/{project_slug}``; otherwise fall back to that
+        derived path itself (the conventional project-level location).
+        """
+        derived = Path(settings.workspaces_root) / project_slug
+        candidate = Path(cast("str", project.workspace_path))
+        resolved = candidate.resolve()
+        if not resolved.is_relative_to(derived.resolve()):
+            return derived
+        return candidate
+
     async def get_workspace(
         self,
         project_slug: str,
@@ -629,7 +646,7 @@ class GitService(BaseService):
                     f"Project '{project_slug}' has no workspace configured "
                     "and no agent_id provided for dynamic workspace resolution"
                 )
-            workspace = Path(project.workspace_path)
+            workspace = self._contained_project_workspace(project_slug, project)
             if not workspace.exists():
                 raise ValidationError(f"Workspace path does not exist: {workspace}")
             return workspace
@@ -6563,13 +6580,12 @@ class GitService(BaseService):
             # commit — anything else (arbitrary dir, another project's clone)
             # is refused as "no usable workspace".
             candidate = Path(project.workspace_path)
+            scope_root = Path(settings.workspaces_root) / project.slug
             try:
-                candidate.resolve().relative_to(
-                    Path(settings.workspaces_root) / project.slug
-                )
-                ws = candidate
-            except (ValueError, OSError):
-                ws = None
+                contained = candidate.resolve().is_relative_to(scope_root)
+            except OSError:
+                contained = False
+            ws = candidate if contained else None
         if ws is None or not ws.exists():
             return None
         base = head_branch(project)

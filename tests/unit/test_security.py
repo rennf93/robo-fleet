@@ -455,7 +455,16 @@ def test_block_clouds_argless_route_still_resolves_route_config() -> None:
     route_id = _guard_test_block_clouds_route._guard_route_id
     route_config = security.guard_deco.get_route_config(route_id)
     assert route_config is not None
-    # guard-core 3.13.0 will widen the argless default to all six supported
-    # providers (adds DigitalOcean/Linode/Vultr). When this pin breaks on
-    # that bump, decide: accept all six, or pass the classic three explicitly.
-    assert route_config.block_cloud_providers == {"AWS", "GCP", "Azure"}
+    # guard-core 3.13.0 widened the argless @block_clouds() default to all six
+    # supported providers (adds DigitalOcean/Linode/Vultr). Production
+    # build_security_config never sets block_cloud_providers and applies no
+    # @block_clouds() decorator, so the wider default has no production effect;
+    # this test asserts the library's documented argless default as-is.
+    assert route_config.block_cloud_providers == {
+        "AWS",
+        "GCP",
+        "Azure",
+        "DigitalOcean",
+        "Linode",
+        "Vultr",
+    }

@@ -908,7 +908,7 @@ wheels = [
 
 [[package]]
 name = "fastapi-guard"
-version = "7.6.0"
+version = "7.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastapi" },
@@ -916,9 +916,9 @@ dependencies = [
     { name = "starlette" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/0f/c4ba36317a3e715efbeeaeafa633849da6c477cadd02a361d8b914499d6e/fastapi_guard-7.6.0.tar.gz", hash = "sha256:5fe35b03277a06239a60b900f3e60241718a93392ef2f3009a2592a91f552c66", size = 51338, upload-time = "2026-08-14T02:34:57.191Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/b9/b3bc3b33f2f4ebcf4d9a660a66871b0d3b62fd5364d55ad06112ab3a7b10/fastapi_guard-7.7.0.tar.gz", hash = "sha256:7fd033109878b87bd3c83b3ee1cbe65839e9f43ddd12171595dfed6467fa03be", size = 52250, upload-time = "2026-08-25T05:51:52.317Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/a6/050147c7509b9157d07872bc406afe88d074ccec5509c64c056647a8033a/fastapi_guard-7.6.0-py3-none-any.whl", hash = "sha256:8c5f187d52cc47b2d2136d45c7a64d3416048274183a501b5898e817af0d05ff", size = 26685, upload-time = "2026-08-14T02:34:56.038Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/26/a2d8b8e78a391b73e5fa992c70dc749fc120f1da1b130cf57b2e2ed6be0a/fastapi_guard-7.7.0-py3-none-any.whl", hash = "sha256:061d67d8b678a4a42d0f34f7d53dd726b6c9da8a944bc8cc386b6ea81009b05e", size = 27142, upload-time = "2026-08-25T05:51:50.926Z" },
 ]
 
 [[package]]
@@ -1402,7 +1402,7 @@ wheels = [
 
 [[package]]
 name = "guard-core"
-version = "3.12.0"
+version = "3.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1413,9 +1413,9 @@ dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/04/85/310996206a3c75e194afec560f8d5c6e792ca7456a0d1c5d620a3755ad19/guard_core-3.12.0.tar.gz", hash = "sha256:d8062fbb381c3cd66bcb529bf95bd866bcc887bd7543a69ae499fe8597eb95cb", size = 296295, upload-time = "2026-08-14T00:45:42.731Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/72/4832d24f5b74659982347fbfdd61a1aa20f8adb8057c851bbdef447d177c/guard_core-3.13.0.tar.gz", hash = "sha256:8da4cb27dd61546f8a068a83c6edc0856e183ef8147afcbcb5e49ea920cc36b5", size = 395168, upload-time = "2026-08-25T03:02:56.722Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/9f/1c9f21fd247384cadad85fe698f021d8c85319a0d25c895c70c7c870083d/guard_core-3.12.0-py3-none-any.whl", hash = "sha256:8ccef438e88830f1894f7b1035613d7493a37599c00cd255261c97a35bb2e3eb", size = 316144, upload-time = "2026-08-14T00:45:41.416Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/82/b3957015746dfae2f96d6b4794c8f0171c08c51c8952e3231d417ba6c51b/guard_core-3.13.0-py3-none-any.whl", hash = "sha256:8c21e0bee38f787ec4ede97e3a5944c6b737fb502767e92caf40f00b0e79d513", size = 448499, upload-time = "2026-08-25T03:02:55.354Z" },
 ]
 
 [package.optional-dependencies]
@@ -3123,7 +3123,7 @@ requires-dist = [
     { name = "factory-boy", marker = "extra == 'dev'" },
     { name = "faker", marker = "extra == 'dev'" },
     { name = "fastapi" },
-    { name = "fastapi-guard", specifier = ">=7.6.0" },
+    { name = "fastapi-guard", specifier = ">=7.7.0" },
     { name = "fastapi-users", extras = ["sqlalchemy"] },
     { name = "fastapi-users-db-sqlalchemy" },
     { name = "google-adk" },
@@ -3131,7 +3131,7 @@ requires-dist = [
     { name = "google-cloud-secret-manager" },
     { name = "google-cloud-storage" },
     { name = "google-genai" },
-    { name = "guard-core", extras = ["redis"], specifier = ">=3.12.0" },
+    { name = "guard-core", extras = ["redis"], specifier = ">=3.13.0" },
     { name = "hiredis" },
     { name = "httpx" },
     { name = "httpx", marker = "extra == 'dev'" },

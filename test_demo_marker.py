@@ -1,5 +1,7 @@
 from datetime import datetime
+
 import demo_marker
+
 
 def test_demo_run_epoch_exists():
     assert hasattr(demo_marker, "DEMO_RUN_EPOCH")

@@ -103,6 +103,26 @@ def _extract_original_developer(task: Any) -> str | None:
     return markers.get_original_developer(task)
 
 
+def _qa_spec_ctx(agent: Any, actor_id: UUID, task: Any) -> Any:
+    """Build the spec Context for a QA claim, tolerating a None agent.
+
+    Factored out of ``claim_review`` so its cyclomatic complexity stays under
+    the xenon gate; the agent-slugged/team ternaries live here instead.
+    """
+    if agent is None:
+        actor_slug = None
+        agent_team = None
+    else:
+        actor_slug = getattr(agent, "slug", None)
+        agent_team = str(agent.team) if agent.team else None
+    return spec_module.Context(
+        actor_id=actor_id,
+        actor_slug=actor_slug,
+        agent_team=agent_team,
+        original_developer_slug=_extract_original_developer(task),
+    )
+
+
 class QAMixin(_Base):
     """QA-role verbs."""
 
@@ -148,12 +168,7 @@ class QAMixin(_Base):
                 task_id=task_id,
                 verb="claim_review",
             )
-        spec_ctx = spec_module.Context(
-            actor_id=qa_agent_id,
-            actor_slug=getattr(agent, "slug", None) if agent is not None else None,
-            agent_team=str(agent.team) if agent is not None and agent.team else None,
-            original_developer_slug=_extract_original_developer(t),
-        )
+        spec_ctx = _qa_spec_ctx(agent, qa_agent_id, t)
         decision = spec_module.can_invoke_intent(role, "claim_review", t, spec_ctx)
         if not decision.allowed:
             return await self._emit_rejection(

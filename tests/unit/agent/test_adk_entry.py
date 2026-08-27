@@ -332,3 +332,45 @@ async def test_main_tool_loop_cut_exits_zero_and_reports_usage(
     assert await main() == 0
     usage = next(p["json"] for p in posts if p["url"].endswith("/usage/report"))
     assert usage["exit_reason"] == "tool_loop"
+
+
+def test_on_model_error_records_request_shape_and_reraises() -> None:
+    """The model-error callback returns None (ADK re-raises) and leaves a
+    per-content shape line the crash dump appends, naming function-call/
+    response parts and whether a thought_signature rode along."""
+    from robofleet.agent import adk_entry
+    from robofleet.agent.adk_entry import _on_model_error
+
+    class _P:
+        def __init__(self, **kw: Any) -> None:
+            self.text = kw.get("text")
+            self.function_call = kw.get("function_call")
+            self.function_response = kw.get("function_response")
+            self.thought_signature = kw.get("thought_signature")
+
+    class _Named:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+    class _C:
+        def __init__(self, role: str, parts: list[Any]) -> None:
+            self.role, self.parts = role, parts
+
+    class _Req:
+        def __init__(self) -> None:
+            self.contents = [
+                _C("user", [_P(text="do the work")]),
+                _C(
+                    "model",
+                    [_P(function_call=_Named("open_pr"), thought_signature=b"x")],
+                ),
+                _C("user", [_P(function_response=_Named("open_pr"))]),
+            ]
+
+    _on_model_error(object(), _Req(), ValueError("400 INVALID_ARGUMENT"))
+    shape = adk_entry._diag_state["last_request"]
+    assert shape.startswith("ValueError: 400 INVALID_ARGUMENT")
+    assert "contents=3" in shape
+    assert "model: fc:open_pr+sig" in shape
+    assert "user: fr:open_pr" in shape
+    assert "user: text:11" in shape

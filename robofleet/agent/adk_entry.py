@@ -159,6 +159,43 @@ def _classify(exc: BaseException) -> int | None:
     return None
 
 
+# Shape of the last model request that failed, for the crash dump. Vertex's
+# `400 INVALID_ARGUMENT` names nothing, and the request is not in any log.
+_diag_state: dict[str, str] = {"last_request": ""}
+
+
+def _request_shape(llm_request: Any, last: int = 10) -> str:
+    """One line per content: role + each part's kind (text length, function
+    call/response name, whether a thought_signature is attached)."""
+    contents = list(getattr(llm_request, "contents", None) or [])
+    lines = [f"contents={len(contents)} (showing last {min(last, len(contents))})"]
+    for c in contents[-last:]:
+        kinds = []
+        for p in getattr(c, "parts", None) or []:
+            sig = "+sig" if getattr(p, "thought_signature", None) else ""
+            if getattr(p, "function_call", None):
+                kinds.append(f"fc:{p.function_call.name}{sig}")
+            elif getattr(p, "function_response", None):
+                kinds.append(f"fr:{p.function_response.name}{sig}")
+            elif getattr(p, "text", None) is not None:
+                kinds.append(f"text:{len(p.text)}{sig}")
+            else:
+                kinds.append(f"other{sig}")
+        lines.append(f"  {getattr(c, 'role', '?')}: {' '.join(kinds) or '<no parts>'}")
+    return "\n".join(lines)
+
+
+def _on_model_error(callback_context: Any, llm_request: Any, error: Exception) -> None:
+    """Record the failing request's shape, then let ADK re-raise (returns None)."""
+    del callback_context
+    try:
+        _diag_state["last_request"] = (
+            f"{type(error).__name__}: {str(error)[:200]}\n{_request_shape(llm_request)}"
+        )
+    except Exception:
+        _diag_state["last_request"] = "request shape unavailable"
+
+
 async def _dump_crash(exc: BaseException) -> None:
     """Best-effort: write the crash traceback to GCS so it is readable from a
     host that cannot reach Cloud Logging. Never raises; a write failure is
@@ -175,6 +212,8 @@ async def _dump_crash(exc: BaseException) -> None:
         f"agent={agent} role={os.environ.get('ROBOFLEET_AGENT_ROLE', '?')} "
         f"model={_MODEL}\n\n{tb}\n"
     )
+    if _diag_state["last_request"]:
+        payload += f"\nLAST MODEL REQUEST\n{_diag_state['last_request']}\n"
     try:
         import google.cloud.storage  # lazy: only needed on the Cloud Run path
 
@@ -323,6 +362,7 @@ async def main() -> int:
             tools=tools,
             on_tool_error_callback=_on_tool_error,
             after_tool_callback=_on_after_tool,
+            on_model_error_callback=_on_model_error,
         )
         session_service = InMemorySessionService()
         runner = Runner(

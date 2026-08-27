@@ -47,4 +47,7 @@ USER agent
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 
-ENTRYPOINT ["python", "-m", "robofleet.agent.adk_entry"]
+# -P (safe path): the Job's working dir is the task worktree, and a repo that
+# ships its own `robofleet/` package (this one) would otherwise shadow the
+# installed runtime on the module path and crash every retry at import.
+ENTRYPOINT ["python", "-P", "-m", "robofleet.agent.adk_entry"]

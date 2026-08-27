@@ -84,6 +84,8 @@ resource "google_secret_manager_secret" "keys" {
     "agent-auth-secret",
     "cloud-auth-secret",
     "gemini-api-key",
+    "database-password",
+    "cloud-auth-password",
   ])
   secret_id = "${var.secret_prefix}-${each.key}"
   replication {

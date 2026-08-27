@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { RfMark } from "@/components/layout/rf-mark";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -56,14 +56,7 @@ export function MobileSidebar() {
               onClick={close}
               className="flex items-center gap-2"
             >
-              <Image
-                src="/robofleet-logo.png"
-                alt="RoboFleet"
-                width={32}
-                height={32}
-                unoptimized
-                className="h-8 w-8 rounded"
-              />
+              <RfMark />
               <span className="text-lg font-semibold">RoboFleet</span>
             </Link>
           </SheetTitle>

@@ -11,10 +11,10 @@
 #   ROBOFLEET_GCP_PROJECT_ID
 #   ROBOFLEET_GCP_REGION
 #   ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO (default robo-fleet)
-#   ROBOFLEET_DATABASE_PASSWORD   (Cloud SQL user password)
 #   ROBOFLEET_REDIS_PASSWORD       (Memorystore AUTH token)
 #   ROBOFLEET_CLOUD_AUTH_EMAIL     (seeded CEO login)
-#   ROBOFLEET_CLOUD_AUTH_PASSWORD  (seeded CEO login password)
+# The DB password and the CEO login password are Secret Manager references in
+# the manifest (seeded by infra/seed-secrets.sh), not deploy-env inputs.
 # Env (optional):
 #   ROBOFLEET_GCP_VPC_CONNECTOR_NAME (default robofleet-connector)
 set -euo pipefail
@@ -70,9 +70,7 @@ sed \
   -e "s|__GCS_BUCKET__|${GCS_BUCKET}|g" \
   -e "s|__VPC_CONNECTOR_PATH__|${VPC_CONNECTOR_PATH}|g" \
   -e "s|__ORCH_SELF_URL__|${ORCH_SELF_URL}|g" \
-  -e "s|__DATABASE_PASSWORD__|${ROBOFLEET_DATABASE_PASSWORD:?set ROBOFLEET_DATABASE_PASSWORD}|g" \
   -e "s|__CLOUD_AUTH_EMAIL__|${ROBOFLEET_CLOUD_AUTH_EMAIL:?set ROBOFLEET_CLOUD_AUTH_EMAIL}|g" \
-  -e "s|__CLOUD_AUTH_PASSWORD__|${ROBOFLEET_CLOUD_AUTH_PASSWORD:?set ROBOFLEET_CLOUD_AUTH_PASSWORD}|g" \
   "${TF_DIR}/orchestrator-service.yaml" > "${TMP_MANIFEST}"
 
 echo "Replacing robofleet-orchestrator service..."
@@ -80,8 +78,9 @@ gcloud run services replace "${TMP_MANIFEST}" \
   --region="${REGION}" \
   --project="${PROJECT}"
 
-# The DB password, cloud-auth email/password, and the 4 Secret Manager secrets
-# are all inlined in the manifest (placeholders above + inline secretKeyRef), so
+# The cloud-auth email and the 6 Secret Manager secrets (DB password and CEO
+# password included) are all inlined in the manifest (placeholders above +
+# inline secretKeyRef), so
 # a single `gcloud run services replace` deploys a boot-healthy revision. No
 # post-replace --update-env-vars / --set-secrets step is needed (and would
 # conflict with the inline secretKeyRef entries).

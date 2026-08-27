@@ -35,26 +35,30 @@ terraform init
 terraform apply
 cd ..
 
-# 2. Seed the four Secret Manager secrets (Fernet key, agent-auth HMAC secret,
-#    cloud-auth secret, Gemini API key). Requires ROBOFLEET_GEMINI_API_KEY.
-ROBOFLEET_GEMINI_API_KEY=your-key ./infra/seed-secrets.sh PROJECT_ID
+# 2. Seed the six Secret Manager secrets (Fernet key, agent-auth HMAC secret,
+#    cloud-auth secret, Gemini API key, Cloud SQL password, and a generated CEO
+#    login password). Requires ROBOFLEET_GEMINI_API_KEY and ROBOFLEET_DATABASE_PASSWORD.
+ROBOFLEET_GEMINI_API_KEY=your-key ROBOFLEET_DATABASE_PASSWORD=... ./infra/seed-secrets.sh PROJECT_ID
+# Read the generated CEO password back when you need to log in:
+gcloud secrets versions access latest --secret=robofleet-cloud-auth-password
 
 # 3. Build the three images (robofleet-orchestrator, robofleet-panel, robofleet-agent-adk)
 #    into Artifact Registry via Cloud Build. Reads ROBOFLEET_GCP_PROJECT_ID and
-#    ROBOFLEET_GCP_REGION; uses cloudbuild.yaml at the repo root.
+#    ROBOFLEET_GCP_REGION; uses cloudbuild.yaml at the repo root. The panel bakes
+#    the orchestrator's public URL into its rewrites at build time, so
+#    ROBOFLEET_API_URL must be set (the orchestrator's Cloud Run URL).
 export ROBOFLEET_GCP_PROJECT_ID=your-project
 export ROBOFLEET_GCP_REGION=your-region
+export ROBOFLEET_API_URL=https://robofleet-orchestrator-XXXX.your-region.run.app
 ./infra/build-images.sh
 
 # 4. Deploy the orchestrator to Cloud Run. Pulls Cloud SQL connection name,
 #    Memorystore host, Filestore IP/share, and GCS bucket from terraform output,
 #    substitutes the __PLACEHOLDER__ tokens in orchestrator-service.yaml, and
-#    calls `gcloud run services replace`. Needs ROBOFLEET_DATABASE_PASSWORD,
-#    ROBOFLEET_REDIS_PASSWORD, and the seeded cloud-auth CEO login.
-export ROBOFLEET_DATABASE_PASSWORD=...
+#    calls `gcloud run services replace`. Passwords come from Secret Manager
+#    (step 2); only the CEO login email is a deploy input.
 export ROBOFLEET_REDIS_PASSWORD=...
 export ROBOFLEET_CLOUD_AUTH_EMAIL=ceo@example.com
-export ROBOFLEET_CLOUD_AUTH_PASSWORD=...
 ./infra/deploy-orchestrator.sh
 
 # 5. Deploy the panel to Cloud Run. Discovers the orchestrator's Cloud Run URL

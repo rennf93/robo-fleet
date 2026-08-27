@@ -27,10 +27,11 @@ const nextConfig: NextConfig = {
   // Proxy API calls to the orchestrator to avoid CORS issues. The Next server
   // (output: standalone, `node server.js`) forwards /api/* to BACKEND_URL,
   // carrying the browser's cloud-auth session cookie through to the
-  // orchestrator. /ws/* is also proxied for completeness; Next production
-  // rewrites do not upgrade HTTP to WebSocket, so live WS updates fall back to
-  // the panel's existing HTTP-polling path (every stream consumer degrades to
-  // polling when the socket is down).
+  // orchestrator. Next's production router proxies WebSocket upgrades through these
+  // build-time rewrites too (middleware never runs for upgrades), so /ws
+  // needs the real orchestrator URL at BUILD time (panel.Dockerfile build
+  // arg). /health is the panel's connection-status probe; it lives at the
+  // orchestrator root, not under /api.
   async rewrites() {
     const base = BACKEND_URL.replace(/\/$/, "");
     return [
@@ -41,6 +42,10 @@ const nextConfig: NextConfig = {
       {
         source: "/ws/:path*",
         destination: `${base}/ws/:path*`,
+      },
+      {
+        source: "/health",
+        destination: `${base}/health`,
       },
     ];
   },

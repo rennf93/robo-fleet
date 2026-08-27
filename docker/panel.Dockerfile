@@ -39,9 +39,14 @@ RUN pnpm install \
 # Copy panel source code
 COPY panel/ ./
 
-# Build the application
-# NOTE: No NEXT_PUBLIC_* env vars set here - we use relative URLs
-# which nginx proxies to the orchestrator
+# Build the application. next.config's rewrites (/api, /ws, /health) are
+# resolved at BUILD time, so the orchestrator URL must be known here: on Cloud
+# Run (no nginx) pass ROBOFLEET_API_URL as a build arg; on compose leave it
+# unset and nginx routes those paths. WebSocket upgrades only ride the
+# build-time rewrite (middleware never runs for upgrades), so a wrong or
+# missing value here is what breaks live WS updates on Cloud Run.
+ARG ROBOFLEET_API_URL
+ENV ROBOFLEET_API_URL=${ROBOFLEET_API_URL}
 RUN pnpm build
 
 # =============================================================================
@@ -59,7 +64,7 @@ RUN adduser --system --uid 1001 nextjs
 # Copy public assets. Must be chowned to the runtime user (nextjs) like the
 # standalone/static copies below — without it the assets stay root:root
 # rwxrwx--- and the non-root nextjs process gets EACCES serving them, so every
-# /public file (e.g. robofleet-logo.png) 500s.
+# /public file 500s.
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Copy standalone build

@@ -11,6 +11,8 @@ substitutions:
   _AR_HOST: ""
   _AR_REPO: ""
   _SHORT_SHA: "manual"
+  # Orchestrator public URL baked into the panel's build-time rewrites.
+  _API_URL: ""
 
 steps:
   - id: orchestrator
@@ -31,6 +33,8 @@ steps:
       - build
       - -f
       - docker/panel.Dockerfile
+      - --build-arg
+      - ROBOFLEET_API_URL=${_API_URL}
       - -t
       - ${_AR_HOST}/${_PROJECT_ID}/${_AR_REPO}/robofleet-panel:${_SHORT_SHA}
       - -t

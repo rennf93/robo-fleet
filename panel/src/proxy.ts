@@ -60,7 +60,7 @@ export async function isCloudAuthEnabled(): Promise<boolean> {
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  if (pathname.startsWith("/api/")) {
+  if (pathname.startsWith("/api/") || pathname === "/health") {
     return PUBLIC_BACKEND_URL
       ? NextResponse.rewrite(
           new URL(`${PUBLIC_BACKEND_URL}${pathname}${search}`),
@@ -82,10 +82,12 @@ export const config = {
   // the Telegram Mini App surface (/tg authenticates via Telegram initData,
   // not the password-login cookie — redirecting it to /login would strand a
   // phone session that can never reach that page), Next's internal asset
-  // paths, and the static icon files at the app root. /api/* IS matched: the
-  // proxy() branch above rewrites it to the orchestrator on Cloud Run and
-  // passes it through untouched everywhere else, before any auth gating.
+  // paths, and the generated icon routes at the app root (icon.tsx and
+  // apple-icon.tsx serve /icon and /apple-icon). /api/* and /health ARE
+  // matched: the proxy() branch above rewrites them to the orchestrator on
+  // Cloud Run and passes them through untouched everywhere else, before any
+  // auth gating.
   matcher: [
-    "/((?!login|tg(?:/|$)|_next/static|_next/image|favicon.ico|apple-icon.png|icon.png).*)",
+    "/((?!login|tg(?:/|$)|_next/static|_next/image|favicon.ico|apple-icon|icon).*)",
   ],
 };

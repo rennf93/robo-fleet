@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { RfMark } from "@/components/layout/rf-mark";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -240,15 +240,7 @@ export function Sidebar() {
                 className="flex items-center gap-2"
                 prefetch={false}
               >
-                <Image
-                  src="/robofleet-logo.png"
-                  alt="RoboFleet"
-                  width={32}
-                  height={32}
-                  priority
-                  unoptimized
-                  className="h-8 w-8 rounded"
-                />
+                <RfMark />
                 <span className="font-semibold text-lg">RoboFleet</span>
               </Link>
             </TooltipTrigger>

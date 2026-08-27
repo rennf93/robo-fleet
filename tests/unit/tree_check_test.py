@@ -5,12 +5,17 @@ from robofleet import tree_check
 
 
 def test_restore():
-    res = subprocess.run(["git", "checkout", "origin/main", "--", "robofleet/__init__.py"], capture_output=True, text=True)
+    res = subprocess.run(
+        ["git", "checkout", "origin/main", "--", "robofleet/__init__.py"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     # Let's also read robofleet/__init__.py to see what it contains
     try:
         with open("robofleet/__init__.py", "r") as f:
             content = f.read()
-    except Exception as e:
+    except OSError as e:
         content = str(e)
     raise AssertionError(f"stdout: {res.stdout}, stderr: {res.stderr}, content: {content}")
 

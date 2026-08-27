@@ -200,13 +200,54 @@ async def _i_am_blocked(
     return await call_verb("i_am_blocked", body)
 
 
-async def _note(scope: str, text: str, task_id: str = "") -> dict[str, Any]:
-    """Write a journal/note entry. scope is e.g. 'note', 'handoff' or 'reflect';
-    text is the entry content. Pass task_id when you have an active task so the
-    note links to it; omit it for the pre-claim tracing note."""
+async def _note(
+    scope: str,
+    text: str,
+    task_id: str = "",
+    *,
+    done: str = "",
+    next: str = "",
+    where_to_look: list[str] | None = None,
+    context: str = "",
+    options: list[dict[str, str]] | None = None,
+    chosen: str = "",
+    rationale: str = "",
+    consequences: list[str] | None = None,
+    what_done: str = "",
+    what_learned: str = "",
+    what_struggled: str = "",
+    next_steps: list[str] | None = None,
+) -> dict[str, Any]:
+    """Write a journal/note entry. scope is one of 'note', 'decision', 'handoff',
+    'reflect', 'learning'; text is the entry content. Pass task_id when you have
+    an active task so the note links to it; omit it for the pre-claim tracing
+    note. scope='handoff' REQUIRES done (what is finished, one sentence) and
+    next (what happens next, one sentence), optionally where_to_look (paths);
+    a PM must write one before delegate and a developer before i_am_done.
+    scope='decision' takes context, options ([{name, pros, cons}]), chosen,
+    rationale, consequences. scope='reflect' takes what_done, what_learned,
+    what_struggled, next_steps. Only the fields for the chosen scope matter.
+    """
     body: dict[str, Any] = {"scope": scope, "text": text}
     if task_id:
         body["task_id"] = task_id
+    # Only non-empty fields ride the wire: the server treats a missing
+    # handoff `done` as a gate failure, and an empty string would too.
+    optional: dict[str, Any] = {
+        "done": done,
+        "next": next,
+        "where_to_look": where_to_look,
+        "context": context,
+        "options": options,
+        "chosen": chosen,
+        "rationale": rationale,
+        "consequences": consequences,
+        "what_done": what_done,
+        "what_learned": what_learned,
+        "what_struggled": what_struggled,
+        "next_steps": next_steps,
+    }
+    body.update({k: v for k, v in optional.items() if v})
     return await call_do("note", body)
 
 
@@ -462,7 +503,7 @@ async def _i_will_plan(
     task_id required. plan is a short summary (<=2000 chars). approach is the
     HOW (>=150 chars). sub_tasks is a list of {title, description}. Optional:
     technical_considerations (list[str]), risks (list of {risk, mitigation}),
-    open_questions (list of {question, ...})."""
+    open_questions (list of {question: str, answered: bool})."""
     body: dict[str, Any] = {
         "task_id": task_id,
         "plan": plan,

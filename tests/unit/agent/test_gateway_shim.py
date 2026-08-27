@@ -301,3 +301,42 @@ def test_build_gateway_tools_wraps_manifest(
     names = {getattr(t, "name", None) for t in tools}
     # FunctionTool exposes the wrapped function name
     assert any("give_me_work" in str(n) for n in names if n)
+
+
+@pytest.mark.asyncio
+async def test_note_forwards_handoff_and_structured_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """scope='handoff' must reach the server with done/next: the tracing gate
+    behind delegate/i_am_done requires them, and a shim that only forwarded
+    scope/text/task_id made every ADK handoff note fail (110 rejected notes in
+    one Main PM run). Empty optional fields stay off the wire."""
+    monkeypatch.setenv("ROBOFLEET_ORCHESTRATOR_URL", "http://orch:8000")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ID", "77777777-7777-7777-7777-777777777777")
+    monkeypatch.setenv("ROBOFLEET_AGENT_ROLE", "main_pm")
+    monkeypatch.setenv("ROBOFLEET_AGENT_TOKEN", "tok")
+    posts: list[dict[str, Any]] = []
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
+        posts.append({"url": url, "json": kw.get("json", {})})
+        return httpx.Response(200, json={"status": "noted"})
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    from robofleet.agent.gateway_shim import _note
+
+    await _note(
+        "handoff",
+        "handoff before delegate",
+        "660d59ce",
+        done="planned the backend split",
+        next="be-pm delegates two dev leaves",
+        where_to_look=["robofleet/tree_check.py"],
+    )
+    await _note("note", "plain note")
+    handoff, plain = (p["json"] for p in posts)
+    assert handoff["scope"] == "handoff"
+    assert handoff["done"] == "planned the backend split"
+    assert handoff["next"] == "be-pm delegates two dev leaves"
+    assert handoff["where_to_look"] == ["robofleet/tree_check.py"]
+    assert handoff["task_id"] == "660d59ce"
+    assert set(plain) == {"scope", "text"}

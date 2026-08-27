@@ -214,6 +214,72 @@ async def _diag(label: str, detail: str = "") -> None:
         pass
 
 
+# Consecutive error responses from ONE tool before the run is warned, then cut.
+# The Docker path's loop-detector hook has no ADK equivalent, so a model that
+# keeps re-issuing a rejected call (a Main PM sent 110 malformed handoff notes
+# in one run) would otherwise burn the whole Job timeout plus Cloud Run's
+# retries. The cut exits 0 so Cloud Run does NOT retry it; the orchestrator's
+# stale-claim reaper releases the task and the respawn breaker bounds re-runs.
+_LOOP_WARN_AT = 6
+_LOOP_HALT_AT = 12
+_loop: dict[str, Any] = {"tool": None, "count": 0}
+
+
+class ToolLoopError(RuntimeError):
+    """One tool rejected the model's call _LOOP_HALT_AT times in a row."""
+
+
+def _is_error_response(resp: Any) -> bool:
+    return isinstance(resp, dict) and bool(
+        resp.get("error") or resp.get("status") == "error"
+    )
+
+
+def _on_after_tool(
+    tool: Any, args: dict[str, Any], tool_context: Any, tool_response: Any
+) -> dict[str, Any] | None:
+    """Count consecutive rejections per tool; warn inside the response at
+    _LOOP_WARN_AT, raise ToolLoopError at _LOOP_HALT_AT. Any non-error
+    response resets the streak."""
+    del args, tool_context  # ADK passes them by keyword; the streak ignores them
+    name = getattr(tool, "name", "?")
+    if not _is_error_response(tool_response):
+        _loop["tool"], _loop["count"] = None, 0
+        return None
+    _loop["count"] = _loop["count"] + 1 if _loop["tool"] == name else 1
+    _loop["tool"] = name
+    n = _loop["count"]
+    if n >= _LOOP_HALT_AT:
+        raise ToolLoopError(f"{name} rejected {n} calls in a row")
+    if n >= _LOOP_WARN_AT:
+        return {
+            **tool_response,
+            "loop_warning": (
+                f"{name} has rejected {n} calls in a row. Do not resend the same"
+                " shape: read `message` and `remediate`, change the arguments,"
+                " or call i_am_blocked with the reason. The run is cut at"
+                f" {_LOOP_HALT_AT}."
+            ),
+        }
+    return None
+
+
+def _find_cause(exc: BaseException, kind: type[BaseException]) -> bool:
+    """True when exc, or anything in its cause/context/`.error` chain, is kind.
+    ADK wraps callback exceptions (DynamicNodeFailError carries `.error`)."""
+    seen: set[int] = set()
+    stack: list[BaseException | None] = [exc]
+    while stack:
+        e = stack.pop()
+        if e is None or id(e) in seen:
+            continue
+        seen.add(id(e))
+        if isinstance(e, kind):
+            return True
+        stack.extend([e.__cause__, e.__context__, getattr(e, "error", None)])
+    return False
+
+
 def _on_tool_error(
     tool: Any, args: dict[str, Any], tool_context: Any, error: Exception
 ) -> dict[str, Any] | None:
@@ -229,7 +295,7 @@ def _on_tool_error(
     returning None makes ADK re-raise it so the run still dies fast instead
     of the model retrying a dead gateway for many turns.
     """
-    if isinstance(error, httpx.HTTPError):
+    if isinstance(error, httpx.HTTPError | ToolLoopError):
         return None
     return {
         "error": type(error).__name__,
@@ -256,6 +322,7 @@ async def main() -> int:
             instruction=instruction,
             tools=tools,
             on_tool_error_callback=_on_tool_error,
+            after_tool_callback=_on_after_tool,
         )
         session_service = InMemorySessionService()
         runner = Runner(
@@ -277,6 +344,10 @@ async def main() -> int:
             _accumulate(usage, event)
             _log_event(event)
     except Exception as exc:
+        if _find_cause(exc, ToolLoopError):
+            await _diag("LOOP_CUT", str(exc)[:300])
+            await _post_usage(usage, exit_reason="tool_loop")
+            return 0
         code = _classify(exc)
         if code is not None:
             reason = "rate_limited" if code == _RATE_LIMIT_EXIT else "auth"

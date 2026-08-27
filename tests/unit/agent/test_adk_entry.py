@@ -248,3 +248,87 @@ def test_headers_carry_team_for_usage_post(monkeypatch: pytest.MonkeyPatch) -> N
     assert h["X-Agent-Token"] == "signed"
     monkeypatch.delenv("ROBOFLEET_AGENT_TEAM")
     assert "X-Agent-Team" not in _headers()
+
+
+def test_after_tool_loop_breaker_warns_then_halts() -> None:
+    """Consecutive rejections of ONE tool: silent below the warn line, a
+    loop_warning merged into the response from _LOOP_WARN_AT, ToolLoopError at
+    _LOOP_HALT_AT; a success or a different tool resets the streak."""
+    from robofleet.agent import adk_entry
+    from robofleet.agent.adk_entry import ToolLoopError, _on_after_tool
+
+    class _Tool:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+    note, ok = _Tool("note"), {"status": "noted", "error": None}
+    bad = {"status": None, "error": "invalid_state", "message": "done required"}
+    adk_entry._loop.update(tool=None, count=0)
+    for _ in range(adk_entry._LOOP_WARN_AT - 1):
+        assert _on_after_tool(note, {}, object(), bad) is None
+    warned = _on_after_tool(note, {}, object(), bad)
+    assert warned is not None and "loop_warning" in warned
+    assert warned["error"] == "invalid_state"
+    assert _on_after_tool(note, {}, object(), ok) is None  # reset
+    assert adk_entry._loop["count"] == 0
+    for _ in range(adk_entry._LOOP_HALT_AT - 1):
+        _on_after_tool(note, {}, object(), bad)
+    assert (
+        _on_after_tool(_Tool("evidence"), {}, object(), bad) is None
+    )  # other tool resets
+    for _ in range(adk_entry._LOOP_HALT_AT - 1):
+        _on_after_tool(note, {}, object(), bad)
+    with pytest.raises(ToolLoopError):
+        _on_after_tool(note, {}, object(), bad)
+    # The tool-error callback must not swallow the cut into a tool response.
+    from robofleet.agent.adk_entry import _on_tool_error
+
+    assert (
+        _on_tool_error(
+            tool=note, args={}, tool_context=object(), error=ToolLoopError("x")
+        )
+        is None
+    )
+
+
+@pytest.mark.asyncio
+async def test_main_tool_loop_cut_exits_zero_and_reports_usage(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A ToolLoopError wrapped by ADK ends the run with exit 0 (no Cloud Run
+    retry) and still posts usage with exit_reason=tool_loop."""
+    _setup_env(monkeypatch, tmp_path)
+    posts: list[dict[str, Any]] = []
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
+        posts.append({"url": url, "json": kw.get("json", {})})
+        return httpx.Response(200, json={"status": "ok"})
+
+    class _Wrapped(Exception):
+        def __init__(self, error: BaseException) -> None:
+            super().__init__("Dynamic node robofleet_agent failed")
+            self.error = error
+
+    class _FakeAgent:
+        def __init__(self, **kw: Any) -> None:
+            self.tools = kw.get("tools", [])
+            assert kw["after_tool_callback"].__name__ == "_on_after_tool"
+
+    class _FakeRunner:
+        def __init__(self, **_: Any) -> None:
+            pass
+
+        async def run_async(self, **_: Any) -> Any:
+            yield _FakeEvent()
+            from robofleet.agent.adk_entry import ToolLoopError
+
+            raise _Wrapped(ToolLoopError("note rejected 12 calls in a row"))
+
+    monkeypatch.setattr("robofleet.agent.adk_entry.LlmAgent", _FakeAgent)
+    monkeypatch.setattr("robofleet.agent.adk_entry.Runner", _FakeRunner)
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    from robofleet.agent.adk_entry import main
+
+    assert await main() == 0
+    usage = next(p["json"] for p in posts if p["url"].endswith("/usage/report"))
+    assert usage["exit_reason"] == "tool_loop"

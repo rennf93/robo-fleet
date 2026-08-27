@@ -15,6 +15,7 @@ For full design details, importing instructions, and usage examples, see [Fleet 
 
 A dedicated module for validation of tree structure and hierarchical consistency check. It exposes:
 - `TREE_CHECK_EPOCH`: An ISO 8601 UTC timestamp string designating the active baseline tree check execution epoch.
+- **CLI Entry Point**: Run `python -m robofleet.tree_check` to print the active epoch directly to standard output.
 
 For full design details, importing instructions, and usage examples, see [Tree Check Module Documentation](docs/tree_check.md).
 

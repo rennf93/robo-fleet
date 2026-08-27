@@ -1,10 +1,10 @@
 # Tree Check Module
 
-The `robofleet.tree_check` module is a small, lightweight module designed to expose marker constants for validating tree structure alignment and hierarchical consistency checks.
+The `robofleet.tree_check` module is a small, lightweight module designed to expose marker constants and a command-line interface (CLI) for validating tree structure alignment and hierarchical consistency checks.
 
 ## Purpose
 
-To ensure that various nodes, components, and services across the fleet are aligned with the same baseline hierarchical validation epoch, this module provides an easily importable timestamp constant. System validation scripts and health endpoints can query this module to verify the current deployed epoch of the backend tree check services.
+To ensure that various nodes, components, and services across the fleet are aligned with the same baseline hierarchical validation epoch, this module provides an easily importable timestamp constant and a companion CLI entry point. System validation scripts, deployment tooling, and health endpoints can query this module to verify the current deployed epoch of the backend tree check services.
 
 ## Constants
 
@@ -16,7 +16,7 @@ To ensure that various nodes, components, and services across the fleet are alig
 
 ## Usage
 
-### Importing and Reading the Epoch
+### Importing and Reading the Epoch in Python
 
 You can import the module and access the constant directly in your application or testing scripts:
 
@@ -48,15 +48,52 @@ except ValueError as e:
     print(f"Invalid ISO 8601 format: {e}")
 ```
 
+## CLI Entry Point
+
+The module can be executed directly as a command-line interface (CLI) to output the active tree check epoch constant.
+
+### Execution
+
+To run the CLI entry point, execute the module using Python's `-m` flag:
+
+```bash
+python -m robofleet.tree_check
+```
+
+### Output
+
+The command prints the value of `TREE_CHECK_EPOCH` followed by a newline to standard output, exiting with status code `0`.
+
+**Example Output:**
+```text
+2026-08-27T00:00:00Z
+```
+
+### Integration & Automation
+
+This CLI entry point is designed for integration with:
+- Deployment or diagnostic shell scripts.
+- Healthcheck definitions in containerized environments (e.g., Docker `HEALTHCHECK`).
+- Orchestration tool assertions.
+
+For example, to capture the epoch value in a shell script:
+
+```bash
+ACTIVE_EPOCH=$(python -m robofleet.tree_check)
+echo "Retrieved epoch: $ACTIVE_EPOCH"
+```
+
 ## Testing
 
-The integrity of this module is verified via unit tests located under `tests/unit/tree_check_test.py`.
+The integrity of this module and its CLI entry point is verified via unit tests located under `tests/unit/tree_check_test.py`.
 
 The unit tests assert that:
 1. `TREE_CHECK_EPOCH` exists and is a non-empty string.
 2. The epoch string is a valid ISO 8601 format and can be correctly parsed using `datetime.fromisoformat`.
+3. Calling the `main()` function directly prints the expected epoch to stdout (verified via pytest's `capsys`).
+4. Running the module as a subprocess using `python -m robofleet.tree_check` outputs the correct epoch and exits with code `0`.
 
-To run the unit tests, execute:
+To run the unit test suite, execute:
 ```bash
 pytest tests/unit/tree_check_test.py
 ```

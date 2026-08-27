@@ -76,12 +76,14 @@ See `.env.gcp.example` for the full set. One-line-per-section summary:
 
 - **Database (Cloud SQL):** `ROBOFLEET_DATABASE_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_NAME` point at the Cloud SQL Auth Proxy sidecar.
 - **Redis (Memorystore):** `ROBOFLEET_REDIS_HOST` / `_PORT` / `_PASSWORD` / `_DB` for the Memorystore instance.
-- **GCP infra references:** `ROBOFLEET_GCP_PROJECT_ID`, `ROBOFLEET_GCP_REGION`, `ROBOFLEET_GCP_CLOUDSQL_INSTANCE`, `ROBOFLEET_GCP_MEMORYSTORE_HOST` / `_PORT`, `ROBOFLEET_GCP_FILESTORE_SHARE`, `ROBOFLEET_GCP_GCS_BUCKET`, `ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO`, `ROBOFLEET_GCP_CLOUD_RUN_AGENT_JOB_PREFIX`.
+- **GCP infra references:** `ROBOFLEET_GCP_PROJECT_ID`, `ROBOFLEET_GCP_REGION`, `ROBOFLEET_GCP_CLOUDSQL_INSTANCE`, `ROBOFLEET_GCP_MEMORYSTORE_HOST` / `_PORT`, `ROBOFLEET_GCP_FILESTORE_SHARE` / `_IP` / `_NFS_PATH`, `ROBOFLEET_GCP_VPC_CONNECTOR_NAME`, `ROBOFLEET_GCP_GCS_BUCKET`, `ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO`, `ROBOFLEET_GCP_CLOUD_RUN_AGENT_JOB_PREFIX`. The Filestore IP/path + VPC connector are attached to every agent Cloud Run Job as its NFS workspace volume; a developer Job refuses to spawn without them.
+- **Vertex AI model location:** `ROBOFLEET_GCP_VERTEX_MODEL_LOCATION=global`, separate from the Cloud Run Job region. `gemini-3.5-flash` is served from the global Vertex endpoint (regional availability was preview-only through Aug 2026); empty falls back to `ROBOFLEET_GCP_REGION`.
 - **Secrets (Secret Manager):** `ROBOFLEET_ENCRYPTION_KEY`, `ROBOFLEET_AGENT_AUTH_SECRET`, `ROBOFLEET_AGENT_AUTH_REQUIRED=true`, `ROBOFLEET_CLOUD_AUTH_SECRET`.
 - **Cloud auth (armed on GCP):** `ROBOFLEET_CLOUD_AUTH_ENABLED=true`, `ROBOFLEET_CLOUD_AUTH_EMAIL` / `_PASSWORD` (the seeded CEO login).
-- **URLs:** `ROBOFLEET_PUBLIC_BASE_URL` (the Cloud Run panel URL), `ROBOFLEET_API_URL` / `ROBOFLEET_ORCHESTRATOR_URL` (localhost in the orchestrator container).
+- **URLs:** `ROBOFLEET_PUBLIC_BASE_URL` (the Cloud Run panel URL), `ROBOFLEET_API_URL` / `ROBOFLEET_ORCHESTRATOR_URL` (localhost in the orchestrator container; on the panel service `deploy-panel.sh` sets them to the orchestrator's public Cloud Run URL, and the panel's `proxy.ts` forwards `/api/*` there at request time).
 - **Agent images:** `ROBOFLEET_AGENT_IMAGE_REGISTRY`, `ROBOFLEET_AGENT_IMAGE_TAG`.
-- **Gemini:** `ROBOFLEET_GEMINI_API_KEY`, `ROBOFLEET_AGENT_MODEL` (defaults to `gemini-3.5-flash` in `robofleet.agent.adk_entry`).
+- **Gemini:** `ROBOFLEET_AGENT_MODEL_DEFAULT` (the model the orchestrator injects into every agent Job as `ROBOFLEET_AGENT_MODEL`; defaults to `gemini-3.5-flash`), `ROBOFLEET_GEMINI_API_KEY` (Gemini API fallback; on Cloud Run the Jobs authenticate to Vertex AI with the compute service account).
+- **Cost caps:** `ROBOFLEET_TASK_BUDGETS_ENABLED=true` arms `tasks.budget_usd` / `projects.monthly_budget_usd`; a breach blocks the task so a looping agent cannot burn credits.
 
 ## The 7 fleet properties
 

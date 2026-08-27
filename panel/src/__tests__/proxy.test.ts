@@ -46,6 +46,36 @@ describe("proxy", () => {
     expect(res.status).toBe(200);
   });
 
+  it("rewrites /api/* to ROBOFLEET_API_URL at request time (Cloud Run)", async () => {
+    vi.stubEnv("ROBOFLEET_API_URL", "https://orch.example.run.app/");
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { proxy } = await import("../proxy");
+
+    const res = await proxy(
+      new NextRequest("http://localhost:3000/api/tasks?limit=1"),
+    );
+    expect(res.headers.get("x-middleware-rewrite")).toBe(
+      "https://orch.example.run.app/api/tasks?limit=1",
+    );
+    // no auth probe, no login redirect on API paths
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  it("passes /api/* through untouched when ROBOFLEET_API_URL is unset", async () => {
+    vi.stubEnv("ROBOFLEET_API_URL", "");
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { proxy } = await import("../proxy");
+
+    const res = await proxy(new NextRequest("http://localhost:3000/api/tasks"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
   it("fails open (passes through) when the status probe errors", async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("network down"));
     const { proxy } = await import("../proxy");

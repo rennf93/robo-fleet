@@ -15,6 +15,12 @@ const INTERNAL_API_URL =
     ? `${process.env.ROBOFLEET_API_URL.replace(/\/$/, "")}/api`
     : "http://robofleet-orchestrator:8000/api");
 
+// Cloud Run only: the panel has no nginx in front, and next.config rewrites
+// are resolved at build time, so the orchestrator URL (known only at deploy)
+// is proxied here at request time. Unset on compose/local, where nginx or the
+// build-time rewrite already routes /api.
+const PUBLIC_BACKEND_URL = process.env.ROBOFLEET_API_URL?.replace(/\/$/, "");
+
 // Must match robofleet.api.auth.backend.SESSION_COOKIE_NAME.
 const SESSION_COOKIE_NAME = "robofleet_session";
 
@@ -53,6 +59,14 @@ export async function isCloudAuthEnabled(): Promise<boolean> {
 }
 
 export async function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  if (pathname.startsWith("/api/")) {
+    return PUBLIC_BACKEND_URL
+      ? NextResponse.rewrite(
+          new URL(`${PUBLIC_BACKEND_URL}${pathname}${search}`),
+        )
+      : NextResponse.next();
+  }
   if (!(await isCloudAuthEnabled())) {
     return NextResponse.next();
   }
@@ -64,14 +78,14 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except the login page itself (avoids a redirect loop), API
-  // routes (nginx routes /api/* straight to the orchestrator in prod — this
-  // never sees them there; excluded defensively for a bare `next start`),
+  // Everything except the login page itself (avoids a redirect loop),
   // the Telegram Mini App surface (/tg authenticates via Telegram initData,
   // not the password-login cookie — redirecting it to /login would strand a
   // phone session that can never reach that page), Next's internal asset
-  // paths, and the static icon files at the app root.
+  // paths, and the static icon files at the app root. /api/* IS matched: the
+  // proxy() branch above rewrites it to the orchestrator on Cloud Run and
+  // passes it through untouched everywhere else, before any auth gating.
   matcher: [
-    "/((?!login|api|tg(?:/|$)|_next/static|_next/image|favicon.ico|apple-icon.png|icon.png).*)",
+    "/((?!login|tg(?:/|$)|_next/static|_next/image|favicon.ico|apple-icon.png|icon.png).*)",
   ],
 };

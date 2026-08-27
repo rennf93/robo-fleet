@@ -374,3 +374,86 @@ def test_on_model_error_records_request_shape_and_reraises() -> None:
     assert "model: fc:open_pr+sig" in shape
     assert "user: fr:open_pr" in shape
     assert "user: text:11" in shape
+
+
+def test_request_json_serializes_bytes_and_models() -> None:
+    """Thought signatures (bytes) ride as base64 and pydantic parts dump cleanly,
+    so the replayable request dump never fails on its own content."""
+    import json as _json
+
+    from robofleet.agent.adk_entry import _request_json
+
+    class _Part:
+        def model_dump(self, **_: Any) -> dict[str, Any]:
+            return {
+                "function_call": {"name": "open_pr"},
+                "thought_signature": b"\x00\xff",
+            }
+
+    class _Req:
+        model = "gemini-3.5-flash"
+        config = None
+
+        def __init__(self) -> None:
+            self.contents = [_Part()]
+
+    data = _json.loads(_request_json(_Req()))
+    assert data["model"] == "gemini-3.5-flash"
+    assert data["contents"][0]["function_call"]["name"] == "open_pr"
+    assert data["contents"][0]["thought_signature"] == {"__bytes_b64__": "AP8="}
+
+
+@pytest.mark.asyncio
+async def test_main_restarts_session_on_invalid_argument(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A wrapped `400 INVALID_ARGUMENT` restarts the ADK session in-process with
+    a RESUME note (fresh history has resumed the task every time), instead of
+    dying into a Cloud Run retry; the run then completes with exit 0."""
+    _setup_env(monkeypatch, tmp_path)
+    monkeypatch.setattr("robofleet.agent.adk_entry._dump_crash", _noop_async)
+    posts: list[dict[str, Any]] = []
+    prompts: list[str] = []
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
+        posts.append({"url": url, "json": kw.get("json", {})})
+        return httpx.Response(200, json={"status": "ok"})
+
+    class _Wrapped(Exception):
+        def __init__(self, error: BaseException) -> None:
+            super().__init__("Dynamic node robofleet_agent failed")
+            self.error = error
+
+    class _FakeAgent:
+        def __init__(self, **kw: Any) -> None:
+            self.tools = kw.get("tools", [])
+
+    class _FakeRunner:
+        def __init__(self, **_: Any) -> None:
+            pass
+
+        async def run_async(self, **kw: Any) -> Any:
+            prompts.append(kw["new_message"].parts[0].text)
+            yield _FakeEvent()
+            if len(prompts) == 1:
+                raise _Wrapped(
+                    RuntimeError(
+                        "400 INVALID_ARGUMENT. Request contains an invalid argument."
+                    )
+                )
+
+    monkeypatch.setattr("robofleet.agent.adk_entry.LlmAgent", _FakeAgent)
+    monkeypatch.setattr("robofleet.agent.adk_entry.Runner", _FakeRunner)
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    from robofleet.agent.adk_entry import main
+
+    assert await main() == 0
+    assert len(prompts) == 2
+    assert "RESUME" not in prompts[0]
+    assert "RESUME" in prompts[1]
+    usage = next(p["json"] for p in posts if p["url"].endswith("/usage/report"))
+    assert usage["exit_reason"] == "normal"
+
+
+async def _noop_async(*_: Any, **__: Any) -> None:
+    return None

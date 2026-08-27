@@ -11,6 +11,8 @@ Unauthenticated) mirroring the grok/codex/kimi conventions.
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
 import os
 import re
 import sys
@@ -185,8 +187,47 @@ def _request_shape(llm_request: Any, last: int = 10) -> str:
     return "\n".join(lines)
 
 
+_REQUEST_DUMP_MAX = 4_000_000  # chars; a 111-content request is well under
+
+
+def _request_json(llm_request: Any) -> str:
+    """The failing request, serialized far enough to replay against Vertex:
+    model, config (system instruction + tool declarations) and every content.
+    Bytes (thought signatures) ride as base64 so nothing is dropped."""
+
+    def default(o: Any) -> Any:
+        if isinstance(o, bytes | bytearray):
+            return {"__bytes_b64__": base64.b64encode(bytes(o)).decode("ascii")}
+        if hasattr(o, "model_dump"):
+            return o.model_dump(mode="python", exclude_none=True)
+        return repr(o)
+
+    data = {
+        "model": getattr(llm_request, "model", None),
+        "config": getattr(llm_request, "config", None),
+        "contents": list(getattr(llm_request, "contents", None) or []),
+    }
+    return json.dumps(data, default=default)[:_REQUEST_DUMP_MAX]
+
+
+def _gcs_put(blob_path: str, payload: str) -> None:
+    """Best-effort blob write; never raises (diagnostics only)."""
+    bucket = os.environ.get(
+        "ROBOFLEET_GCS_BUCKET", "robofleet-deploy-813757481440-state"
+    )
+    try:
+        import google.cloud.storage  # lazy: only needed on the Cloud Run path
+
+        google.cloud.storage.Client().bucket(bucket).blob(blob_path).upload_from_string(
+            payload
+        )
+    except Exception:
+        pass
+
+
 def _on_model_error(callback_context: Any, llm_request: Any, error: Exception) -> None:
-    """Record the failing request's shape, then let ADK re-raise (returns None)."""
+    """Record the failing request (shape for the crash dump, full JSON to
+    diag/request-{agent}.json), then let ADK re-raise (returns None)."""
     del callback_context
     try:
         _diag_state["last_request"] = (
@@ -194,6 +235,11 @@ def _on_model_error(callback_context: Any, llm_request: Any, error: Exception) -
         )
     except Exception:
         _diag_state["last_request"] = "request shape unavailable"
+    try:
+        agent = os.environ.get("ROBOFLEET_AGENT_ID", "unknown")
+        _gcs_put(f"diag/request-{agent}.json", _request_json(llm_request))
+    except Exception:
+        pass
 
 
 async def _dump_crash(exc: BaseException) -> None:
@@ -303,20 +349,29 @@ def _on_after_tool(
     return None
 
 
-def _find_cause(exc: BaseException, kind: type[BaseException]) -> bool:
-    """True when exc, or anything in its cause/context/`.error` chain, is kind.
-    ADK wraps callback exceptions (DynamicNodeFailError carries `.error`)."""
+def _chain(exc: BaseException) -> list[BaseException]:
+    """exc plus everything reachable through cause/context/`.error` (ADK wraps
+    callback and model exceptions; DynamicNodeFailError carries `.error`)."""
     seen: set[int] = set()
+    out: list[BaseException] = []
     stack: list[BaseException | None] = [exc]
     while stack:
         e = stack.pop()
         if e is None or id(e) in seen:
             continue
         seen.add(id(e))
-        if isinstance(e, kind):
-            return True
+        out.append(e)
         stack.extend([e.__cause__, e.__context__, getattr(e, "error", None)])
-    return False
+    return out
+
+
+def _find_cause(exc: BaseException, kind: type[BaseException]) -> bool:
+    return any(isinstance(e, kind) for e in _chain(exc))
+
+
+def _is_invalid_request(exc: BaseException) -> bool:
+    """Vertex's nameless `400 INVALID_ARGUMENT` on a model call."""
+    return any("INVALID_ARGUMENT" in str(e) for e in _chain(exc))
 
 
 def _on_tool_error(
@@ -346,6 +401,30 @@ def _on_tool_error(
     }
 
 
+# In-process session restarts on a model-request 400 before giving up.
+_MODEL_RESTARTS = 2
+_RESUME_NOTE = (
+    "\n\nRESUME: your previous session in this container was cut by a "
+    "model-request error after real progress was made. Re-read the task state "
+    "(evidence(task_id) or give_me_work) and continue from where it stands; do "
+    "not redo finished steps."
+)
+
+
+async def _run_session(
+    runner: Any, session_service: Any, usage: dict[str, Any], initial: str
+) -> None:
+    """One ADK session over the agent: create it, drive it to the end."""
+    session = await session_service.create_session(app_name=_APP_NAME, user_id="agent")
+    async for event in runner.run_async(
+        user_id="agent",
+        session_id=session.id,
+        new_message=types.Content(parts=[types.Part(text=initial)]),
+    ):
+        _accumulate(usage, event)
+        _log_event(event)
+
+
 async def main() -> int:
     usage = _new_usage()
     # Heartbeat: proves main() began (an OOM-SIGKILL during import leaves no
@@ -368,40 +447,45 @@ async def main() -> int:
         runner = Runner(
             agent=agent, app_name=_APP_NAME, session_service=session_service
         )
-        session = await session_service.create_session(
-            app_name=_APP_NAME, user_id="agent"
-        )
     except Exception as exc:
         await _dump_crash(exc)
         raise
     await _diag("RUNNER_READY", f"tools={len(agent.tools)}")
-    try:
-        async for event in runner.run_async(
-            user_id="agent",
-            session_id=session.id,
-            new_message=types.Content(parts=[types.Part(text=initial)]),
-        ):
-            _accumulate(usage, event)
-            _log_event(event)
-    except Exception as exc:
-        if _find_cause(exc, ToolLoopError):
-            await _diag("LOOP_CUT", str(exc)[:300])
-            await _post_usage(usage, exit_reason="tool_loop")
-            return 0
-        code = _classify(exc)
-        if code is not None:
-            reason = "rate_limited" if code == _RATE_LIMIT_EXIT else "auth"
-            # GCS diag BEFORE _post_usage: the usage post can fail (orchestrator
-            # unreachable), and this is the only signal for a classified exit
-            # since it returns without a _dump_crash traceback.
-            await _diag(
-                "CLASSIFIED",
-                f"exit={code} reason={reason} exc={type(exc).__name__}: {exc}",
-            )
-            await _post_usage(usage, exit_reason=reason)
-            return code
-        await _dump_crash(exc)
-        raise
+    restarts = 0
+    while True:
+        try:
+            await _run_session(runner, session_service, usage, initial)
+            break
+        except Exception as exc:
+            if _find_cause(exc, ToolLoopError):
+                await _diag("LOOP_CUT", str(exc)[:300])
+                await _post_usage(usage, exit_reason="tool_loop")
+                return 0
+            code = _classify(exc)
+            if code is not None:
+                reason = "rate_limited" if code == _RATE_LIMIT_EXIT else "auth"
+                # GCS diag BEFORE _post_usage: the usage post can fail (orchestrator
+                # unreachable), and this is the only signal for a classified exit
+                # since it returns without a _dump_crash traceback.
+                await _diag(
+                    "CLASSIFIED",
+                    f"exit={code} reason={reason} exc={type(exc).__name__}: {exc}",
+                )
+                await _post_usage(usage, exit_reason=reason)
+                return code
+            await _dump_crash(exc)
+            if _is_invalid_request(exc) and restarts < _MODEL_RESTARTS:
+                # A fresh session has resumed the task every time so far; do it
+                # here instead of dying into a Cloud Run retry (container restart,
+                # lost usage, a retry budget of three).
+                restarts += 1
+                await _diag(
+                    "MODEL_RESTART", f"{restarts}/{_MODEL_RESTARTS} {exc!s:.200}"
+                )
+                if _RESUME_NOTE not in initial:
+                    initial += _RESUME_NOTE
+                continue
+            raise
     await _post_usage(usage, exit_reason="normal")
     return 0
 

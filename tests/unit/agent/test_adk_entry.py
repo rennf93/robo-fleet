@@ -457,3 +457,53 @@ async def test_main_restarts_session_on_invalid_argument(
 
 async def _noop_async(*_: Any, **__: Any) -> None:
     return None
+
+
+@pytest.mark.asyncio
+async def test_main_reports_usage_on_crash_and_counts_thinking_tokens(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A run that dies on an unclassified exception still posts its usage
+    (exit_reason=crash) before re-raising, and thinking tokens count as
+    output. Both were blind spots: crashed loops were the costliest runs and
+    the ledger never saw them."""
+    _setup_env(monkeypatch, tmp_path)
+    monkeypatch.setattr("robofleet.agent.adk_entry._dump_crash", _noop_async)
+    posts: list[dict[str, Any]] = []
+
+    async def fake_post(self: httpx.AsyncClient, url: str, **kw: Any) -> httpx.Response:
+        posts.append({"url": url, "json": kw.get("json", {})})
+        return httpx.Response(200, json={"status": "ok"})
+
+    class _ThinkingUsage:
+        prompt_token_count = 100
+        candidates_token_count = 20
+        thoughts_token_count = 300
+
+    class _ThinkingEvent:
+        usage_metadata: Any = _ThinkingUsage()
+        turn_complete = True
+
+    class _FakeAgent:
+        def __init__(self, **kw: Any) -> None:
+            self.tools = kw.get("tools", [])
+
+    class _FakeRunner:
+        def __init__(self, **_: Any) -> None:
+            pass
+
+        async def run_async(self, **_: Any) -> Any:
+            yield _ThinkingEvent()
+            raise RuntimeError("something unclassified")
+
+    monkeypatch.setattr("robofleet.agent.adk_entry.LlmAgent", _FakeAgent)
+    monkeypatch.setattr("robofleet.agent.adk_entry.Runner", _FakeRunner)
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    from robofleet.agent.adk_entry import main
+
+    with pytest.raises(RuntimeError):
+        await main()
+    usage = next(p["json"] for p in posts if p["url"].endswith("/usage/report"))
+    assert usage["exit_reason"] == "crash"
+    assert usage["tokens_output"] == 320
+    assert usage["tokens_input"] == 100

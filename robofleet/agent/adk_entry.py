@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import json
 import os
 import re
@@ -121,7 +122,11 @@ def _accumulate(usage: dict[str, Any], event: Any) -> None:
     u = getattr(event, "usage_metadata", None)
     if u is not None:
         usage["tokens_input"] = getattr(u, "prompt_token_count", 0) or 0
-        usage["tokens_output"] = getattr(u, "candidates_token_count", 0) or 0
+        # Thinking tokens are billed as output on Gemini 3.x; without them the
+        # ledger (and the budget caps) undercount a tool-heavy run badly.
+        usage["tokens_output"] = (getattr(u, "candidates_token_count", 0) or 0) + (
+            getattr(u, "thoughts_token_count", 0) or 0
+        )
         # cached_content_token_count is the genai cache-read field; cache-write
         # has no clean summary scalar, left at 0.
         usage["tokens_cache_read"] = getattr(u, "cached_content_token_count", 0) or 0
@@ -425,6 +430,28 @@ async def _run_session(
         _log_event(event)
 
 
+async def _classified_exit(exc: BaseException, usage: dict[str, Any]) -> int | None:
+    """Exit code for a loop cut or a classified (rate-limit / auth) failure,
+    with its usage report; None when the failure is unclassified."""
+    if _find_cause(exc, ToolLoopError):
+        await _diag("LOOP_CUT", str(exc)[:300])
+        await _post_usage(usage, exit_reason="tool_loop")
+        return 0
+    code = _classify(exc)
+    if code is None:
+        return None
+    reason = "rate_limited" if code == _RATE_LIMIT_EXIT else "auth"
+    # GCS diag BEFORE _post_usage: the usage post can fail (orchestrator
+    # unreachable), and this is the only signal for a classified exit
+    # since it returns without a _dump_crash traceback.
+    await _diag(
+        "CLASSIFIED",
+        f"exit={code} reason={reason} exc={type(exc).__name__}: {exc}",
+    )
+    await _post_usage(usage, exit_reason=reason)
+    return code
+
+
 async def main() -> int:
     usage = _new_usage()
     # Heartbeat: proves main() began (an OOM-SIGKILL during import leaves no
@@ -457,21 +484,8 @@ async def main() -> int:
             await _run_session(runner, session_service, usage, initial)
             break
         except Exception as exc:
-            if _find_cause(exc, ToolLoopError):
-                await _diag("LOOP_CUT", str(exc)[:300])
-                await _post_usage(usage, exit_reason="tool_loop")
-                return 0
-            code = _classify(exc)
+            code = await _classified_exit(exc, usage)
             if code is not None:
-                reason = "rate_limited" if code == _RATE_LIMIT_EXIT else "auth"
-                # GCS diag BEFORE _post_usage: the usage post can fail (orchestrator
-                # unreachable), and this is the only signal for a classified exit
-                # since it returns without a _dump_crash traceback.
-                await _diag(
-                    "CLASSIFIED",
-                    f"exit={code} reason={reason} exc={type(exc).__name__}: {exc}",
-                )
-                await _post_usage(usage, exit_reason=reason)
                 return code
             await _dump_crash(exc)
             if _is_invalid_request(exc) and restarts < _MODEL_RESTARTS:
@@ -485,6 +499,11 @@ async def main() -> int:
                 if _RESUME_NOTE not in initial:
                     initial += _RESUME_NOTE
                 continue
+            # A crashed run still spent tokens: report them so the ledger and
+            # the budget caps see the loops that cost the most. Best-effort: a
+            # failed report must not mask the crash itself.
+            with contextlib.suppress(Exception):
+                await _post_usage(usage, exit_reason="crash")
             raise
     await _post_usage(usage, exit_reason="normal")
     return 0

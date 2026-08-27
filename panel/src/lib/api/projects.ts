@@ -82,6 +82,8 @@ const mockTaskCounts: Record<
   "proj-mock-2": { done: 34, active: 2, blocked: 0 },
 };
 
+
+
 export interface ProjectFilters {
   assigned_cell?: Team;
   active_only?: boolean;
@@ -154,7 +156,7 @@ export const projectsApi = {
         // Mock mode: mirror the backend's auto-detect (github.com -> github).
         git_provider:
           project.git_provider ??
-          (project.git_url.includes("github.com") ? "github" : null),
+          detectGithubProvider(project.git_url),
         github_installation_id: project.github_installation_id ?? null,
         default_branch: project.default_branch ?? "main",
         environments: project.environments ?? null,

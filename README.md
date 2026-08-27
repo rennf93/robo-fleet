@@ -1,1 +1,26 @@
-# robo-fleet
+# RoboFleet Backend
+
+RoboFleet is a fleet management and coordination system for autonomous agents. This repository contains the backend services and modules.
+
+## Modules
+
+### Fleet Check (`robofleet.fleet_check`)
+
+A dedicated marker module for pre-demo end-to-end (E2E) testing. It exposes:
+- `FLEET_CHECK_EPOCH`: An ISO 8601 UTC timestamp string designating the current active baseline execution epoch.
+
+For full design details, importing instructions, and usage examples, see [Fleet Check Marker Module Documentation](docs/fleet_check.md).
+
+## Running Tests
+
+To verify package integrity and unit test suite pass rates, run:
+
+```bash
+pytest
+```
+
+Specific test files can be executed individually:
+
+```bash
+pytest tests/unit/test_fleet_check.py
+```

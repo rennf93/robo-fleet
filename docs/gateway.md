@@ -43,7 +43,7 @@ Content tools all live under one segment: `POST /api/v1/do/{tool}` (`robofleet/a
 }
 ```
 
-**Error** — one of five flavors, each a classmethod on `Envelope`:
+**Error** — one of seven flavors, each a classmethod on `Envelope`:
 
 | Constructor | `error` value | When |
 |---|---|---|

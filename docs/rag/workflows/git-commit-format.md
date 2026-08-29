@@ -1,47 +1,32 @@
 # Git Commit Format
 
-Commits use conventional format with traceability:
+**See `docs/rag/workflows/git-commits.md` for the full workflow  -  this file covers only the message format.** The real format, verified against `robofleet/services/gateway/content_actions.py`'s `commit()` action and `robofleet/services/gateway/commit_validator.py`, is much simpler than a template with a body/footer/links block:
 
 ```
-[{root-id:8}:{task-id:8}] {type}({scope}): {description}
-
-{body}
-
----
-Task: {task-id}
-Root: {root-task-id}
-Agent: {agent-slug}
-
-Links:
-- Task: {api}/tasks/{task-id}
-- Root: {api}/tasks/{root-task-id}
-- Journal: {api}/journals/{agent-slug}
+[{task_id:8}] {your subject}
 ```
 
-**Required:** the conventional `type` (feat, fix, chore, docs, refactor, test, style, perf, ci, build) at the start of the subject. The `commit_validator` rejects messages that don't start with one of these followed by `(scope)?:`.
+Example: `[a1b2c3d4] Add rate limiting endpoint`
 
-**Optional:** `scope` (api, auth, db, ui), `body`, the `files` argument to scope the commit.
+You write the subject; the gateway strips any `[task-id]` you included yourself and re-prefixes with the canonical 8-char task id.
+
+**Validated (enforced), via `commit_validator.validate_commit_message`:**
+- Non-empty
+- At least `commit_subject_min_chars` (default 20) characters
+- Not a single banned word (case-insensitive): `wip`, `tmp`, `asdf`, `oops`, `fix`, `update`, `change`, `stuff`, `things`
+
+**Not enforced  -  a soft hint only:** Conventional-Commits shape (`type(scope): subject`, e.g. `feat(api): ...`). A subject that doesn't match `^(feat|fix|chore|docs|refactor|test|perf|build|ci)(\(scope\))?:\s+.+$` still succeeds; the response just carries a hint suggesting that shape. There is no required `type`, no body template, no footer with task/root/agent links  -  write a real, substantive subject line and you're done.
+
+Only `developer` and `documenter` roles may commit (`commit` is not in any other role's manifest).
 
 ## How to commit
 
-Use the **`commit`** verb on the robofleet-do MCP — devs and documenters only. There is no `robofleet_git_commit` tool.
-
 ```python
 commit(
-    message="feat(api): add Redis rate limiter",
+    message="Add rate limiting endpoint",
     files=["robofleet/api/routes/rate.py", "tests/integration/test_rate.py"],
     # files is optional; defaults to all staged + modified tracked files
 )
 ```
 
-The choreographer:
-
-1. Strips any leading `[task-id]` you might have included
-2. Runs `commit_validator` on the subject
-3. Re-prefixes with the canonical `[task-id-first-8]`
-4. Stages the listed files (or everything tracked + modified)
-5. Commits in the agent's workspace
-6. Pushes to the agent's branch on origin
-7. Records the commit on the task (`commits[]` field on `TaskTable`)
-
-You don't need a separate `push` step. There is no `robofleet_git_push` tool.
+There is no `git_commit`-via-shell path and no separate `push` tool the model calls directly  -  `commit` (a do-tool, HTTP POST to `/api/v1/do/commit`, no MCP) stages, commits, and pushes in one call.

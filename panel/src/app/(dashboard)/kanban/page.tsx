@@ -4,10 +4,6 @@ import { Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// The kanban views (dev/qa/pr-review/pm) now live as the Tasks page's Kanban
-// tab (see (dashboard)/tasks/page.tsx). This route only exists so old links
-// and bookmarks to /kanban and /kanban?view=qa keep working — it forwards
-// straight to /tasks?tab=kanban(&view=X) and never renders any board itself.
 function KanbanRedirect() {
   const router = useRouter();
   const searchParams = useSearchParams();

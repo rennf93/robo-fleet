@@ -1,6 +1,8 @@
 # API Endpoints Reference
 
-Base URL: `http://{host}:{port}/api/v1`
+**This is the operator/panel-facing REST API (`robofleet/api/routes/`), not what a spawned agent calls.** A delivery agent never hits these routes directly - its tools are ADK `FunctionTool`s that HTTP POST to a much narrower surface, `{base}/api/v1/flow/{segment}/{verb}` and `{base}/api/v1/do/{tool}` (`robofleet/agent/gateway_shim.py`; the routes live under `robofleet/api/routes/v1/{flow_dev,flow_qa,flow_cell_pm,flow_main_pm,flow_board,flow_auditor,flow_pr_reviewer,do}.py`), resolved from `ROBOFLEET_ORCHESTRATOR_URL` with a `ROBOFLEET_PUBLIC_API_URL` fallback for a Cloud Run Job that cannot reach the mesh-internal address. For the actual agent tool surface, see `docs/rag/tools/task-tools.md` and the per-role files under `docs/rag/roles/`. The routes below are what the Next.js panel and CEO-facing tooling call; listed for reference, not re-verified line by line against the current route files.
+
+Base URL: `http://{host}:{port}/api`
 
 ## Tasks
 
@@ -81,7 +83,7 @@ Base URL: `http://{host}:{port}/api/v1`
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/system/rate-limits` | Active per-provider rate-limit state (`{ entries: [...] }`) |
-| WS | `/ws/system` | Operator stream — rate-limit lifecycle (`RATE_LIMIT_HIT` / `RATE_LIMIT_LIFTED`) and live usage (`USAGE_SNAPSHOT`) pushed to the usage dashboard |
+| WS | `/ws/system` | Operator stream  -  rate-limit lifecycle (`RATE_LIMIT_HIT` / `RATE_LIMIT_LIFTED`) and live usage (`USAGE_SNAPSHOT`) pushed to the usage dashboard |
 | WS | `/ws/agents/{id}`, `/ws/notifications/{id}` | Per-resource live streams |
 
 ## Documentation

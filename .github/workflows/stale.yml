@@ -1,5 +1,3 @@
-# Warns then closes issues and PRs that have had no activity for a specified amount of time.
-# Configuration reference: https://github.com/actions/stale
 name: Mark stale issues and pull requests
 
 on:

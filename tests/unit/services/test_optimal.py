@@ -165,7 +165,7 @@ async def test_unindex_journal_entry_swallows_tracking_row_failure() -> None:
 # Periodic re-scan: deleted-file de-indexing (secondary defect fix)
 #
 # _check_for_updates detected new/modified auto-index-dir files by mtime but
-# never noticed a file removed from disk, so a deleted docs/rag or docs/map
+# never noticed a file removed from disk, so a deleted docs/rag
 # file kept surfacing in robofleet_kb_search forever. _scan_for_deleted_files
 # is the pure detection step (diffs self._file_mtimes against a fresh
 # rglob); _unindex_deleted_doc_file is the de-index action, mirroring
@@ -204,7 +204,7 @@ def test_scan_for_deleted_files_detects_and_prunes(tmp_path: Path) -> None:
 
 
 def test_scan_for_deleted_files_ignores_other_directories(tmp_path: Path) -> None:
-    """A tracked path outside the scanned directory (e.g. docs/map's entries
+    """A tracked path outside the scanned directory (e.g. a removed directory's entries
     while scanning docs/rag) must never be reported as deleted."""
     rag_dir = tmp_path / "rag"
     map_dir = tmp_path / "map"

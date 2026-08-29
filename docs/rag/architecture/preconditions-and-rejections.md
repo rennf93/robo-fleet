@@ -20,7 +20,7 @@ When a precondition fails, the error flavor depends on the **reason for the fail
 
 ### `tracing_gap` (default)
 
-**Meaning:** A required artifact is missing — the agent needs to do something to provide it.
+**Meaning:** A required artifact is missing  -  the agent needs to do something to provide it.
 
 **Examples:**
 - `PRECONDITION_COMMITS` fails if the developer hasn't made any commits yet
@@ -40,7 +40,7 @@ The `missing[]` array tells the agent exactly what artifact is missing, so they 
 
 ### `not_authorized` (ownership / identity gates)
 
-**Meaning:** The agent is not allowed to perform this action — a role/permission boundary, not a missing artifact.
+**Meaning:** The agent is not allowed to perform this action  -  a role/permission boundary, not a missing artifact.
 
 **Examples:**
 - **`PRECONDITION_OWNERSHIP`** fails if the agent is not assigned to the task
@@ -56,7 +56,7 @@ The `missing[]` array tells the agent exactly what artifact is missing, so they 
 }
 ```
 
-There is no `missing[]` array — the agent is simply not allowed, and the remediate message tells them what to do instead (usually "find your own work" or "have a different role perform this").
+There is no `missing[]` array  -  the agent is simply not allowed, and the remediate message tells them what to do instead (usually "find your own work" or "have a different role perform this").
 
 ## How `rejection_kind` works
 
@@ -133,7 +133,7 @@ When an agent tries to perform an action on a task they don't own, they now see:
 }
 ```
 
-This is semantically clearer than the previous `tracing_gap` / `owns_task` message: it's an authorization failure, not a data-collection problem. The agent cannot add a "missing" artifact to fix it — they need a different task.
+This is semantically clearer than the previous `tracing_gap` / `owns_task` message: it's an authorization failure, not a data-collection problem. The agent cannot add a "missing" artifact to fix it  -  they need a different task.
 
 ## When to add a new precondition with `rejection_kind='not_authorized'`
 
@@ -146,6 +146,6 @@ When designing a new gate-check precondition:
 
 ## See also
 
-- [How agents are sandboxed](../company/agent-gateway.md) — the gateway, verbs, and envelope
-- [REST API](../../api/rest-api.md) — error envelope schema and error flavors
-- [Task model](./task-model.md) — task fields and state
+- How agents are sandboxed  -  the gateway, verbs, and envelope
+- REST API  -  error envelope schema and error flavors
+- [Task model](./task-model.md)  -  task fields and state

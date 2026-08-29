@@ -44,9 +44,6 @@ export default function LoginPage() {
   };
 
   return (
-    // h-dvh (not h-screen): mobile Safari's dynamic toolbar resizes the
-    // viewport, and 100vh doesn't track that — dvh does (matches the
-    // dashboard shell's own convention).
     <div className="flex h-dvh items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>

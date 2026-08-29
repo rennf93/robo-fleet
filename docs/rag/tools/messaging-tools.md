@@ -1,8 +1,8 @@
 # Notification Tools
 
-There is **no** `robofleet_message_*`, `robofleet_notify_send`, or `robofleet_session_*` tool. Formal notifications are a small set of **content tools** on the `robofleet-do` MCP server, role-scoped at spawn time. For agent-to-agent messaging (`dm`, `read_a2a`), see `docs/rag/tools/a2a-tools.md`.
+There is **no** `robofleet_message_*`, `robofleet_notify_send`, or `robofleet_session_*` tool. Formal notifications are a small set of **do-tools** - ADK `FunctionTool`s that HTTP POST to `/api/v1/do/{tool}`, no MCP server involved - role-scoped at spawn time. For agent-to-agent messaging (`dm`, `read_a2a`), see `docs/rag/tools/a2a-tools.md`.
 
-## Formal notification — `notify` (PM / Board only)
+## Formal notification  -  `notify` (PM / Board only)
 
 `notify` creates an ack-required notification (distinct from the informal `dm`). Only PM roles and the Board may send it; devs / QA / docs reach peers via `dm` and use the inbox tools below to receive.
 
@@ -12,7 +12,9 @@ notify(target="be-dev-1", text="Task ready for you", priority="normal", task_id=
 
 `priority` is `normal | high | urgent`. `task_id` auto-injects from the active task when omitted.
 
-`notify` rejects **human-only recipients** (`prompter`, `secretary`) — they have no agent ack path, so an ack-required alert to them would sit unacked forever. The CEO is allowed (acks via the panel).
+`notify` rejects **human-only recipients** (`prompter`, `secretary`)  -  they have no agent ack path, so an ack-required alert to them would sit unacked forever. The CEO is allowed (acks via the panel).
+
+**Known gap under the ADK runtime:** `notify`/`notify_list`/`notify_get`/`notify_ack` have no hand-written wrapper in `robofleet/agent/gateway_shim.py`'s `_SPECIALIZED` map, so each falls through to a generic `async def _fn(**kwargs)` `FunctionTool`. ADK derives a tool's callable schema from the Python function's own named parameters  -  a bare `**kwargs` function exposes none, and the code comment right above `gateway_shim.py`'s specialized-function block states plainly that ADK then strips whatever the model tries to pass. If an ack or a notify call seems to silently ignore your arguments, this is why; it is a real, unresolved gap, not something you did wrong.
 
 ## Receiving notifications
 
@@ -28,4 +30,4 @@ When `i_am_idle()` reports unread A2A or @mentions, clear A2A with `read_a2a()` 
 
 ## Unacked notifications re-escalate
 
-An ack-required `notify` left unacked past its `expires_at` is re-escalated to the recipient's up-role (your PM's PM, or the CEO) — but not on every sweep tick. The first re-escalation fires at expiry, each one after that doubles the wait (1h, 2h, 4h, ... capped at 24h), and after a fixed number of attempts it stops and is logged as permanently unacked. Acking promptly is the only way to stop the clock — there is no way to snooze or dismiss a notification other than `notify_ack`.
+An ack-required `notify` left unacked past its `expires_at` is re-escalated to the recipient's up-role (your PM's PM, or the CEO)  -  but not on every sweep tick. The first re-escalation fires at expiry, each one after that doubles the wait (1h, 2h, 4h, ... capped at 24h), and after a fixed number of attempts it stops and is logged as permanently unacked. Acking promptly is the only way to stop the clock  -  there is no way to snooze or dismiss a notification other than `notify_ack`.

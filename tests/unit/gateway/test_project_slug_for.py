@@ -5,7 +5,6 @@ task a root→master PR ever sits on) often carries just a ``product_id`` (the
 cell→repo map) and no project of its own. Before the fallback, the in-path
 gate's PR-comment post and the external reviewer's diff fetch both resolved a
 ``None`` slug and silently no-op'd — so the gate verdict never reached the PR
-(observed live: PR #107 / root fead4372 got pr_fail'd with no PR comment).
 """
 
 from __future__ import annotations

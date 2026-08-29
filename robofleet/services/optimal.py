@@ -60,11 +60,10 @@ logger = structlog.get_logger()
 MAX_CONTENT_CHARS = 800
 
 # Directories under docs/ that are auto-indexed at startup AND watched by the
-# periodic update loop. docs/rag is the agent-facing RAG corpus; docs/map is
-# the agent-facing exhaustive codebase map. Both dirs' files route through
-# index_documentation, except any file under a "standards" subdir, which
-# routes to the standards indexer instead (see _index_doc_file).
-AUTO_INDEX_DIRS = ("rag", "map")
+# periodic update loop. docs/rag is the agent-facing RAG corpus; its files
+# route through index_documentation, except any file under a "standards"
+# subdir, which routes to the standards indexer instead (see _index_doc_file).
+AUTO_INDEX_DIRS = ("rag",)
 
 
 @dataclass
@@ -553,7 +552,7 @@ class OptimalService:
 
         Mirrors unindex_playbook/unindex_vault_note/unindex_journal_entry:
         drops the file's vector-store chunks AND its IndexedDocumentTable
-        tracking row, so a file removed from docs/rag or docs/map stops
+        tracking row, so a file removed from docs/rag stops
         surfacing in robofleet_kb_search once it's gone from the tree.
         Idempotent; failures are logged and swallowed so one bad path never
         aborts the rest of the periodic re-scan.

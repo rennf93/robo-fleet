@@ -245,9 +245,7 @@ export function isKnownAgent(agentId: string | null | undefined): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Team-color identity (design doc:
-// docs/ux_ui/design/02-conversation-first-layout-agent-identity-live-stream.md
-// §2). Color is scoped to the CELL an agent belongs to, not a per-agent hue —
+// Team-color identity. Color is scoped to the CELL an agent belongs to, not a per-agent hue —
 // legible at 22-agent scale and needs no new bucket when a cell grows.
 // ---------------------------------------------------------------------------
 

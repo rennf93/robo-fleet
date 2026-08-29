@@ -45,7 +45,7 @@ interface FilterChip {
  * Popover-triggered filter panel above the switchboard/list content: Agent
  * (multi-select), Task (id fragment + "No linked task"), Status (toggle
  * buttons) and a date range — plus the active-filter chip row and
- * Clear-all. See docs/ux_ui/design/conversations-filter-control.md.
+ * Clear-all.
  */
 export function A2AFilterBar({
   filters,

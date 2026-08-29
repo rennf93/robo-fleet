@@ -49,8 +49,6 @@ export default function PrompterPage() {
     confirmBatch,
   } = usePrompter();
 
-  // Entry from a task's "Re-draft with board feedback" button: ?redraft=<taskId>
-  // re-opens intake seeded with the board's review of that task. Fire once.
   const redraftTriggered = useRef(false);
   useEffect(() => {
     if (redraftTriggered.current) return;
@@ -125,12 +123,6 @@ export default function PrompterPage() {
           createdTaskTeam ? (
             <div className="flex flex-1 flex-col items-center justify-center px-8 py-8">
               <div className="w-full max-w-md space-y-3">
-                {/* Board-routed MegaTask: created HELD for PO+HoM review, not
-                    dispatched — the CEO releases it with Approve & Start on the
-                    umbrella task. Every other path is a real "created/launched"
-                    success. ``createdTaskTeam === BOARD`` is set only by the
-                    batch board route (the single-draft board route parks and
-                    never reaches success). */}
                 {createdTaskTeam === Team.BOARD && batchResult ? (
                   <BoardReviewSentCard
                     taskId={createdTaskId}
@@ -163,11 +155,6 @@ export default function PrompterPage() {
               </div>
             </div>
           ) : state === "batch_preview" && batch ? (
-            /* MegaTask review — the agent proposed a batch; confirm them
-               together. Owns the scroll area (min-h-0 + overflow-y-auto) so a
-               tall batch — many tasks, per-cell pickers, the wave plan — scrolls
-               instead of overflowing the clipped parent and stranding the launch
-               buttons off-screen. */
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
               <BatchReviewCard
                 batch={batch}

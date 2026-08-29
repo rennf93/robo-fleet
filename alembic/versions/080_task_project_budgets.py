@@ -20,7 +20,7 @@ Revises: 079_notification_backoff
 Create Date: 2026-07-22
 
 NOTE: down_revision was re-chained from 078_project_codegen_command to
-079_notification_backoff (PR #652 landed first at integration) — the
+079_notification_backoff — the
 079_task_project_budgets -> 080_task_project_budgets rename + re-chain is
 exactly the "may be re-chained at integration" case flagged in the original
 docstring, not a fork of the tree.

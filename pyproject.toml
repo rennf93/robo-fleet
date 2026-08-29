@@ -102,7 +102,7 @@ robofleet-bootstrap = "robofleet.bootstrap:cli"
 
 [project.urls]
 Homepage = "https://github.com/rennf93/robo-fleet"
-Documentation = "https://docs.robo-fleet.tech"
+Documentation = "https://github.com/rennf93/robo-fleet#readme"
 Repository = "https://github.com/rennf93/robo-fleet"
 
 [build-system]

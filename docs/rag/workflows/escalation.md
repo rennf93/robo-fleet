@@ -14,7 +14,7 @@ Developer/QA/Documenter
         CEO
 ```
 
-`escalate_up` walks this chain **one rung at a time** — it auto-routes to your immediate escalation target; you cannot choose a higher level or skip a rung.
+`escalate_up` walks this chain **one rung at a time**  -  it auto-routes to your immediate escalation target; you cannot choose a higher level or skip a rung.
 
 The one exception is `escalate_to_ceo`: it is a **separate** verb, available only to Main PM and the Board (Product Owner / Head of Marketing), that goes straight to the CEO for final approval of a major task. It is not part of the `escalate_up` chain.
 
@@ -29,7 +29,7 @@ escalate_up(
 
 Auto-routes to your escalation target (you cannot choose it).
 
-`escalate_up` is refused on a **terminal** task (`completed` / `cancelled`) — it returns `invalid_state` rather than resurrecting a finished task. Escalate live work only.
+`escalate_up` is refused on a **terminal** task (`completed` / `cancelled`)  -  it returns `invalid_state` rather than resurrecting a finished task. Escalate live work only.
 
 ## When to Escalate
 
@@ -78,7 +78,7 @@ Requirements:
 - Task must be in `awaiting_pm_review`
 - PR must exist
 - Only Main PM, Product Owner, or Head of Marketing can call it
-- **PARENT TASKS ONLY** — subtasks cannot be escalated to CEO
+- **PARENT TASKS ONLY**  -  subtasks cannot be escalated to CEO
 
 If you need to escalate a subtask, escalate the parent task instead. The CEO reviews the complete feature, not individual components.
 
@@ -99,4 +99,4 @@ Include:
 4. Communicate the decision (`dm` / `notify`)
 5. Unblock if needed: `unblock(task_id, reason)`
 
-CRITICAL: Verbal resolution is NOT enough. To clear a block you MUST call `unblock(task_id, reason)`. The `reason` (why you are clearing the block) is recorded as your `journal:decision` — no separate `note(scope='decision')` call is required.
+CRITICAL: Verbal resolution is NOT enough. To clear a block you MUST call `unblock(task_id, reason)`. The `reason` (why you are clearing the block) is recorded as your `journal:decision`  -  no separate `note(scope='decision')` call is required.

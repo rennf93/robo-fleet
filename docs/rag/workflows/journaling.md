@@ -9,7 +9,7 @@
 
 ## The Tool
 
-Journaling is a single content tool: `note(text, scope, ...)` on the `robofleet-do` MCP server. There is **no** separate `robofleet_journal_*` tool — the `scope` argument selects the kind of entry.
+Journaling is a single do-tool: `note(text, scope, ...)` (an ADK `FunctionTool`, HTTP POST to `/api/v1/do/note`, no MCP server involved). There is **no** separate `robofleet_journal_*` tool  -  the `scope` argument selects the kind of entry.
 
 | `scope` | Use For |
 |---------|---------|
@@ -29,7 +29,7 @@ note(
     task_id=task_id,
 )
 
-# Decision log — `decision` scope uses the structured fields
+# Decision log  -  `decision` scope uses the structured fields
 note(
     text="Chose Redis for session storage",
     scope="decision",
@@ -73,15 +73,7 @@ note(
 
 ## Searching Journals
 
-Journal entries are indexed into the knowledge base. Search them through the `robofleet-optimal` RAG tools (there is no dedicated journal-search verb):
-
-```python
-# Semantic search across the KB, filtered to journal entries
-robofleet_kb_search(query="rate limiting patterns", index_types=["journals"])
-
-# Or ask the mentor, which searches all sources including journals
-robofleet_ask_mentor(question="What did we decide about rate limiting?")
-```
+There is no way to search past journal entries yourself under this runtime  -  no dedicated journal-search verb, and no `robofleet_kb_search`/`robofleet_ask_mentor` reachable either (see `docs/rag/workflows/kb-search.md`). You journal forward, for whoever reads it later (a human, or the org-memory institutional-memory briefing when armed)  -  not to search it back yourself.
 
 ## Best Practices
 

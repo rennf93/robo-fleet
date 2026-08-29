@@ -1,8 +1,7 @@
 /**
  * Pure filter helpers for the A2A page's filter control — shared by both the
  * switchboard (pairs) and the classic list (conversations) so the same
- * filter state narrows both views (per the per-view rules in
- * docs/ux_ui/design/conversations-filter-control.md §1).
+ * filter state narrows both views.
  *
  * All four dimensions filter client-side over the already-fetched page
  * (there are no backend query params for them yet — see the design doc's

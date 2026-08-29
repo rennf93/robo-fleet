@@ -967,7 +967,7 @@ def _schedule_stranded_eviction(
 
 # Source tag for a Sentinel (Board Program) exploration cycle: a PENDING task
 # the sentinel engine opens for the Auditor to assess org-wide quality drift
-# (waiver-accumulation trends, conventions-violation hotspots, docs/map
+# (waiver-accumulation trends, conventions-violation hotspots, docs
 # staleness, budget anomalies) and file ONE "state of quality" report via the
 # ``propose_quality_report`` content verb. Org-scoped (no project targeting)
 # and, like PERISCOPE_SOURCE, complete-at-propose — but each drift item still

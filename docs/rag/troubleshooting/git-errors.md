@@ -9,14 +9,14 @@
 **Fix:**
 
 1. Open the project's settings tab in the panel
-2. Paste a Personal Access Token for the project's forge (`repo` scope on GitHub/Gitea; an equivalent `api`/`write_repository` scope on GitLab) — the Forge select on the project decides which provider `GitService` routes to
-3. Save — the panel encrypts and stores it; the API never returns the plaintext
+2. Paste a Personal Access Token for the project's forge (`repo` scope on GitHub/Gitea; an equivalent `api`/`write_repository` scope on GitLab)  -  the Forge select on the project decides which provider `GitService` routes to
+3. Save  -  the panel encrypts and stores it; the API never returns the plaintext
 
 Notes:
 
 - Each project has its own token (no global fallback)
 - Tokens are encrypted at rest with Fernet
-- The token is injected only at the MCP layer (commit / clone / PR ops); `.git/config` is scrubbed post-clone so a leaked token from there is not a recovery path
+- The token is injected only at the gateway/provider layer (commit / clone / PR ops - `ROBOFLEET_GIT_TOKEN` for the ADK `git_push` tool, `robofleet/agent/git_tools.py`); `.git/config` is scrubbed post-clone so a leaked token from there is not a recovery path
 - The field is historically named for GitHub PATs but works unchanged for a project registered against Gitea or GitLab (`projects.git_provider`)
 
 ## Workspace Not Found
@@ -34,32 +34,32 @@ Notes:
 
 **Error envelope:** `Workspace is on '<other-branch>' but task requires '<task-branch>'`
 
-**Cause:** You're trying to act on task A while your workspace is still on task B's branch — usually after a respawn/resume on a shared clone, or a re-provisioned clone that no longer has your task's branch locally.
+**Cause:** You're trying to act on task A while your workspace is still on task B's branch  -  usually after a respawn/resume on a shared clone, or a re-provisioned clone that no longer has your task's branch locally.
 
-**Auto-recovery first:** a commit-time check now *recovers* this for you — it re-checks out your task's branch (recreating a missing local ref from origin) before acting, without ever discarding your local commits. So you normally won't see this error on resume at all; just continue your work.
+**Auto-recovery first:** a commit-time check now *recovers* this for you  -  it re-checks out your task's branch (recreating a missing local ref from origin) before acting, without ever discarding your local commits. So you normally won't see this error on resume at all; just continue your work.
 
 **When you still see it:** the only case left is **uncommitted changes blocking the switch** (the clone can't move off its current branch). Then:
 
 - `commit(message=..., files=...)` your in-progress work, or escalate via `i_am_blocked` if the changes aren't yours / are conflicting.
 - Re-call your role's claim verb on the intended task: `i_will_work_on(task_id)` (devs), `i_will_plan(task_id, plan)` (PMs), `claim_doc_task(task_id)` (documenters), `claim_review(task_id)` (QA).
 
-Don't checkout by hand — there is no `robofleet_git_checkout` tool.
+Don't checkout by hand  -  there is no checkout tool at all under this runtime (`robofleet/agent/git_tools.py` has no `git_checkout`, and no shell tool exists to run one manually).
 
 ## NO_COMMITS on open_pr
 
-**Cause:** No commits on the task yet — the choreographer has nothing to open a PR over.
+**Cause:** No commits on the task yet  -  the choreographer has nothing to open a PR over.
 
 **Fix:** `commit(message=..., files=...)` at least once, then call `open_pr(task_id)` again.
 
 ## Branch Behind Its Base / master
 
-**Symptom:** `robofleet_git_status` shows `behind > 0` against the base branch when you go to submit, OR `i_am_done` refuses with "your branch is N commit(s) behind its base".
+**Symptom:** `i_am_done` (or `submit_up`/`submit_root`) refuses with "your branch is N commit(s) behind its base". (There is no client-side way to check ahead/behind counts yourself - `git_status()`, `robofleet/agent/git_tools.py`, runs a plain `git status --porcelain` with no branch-tracking info, so you only find out at the gate.)
 
-**Cause:** The base (cell branch or master) advanced after your branch was cut, so your branch is stale — a sibling's PR merged into the parent branch while you worked.
+**Cause:** The base (cell branch or master) advanced after your branch was cut, so your branch is stale  -  a sibling's PR merged into the parent branch while you worked.
 
-**Fix (devs):** Call `sync_branch(task_id)` — that is your gate-level rebase verb (raw `Bash git rebase` is denied). It fetches, rebases your branch onto its base, and force-pushes with-lease. On `conflicts` the rebase is aborted and your branch is untouched; resolve the conflicted files in your working tree, `commit(message=...)`, then `sync_branch(task_id)` again. Do **not** create a rebase task or improvise shell git. After it returns `rebased`, continue editing + `commit`, then `open_pr` / `i_am_done` as normal.
+**Fix (devs):** Call `sync_branch(task_id)`  -  that is your gate-level rebase verb (raw `Bash git rebase` is denied). It fetches, rebases your branch onto its base, and force-pushes with-lease. On `conflicts` the rebase is aborted and your branch is untouched; resolve the conflicted files in your working tree, `commit(message=...)`, then `sync_branch(task_id)` again. Do **not** create a rebase task or improvise shell git. After it returns `rebased`, continue editing + `commit`, then `open_pr` / `i_am_done` as normal.
 
-**Fix (PMs, for a cell/root integration branch — NOT a dev leaf):** `escalate_up(task_id, reason='branch behind base — needs rebase')` — bringing an integration branch current is a platform action. A dev's own leaf branch is the dev's to `sync_branch`.
+**Fix (PMs, for a cell/root integration branch  -  NOT a dev leaf):** `escalate_up(task_id, reason='branch behind base  -  needs rebase')`  -  bringing an integration branch current is a platform action. A dev's own leaf branch is the dev's to `sync_branch`.
 
 ## DIRTY_WORKSPACE on sync_branch
 
@@ -67,15 +67,15 @@ Don't checkout by hand — there is no `robofleet_git_checkout` tool.
 
 **Cause:** `sync_branch` refuses to rebase over uncommitted edits by default (a `git reset --hard` mid-rebase would discard them).
 
-**Fix:** Either `commit(message=...)` (omit `files` to stage everything) then `sync_branch(task_id)` again, OR call `sync_branch(task_id, stash=True)` to auto-stash (tracked + untracked), rebase, and restore your changes in one call. If the stash pop conflicts, the envelope's `next` tells you so — your stash is preserved (never dropped); resolve by hand and `commit(...)`. Still stuck after that? `unclaim(task_id)` releases the claim back to the pool rather than looping.
+**Fix:** Either `commit(message=...)` (omit `files` to stage everything) then `sync_branch(task_id)` again, OR call `sync_branch(task_id, stash=True)` to auto-stash (tracked + untracked), rebase, and restore your changes in one call. If the stash pop conflicts, the envelope's `next` tells you so  -  your stash is preserved (never dropped); resolve by hand and `commit(...)`. Still stuck after that? `unclaim(task_id)` releases the claim back to the pool rather than looping.
 
 ## sync_branch refused: branch DIVERGED from its origin copy
 
 **Error:** `sync_branch` returns `next` telling you your branch and its origin copy have DIVERGED (both sides carry commits the other lacks).
 
-**Cause:** Your workspace and `origin/<your-branch>` each hold real work the other doesn't — not the routine "behind base" case. `sync_branch` first checks whether this is actually the harmless residue of an EARLIER `sync_branch` call whose rebase succeeded locally but whose force-push then failed (a network blip, a container reap) — that self-heals silently as an ordinary rebase on this retry. What's left after that check is a genuine divergence, most often your task bounced to a different agent's clone that pushed meanwhile.
+**Cause:** Your workspace and `origin/<your-branch>` each hold real work the other doesn't  -  not the routine "behind base" case. `sync_branch` first checks whether this is actually the harmless residue of an EARLIER `sync_branch` call whose rebase succeeded locally but whose force-push then failed (a network blip, a container reap)  -  that self-heals silently as an ordinary rebase on this retry. What's left after that check is a genuine divergence, most often your task bounced to a different agent's clone that pushed meanwhile.
 
-**Fix:** Neither side is touched or lost — nothing was reset, nothing was rebased, nothing was pushed. `i_am_blocked(reason='...')` naming the divergence so a human can reconcile the two histories by hand (fetch, inspect both tips, merge or rebase deliberately). If `stash=True` was passed and the stash pop ALSO conflicted, your stash is preserved (never dropped) — resolve it by hand alongside the divergence.
+**Fix:** Neither side is touched or lost  -  nothing was reset, nothing was rebased, nothing was pushed. `i_am_blocked(reason='...')` naming the divergence so a human can reconcile the two histories by hand (fetch, inspect both tips, merge or rebase deliberately). If `stash=True` was passed and the stash pop ALSO conflicted, your stash is preserved (never dropped)  -  resolve it by hand alongside the divergence.
 
 ## src refspec does not match any (during open_pr)
 
@@ -83,17 +83,17 @@ Don't checkout by hand — there is no `robofleet_git_checkout` tool.
 
 **Cause:** A re-provisioned or shared clone can be missing the local branch ref even though the commits are already on origin.
 
-**Fix:** Just call `open_pr(task_id)` again — the gateway recovers the ref from origin, or returns an explicit "unclaim and re-claim to rebuild" instruction. Follow whichever the envelope gives you; don't switch branches by hand.
+**Fix:** Just call `open_pr(task_id)` again  -  the gateway recovers the ref from origin, or returns an explicit "unclaim and re-claim to rebuild" instruction. Follow whichever the envelope gives you; don't switch branches by hand.
 
 ## Updates were rejected / non-fast-forward (on push)
 
 **Cause:** Your branch is behind its remote, so the push can't fast-forward.
 
-**Fix (devs):** Call `sync_branch(task_id)` to rebase onto your base through the gate, then retry the push-bearing verb (`open_pr` / `i_am_done`). If `sync_branch` itself refuses with DIRTY_WORKSPACE, see that section below (`commit(...)` then retry, or `sync_branch(task_id, stash=True)`). **PMs** escalate: `escalate_up(...)`. There is no agent-layer pull — `sync_branch` is the dev's rebase path. Still stuck after trying both? `unclaim(task_id)` releases the claim back to the pool rather than looping on `i_am_done`.
+**Fix (devs):** Call `sync_branch(task_id)` to rebase onto your base through the gate, then retry the push-bearing verb (`open_pr` / `i_am_done`). If `sync_branch` itself refuses with DIRTY_WORKSPACE, see that section below (`commit(...)` then retry, or `sync_branch(task_id, stash=True)`). **PMs** escalate: `escalate_up(...)`. There is no agent-layer pull  -  `sync_branch` is the dev's rebase path. Still stuck after trying both? `unclaim(task_id)` releases the claim back to the pool rather than looping on `i_am_done`.
 
 ## NO_PR on pass / fail
 
-**Cause:** The PR was never created — usually because `open_pr(task_id)` did not run cleanly.
+**Cause:** The PR was never created  -  usually because `open_pr(task_id)` did not run cleanly.
 
 **Fix:** Roll back to the dev: have them re-call `open_pr(task_id)` after fixing whatever blocked the PR opening (see PR Creation Failed, below). QA cannot create the PR.
 
@@ -101,24 +101,24 @@ Don't checkout by hand — there is no `robofleet_git_checkout` tool.
 
 **Causes:**
 
-1. Nothing to push — no commits on the branch
+1. Nothing to push  -  no commits on the branch
 2. Branch is on the workspace but not pushed yet (rare; the choreographer pushes during `commit`, but a stale workspace can drift)
 3. Project has no git token configured
-4. The forge repo doesn't allow PRs from your branch (rare; usually org-level branch protection — applies on GitHub, Gitea, and GitLab alike)
+4. The forge repo doesn't allow PRs from your branch (rare; usually org-level branch protection  -  applies on GitHub, Gitea, and GitLab alike)
 
 **Fix:**
 
-- Verify commits exist with `robofleet_git_log(project_slug=...)`
+- There is no `git_log` tool to verify commits exist client-side under this runtime - trust the `commit` do-tool's own return (it gives you the sha) or the envelope's error text
 - Verify the project has a git token (Missing Git Token, above)
 - If the task is in a stuck state, `unclaim(task_id)` and re-`claim` to rebuild the branch
 
 ## "GitHub API" wording in an error on a Gitea/GitLab project
 
-Some low-level git error messages still say "GitHub API" in their text regardless of which forge the project actually uses (a known wording gap, not a routing bug) — the underlying failure is real even when the vendor name in the message is wrong. Diagnose from the actual symptom (missing token, PR-not-found, merge conflict, etc.), not from the vendor name in the message.
+Some low-level git error messages still say "GitHub API" in their text regardless of which forge the project actually uses (a known wording gap, not a routing bug)  -  the underlying failure is real even when the vendor name in the message is wrong. Diagnose from the actual symptom (missing token, PR-not-found, merge conflict, etc.), not from the vendor name in the message.
 
 ## Rebase/sync_branch refused on a protected branch
 
-**Cause:** `sync_branch`/rebase refuses to force-push a branch whose name matches the project's operator-declared `protected_branches` list, its environment-ladder rungs, or the hardcoded `master`/`main` floor. You should never legitimately be working on one of these directly — your own feature branch is never a protected name.
+**Cause:** `sync_branch`/rebase refuses to force-push a branch whose name matches the project's operator-declared `protected_branches` list, its environment-ladder rungs, or the hardcoded `master`/`main` floor. You should never legitimately be working on one of these directly  -  your own feature branch is never a protected name.
 
 **Fix:** If you see this, your task's recorded branch is misconfigured. `unclaim(task_id)` and re-claim to rebuild a proper branch; don't try to force through it.
 
@@ -134,10 +134,10 @@ Some low-level git error messages still say "GitHub API" in their text regardles
 
 **Fix:** This currently surfaces as an error envelope from `complete`. The recovery path:
 
-1. PM `unblock(task_id, restore=False)` — frees the task back to the dev
+1. PM `unblock(task_id, restore=False)`  -  frees the task back to the dev
 2. Dev re-claims, the choreographer rebuilds the branch off the latest parent, and they replay their commits
 3. Dev `open_pr` again
 4. QA re-runs `pass` (or `fail` if the rebase changed behaviour)
 5. PM `complete` again
 
-We don't expose a "resolve conflicts in place" path at the agent layer — rebuilds via the lifecycle are the recovery.
+We don't expose a "resolve conflicts in place" path at the agent layer  -  rebuilds via the lifecycle are the recovery.

@@ -15,7 +15,7 @@ What each role can do in the system.
 | (read-only reviewer) | pr_reviewer |
 | (human-only) | prompter, secretary |
 
-`pr_reviewer` is a read-only role (QA level): the main reviewer (`pr-reviewer-1`) is board-adjacent and the three cell reviewers are team-scoped. It claims and posts inbound-PR reviews (`claim_pr_review` / `post_pr_review`) and runs the in-path assembled-PR gate (`claim_gate_review` / `pr_pass` / `pr_fail`), but creates, assigns, merges, and notifies nothing. `prompter` (intake) and `secretary` are **human-only** — they chat with the CEO and have only `note` + `evidence`, with no task or notification permissions; they don't appear in the action tables below.
+`pr_reviewer` is a read-only role (QA level): the main reviewer (`pr-reviewer-1`) is board-adjacent and the three cell reviewers are team-scoped. It claims and posts inbound-PR reviews (`claim_pr_review` / `post_pr_review`) and runs the in-path assembled-PR gate (`claim_gate_review` / `pr_pass` / `pr_fail`), but creates, assigns, merges, and notifies nothing. `prompter` (intake) and `secretary` are **human-only**  -  they chat with the CEO and have only `note` + `evidence`, with no task or notification permissions; they don't appear in the action tables below.
 
 ## Task Permissions
 
@@ -34,7 +34,7 @@ What each role can do in the system.
 
 Notes (verified against `robofleet/foundation/policy/lifecycle.py`):
 - **Create / Assign** (`create_subtask`, `delegate`) are PM-only: `cell_pm` and `main_pm`. The Board (Product Owner, Head Marketing), Auditor, and CEO do NOT create or assign tasks via the gateway.
-- **Cancel** is allowed to PM roles + CEO (`cell_pm`, `main_pm`, `ceo`) for all non-terminal states **except** `awaiting_ceo_approval → cancelled`, which is **CEO-only** (a PM cannot cancel a task already in the CEO's approval queue — that would bypass the human gate). The Board and Auditor CANNOT cancel.
+- **Cancel** is allowed to PM roles + CEO (`cell_pm`, `main_pm`, `ceo`) for all non-terminal states **except** `awaiting_ceo_approval → cancelled`, which is **CEO-only** (a PM cannot cancel a task already in the CEO's approval queue  -  that would bypass the human gate). The Board and Auditor CANNOT cancel.
 - **Complete** (final approve/merge) is PM-only (`cell_pm`, `main_pm`). The CEO acts only on tasks escalated to `awaiting_ceo_approval`.
 - **Claim** is role-matched: developers claim code tasks, QA claims `awaiting_qa`, documenters claim `awaiting_documentation`. PMs can claim the planning/coordination work assigned to them.
 
@@ -67,17 +67,17 @@ Sending notifications means calling the `notify(target, text, priority)` content
 | qa | No | - |
 | documenter | No | - |
 
-Non-senders (developer, qa, documenter) still communicate via `dm(recipient, text)` for direct agent-to-agent messages — those are not ack-required notifications. The Auditor is restricted further: `note(scope=reflect)` + `evidence` + read-only `notify_list`/`notify_get`, and NO `notify`. It does carry `dm`/`read_a2a`, but only to reply in-thread when the CEO opens a DM with it — `can_a2a_direct` refuses it as a sender unconditionally, so it never initiates to a peer.
+Non-senders (developer, qa, documenter) still communicate via `dm(recipient, text)` for direct agent-to-agent messages  -  those are not ack-required notifications. The Auditor is restricted further: `note(scope=reflect)` + `evidence` + read-only `notify_list`/`notify_get`, and NO `notify`. It does carry `dm`/`read_a2a`, but only to reply in-thread when the CEO opens a DM with it  -  `can_a2a_direct` refuses it as a sender unconditionally, so it never initiates to a peer.
 
 ## Task-Creator Roles
 
-These roles can create/assign tasks (`create_subtask`, `delegate` — PM-only per `lifecycle.py`):
+These roles can create/assign tasks (`create_subtask`, `delegate`  -  PM-only per `lifecycle.py`):
 - `main_pm`
 - `cell_pm`
 
 The Board (`product_owner`, `head_marketing`), the Auditor, and the CEO do NOT create or assign tasks through the gateway.
 
-**Footnote — `propose_roadmap` is not an exception to this.** The Product Owner's `propose_roadmap` content verb authors a themed cycle of roadmap item **drafts** onto its own held exploration task — it does not call `delegate` and creates nothing directly. A draft only becomes a real BACKLOG task via a distinct code path, `RoadmapService.approve_item` (the CEO's per-item approval in the roadmap queue), which itself calls the same `create_task_from_draft` helper the pitch-approval flow uses. So the Board still never creates or assigns a task on its own authority — it authors proposals; only the CEO's explicit per-item approval materializes one.
+**Footnote  -  `propose_roadmap` is not an exception to this.** The Product Owner's `propose_roadmap` content verb authors a themed cycle of roadmap item **drafts** onto its own held exploration task  -  it does not call `delegate` and creates nothing directly. A draft only becomes a real BACKLOG task via a distinct code path, `RoadmapService.approve_item` (the CEO's per-item approval in the roadmap queue), which itself calls the same `create_task_from_draft` helper the pitch-approval flow uses. So the Board still never creates or assigns a task on its own authority  -  it authors proposals; only the CEO's explicit per-item approval materializes one.
 
 ## Cancellation Roles
 

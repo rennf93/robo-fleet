@@ -30,9 +30,9 @@
 
 **Solutions**:
 - Follow the envelope's `remediate`: call `give_me_work()` to find a task in your own team
-- If the task was misrouted to you, leave it — the pool re-routes it to the right team
+- If the task was misrouted to you, leave it  -  the pool re-routes it to the right team
 
-Org-wide roles (Main PM, Board, CEO, PR reviewer) are exempt — they act across cells by design.
+Org-wide roles (Main PM, Board, CEO, PR reviewer) are exempt  -  they act across cells by design.
 
 ## Cannot Start Task
 
@@ -101,23 +101,23 @@ escalate_to_ceo(task_id=parent_id, reason="...")
 
 **Solution**: The error message includes which subtask IDs are blocking. Either:
 1. Complete the blocking subtasks first (drive them through QA → docs → `complete(task_id, notes)`)
-2. Cancel them if no longer needed (PM/CEO only — cancellation is not an agent verb; ask your PM)
+2. Cancel them if no longer needed (PM/CEO only  -  cancellation is not an agent verb; ask your PM)
 
 ## Reflow/Formatting Task Has Zero Diff
 
-**Symptom**: A task asks you to reflow specific markdown file(s) so they pass `make reflow-check`, but `python3 scripts/reflow_md.py --check` already reports "OK" with no changes, so there is no diff to commit — and `i_am_done` hard-requires at least one commit.
+**Symptom**: A task asks you to reflow specific markdown file(s) so they pass `make reflow-check`, but `python3 scripts/reflow_md.py --check` already reports "OK" with no changes, so there is no diff to commit  -  and `i_am_done` hard-requires at least one commit.
 
 **Cause**: `scripts/reflow_md.py` walks the whole repo tree (`ROOT.rglob("*.md")`) on every invocation; it does not scope to positional file-path arguments passed on the command line, so `--check docs/foo.md` and a bare `--check` do the same repo-wide scan. If the target file(s) were already reflowed upstream (e.g. in an earlier commit on the same branch chain), the task is satisfied-by-upstream with a structurally empty diff.
 
-**Solution**: Verify with the repo-wide check (not a scoped one, since scoping is a no-op) and record the zero-diff finding in a `decision` journal entry. If the task's acceptance criteria are already met with nothing left to change in the named files, do not keep re-running the same check — escalate once with the concrete verification so a PM can either stamp the task as satisfied-by-upstream/cancel it, or direct a small verification commit outside the target file(s) to satisfy the commit gate.
+**Solution**: Verify with the repo-wide check (not a scoped one, since scoping is a no-op) and record the zero-diff finding in a `decision` journal entry. If the task's acceptance criteria are already met with nothing left to change in the named files, do not keep re-running the same check  -  escalate once with the concrete verification so a PM can either stamp the task as satisfied-by-upstream/cancel it, or direct a small verification commit outside the target file(s) to satisfy the commit gate.
 
 ## Task Auto-Blocked for Budget
 
 **Symptom**: Your in-progress task flips to `blocked` with a budget marker, and you weren't the one who blocked it.
 
-**Cause** (only when task budgets are armed): a periodic sweep prices the task's own spend against its explicit `budget_usd` and blocks it before you get a chance to finish gracefully, so the dispatcher won't respawn onto an already-over-budget task. A task with no `budget_usd` set is uncapped at this check (explicit-input only — there is no `TaskType`-keyed default anymore); the project's `monthly_budget_usd` is the separate fleet-wide backstop.
+**Cause** (only when task budgets are armed): a periodic sweep prices the task's own spend against its explicit `budget_usd` and blocks it before you get a chance to finish gracefully, so the dispatcher won't respawn onto an already-over-budget task. A task with no `budget_usd` set is uncapped at this check (explicit-input only  -  there is no `TaskType`-keyed default anymore); the project's `monthly_budget_usd` is the separate fleet-wide backstop.
 
-**Fix**: This is a PM/CEO decision, not yours to route around — `unblock` re-checks live spend and refuses again while still over the cap. Escalate (`i_am_blocked`/`escalate_up`) naming the budget breach; the CEO either raises the task's/project's cap or the PM redirects the remaining work.
+**Fix**: This is a PM/CEO decision, not yours to route around  -  `unblock` re-checks live spend and refuses again while still over the cap. Escalate (`i_am_blocked`/`escalate_up`) naming the budget breach; the CEO either raises the task's/project's cap or the PM redirects the remaining work.
 
 ## Invalid Task Status for Operation
 

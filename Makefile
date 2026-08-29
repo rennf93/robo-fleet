@@ -448,14 +448,6 @@ high-load-stress-test:
 	@docker compose down --rmi all --remove-orphans -v
 	@docker system prune -f
 
-# Regenerate the GitHub Pages redirect stubs (docs-redirects/) that replaced
-# the old MkDocs-built site — docs.robo-fleet.tech is canonical now. Only needed
-# if a legacy URL is missing a stub; requires a restored copy of the old
-# nav-bearing mkdocs.yml (see git history) since the live one is gone.
-.PHONY: regen-docs-redirects
-regen-docs-redirects:
-	@uv run python scripts/gen_docs_redirects.py
-
 # Prune
 .PHONY: prune
 prune:
@@ -531,8 +523,6 @@ help:
 	@echo "  make stop                     - Stop all containers"
 	@echo "  make clean                    - Clean cache files"
 	@echo "  make prune                    - Prune docker resources"
-	@echo ""
-	@echo "Full docs: https://docs.robo-fleet.tech"
 
 # Python versions list
 .PHONY: show-python-versions

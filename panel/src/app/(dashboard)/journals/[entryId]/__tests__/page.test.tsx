@@ -3,11 +3,6 @@ import { render, screen, act } from "@testing-library/react";
 import { Suspense } from "react";
 import { JournalEntryType, type JournalEntry } from "@/types";
 
-// CEO feedback: the journal/task ids on the entry detail page were shown
-// truncated with "..." and had no copy button. Guards the fix: no ellipsis,
-// a copy button for the full id on both the journal id and the task id, and
-// the existing task quick-link stays intact.
-
 vi.mock("@/hooks/use-journals", () => ({
   useJournalEntry: vi.fn(),
 }));

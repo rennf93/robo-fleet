@@ -1,19 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-// Detail-page parity fix: the grid card's spawn affordance (SpawnAgentDialog,
-// which collects task id + message) was already correct, but this page called
-// spawnAgent.mutateAsync({ agentId }) directly from a bare button — no task,
-// no message, no double-fire guard. Both bare buttons must now render the
-// shared SpawnAgentDialog instead.
-//
-// Whole-page-replaced-by-error fix: a stopped agent's live-status query 404s
-// (orchestrator has no running instance) while the agent's roster identity
-// still resolves fine. That must degrade the live-status area only — not
-// discard the DB-backed header/activity content already rendered above it.
-// The full-page fatal card is reserved for a genuinely invalid agent id
-// (the roster lookup itself failing).
-
 vi.mock("next/navigation", () => ({
   useParams: () => ({ agentId: "fe-dev-2" }),
   useRouter: () => ({ back: vi.fn() }),

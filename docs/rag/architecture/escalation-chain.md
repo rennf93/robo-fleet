@@ -57,7 +57,7 @@ escalate_to_ceo(task_id="uuid-here", reason="Major feature ready for approval")
 Requirements:
 - Task in `awaiting_pm_review`
 - PR exists
-- Only Main PM, Product Owner, or Head of Marketing can call this (Cell PMs cannot — they `escalate_up` to Main PM first)
+- Only Main PM, Product Owner, or Head of Marketing can call this (Cell PMs cannot  -  they `escalate_up` to Main PM first)
 
 ## Cannot Skip Levels
 

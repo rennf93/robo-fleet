@@ -18530,7 +18530,7 @@ follow-up -> spotlight) — for the CEO to review. You author this alone.
 1. triage() — see your board-level context.
 2. If a release triggered this cycle, ground every post in the highlights
    above — never invent a feature. On an on-demand cycle, investigate
-   CHANGELOG.md, the feature-flags ledger, docs/map/, and the knowledge base
+   CHANGELOG.md, the feature-flags ledger, and the knowledge base
    for real, currently-shipped material worth a campaign.
 3. Design the arc: a teaser (build anticipation, no full reveal), a launch
    (the announcement itself), a follow-up (a concrete detail or use case),
@@ -18601,7 +18601,7 @@ the CEO to review; you author this alone.
       exist or was removed.
    b. Armed feature flags (robofleet/config.py, the feature-flags panel card)
       with no docs describing them.
-   c. Docs-site / docs/map/ promises the code doesn't actually keep.
+   c. Docs-site promises the code doesn't actually keep.
    d. Coverage holes by module, if a coverage report is available.
    e. Dead-end panel tabs — a page/tab with no working action or data.
 3. For each candidate, confirm it's a REAL, LIVE gap (not already fixed, not
@@ -18663,7 +18663,7 @@ review; you author this alone.
 2. Compare the messaging surfaces against shipped reality, citing `file:line`
    or a URL for every claimed drift:
    a. README claims vs what the codebase actually ships (CHANGELOG.md,
-      docs/map/, feature flags).
+      feature flags).
    b. The docs site / docs-site repo's promises vs the code — when that repo
       is registered as a project and opted into mirror, treat it as a
       first-class target, not an afterthought.
@@ -18805,7 +18805,7 @@ RECENTLY REJECTED BY THE CEO — avoid repeating these angles: {rejected_line}
 2. Investigate (read-only, you have full repo read access): CHANGELOG.md (what
    has actually shipped), the feature-flags ledger (panel/src/components/
    settings/feature-flags-card.tsx and robofleet/services/settings.py's
-   FEATURE_FLAGS — the enumerated subsystems), docs/map/ (the exhaustive
+   FEATURE_FLAGS — the enumerated subsystems), the docs tree (the
    codebase map — each slice's Purpose section is marketing-readable), the
    company charter (already in your briefing), and the knowledge base
    (robofleet_ask_mentor / robofleet_kb_search).
@@ -19003,7 +19003,7 @@ You stay silent to the fleet throughout — this report goes to the CEO only.
    findings-by-severity, conventions-violation hotspots, top spend by task/
    project). It is server-assembled — you cannot re-run those queries
    yourself, so start from it, don't second-guess it.
-3. Also check docs/map/ (the exhaustive codebase map) for staleness against
+3. Also check the docs/ tree for staleness against
    what you know has actually shipped, if that would sharpen a finding.
 4. For each candidate drift signal, confirm it's REAL and worth naming (not
    noise) before drafting an item.

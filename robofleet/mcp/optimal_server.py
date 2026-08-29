@@ -77,7 +77,7 @@ _RESULT_CONTENT_CAP = 800
 #
 # ponytail: the marker never flips back to "repo_tree" on merge — there's no
 # lifecycle hook from PR-merge back into the KB, and the periodic re-scan
-# only walks docs/rag + docs/map (siblings of the team dirs robofleet_docs_write
+# only walks docs/rag (a sibling of the team dirs robofleet_docs_write
 # targets), so a caveat persists until an operator/startup reindex re-derives
 # the doc's metadata from the repo tree. Treat it as "verify against git",
 # not "this is unmerged". Upgrade path: stamp the doc's task_id (already

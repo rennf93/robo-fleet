@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-// The three tab panes have their own dedicated tests — stub them here so
-// this page test only checks tab composition + the URL-driven default,
-// mirroring workstation/__tests__/page.test.tsx.
 vi.mock("@/components/agents/agents-fleet-view", () => ({
   AgentsFleetView: () => <div>AgentsFleetViewStub</div>,
 }));

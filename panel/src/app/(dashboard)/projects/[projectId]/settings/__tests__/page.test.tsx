@@ -5,9 +5,7 @@ import { Team, type Project } from "@/types";
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
 const mockRouter = { push: mockPush, replace: mockReplace };
-// Stable object per test (like real next/navigation — see
-// a2a-view.test.tsx's identical note): an unstable mock would refire any
-// effect keyed on it every render regardless of the real URL.
+
 let searchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => mockRouter,
@@ -27,10 +25,6 @@ vi.mock("@/components/conventions/conventions-tab", () => ({
   ),
 }));
 
-// Each card's own behavior (fields, dirty-state save, mutation payload) is
-// covered by its dedicated test in settings/__tests__/*.test.tsx — this
-// route test only cares that the page assembles all seven, so each is
-// stubbed to a nameable marker.
 vi.mock("@/components/projects/settings/identity-card", () => ({
   IdentityCard: ({ project }: { project: Project }) => (
     <div data-testid="identity-card-stub" data-project-id={project.id} />

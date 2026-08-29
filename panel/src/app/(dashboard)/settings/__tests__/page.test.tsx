@@ -1,15 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
-// jsdom has no layout engine, so Radix Select's scroll-into-view-on-open call
-// throws there; stub it so opening the Refresh Interval dropdown works.
 Element.prototype.scrollIntoView = vi.fn();
 
-// The four prefs below are CLIENT-ONLY (never sent to the backend — the
-// server's settings allowlist is transcript_retention_days + feature flags
-// only, see robofleet/services/settings.py). This mock stands in for the
-// persisted UI store; mutate its fields per-test to control what the page
-// renders.
 const mockStore = vi.hoisted(() => ({
   sidebarCollapsed: false,
   setSidebarCollapsed: vi.fn(),
@@ -50,8 +43,6 @@ vi.mock("sonner", () => ({ toast: { success: toastSuccess } }));
 
 import SettingsPage from "../page";
 
-// The Label and Switch/Select are siblings inside a flex row, so the label
-// text doesn't associate with the control. Walk to the row to find it.
 function controlFor(labelText: RegExp | string, role: string): HTMLElement {
   const label = screen.getByText(labelText);
   const row = label.closest("div")?.parentElement;
@@ -150,11 +141,6 @@ describe("SettingsPage — client-only prefs (store-driven, no server round trip
     expect(toastSuccess).toHaveBeenCalledWith("Sound alerts disabled");
   });
 
-  // W9-5 follow-up: the disabled Refresh Interval / Sound Alerts controls
-  // now carry a tooltip on their label explaining why — but only while
-  // actually disabled. TooltipTrigger always stamps data-state onto its
-  // asChild target, so its presence/absence proxies "is this label
-  // tooltip-wrapped" without simulating hover.
   it("Refresh Interval and Sound Alerts labels carry a disabled-reason tooltip only while disabled", () => {
     const { rerender } = render(<SettingsPage />); // autoRefresh: false, notificationsEnabled: true (reset default)
     expect(

@@ -44,10 +44,6 @@ export default function SettingsPage() {
     setRefreshIntervalSeconds,
   } = useUIStore();
 
-  // Each of these prefs writes synchronously to the persisted store (no
-  // network round trip, so it can't fail server-side) — but a silent write is
-  // still indistinguishable from a broken one to the person who just clicked
-  // it, so every change surfaces its own confirmation toast.
   const applyNotificationsEnabled = (enabled: boolean) => {
     setNotificationsEnabled(enabled);
     toast.success(`Notifications ${enabled ? "enabled" : "disabled"}`);
@@ -75,10 +71,6 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Cards grid — two columns on large screens. Order (row,col):
-          User Info (1,1) · Appearance (1,2) · Data & Refresh (2,1) ·
-          Transcript Retention (2,2) · Notifications (3,1) · Connection Info (3,2) ·
-          GitHub App (4,1). */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* User Info */}
         <UserInfoCard />
@@ -133,8 +125,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Data & Refresh — client-only prefs, instant-apply (same idiom as
-            Theme/Sidebar above); never sent to the backend. */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1680 1000" width="1680" height="1000" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280"/>
+    </marker>
+    <marker id="arrowHot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4f46e5"/>
+    </marker>
+  </defs>
+
+  <rect width="1680" height="1000" fill="#ffffff"/>
+
+  <text x="60" y="52" font-size="26" font-weight="700" fill="#111827">robo-fleet architecture</text>
+  <text x="60" y="78" font-size="15" fill="#6b7280">An AI agent company on Google Cloud: one Cloud Run Job execution per task, Google ADK + Gemini 3.5 Flash inside it.</text>
+
+  <!-- ── browser ────────────────────────────────────────────────────── -->
+  <g>
+    <rect x="250" y="112" width="320" height="74" rx="10" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+    <text x="410" y="141" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">robo-fleet panel</text>
+    <text x="410" y="162" text-anchor="middle" font-size="13.5" fill="#4b5563">Next.js 16 on Cloud Run</text>
+    <text x="410" y="179" text-anchor="middle" font-size="13" font-style="italic" fill="#6b7280">CEO / judge browser</text>
+  </g>
+
+  <!-- ── orchestrator ───────────────────────────────────────────────── -->
+  <g>
+    <rect x="60" y="240" width="700" height="420" rx="14" fill="#fbfbfd" stroke="#d1d5db" stroke-width="1.5"/>
+    <text x="80" y="268" font-size="14" font-weight="700" fill="#4b5563">robo-fleet orchestrator &#183; Cloud Run service</text>
+
+    <rect x="100" y="284" width="620" height="58" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+    <text x="410" y="310" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">FastAPI</text>
+    <text x="410" y="330" text-anchor="middle" font-size="13.5" fill="#4b5563">REST + WebSocket, HMAC agent auth</text>
+
+    <rect x="100" y="366" width="620" height="58" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+    <text x="410" y="392" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">Choreographer</text>
+    <text x="410" y="412" text-anchor="middle" font-size="13.5" fill="#4b5563">flow verbs + do tools, per-role manifest</text>
+
+    <rect x="100" y="448" width="620" height="70" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+    <text x="410" y="474" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">Services</text>
+    <text x="410" y="494" text-anchor="middle" font-size="13.5" fill="#4b5563">TaskService &#183; GitService &#183; MetricsService</text>
+    <text x="410" y="511" text-anchor="middle" font-size="13.5" fill="#4b5563">lifecycle guards &#183; findings ledger &#183; audit log</text>
+
+    <rect x="100" y="542" width="620" height="58" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+    <text x="410" y="568" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">Dispatcher</text>
+    <text x="410" y="588" text-anchor="middle" font-size="13.5" fill="#4b5563">CloudRunJobsProvider</text>
+
+    <line x1="410" y1="342" x2="410" y2="360" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="410" y1="424" x2="410" y2="442" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="410" y1="518" x2="410" y2="536" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- ── agent runtime ──────────────────────────────────────────────── -->
+  <g>
+    <rect x="880" y="240" width="520" height="290" rx="14" fill="#fbfbfd" stroke="#d1d5db" stroke-width="1.5"/>
+    <text x="900" y="268" font-size="14" font-weight="700" fill="#4b5563">agent runtime &#183; Cloud Run Job, one execution per task</text>
+
+    <rect x="920" y="290" width="440" height="86" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+    <text x="1140" y="320" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">ADK Runner + LlmAgent</text>
+    <text x="1140" y="341" text-anchor="middle" font-size="13.5" fill="#4b5563">robofleet.agent.adk_entry</text>
+    <text x="1140" y="360" text-anchor="middle" font-size="13" fill="#6b7280">role prompt + tool manifest, no MCP</text>
+
+    <rect x="920" y="410" width="440" height="86" rx="8" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+    <text x="1140" y="440" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">Gateway tool-shim</text>
+    <text x="1140" y="461" text-anchor="middle" font-size="13.5" fill="#4b5563">+ git / file FunctionTools</text>
+    <text x="1140" y="480" text-anchor="middle" font-size="13" fill="#6b7280">clone, branch, commit, push, PR</text>
+
+    <line x1="1140" y1="376" x2="1140" y2="404" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- ── model ──────────────────────────────────────────────────────── -->
+  <g>
+    <rect x="1450" y="290" width="190" height="86" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+    <text x="1545" y="322" text-anchor="middle" font-size="15.5" font-weight="700" fill="#111827">Gemini 3.5 Flash</text>
+    <text x="1545" y="343" text-anchor="middle" font-size="13" fill="#4b5563">Vertex AI</text>
+    <text x="1545" y="360" text-anchor="middle" font-size="13" fill="#6b7280">Job service account (ADC)</text>
+  </g>
+
+  <!-- ── managed services ───────────────────────────────────────────── -->
+  <g>
+    <rect x="60" y="712" width="1580" height="228" rx="14" fill="#fbfbfd" stroke="#d1d5db" stroke-width="1.5"/>
+    <text x="80" y="740" font-size="14" font-weight="700" fill="#4b5563">managed GCP services</text>
+
+    <rect x="100" y="758" width="230" height="150" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.5"/>
+    <text x="215" y="800" text-anchor="middle" font-size="15" font-weight="700" fill="#111827">Cloud SQL</text>
+    <text x="215" y="822" text-anchor="middle" font-size="13" fill="#4b5563">Postgres 16 + pgvector</text>
+    <text x="215" y="842" text-anchor="middle" font-size="13" fill="#6b7280">tasks, sessions, audit log,</text>
+    <text x="215" y="859" text-anchor="middle" font-size="13" fill="#6b7280">memory bank embeddings</text>
+
+    <rect x="355" y="758" width="230" height="150" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.5"/>
+    <text x="470" y="800" text-anchor="middle" font-size="15" font-weight="700" fill="#111827">Memorystore</text>
+    <text x="470" y="822" text-anchor="middle" font-size="13" fill="#4b5563">Redis 7.x</text>
+    <text x="470" y="842" text-anchor="middle" font-size="13" fill="#6b7280">cache, locks, rate-limit</text>
+    <text x="470" y="859" text-anchor="middle" font-size="13" fill="#6b7280">state, stream bus</text>
+
+    <rect x="610" y="758" width="230" height="150" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.5"/>
+    <text x="725" y="800" text-anchor="middle" font-size="15" font-weight="700" fill="#111827">Secret Manager</text>
+    <text x="725" y="822" text-anchor="middle" font-size="13" fill="#4b5563">bootstrap secrets</text>
+    <text x="725" y="842" text-anchor="middle" font-size="13" fill="#6b7280">DB password, Fernet key,</text>
+    <text x="725" y="859" text-anchor="middle" font-size="13" fill="#6b7280">HMAC secret, git token</text>
+
+    <rect x="865" y="758" width="230" height="150" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.5"/>
+    <text x="980" y="800" text-anchor="middle" font-size="15" font-weight="700" fill="#111827">Artifact Registry</text>
+    <text x="980" y="822" text-anchor="middle" font-size="13" fill="#4b5563">3 images</text>
+    <text x="980" y="842" text-anchor="middle" font-size="13" fill="#6b7280">orchestrator, panel, agent</text>
+    <text x="980" y="859" text-anchor="middle" font-size="13" fill="#6b7280">built by Cloud Build</text>
+
+    <rect x="1120" y="758" width="230" height="150" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.5"/>
+    <text x="1235" y="800" text-anchor="middle" font-size="15" font-weight="700" fill="#111827">Filestore NFS</text>
+    <text x="1235" y="822" text-anchor="middle" font-size="13" fill="#4b5563">/data/workspaces</text>
+    <text x="1235" y="842" text-anchor="middle" font-size="13" fill="#6b7280">per-agent git clones</text>
+    <text x="1235" y="859" text-anchor="middle" font-size="13" fill="#6b7280">mounted on Job + orchestrator</text>
+
+    <rect x="1375" y="758" width="230" height="150" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.5"/>
+    <text x="1490" y="800" text-anchor="middle" font-size="15" font-weight="700" fill="#111827">Cloud Storage</text>
+    <text x="1490" y="822" text-anchor="middle" font-size="13" fill="#4b5563">per-spawn objects</text>
+    <text x="1490" y="842" text-anchor="middle" font-size="13" fill="#6b7280">tool manifests, crash and</text>
+    <text x="1490" y="859" text-anchor="middle" font-size="13" fill="#6b7280">heartbeat diagnostics</text>
+  </g>
+
+  <!-- ── edges ──────────────────────────────────────────────────────── -->
+  <!-- panel -> API -->
+  <line x1="410" y1="186" x2="410" y2="278" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="424" y="228" font-size="13.5" fill="#4b5563">HTTPS + WebSocket</text>
+
+  <!-- 1. dispatcher -> ADK -->
+  <path d="M 720 571 H 830 V 320 H 914" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#arrowHot)"/>
+  <text x="786" y="600" font-size="14" font-weight="700" fill="#4f46e5">1</text>
+  <text x="800" y="600" font-size="13.5" fill="#4b5563">create + run Job execution</text>
+
+  <!-- 2. ADK -> Gemini -->
+  <line x1="1360" y1="333" x2="1444" y2="333" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#arrowHot)"/>
+  <text x="1372" y="322" font-size="14" font-weight="700" fill="#4f46e5">2</text>
+  <text x="1386" y="322" font-size="13.5" fill="#4b5563">generate</text>
+
+  <!-- 3. shim -> API (over the top) -->
+  <path d="M 1360 453 H 1418 V 214 H 640 V 272" fill="none" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#arrowHot)"/>
+  <text x="960" y="205" font-size="14" font-weight="700" fill="#4f46e5">3</text>
+  <text x="974" y="205" font-size="13.5" fill="#4b5563">verb calls over HTTP: /api/v1/flow/&#123;role&#125;/&#123;verb&#125;, /api/v1/do/&#123;tool&#125;</text>
+
+  <!-- orchestrator -> managed services -->
+  <line x1="215" y1="660" x2="215" y2="752" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="470" y1="660" x2="470" y2="752" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="725" y1="660" x2="725" y2="752" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 660 660 V 690 H 980 V 752" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="240" y="700" font-size="13" fill="#6b7280">state, cache, secrets, images</text>
+
+  <!-- agent -> filestore / gcs -->
+  <line x1="1235" y1="530" x2="1235" y2="752" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="1249" y="600" font-size="13" fill="#6b7280">read / write worktree</text>
+  <path d="M 1330 530 V 640 H 1490 V 752" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="1345" y="672" font-size="13" fill="#6b7280">manifest, diagnostics</text>
+
+  <text x="60" y="972" font-size="13" fill="#9ca3af">Every task runs one isolated Job execution. The agent holds no credentials: it reaches the orchestrator with a per-spawn HMAC token and the model through the Job's own service account.</text>
+</svg>

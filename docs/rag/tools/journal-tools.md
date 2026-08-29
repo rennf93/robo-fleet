@@ -1,6 +1,6 @@
 # Journal Tools
 
-There is **no** `robofleet_journal_*` tool. Journaling is a single content tool on the `robofleet-do` MCP server: `note`. The `scope` argument selects the entry kind; structured fields are filled per scope.
+There is **no** `robofleet_journal_*` tool. Journaling is a single do-tool: `note` (an ADK `FunctionTool` that HTTP POSTs to `/api/v1/do/note`, no MCP server involved). The `scope` argument selects the entry kind; structured fields are filled per scope. Scopes are `note`, `decision`, `reflect`, `learning`, `struggle` (`robofleet/foundation/policy/journaling.py`'s `Scope` enum) - there is no `handoff` scope in this codebase.
 
 ```python
 note(
@@ -22,7 +22,7 @@ note(
 )
 ```
 
-`text` is always required. Missing narrative fields default to a visible placeholder rather than being rejected — the note is always recorded.
+`text` is always required. Missing narrative fields default to a visible placeholder rather than being rejected  -  the note is always recorded.
 
 ## Scopes
 
@@ -67,7 +67,7 @@ note(
 
 ```python
 note(
-    text="asyncio.gather for parallel calls — reduced latency 50%",
+    text="asyncio.gather for parallel calls  -  reduced latency 50%",
     scope="learning",
     title="Parallel async calls",
 )
@@ -78,7 +78,7 @@ note(
 ```python
 note(
     text=(
-        "Tests failing intermittently — tried timeout increase and retry "
+        "Tests failing intermittently  -  tried timeout increase and retry "
         "logic; root cause was a race condition in setup."
     ),
     scope="struggle",
@@ -88,7 +88,7 @@ note(
 
 ## Reflection
 
-Use a `reflect`-scope note before submitting to QA — it gives QA the "why" behind the diff.
+Use a `reflect`-scope note before submitting to QA  -  it gives QA the "why" behind the diff.
 
 ```python
 note(
@@ -104,12 +104,4 @@ note(
 
 ## Reading Journals
 
-Journals are written by `note` and surface through the knowledge base — there is no separate journal-read tool. Search past notes (yours and your team's, where permitted) via the `robofleet-optimal` MCP server:
-
-```python
-# Semantic search over indexed notes/decisions/learnings
-robofleet_kb_search(query="rate limiting", index_types=["journals", "decisions"])
-
-# Conversational lookup with follow-up context
-robofleet_ask_mentor(question="What did we decide about session storage?")
-```
+Journals are written by `note` and are meant to surface through the knowledge base for later semantic search  -  but there is **no KB-search tool reachable from this runtime**. `robofleet_kb_search`/`robofleet_ask_mentor` exist in the codebase (`robofleet/mcp/optimal_server.py`) but are wired only for the legacy Docker/CLI-container provider path, never for the `ADK_CLOUD_RUN` runtime this fleet's delivery agents actually run on (see `docs/rag/README.md` for the full explanation). In practice: you cannot search past journal entries yourself. The one automatic path is the org-memory "institutional memory" briefing injected at claim time when `org_memory_enabled` is armed (default off) - it surfaces top-K relevant lessons/playbooks in your `context_briefing`, but you never query it directly.

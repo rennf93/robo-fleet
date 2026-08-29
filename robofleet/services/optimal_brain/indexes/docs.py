@@ -53,7 +53,7 @@ class DocsIndexPlugin(BaseIndexPlugin):
         ``provenance`` distinguishes a doc written mid-task (``live_write`` —
         via ``robofleet_docs_write``/``i_documented``, describing not-yet-merged
         work) from one picked up by the repo-tree scan (``repo_tree`` — the
-        default; committed content already on disk, e.g. docs/rag, docs/map,
+        default; committed content already on disk, e.g. docs/rag,
         or a startup/manual reindex). ``robofleet_kb_search`` renders a caveat on
         any ``live_write`` hit (see ``mcp/optimal_server.py``) so an agent
         doesn't mistake an in-flight contract for deployed reality.

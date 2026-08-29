@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, waitFor } from "@testing-library/react";
 
-// /kanban and /kanban?view=X used to render the full kanban board; Stream3-A
-// moved that board into the Tasks page's Kanban tab, so this route now only
-// redirects there — this test locks in the redirect target for both the
-// bare route and the view-preserving query-param case.
 const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
 let currentSearch = "";
 

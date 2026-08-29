@@ -376,7 +376,7 @@ _FEATURE_EXPLORATION_TITLE = "X feature-spotlight exploration"
 def _feature_exploration_description(product_name: str) -> str:
     return (
         f"Investigate {product_name}'s own shipped capabilities — CHANGELOG.md, "
-        "the feature-flags ledger, docs/map, the company charter, and the "
+        "the feature-flags ledger, the company charter, and the "
         "knowledge base — and pick ONE under-publicized, fresh-but-unspotlighted "
         "feature not already covered (see the seen-features list on this task). "
         "Draft ONE marketing post via propose_feature_spotlight(). If nothing "

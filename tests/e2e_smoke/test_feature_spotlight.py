@@ -95,7 +95,7 @@ def _seed_feature_exploration(
         title="X feature-spotlight exploration",
         description=(
             "Investigate shipped capabilities (CHANGELOG, feature flags, "
-            "docs/map, charter, KB) and propose ONE feature-spotlight post "
+            "charter, KB) and propose ONE feature-spotlight post "
             "for an under-publicized, not-yet-covered capability."
         ),
         acceptance_criteria=[

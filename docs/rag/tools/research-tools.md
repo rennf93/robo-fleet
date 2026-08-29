@@ -1,51 +1,9 @@
 # Web Research Tools
 
-Two tools on the `robofleet-search` MCP server: `web_search` and `web_fetch`. Mounted only for **Board + PM roles** — `cell_pm`, `main_pm`, `product_owner`, `head_marketing` — and only when `ROBOFLEET_RESEARCH_ENABLED` is true (default **on**; see `docs/rag/architecture/config-reference.md`). Every other role has no access.
+**Not reachable by any spawned delivery agent under this runtime.** `web_search`/`web_fetch` exist server-side (`ResearchService`, `robofleet/mcp/search_server.py`, mounted as the `robofleet-search` MCP server) and are still gated by role (`cell_pm`/`main_pm`/`product_owner`/`head_marketing`) plus `ROBOFLEET_RESEARCH_ENABLED` in the API layer's authorization checks - but MCP mounting only happens for the legacy Docker/CLI-container provider path. The default and, on the current fleet, only actually-used delivery runtime is `ModelProvider.ADK_CLOUD_RUN` (`robofleet.agent.adk_entry`), whose tool manifest is built by `AgentOrchestrator._generate_adk_manifest` from `{flow_tools, do_tools}` alone (`robofleet/services/gateway/role_config.py`) - `role_config.py`'s do-tool tuples for `cell_pm`/`main_pm`/`product_owner`/`head_marketing` contain no `web_search`/`web_fetch` entry at all. Flipping `ROBOFLEET_RESEARCH_ENABLED` has no effect on what an ADK-spawned agent can actually call.
 
-Calls flow agent → `robofleet-search` MCP → `/api/research/search` or `/api/research/fetch` → `ResearchService` → the configured provider. The provider API key lives only in the server-side orchestrator process — it is never injected into an agent container, and the agent itself never egresses; the provider's own API does.
+If you are a Board/PM agent that needs a citation-backed external fact (Periscope's market briefs are the clearest case), you cannot fetch it yourself right now - work from whatever the task prompt already gave you, and say plainly that you could not verify a claim rather than fabricating a `source_url`. See `docs/rag/roles/head-marketing.md` and `docs/rag/README.md` for the same finding in context.
 
-## `web_search`
+## What exists server-side (for reference, not agent-callable today)
 
-```python
-web_search(query="competitor pricing for AI agent platforms", max_results=5)
-```
-
-| Arg | Required | Description |
-|-----|----------|--------------|
-| `query` | yes | The search query. |
-| `max_results` | no | Cap on results, clamped server-side to `ROBOFLEET_RESEARCH_MAX_RESULTS` (default 5, hard ceiling 20). |
-
-Returns cited results (`title`, `url`, `snippet`, optional `score`) and, when the provider supports it (Tavily), a short synthesized `answer`. A `guidance` field reminds you to cite the URL for anything you rely on and to persist key findings — see below.
-
-## `web_fetch`
-
-```python
-web_fetch(url="https://example.com/pricing", max_chars=5000)
-```
-
-| Arg | Required | Description |
-|-----|----------|--------------|
-| `url` | yes | The page to extract readable content from. |
-| `max_chars` | no | Cap on returned characters, clamped server-side to `ROBOFLEET_RESEARCH_FETCH_MAX_CHARS` (default 20000). |
-
-Only works with providers that support content extraction (Tavily, Exa) — the response's `truncated` field tells you whether the content was cut at the cap. Brave has no extraction endpoint; calling `web_fetch` against it returns a "does not support web_fetch" error (HTTP 501 at the route, surfaced as an error envelope to the tool).
-
-## Cite-and-persist rules
-
-Web research is external, unverified-by-the-org information — treat it accordingly:
-
-1. **Always cite the URL** for any fact you rely on in a decision, a `delegate` description, or a `dm` message.
-2. **Persist key findings** with `note(scope="reflect", ...)` so the source survives beyond your own context window and the team keeps it, not just you.
-3. Do not treat a search `answer` or a fetched page as ground truth about RoboFleet itself — it is about the outside world (competitors, libraries, market trends), not this codebase.
-
-## Daily quota
-
-Each agent gets `ROBOFLEET_RESEARCH_DAILY_QUOTA_PER_AGENT` (default 50) combined `web_search` + `web_fetch` calls per UTC day, tracked in Redis. Past the quota, calls return HTTP 429 with a message naming the limit and the UTC reset time. The quota check **fails open** — a Redis outage lets the call through rather than blocking research on an infra hiccup.
-
-## Graceful degradation
-
-With `ROBOFLEET_RESEARCH_PROVIDER=null` or no `ROBOFLEET_RESEARCH_API_KEY` configured, both tools still respond (never a hard failure) — `web_search` returns zero results with `provider: "null"` and a guidance string telling you to proceed without external sources or ask the CEO to configure a key; `web_fetch` returns empty content. Check the `provider` field in the response rather than assuming a key is set.
-
-## CEO access
-
-The CEO (as the human operator, via the panel) is also in the research-authorized role set at the API layer, alongside the four agent roles above — but the CEO does not call MCP tools; this is purely so a panel-driven research surface (if built) would not need a separate authorization path.
+`ResearchService` fronts a configurable provider (Tavily/Exa/Brave) behind `/api/research/search` and `/api/research/fetch`; the provider API key lives only in the orchestrator process. Config knobs still present in `robofleet/config.py`: `research_enabled` (default on), a per-call result/char cap, and a daily per-agent quota tracked in Redis (fail-open on a Redis outage). None of this reaches an ADK-spawned agent today - wiring it in would mean adding real named-argument `FunctionTool`s to `robofleet/agent/gateway_shim.py` the same way every other tool here is wired, not restoring the old MCP mount.

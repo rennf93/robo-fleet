@@ -214,7 +214,7 @@ class ReviewFindingsRepository(BaseRepository[TaskReviewFindingTable]):
         same origin (the task's later rounds routed through QA/PM instead)
         survives to completion still ``addressed`` — shipped without the
         raiser ever confirming the fix. That's the escaped defect; see
-        docs/map/metrics-observability.md for the full rationale.
+        the metrics documentation for the full rationale.
 
         Scoped to ``COMPLETED`` (not every terminal state): ``cancelled``
         tasks never set ``completed_at`` and never ship code, so nothing

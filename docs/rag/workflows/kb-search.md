@@ -1,97 +1,17 @@
 # Knowledge Base Search
 
-**ALL agents have access to KB/RAG tools.** These are automatically available.
+**No agent has access to KB/RAG tools under the current runtime.** `robofleet_ask_mentor`, `robofleet_kb_search`, `robofleet_rag_query`, and `robofleet_get_proactive_context` are real MCP tools (`robofleet/mcp/optimal_server.py`) but they are mounted only for the legacy Docker/CLI-container provider path  -  never for `ModelProvider.ADK_CLOUD_RUN`, the runtime every delivery agent (dev/qa/doc/pm/pr-reviewer/board) actually spawns on. See `docs/rag/README.md` and `docs/rag/tools/kb-tools.md` for the full mechanism and why.
 
-## Recommended: Ask Mentor
+## What you actually have instead
 
-For most questions, use `robofleet_ask_mentor`:
+Nothing that searches the knowledge base. Work from:
 
-```python
-robofleet_ask_mentor(question="How do I handle authentication?")
-```
+- What the task prompt already handed you (composed at spawn from `compose_prompt` + the conventions ambient block)
+- What your flow verbs return inline (`evidence(task_id)`, `claim_review`'s AC/PR data, `context_briefing` on claim)
+- `read_file` over your actual worktree, when you have one
 
-It searches ALL knowledge sources and supports follow-up questions.
-
-## Search Types
-
-| Tool | Purpose | Best For |
-|------|---------|----------|
-| `robofleet_ask_mentor` | Conversational help | **Most questions** |
-| `robofleet_kb_search` | Semantic search | Browsing, exploration |
-| `robofleet_rag_query` | AI-synthesized answer | Quick answers |
-
-## Semantic Search
-
-```python
-robofleet_kb_search(
-    query="rate limiting redis implementation",
-    top_k=5,  # Results to return
-    project="robofleet-api",  # Optional project filter
-    index_types=["code", "docs"],  # Filter by type
-)
-```
-
-Returns similar content - not just keyword matches.
-
-## RAG Query (AI Answer)
-
-```python
-robofleet_rag_query(query="How does authentication work in this codebase?", top_k=5)
-```
-
-Returns AI-synthesized answer with citations.
-
-Good for:
-- "How does X work?"
-- "What pattern should I use?"
-- "What decisions were made about Y?"
-
-## Mentor (Conversational)
-
-```python
-# First question
-response = robofleet_ask_mentor(
-    question="How do I handle authentication?", domain="coding"
-)
-
-# Follow-up
-robofleet_ask_mentor(
-    question="What about refresh tokens?", conversation_id=response["conversation_id"]
-)
-```
-
-## Index Types
-
-| Type | Content |
-|------|---------|
-| `code` | Source files |
-| `docs` | Documentation |
-| `journals` | Agent journal entries |
-| `errors` | Error patterns & fixes |
-| `standards` | Coding rules |
-| `decisions` | Architectural decisions |
-| `reviews` | Code review patterns |
-| `learnings` | Captured learnings |
+The one automatic path back to KB-derived content is the org-memory "institutional memory" briefing (`context_briefing["institutional_memory"]`), injected at claim time when `org_memory_enabled` is armed (default off) - and even then it only covers the `LEARNINGS`/`PLAYBOOKS` indexes, never `DOCUMENTATION`/`code`. You never call anything to get it.
 
 ## Before Starting a Task
 
-Always search first:
-```python
-robofleet_kb_search(query="implementing rate limiter")
-# Journal entries are part of the KB — filter to them with index_types:
-robofleet_kb_search(query="rate limit decisions", index_types=["journals", "decisions"])
-```
-
-This helps you:
-- Avoid repeating mistakes
-- Find proven patterns
-- Learn from others' experiences
-
-## Proactive Context
-
-System auto-provides context when you claim:
-```python
-robofleet_get_proactive_context(task_id)
-# Returns: similar_tasks, relevant_learnings, code_patterns,
-#          applicable_standards, recent_decisions, known_issues
-```
+There is no pre-task KB search step to run - skip straight to `give_me_work()`/`i_will_work_on(...)` and rely on the task's own acceptance criteria and whatever context arrives with it.

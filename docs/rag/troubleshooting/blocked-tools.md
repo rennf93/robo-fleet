@@ -1,41 +1,41 @@
 # Blocked Tools
 
-## Native Git Commands Blocked
+## There Is No Bash/Shell Tool At All
 
-**Symptom:** `Bash(git commit)`, `Bash(git push)`, `Bash(git checkout)`, etc. denied by the bash-guard hook.
+**Symptom:** You want to run `git commit`, `git push`, `pytest`, `ruff`, or any other shell command, and there is nothing to call.
 
-**Cause:** Shell git for network / auth / branch-mutating ops bypasses the PAT injection done by the MCP layer; raw `git fetch` etc. would fail with `could not read Username for 'https://github.com'` anyway.
+**Cause:** This is not a permissions restriction (there is no "bash-guard hook" under this runtime) - a delivery agent is a Google ADK `LlmAgent` (`robofleet.agent.adk_entry`) whose only tools are the specific `FunctionTool`s built at spawn from your role's manifest (`robofleet/agent/gateway_shim.py`'s flow/do verbs, plus the seven functions in `robofleet/agent/git_tools.py`). There is no generic shell/Bash tool, no `Write()`/`Edit()`/`Read()` Claude-Code-style tool, and no way to escape to one.
 
-**Solution:** Use the role-scoped MCP verb that matches what you're trying to do. There is **no** `robofleet_git_commit / _push / _create_pr / _merge_pr / _checkout` MCP tool — the surface is smaller than that:
+**Solution:** Use the specific tool that matches what you're trying to do - the surface is smaller than a general dev environment, by design:
 
-| Blocked shell command | Use instead |
-|-----------------------|-------------|
-| `git status` / `git diff` / `git log` / `git branch` | `robofleet_git_status` / `robofleet_git_diff` / `robofleet_git_log` / `robofleet_git_branch_list` (robofleet-git-readonly) |
-| `git commit` + `git push` (devs / docs) | `commit(message, files)` (robofleet-do) — auto-prefixes [task-id], pushes |
-| `git checkout` of a task branch | None — branch is auto-checked-out by `i_will_work_on(task_id)` (devs) or `i_will_plan(task_id, plan)` (PMs) |
-| Open a PR | None — PR is opened by the choreographer when the dev calls `open_pr(task_id)` |
-| Merge a PR | `complete(task_id, notes)` (PMs only) — Cell PM merges leaf PR; Main PM merges parent and escalates to CEO |
-| `git fetch` / `git pull` / `git rebase` | Devs have `sync_branch(task_id)` — the gate-level rebase (fetch + rebase + force-with-lease push). If your branch is **behind its base**, call `sync_branch(task_id)`; do NOT improvise shell git. PMs have no rebase verb — for a cell/root integration branch behind its base, `escalate_up(...)`. Use `unclaim` + re-`claim` only to rebuild a branch fresh from the current base, and only on instruction |
+| You want to | Use instead |
+|---|---|
+| `git status` | `git_status()` (`robofleet/agent/git_tools.py`) |
+| `git log` / `git diff` / `git branch` (list) | **Nothing exists.** No such tool under this runtime; work from `files_changed`/`commits` returned inline by your flow verbs plus `read_file` over actual file content |
+| Read/write a file | `read_file(rel_path)` / `write_file(rel_path, content)` |
+| Delete/rename a file | `delete_file(rel_path)` / `move_file(src_path, dst_path)` |
+| `git commit` + `git push` (devs/docs) | `commit(message, files)` (do-tool) - auto-prefixes `[task_id:8]`, pushes |
+| `git checkout` of a task branch | Nothing to call - branch is auto-checked-out by `i_will_work_on(task_id)` (devs) or `i_will_plan(task_id, plan)` (PMs) |
+| Open a PR | `open_pr(task_id)` |
+| Merge a PR | `complete(task_id, notes)` (PMs only) - Cell PM merges leaf PR; Main PM merges parent and escalates to CEO |
+| `git fetch` / `git pull` / `git rebase` | Devs: `sync_branch(task_id)` (fetch + rebase + force-with-lease push). PMs have no rebase verb - escalate a stale integration branch via `escalate_up(...)` |
+| `pytest` / `ruff` / `mypy` / `pnpm test` | Nothing to call - you have no local gate. Rely on the project's own CI (runs on your pushed branch after `open_pr`) and QA's review |
 
-## Write/Edit Outside Workspace
+## Write Outside Your Worktree
 
-**Symptom:** `Write()` or `Edit()` denied for a file path
+**Symptom:** `write_file`/`delete_file`/`move_file` returns an error (`PermissionError: path traversal outside worktree`)
 
-**Cause:** Write operations restricted to your workspace
+**Cause:** Every `git_tools.py` function resolves your `rel_path` under `ROBOFLEET_WORKSPACE_DIR` and rejects anything that resolves outside it (`_resolve` in `robofleet/agent/git_tools.py`) - there is no way to read or write outside your own per-task clone. That directory lives under `ROBOFLEET_WORKSPACES_ROOT` (default `/data/workspaces`, or the GCP Filestore NFS mount when armed).
 
-**Solution:**
-
-- Developers: Only write in `/data/workspaces/{project}/{team}/{agent-id}/`
-- Documenters: Only write in `/app/docs/`
-- QA: No write access (review only)
+**Solution:** Use a relative path inside your own worktree. QA and other roles without a provisioned workspace get no meaningful write target at all - not because writing is blocked, but because there is no real project clone to write into.
 
 ## QA Cannot Commit
 
-**Symptom:** `commit()` returns `not_authorized` for a QA agent
+**Symptom:** The `commit` do-tool is not in your manifest at all if you are QA
 
-**Cause:** QA role is read-only — cannot modify code or open PRs.
+**Cause:** QA's role is read-only by design - `role_config.py`'s `_QA_DO` tuple has no `commit` entry.
 
-**Solution:** QA `pass(task_id, notes)` or `fail(task_id, issues)` only. Developers fix issues and re-submit.
+**Solution:** QA `pass(task_id, notes, criteria_verified=...)` or `fail(task_id, findings=...)` only. Developers fix issues and re-submit.
 
 ## NO_PLAN Error on Start
 
@@ -43,7 +43,7 @@
 
 **Cause:** Parent tasks require a plan before they can leave `pending`.
 
-**Solution:** PMs call `i_will_plan(task_id, plan)`; the verb both records the plan and transitions the task into `in_progress`.
+**Solution:** PMs call `i_will_plan(task_id, plan, approach)`; the verb both records the plan and transitions the task into `in_progress`.
 
 ## Parent Branch Required
 

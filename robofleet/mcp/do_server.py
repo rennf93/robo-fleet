@@ -704,7 +704,7 @@ def propose_feature_spotlight(
     """Head of Marketing: draft ONE feature-spotlight marketing post, or skip.
 
     Call this exactly ONCE per exploration cycle, after investigating the
-    CHANGELOG, feature-flags ledger, docs/map, charter, and KB to pick a real,
+    CHANGELOG, feature-flags ledger, charter, and KB to pick a real,
     under-publicized capability. The draft is held in the X post queue for the
     CEO to edit/approve — nothing auto-posts.
 

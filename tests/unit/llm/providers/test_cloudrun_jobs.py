@@ -76,6 +76,7 @@ def test_task_template_mounts_nfs_and_connector_for_workspace_cwd(
     assert template.volumes[0].nfs.server == "10.0.0.5"
     assert template.volumes[0].nfs.path == "/workspaces"
     assert template.vpc_access.connector == "projects/p/locations/r/connectors/c"
+    assert template.max_retries == 0
 
 
 def test_task_template_refuses_workspace_cwd_without_nfs(

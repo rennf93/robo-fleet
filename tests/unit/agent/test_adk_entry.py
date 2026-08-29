@@ -507,3 +507,27 @@ async def test_main_reports_usage_on_crash_and_counts_thinking_tokens(
     assert usage["exit_reason"] == "crash"
     assert usage["tokens_output"] == 320
     assert usage["tokens_input"] == 100
+
+
+def test_accumulate_sums_every_model_call() -> None:
+    from robofleet.agent.adk_entry import _accumulate, _new_usage
+
+    class _U:
+        def __init__(self, p: int, c: int, t: int, cached: int) -> None:
+            self.prompt_token_count = p
+            self.candidates_token_count = c
+            self.thoughts_token_count = t
+            self.cached_content_token_count = cached
+
+    class _E:
+        def __init__(self, u: Any) -> None:
+            self.usage_metadata = u
+
+    usage = _new_usage()
+    _accumulate(usage, _E(_U(100, 10, 5, 0)))
+    _accumulate(usage, _E(None))  # tool-response event: no usage metadata
+    _accumulate(usage, _E(_U(250, 20, 15, 200)))
+    assert usage["turns"] == 3
+    assert usage["tokens_input"] == 350
+    assert usage["tokens_output"] == 50
+    assert usage["tokens_cache_read"] == 200

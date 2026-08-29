@@ -420,6 +420,10 @@ class CloudRunJobsProvider(AgentProvider):
             containers=[run_v2.Container(**container_kwargs)],
             timeout={"seconds": _JOB_TIMEOUT_SECONDS},
             volumes=volumes,
+            # No Cloud Run-level retry: a retried task re-runs the whole agent
+            # from scratch (full model spend again) with no orchestrator
+            # bookkeeping; the respawn breaker is the only retry path.
+            max_retries=0,
         )
         # VPC connector (GCP only): lets the Job reach Cloud SQL + Memorystore
         # on the robofleet-net VPC. The v2-native VpcAccess.connector is the

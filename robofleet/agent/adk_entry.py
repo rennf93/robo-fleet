@@ -121,15 +121,18 @@ def _accumulate(usage: dict[str, Any], event: Any) -> None:
     usage["turns"] += 1
     u = getattr(event, "usage_metadata", None)
     if u is not None:
-        usage["tokens_input"] = getattr(u, "prompt_token_count", 0) or 0
+        # Every model call is billed on its own full prompt: SUM across events.
+        # Assigning (the old bug) kept only the last call's tokens, so the
+        # ledger and the budget caps saw ~1% of a run's real spend.
+        usage["tokens_input"] += getattr(u, "prompt_token_count", 0) or 0
         # Thinking tokens are billed as output on Gemini 3.x; without them the
         # ledger (and the budget caps) undercount a tool-heavy run badly.
-        usage["tokens_output"] = (getattr(u, "candidates_token_count", 0) or 0) + (
+        usage["tokens_output"] += (getattr(u, "candidates_token_count", 0) or 0) + (
             getattr(u, "thoughts_token_count", 0) or 0
         )
         # cached_content_token_count is the genai cache-read field; cache-write
         # has no clean summary scalar, left at 0.
-        usage["tokens_cache_read"] = getattr(u, "cached_content_token_count", 0) or 0
+        usage["tokens_cache_read"] += getattr(u, "cached_content_token_count", 0) or 0
 
 
 def _log_event(event: Any) -> None:

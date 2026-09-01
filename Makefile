@@ -1,0 +1,589 @@
+# Supported Python versions
+PYTHON_VERSIONS = 3.10 3.11 3.12 3.13 3.14
+DEFAULT_PYTHON = 3.10
+
+# Every `uv run` implicitly re-syncs the venv (rebuilding the robo-fleet package
+# after any source edit). Two uv processes doing that concurrently — a
+# background `make quality` plus any foreground `uv run` — race on one
+# .venv and tear site-packages apart (recurring rich/pip/bandit ImportError
+# corruption). Recipes therefore never sync implicitly; targets that need a
+# fresh env depend on the explicit `sync` below, which runs once, up front.
+export UV_NO_SYNC := 1
+
+# Private per-repo uv cache. The user-level ~/.cache/uv is SHARED with every
+# `uvx` tool server on the machine (e.g. Claude Code's mcp-server-fetch runs
+# for days holding/contending the cache lock); concurrent cache writes from
+# those processes poisoned package entries (rich/pip/bandit rot that survived
+# venv rebuilds — the cache, not the venv, was the carrier). One-time cost:
+# the first sync re-downloads; after that, total isolation.
+export UV_CACHE_DIR := $(CURDIR)/.uv-cache
+
+.PHONY: sync
+sync:
+	@echo "==> uv sync --extra dev"
+	@uv sync --extra dev
+
+# Install dependencies
+.PHONY: install
+install:
+	@uv sync
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+# Install dev dependencies
+.PHONY: install-dev
+install-dev:
+	@uv sync --extra dev
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+# Update dependencies
+.PHONY: lock
+lock:
+	@uv lock
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+
+# Upgrade dependencies
+.PHONY: upgrade
+upgrade:
+	@uv lock --upgrade
+	@uv sync --all-extras
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+# =============================================================================
+# INFRASTRUCTURE
+# =============================================================================
+
+# Default agents to spawn
+AGENTS ?= main-pm be-dev-1 be-qa
+
+# Start infrastructure (PostgreSQL + Redis)
+.PHONY: infra
+infra:
+	@echo "Starting infrastructure..."
+	@docker compose up -d postgres redis
+	@echo "Waiting for services to be healthy..."
+	@sleep 3
+	@docker compose ps
+
+# Stop infrastructure
+.PHONY: infra-down
+infra-down:
+	@echo "Stopping infrastructure..."
+	@docker compose down
+
+# One-command bring-up for the registry (pull-and-run) deploy: scaffolds .env
+# with freshly generated secrets on first run (never touches an existing one),
+# pulls + starts docker-compose.registry.yml, then polls until the stack is
+# genuinely ready and prints a doctor-style summary. See scripts/bootstrap.sh
+# for the grounded health/readiness probes.
+.PHONY: quickstart
+quickstart:
+	@./scripts/bootstrap.sh
+
+# Run database migrations
+.PHONY: migrate
+migrate:
+	@echo "Running database migrations..."
+	@uv run alembic upgrade head
+
+# Create new migration
+.PHONY: migration
+migration:
+	@read -p "Migration message: " msg; \
+	uv run alembic revision --autogenerate -m "$$msg"
+
+# =============================================================================
+# RUNNING THE APPLICATION
+# =============================================================================
+
+# Start API server only (development mode with reload)
+.PHONY: api
+api:
+	@echo "Starting RoboFleet API (development mode)..."
+	@uv run uvicorn robofleet.api.app:app --host 0.0.0.0 --port 8000 --reload
+
+# Start API server (production mode, no reload)
+.PHONY: run
+run:
+	@echo "Starting RoboFleet API (production mode)..."
+	@uv run uvicorn robofleet.api.app:app --host 0.0.0.0 --port 8000
+
+# Start orchestrator only (spawns agents)
+.PHONY: orchestrator
+orchestrator:
+	@echo "Starting orchestrator with agents: $(AGENTS)..."
+	@uv run python -m robofleet.cli --spawn $(AGENTS)
+
+# Start API + Orchestrator (full development mode)
+.PHONY: dev
+dev:
+	@echo "Starting RoboFleet in development mode..."
+	@echo "Agents to spawn: $(AGENTS)"
+	@echo ""
+	@echo "Starting API in background..."
+	@uv run uvicorn robofleet.api.app:app --host 0.0.0.0 --port 8000 &
+	@sleep 2
+	@echo "Starting orchestrator..."
+	@uv run python -m robofleet.cli --spawn $(AGENTS)
+
+# Initialize database only (seed data)
+.PHONY: db-init
+db-init:
+	@echo "Initializing database..."
+	@uv run python -m robofleet.cli --db-only
+
+# =============================================================================
+# MONITORING & STATUS
+# =============================================================================
+
+# Show system status
+.PHONY: status
+status:
+	@echo "=== Infrastructure ==="
+	@docker compose ps
+	@echo ""
+	@echo "=== API Health ==="
+	@curl -s http://localhost:8000/health 2>/dev/null | jq . || echo "API not running"
+	@echo ""
+	@echo "=== Orchestrator Status ==="
+	@curl -s http://localhost:8000/api/v1/orchestrator/status 2>/dev/null | jq . || echo "Orchestrator not available"
+
+# Tail all logs
+.PHONY: logs
+logs:
+	@docker compose logs -f
+
+# =============================================================================
+# TMUX SESSION
+# =============================================================================
+
+# Create tmux session with all components
+.PHONY: tmux
+tmux:
+	@echo "Creating tmux session 'robo-fleet'..."
+	@tmux kill-session -t robo-fleet 2>/dev/null || true
+	@tmux new-session -d -s robo-fleet -n infra
+	@tmux send-keys -t robofleet:infra "cd $(PWD) && docker compose logs -f" Enter
+	@tmux new-window -t robo-fleet -n api
+	@tmux send-keys -t robofleet:api "cd $(PWD) && make api" Enter
+	@tmux new-window -t robo-fleet -n orch
+	@tmux send-keys -t robofleet:orch "cd $(PWD) && sleep 3 && make orchestrator AGENTS='$(AGENTS)'" Enter
+	@tmux select-window -t robofleet:api
+	@echo "tmux session 'robo-fleet' created. Attach with: tmux attach -t robo-fleet"
+
+# Stop
+.PHONY: stop
+stop:
+	@docker compose down --rmi all --remove-orphans -v
+	@docker system prune -f
+
+# Restart
+.PHONY: restart
+restart: stop start-example
+
+# Lint code
+.PHONY: lint
+lint:
+	@echo 'Formatting w/ Ruff...' ; echo '' ; uv run ruff format .
+	@echo '' ; echo '' ; echo 'Linting w/ Ruff...' ; echo '' ; uv run ruff check .
+	@echo '' ; echo '' ; echo 'Type checking w/ Mypy...' ; echo '' ; uv run mypy robofleet/ tests/
+	@echo '' ; echo '' ; echo 'Finding dead code w/ Vulture...' ; echo '' ; uv run vulture vulture_whitelist.py
+
+# Fix code
+.PHONY: fix
+fix:
+	@echo "Fixing formatting w/ Ruff..."
+	@echo ''
+	@uv run ruff check --fix .
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+# Reflow hard-wrapped markdown prose to one line per paragraph (docs style).
+.PHONY: reflow-docs
+reflow-docs:
+	uv run python scripts/reflow_md.py --apply
+
+# CI guard: fail if any in-scope doc has hard-wrapped prose. Wired into `quality`.
+.PHONY: reflow-check
+reflow-check:
+	uv run python scripts/reflow_md.py --check
+
+# Find dead code with Vulture
+.PHONY: vulture
+vulture:
+	@echo "Finding dead code with Vulture..."
+	@echo ''
+#	@uv run vulture
+#	@uv run vulture --verbose
+	@uv run vulture vulture_whitelist.py
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+# Security scan with Bandit
+.PHONY: bandit
+bandit:
+	@echo "Running Bandit security scan..."
+	@echo ''
+	@uv run bandit -r robofleet -ll
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+# Audit dependencies with pip-audit
+.PHONY: pip-audit
+pip-audit:
+	@echo "Auditing dependencies with pip-audit..."
+	@echo ''
+	@uv run pip-audit
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+# Analyze code complexity with Radon
+.PHONY: radon
+radon:
+	@echo "Analyzing code complexity with Radon..."
+	@echo ''
+	@echo "Cyclomatic Complexity:"
+	@uv run radon cc robofleet -nc
+	@echo ''
+	@echo "Maintainability Index:"
+	@uv run radon mi robofleet -nc
+	@echo ''
+	@echo "Raw Metrics:"
+	@uv run radon raw robofleet
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+# Check complexity thresholds with Xenon
+.PHONY: xenon
+xenon:
+	@echo "Checking complexity thresholds with Xenon..."
+	@echo ''
+	@uv run xenon robofleet --max-absolute B --max-modules A --max-average A
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+# Analyze dependencies with Deptry
+.PHONY: deptry
+deptry:
+	@echo "Analyzing dependencies with Deptry..."
+	@echo ''
+	@uv run deptry .
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache)" | xargs rm -rf
+
+# Run all security checks
+.PHONY: security
+security: bandit pip-audit
+	@echo "All security checks completed."
+
+# =============================================================================
+# QUALITY GATES
+# =============================================================================
+
+# docker-compose.yaml and docker-compose.yml must stay byte-identical: Compose's
+# default file lookup prefers .yaml, so a bare `docker compose up` silently runs
+# whichever twin is stale. This has drifted before (see CHANGELOG's vault-mount
+# divergence) — this is the guard that catches it before it ships again.
+.PHONY: compose-sync
+compose-sync:
+	@cmp -s docker-compose.yml docker-compose.yaml || (echo "docker-compose.yaml has drifted from docker-compose.yml — copy .yml over .yaml" && exit 1)
+
+# Run every quality gate. Fails on any red. Use this as the merge gate.
+.PHONY: quality
+quality: sync
+	@echo "==> compose files in sync (.yaml == .yml)"
+	@$(MAKE) compose-sync
+	@echo "==> ruff format --check"
+	@uv run ruff format --check .
+	@echo "==> ruff check"
+	@uv run ruff check .
+	@echo "==> markdown prose (no hard-wrapping)"
+	@uv run python scripts/reflow_md.py --check
+	@echo "==> mypy"
+	@uv run mypy robofleet/ tests/
+	@echo "==> pytest with coverage"
+	@uv run pytest -q --cov=robofleet --cov-report=term-missing --cov-fail-under=80
+	@echo "==> xenon (cyclomatic complexity)"
+	@uv run xenon --max-absolute B --max-modules A --max-average A robofleet/
+	@echo "==> radon mi (maintainability index)"
+	@uv run radon mi robofleet/ -nc -s
+	@echo "==> vulture (dead code)"
+	@uv run vulture robofleet/ tests/ vulture_whitelist.py --min-confidence 100
+	@echo "==> bandit (security)"
+	@uv run bandit -r robofleet/ -ll
+	@echo "==> pip-audit (deps vulnerabilities)"
+	# CVE-2025-3000: memory corruption in torch.jit.script (MEDIUM, local-only,
+	# no fix published). torch is a transitive dep (piragi / sentence-transformers)
+	# pinned to the CPU wheel and NEVER loaded at runtime — the stack uses Ollama
+	# over HTTP for all embeddings/LLM, so the vulnerable JIT path is unreachable.
+	# Documented waiver; revisit when a fixed torch ships.
+	@uv run pip-audit --ignore-vuln CVE-2025-3000
+	@echo "==> deptry (dependency hygiene)"
+	@uv run deptry robofleet/
+	@echo "==> alembic upgrade --sql (migrations parse)"
+	@uv run alembic upgrade head --sql > /dev/null
+	@echo "==> import-linter (architectural boundaries)"
+	@uv run lint-imports
+	@echo "==> foundation drift checks (includes lifecycle artifacts)"
+	@$(MAKE) foundation-check
+	@echo ""
+	@echo "All quality gates passed."
+
+# Scripted-agent lifecycle smoke: the REAL MCP flow/do tools driven through
+# the REAL gateway/gates against an in-process API + ephemeral test Postgres +
+# local git origin (gh shimmed). No LLM. Excluded from `quality` (env-gated);
+# CI runs it as its own job.
+.PHONY: e2e-smoke
+e2e-smoke: sync
+	@echo "==> e2e lifecycle smoke (scripted agents, real gates)"
+	@ROBOFLEET_E2E_SMOKE=1 uv run pytest tests/e2e_smoke -q --no-cov
+
+.PHONY: quality-fast
+quality-fast: sync
+	@uv run ruff format --check .
+	@uv run ruff check .
+	@uv run mypy robofleet/ tests/
+	@uv run pytest -q -x --no-cov
+
+# Fast pre-submit gate: format-check + lint + types + complexity + import boundaries, NO tests.
+# This is the command a project points `quality_command` at, so the agent
+# pre-submit gate (run at i_am_done) executes it in the dev's workspace and
+# catches lint/type/complexity at the desk. The test suite stays on CI.
+.PHONY: gate
+gate: sync
+	@uv run ruff format --check .
+	@uv run ruff check .
+	@uv run mypy robofleet/ tests/
+	@uv run xenon --max-absolute B --max-modules A --max-average A robofleet/
+	@uv run lint-imports
+
+# Panel (Next.js) fast gate: lint + type-check + vitest.
+# Run locally before submitting panel changes; mirrors the CI panel job exactly.
+.PHONY: panel-gate
+panel-gate:
+	@cd panel && pnpm lint
+	@cd panel && pnpm exec tsc --noEmit
+	@cd panel && pnpm test
+
+# Full CI-equivalent panel gate (alias for panel-gate).
+.PHONY: panel-quality
+panel-quality: panel-gate
+
+# Run all analysis tools
+.PHONY: analysis
+analysis: deptry
+	@echo "All analysis tools completed."
+
+# Run all checks (linting, security, quality, and analysis)
+.PHONY: check-all
+check-all: lint security quality analysis
+	@echo "All checks completed."
+
+# Run tests (default Python version)
+.PHONY: test
+test:
+	@COMPOSE_BAKE=true PYTHON_VERSION=$(DEFAULT_PYTHON) docker compose run --rm --build robo-fleet pytest -v --cov=.
+	@docker compose down --rmi all --remove-orphans -v
+	@docker system prune -f
+
+# Run All Python versions
+.PHONY: test-all
+test-all: test-3.10 test-3.11 test-3.12 test-3.13 test-3.14
+
+# Python 3.10
+.PHONY: test-3.10
+test-3.10:
+	@docker compose down -v robo-fleet
+	@COMPOSE_BAKE=true PYTHON_VERSION=3.10 docker compose build robo-fleet
+	@PYTHON_VERSION=3.10 docker compose run --rm robo-fleet pytest -v --cov=.
+	@docker compose down --rmi all --remove-orphans -v
+	@docker system prune -f
+
+# Python 3.11
+.PHONY: test-3.11
+test-3.11:
+	@docker compose down -v robo-fleet
+	@COMPOSE_BAKE=true PYTHON_VERSION=3.11 docker compose build robo-fleet
+	@PYTHON_VERSION=3.11 docker compose run --rm robo-fleet pytest -v --cov=.
+	@docker compose down --rmi all --remove-orphans -v
+	@docker system prune -f
+
+# Python 3.12
+.PHONY: test-3.12
+test-3.12:
+	@docker compose down -v robo-fleet
+	@COMPOSE_BAKE=true PYTHON_VERSION=3.12 docker compose build robo-fleet
+	@PYTHON_VERSION=3.12 docker compose run --rm robo-fleet pytest -v --cov=.
+	@docker compose down --rmi all --remove-orphans -v
+	@docker system prune -f
+
+# Python 3.13
+.PHONY: test-3.13
+test-3.13:
+	@docker compose down -v robo-fleet
+	@COMPOSE_BAKE=true PYTHON_VERSION=3.13 docker compose build robo-fleet
+	@PYTHON_VERSION=3.13 docker compose run --rm robo-fleet pytest -v --cov=.
+	@docker compose down --rmi all --remove-orphans -v
+	@docker system prune -f
+
+# Python 3.14
+.PHONY: test-3.14
+test-3.14:
+	@docker compose down -v robo-fleet
+	@COMPOSE_BAKE=true PYTHON_VERSION=3.14 docker compose build robo-fleet
+	@PYTHON_VERSION=3.14 docker compose run --rm robo-fleet pytest -v --cov=.
+	@docker compose down --rmi all --remove-orphans -v
+	@docker system prune -f
+
+# Stress Test
+.PHONY: stress-test
+stress-test:
+	@COMPOSE_BAKE=true docker compose up --build -d robofleet-example redis
+	@echo "Waiting for services to start up..."
+	@sleep 5
+	@docker compose run --rm robofleet-example uv run python examples/testing/stress_test.py --url http://robofleet-example:8000 --duration 120 --concurrency 50 --ramp-up 10 --delay 0.02 --test-type standard -v
+	@docker compose down --rmi all --remove-orphans -v
+	@docker system prune -f
+
+# High-load stress test
+.PHONY: high-load-stress-test
+high-load-stress-test:
+	@COMPOSE_BAKE=true docker compose up --build -d robofleet-example redis
+	@echo "Waiting for services to start up..."
+	@sleep 5
+	@docker compose run --rm robofleet-example uv run python examples/testing/stress_test.py --url http://robofleet-example:8000 --duration 180 --concurrency 100 --ramp-up 15 --delay 0.01 --test-type high_load -v
+	@docker compose down --rmi all --remove-orphans -v
+	@docker system prune -f
+
+# Prune
+.PHONY: prune
+prune:
+	@docker system prune -f
+
+# Clean Cache Files
+.PHONY: clean
+clean:
+	@find . | grep -E "(__pycache__|\.pyc|\.pyo|\.pytest_cache|\.ruff_cache|\.mypy_cache|data/|site/)" | xargs rm -rf
+	@cd panel && rm -rf node_modules/ && rm -rf .next/ && rm -rf logs/ && rm -rf coverage/
+	@cd ..
+	@cd motion && rm -rf node_modules/
+	@cd ..
+	@cd video-renderer && rm -rf node_modules/
+	@cd ..
+
+# Security
+.PHONY: panel-token
+panel-token:
+	@# Strip surrounding quotes from the .env value: docker-compose/pydantic
+	@# unquote it, so the token must be signed with the UNQUOTED secret or it
+	@# won't verify against the orchestrator (a quoted .env value silently
+	@# produced a mismatched token before this).
+	@SECRET="$$(grep -E '^ROBOFLEET_AGENT_AUTH_SECRET=' .env 2>/dev/null | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$$//' -e "s/^'//" -e "s/'$$//")"; \
+	ROBOFLEET_AGENT_AUTH_SECRET="$${SECRET:-$$ROBOFLEET_AGENT_AUTH_SECRET}" \
+	uv run python -c "import sys; from robofleet.agents_config import issue_panel_token; tok = issue_panel_token(); print(tok) if tok != 'UNSIGNED' else sys.exit('ERROR: ROBOFLEET_AGENT_AUTH_SECRET not set (in .env or environment) - the panel token would be unsigned')"
+
+# Help
+.PHONY: help
+help:
+	@echo "RoboFleet - AI Agents Company"
+	@echo ""
+	@echo "Infrastructure:"
+	@echo "  make quickstart               - One-command bring-up (registry pull-and-run)"
+	@echo "  make infra                    - Start PostgreSQL + Redis"
+	@echo "  make infra-down               - Stop infrastructure"
+	@echo "  make migrate                  - Run database migrations"
+	@echo "  make migration                - Create new migration"
+	@echo "  make db-init                  - Initialize/seed database"
+	@echo ""
+	@echo "Running:"
+	@echo "  make dev                      - Start API + Orchestrator (development)"
+	@echo "  make dev AGENTS='a b c'       - Start with specific agents"
+	@echo "  make api                      - Start API only (with reload)"
+	@echo "  make run                      - Start API only (production)"
+	@echo "  make orchestrator             - Start orchestrator only"
+	@echo "  make tmux                     - Create tmux session with all components"
+	@echo ""
+	@echo "Monitoring:"
+	@echo "  make status                   - Show system status"
+	@echo "  make logs                     - Tail infrastructure logs"
+	@echo ""
+	@echo "Dependencies:"
+	@echo "  make install                  - Install dependencies"
+	@echo "  make install-dev              - Install dev dependencies"
+	@echo "  make lock                     - Update lock file"
+	@echo "  make upgrade                  - Upgrade all dependencies"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  make lint                     - Run linting (ruff, mypy, vulture)"
+	@echo "  make fix                      - Auto-fix linting issues"
+	@echo "  make quality                  - Run all quality checks"
+	@echo "  make security                 - Run security checks (bandit, safety, pip-audit)"
+	@echo "  make check-all                - Run ALL checks"
+	@echo "  make panel-token              - Print the panel's CEO token for secure mode"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test                     - Run tests (Python $(DEFAULT_PYTHON))"
+	@echo "  make test-all                 - Run tests (all Python versions)"
+	@echo "  make stress-test              - Run stress test"
+	@echo ""
+	@echo "Cleanup:"
+	@echo "  make stop                     - Stop all containers"
+	@echo "  make clean                    - Clean cache files"
+	@echo "  make prune                    - Prune docker resources"
+
+# Python versions list
+.PHONY: show-python-versions
+show-python-versions:
+	@echo "Supported Python versions: $(PYTHON_VERSIONS)"
+	@echo "Default Python version: $(DEFAULT_PYTHON)"
+
+# =============================================================================
+# LIFECYCLE ARTIFACTS
+# =============================================================================
+
+# Regenerate canonical lifecycle artifacts (markdown / JSON / prompt fragments)
+# from robofleet/lifecycle/spec.py. Output is deterministic; CI gates on
+# `make lifecycle && git diff --exit-code`.
+.PHONY: lifecycle
+lifecycle:
+	uv run python scripts/build_lifecycle_artifacts.py
+
+# =============================================================================
+# FOUNDATION DRIFT GATE
+# =============================================================================
+
+# Canonical drift gate: validates identity tables, runs foundation self-tests,
+# regenerates lifecycle artifacts and fails on any uncommitted diff, and
+# (when reachable) checks postgres enum parity. Run on every PR — drift
+# between foundation tables / lifecycle spec and the committed artifacts
+# cannot land on master.
+.PHONY: foundation-check
+foundation-check:
+	@echo "==> foundation/identity validators"
+	uv run python -c "from robofleet.foundation import _validate; _validate.run_all(); print('  identity validators: OK')"
+	@echo "==> foundation/tracing verb parity"
+	uv run pytest tests/foundation/test_tracing_verb_parity.py --no-cov -q
+	@echo "==> foundation/journaling consumers"
+	uv run pytest tests/foundation/test_journaling_consumers.py --no-cov -q
+	@echo "==> foundation/communications consumers"
+	uv run pytest tests/foundation/test_communications_consumers.py --no-cov -q
+	@echo "==> foundation tests (full)"
+	uv run pytest tests/foundation/ --no-cov -q
+	@echo "==> lifecycle artifacts up-to-date (renders + git diff)"
+	@$(MAKE) lifecycle
+	@git diff --exit-code -- docs/rag/lifecycle panel/lib/lifecycle.json agents/prompts/_generated/lifecycle-*.md \
+		|| (echo "Lifecycle artifacts are out of date. Run 'make lifecycle' and commit the diff." && exit 1)
+	@echo "==> verb tables up-to-date (renders + git diff)"
+	@uv run python scripts/regenerate_verb_tables.py
+	@git diff --exit-code -- agents/prompts/_generated/ ':!agents/prompts/_generated/lifecycle-*.md' \
+		|| (echo "Verb tables are out of date. Run 'make foundation-check' and commit the diff." && exit 1)
+	@echo "==> postgres enum parity (skip if no migrated DB)"
+	uv run python scripts/verify_postgres_enums.py
+	@echo "All foundation drift checks passed."
+
+# Backwards-compatible alias — prior CI / scripts called `ci-lifecycle-check`.
+# `foundation-check` is now the canonical drift gate; this alias just forwards.
+.PHONY: ci-lifecycle-check
+ci-lifecycle-check: foundation-check
+
+# Write counterpart to foundation-check's read: regenerates the same checked-in
+# artifacts IN PLACE (no diff/exit-code guard) so a project can point its
+# `codegen_command` at this and have drift committed before a push, instead of
+# only ever discovering it at CI's foundation-check hard-fail.
+.PHONY: codegen
+codegen:
+	@$(MAKE) lifecycle
+	@uv run python scripts/regenerate_verb_tables.py

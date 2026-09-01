@@ -1,0 +1,384 @@
+import api from "./client";
+import { isMockMode } from "@/lib/mock-data";
+import type {
+  UsageSummary,
+  AgentUsageRow,
+  TeamUsageRow,
+  ModelUsageSlice,
+  RoleUsageRow,
+  UsageTimePoint,
+  UsageProjection,
+  CacheEfficiencyResponse,
+  SpawnWasteResponse,
+  UsageSession,
+} from "@/types";
+
+export type UsagePeriod = "24h" | "7d" | "30d" | "90d";
+
+// =============================================================================
+// MOCK DATA  — shapes must exactly match the real backend response schemas
+// =============================================================================
+
+/** Linear scale factor for mock aggregates so a longer window shows more volume. */
+function scaleFor(period: UsagePeriod): number {
+  return period === "90d"
+    ? 90
+    : period === "30d"
+      ? 30
+      : period === "7d"
+        ? 7
+        : 1;
+}
+
+function mockSummary(period: UsagePeriod = "24h"): UsageSummary {
+  const scale = scaleFor(period);
+  const base = 124_800 * scale;
+  return {
+    tokens_input: Math.round(base * 0.55),
+    tokens_output: Math.round(base * 0.35),
+    total_tokens: base,
+    total_cost_usd: parseFloat((base * 0.00003).toFixed(6)),
+    trend_pct: 12.5,
+    period,
+  };
+}
+
+function mockTimeSeries(period: UsagePeriod = "24h"): UsageTimePoint[] {
+  const now = new Date();
+  const points =
+    period === "24h" ? 24 : period === "7d" ? 7 : period === "90d" ? 90 : 30;
+  const step = period === "24h" ? "hour" : "day";
+  return Array.from({ length: points }, (_, i) => {
+    const ts = new Date(now);
+    if (step === "hour") {
+      ts.setHours(now.getHours() - (points - 1 - i), 0, 0, 0);
+    } else {
+      ts.setDate(now.getDate() - (points - 1 - i));
+      ts.setHours(0, 0, 0, 0);
+    }
+    const base = 3_000 + Math.round(Math.random() * 4_000);
+    const tokens_input = Math.round(base * 0.55);
+    const tokens_output = Math.round(base * 0.35);
+    const total_tokens = base;
+    return {
+      bucket: ts.toISOString(),
+      tokens_input,
+      tokens_output,
+      total_tokens,
+      cost_usd: parseFloat((total_tokens * 0.00003).toFixed(6)),
+    };
+  });
+}
+
+function mockAgentUsage(period: UsagePeriod = "24h"): AgentUsageRow[] {
+  const scale = scaleFor(period);
+  const agents = [
+    { agent_slug: "be-dev-1" },
+    { agent_slug: "be-dev-2" },
+    { agent_slug: "fe-dev-1" },
+    { agent_slug: "fe-dev-2" },
+    { agent_slug: "ux-dev-1" },
+    { agent_slug: "be-qa" },
+    { agent_slug: "fe-qa" },
+    { agent_slug: "main-pm" },
+  ];
+  const grand = agents.length * 15_000 * scale;
+  return agents.map((a) => {
+    const ti = Math.round((5_000 + Math.random() * 20_000) * scale);
+    const to_ = Math.round(ti * 0.65);
+    const total = ti + to_;
+    return {
+      agent_slug: a.agent_slug,
+      tokens_input: ti,
+      tokens_output: to_,
+      total_tokens: total,
+      cost_usd: parseFloat((total * 0.00003).toFixed(6)),
+      pct_of_total: parseFloat(((total / grand) * 100).toFixed(2)),
+    };
+  });
+}
+
+function mockTeamUsage(period: UsagePeriod = "24h"): TeamUsageRow[] {
+  const scale = scaleFor(period);
+  const teams = ["backend", "frontend", "ux_ui", "main_pm"];
+  const grand = teams.length * 50_000 * scale;
+  return teams.map((team) => {
+    const ti = Math.round((30_000 + Math.random() * 40_000) * scale);
+    const to_ = Math.round(ti * 0.65);
+    const total = ti + to_;
+    return {
+      team,
+      tokens_input: ti,
+      tokens_output: to_,
+      total_tokens: total,
+      cost_usd: parseFloat((total * 0.00003).toFixed(6)),
+      pct_of_total: parseFloat(((total / grand) * 100).toFixed(2)),
+    };
+  });
+}
+
+function mockModelUsage(period: UsagePeriod = "24h"): ModelUsageSlice[] {
+  const scale = scaleFor(period);
+  const models = [
+    { model: "claude-opus-5", share: 0.548 },
+    { model: "claude-sonnet-5", share: 0.346 },
+    { model: "claude-haiku-4-5", share: 0.106 },
+  ];
+  const base = 124_800 * scale;
+  return models.map((m) => {
+    const ti = Math.round(base * m.share * 0.55);
+    const to_ = Math.round(base * m.share * 0.35);
+    const total = Math.round(base * m.share);
+    return {
+      model: m.model,
+      tokens_input: ti,
+      tokens_output: to_,
+      total_tokens: total,
+      cost_usd: parseFloat((total * 0.00003).toFixed(6)),
+      pct_of_total: parseFloat((m.share * 100).toFixed(1)),
+    };
+  });
+}
+
+function mockProjection(): UsageProjection {
+  const total_cost_7d = parseFloat((124_800 * 7 * 0.00003).toFixed(6));
+  return {
+    total_cost_7d,
+    avg_daily_cost_usd: parseFloat((total_cost_7d / 7).toFixed(6)),
+    projected_monthly_cost_usd: parseFloat(
+      ((total_cost_7d / 7) * 30).toFixed(4),
+    ),
+    basis_days: 7,
+  };
+}
+
+function mockCacheEfficiency(
+  period: UsagePeriod = "24h",
+): CacheEfficiencyResponse {
+  return {
+    cache_hit_rate: 0.3142,
+    tokens_cache_read: 39_168,
+    tokens_cache_write: 12_480,
+    tokens_input: 85_632,
+    cost_saved_by_cache_usd: parseFloat(
+      ((39_168 * (3.0 - 0.3)) / 1_000_000).toFixed(6),
+    ),
+    period,
+  };
+}
+
+function mockRoleUsage(period: UsagePeriod = "24h"): RoleUsageRow[] {
+  const scale = scaleFor(period);
+  const roles = [
+    { role: "developer", share: 0.375 },
+    { role: "main_pm", share: 0.301 },
+    { role: "cell_pm", share: 0.176 },
+    { role: "pr_reviewer", share: 0.058 },
+    { role: "qa", share: 0.056 },
+    { role: "documenter", share: 0.034 },
+  ];
+  const base = 124_800 * scale;
+  return roles.map((r) => {
+    const ti = Math.round(base * r.share * 0.05);
+    const to_ = Math.round(base * r.share * 0.03);
+    const cr = Math.round(base * r.share * 0.8);
+    const cw = Math.round(base * r.share * 0.12);
+    const total = ti + to_ + cr + cw;
+    return {
+      role: r.role,
+      tokens_input: ti,
+      tokens_output: to_,
+      tokens_cache_read: cr,
+      tokens_cache_write: cw,
+      cache_hit_rate: parseFloat((cr / (ti + cr)).toFixed(4)),
+      total_tokens: total,
+      cost_usd: parseFloat((total * 0.00002).toFixed(6)),
+      pct_of_total: parseFloat((r.share * 100).toFixed(1)),
+    };
+  });
+}
+
+function mockSpawnWaste(period: UsagePeriod = "24h"): SpawnWasteResponse {
+  const scale = scaleFor(period);
+  const by_role = [
+    { role: "developer", spawns: 51 * scale, unproductive: 42 * scale },
+    { role: "cell_pm", spawns: 34 * scale, unproductive: 18 * scale },
+    { role: "main_pm", spawns: 20 * scale, unproductive: 9 * scale },
+    { role: "qa", spawns: 18 * scale, unproductive: 14 * scale },
+  ].map((r) => ({
+    ...r,
+    unproductive_pct: parseFloat(
+      ((r.unproductive / r.spawns) * 100).toFixed(1),
+    ),
+  }));
+  const total_spawns = by_role.reduce((s, r) => s + r.spawns, 0);
+  const unproductive_spawns = by_role.reduce((s, r) => s + r.unproductive, 0);
+  return {
+    total_spawns,
+    unproductive_spawns,
+    unproductive_pct: parseFloat(
+      ((unproductive_spawns / total_spawns) * 100).toFixed(1),
+    ),
+    by_role,
+    respawn_strikes: [
+      {
+        agent_slug: "be-dev-1",
+        task_id: "11111111-1111-1111-1111-111111111111",
+        count: 4,
+        last_status: "in_progress",
+        notified: true,
+      },
+    ],
+    period,
+  };
+}
+
+function mockSessions(): UsageSession[] {
+  const models = ["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"];
+  const agentSlugs = ["be-dev-1", "be-dev-2", "fe-dev-1", "fe-qa", "main-pm"];
+  return Array.from({ length: 35 }, (_, i) => {
+    const agent_slug = agentSlugs[i % agentSlugs.length];
+    const model = models[i % models.length];
+    const input = Math.round(2_000 + Math.random() * 8_000);
+    const output = Math.round(500 + Math.random() * 3_000);
+    const cache = Math.round(100 + Math.random() * 1_000);
+    const started = new Date(Date.now() - (i + 1) * 12 * 60_000);
+    const ended =
+      i < 3
+        ? null
+        : new Date(
+            started.getTime() + Math.round(5 + Math.random() * 55) * 60_000,
+          );
+    return {
+      id: `session-mock-${i + 1}`,
+      agent_slug,
+      started_at: started.toISOString(),
+      ended_at: ended ? ended.toISOString() : null,
+      tokens_input: input,
+      tokens_output: output,
+      tokens_cache: cache,
+      total_tokens: input + output + cache,
+      cost: parseFloat(
+        ((input + output) * 0.00003 + cache * 0.000003).toFixed(4),
+      ),
+      model,
+    };
+  });
+}
+
+// =============================================================================
+// API OBJECT
+// =============================================================================
+
+export const usageApi = {
+  /** Aggregated token usage summary — GET /usage/summary?period= */
+  getUsageSummary: async (
+    period: UsagePeriod = "24h",
+  ): Promise<UsageSummary> => {
+    if (isMockMode()) return mockSummary(period);
+    const { data } = await api.get<UsageSummary>("/usage/summary", {
+      params: { period },
+    });
+    return data;
+  },
+
+  /** Bucketed time-series — GET /usage/time-series?period=&agent_slug= */
+  getUsageTimeSeries: async (
+    period: UsagePeriod = "24h",
+    agentSlug?: string,
+  ): Promise<UsageTimePoint[]> => {
+    if (isMockMode()) return mockTimeSeries(period);
+    const { data } = await api.get<UsageTimePoint[]>("/usage/time-series", {
+      params: agentSlug ? { period, agent_slug: agentSlug } : { period },
+    });
+    return data;
+  },
+
+  /** Per-agent usage rows — GET /usage/by-agent?period= */
+  getAgentUsage: async (
+    period: UsagePeriod = "24h",
+  ): Promise<AgentUsageRow[]> => {
+    if (isMockMode()) return mockAgentUsage(period);
+    const { data } = await api.get<AgentUsageRow[]>("/usage/by-agent", {
+      params: { period },
+    });
+    return data;
+  },
+
+  /** Per-team usage rows — GET /usage/by-team?period= */
+  getTeamUsage: async (
+    period: UsagePeriod = "24h",
+  ): Promise<TeamUsageRow[]> => {
+    if (isMockMode()) return mockTeamUsage(period);
+    const { data } = await api.get<TeamUsageRow[]>("/usage/by-team", {
+      params: { period },
+    });
+    return data;
+  },
+
+  /** Per-model usage slices — GET /usage/by-model?period= */
+  getModelUsage: async (
+    period: UsagePeriod = "24h",
+  ): Promise<ModelUsageSlice[]> => {
+    if (isMockMode()) return mockModelUsage(period);
+    const { data } = await api.get<ModelUsageSlice[]>("/usage/by-model", {
+      params: { period },
+    });
+    return data;
+  },
+
+  /** Per-role usage rows (with cache hit rate) — GET /usage/by-role?period= */
+  getRoleUsage: async (
+    period: UsagePeriod = "24h",
+  ): Promise<RoleUsageRow[]> => {
+    if (isMockMode()) return mockRoleUsage(period);
+    const { data } = await api.get<RoleUsageRow[]>("/usage/by-role", {
+      params: { period },
+    });
+    return data;
+  },
+
+  /** Spawn-churn signal — GET /usage/spawn-waste?period= */
+  getSpawnWaste: async (
+    period: UsagePeriod = "24h",
+  ): Promise<SpawnWasteResponse> => {
+    if (isMockMode()) return mockSpawnWaste(period);
+    const { data } = await api.get<SpawnWasteResponse>("/usage/spawn-waste", {
+      params: { period },
+    });
+    return data;
+  },
+
+  /** Monthly cost projection — GET /usage/projection */
+  getUsageProjection: async (): Promise<UsageProjection> => {
+    if (isMockMode()) return mockProjection();
+    const { data } = await api.get<UsageProjection>("/usage/projection");
+    return data;
+  },
+
+  /** Cache efficiency stats — GET /usage/cache-efficiency?period= */
+  getCacheEfficiency: async (
+    period: UsagePeriod = "24h",
+  ): Promise<CacheEfficiencyResponse> => {
+    if (isMockMode()) return mockCacheEfficiency(period);
+    const { data } = await api.get<CacheEfficiencyResponse>(
+      "/usage/cache-efficiency",
+      {
+        params: { period },
+      },
+    );
+    return data;
+  },
+
+  /**
+   * Recent spawn sessions — the raw per-session rows behind the aggregate
+   * panels, served by GET /usage/sessions.
+   */
+  getUsageSessions: async (limit: number = 100): Promise<UsageSession[]> => {
+    if (isMockMode()) return mockSessions();
+    const { data } = await api.get<UsageSession[]>("/usage/sessions", {
+      params: { limit },
+    });
+    return data;
+  },
+};

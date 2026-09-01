@@ -1,0 +1,233 @@
+# Cloud Run v2 Service manifest for robofleet-orchestrator.
+# Consumed by `gcloud run services replace infra/orchestrator-service.yaml`.
+# Deploy via infra/deploy-orchestrator.sh, which reads terraform outputs and
+# sed-substitutes the __PLACEHOLDER__ tokens below into a temp copy before
+# replacing the service. Plain hyphens only, no em-dashes.
+#
+# The full ROBOFLEET_* env surface from .env.gcp.example is carried here. The six
+# Secret Manager secrets (fernet, agent-auth, cloud-auth, gemini-api-key,
+# database-password, cloud-auth-password; seeded by infra/seed-secrets.sh) are
+# mounted as env vars via secretKeyRef. No password is ever a plain value here.
+#
+# No docker socket: the orchestrator on Cloud Run spawns agents as Cloud Run
+# Jobs (CloudRunJobsProvider), not as sibling containers. ROBOFLEET_TOOLCHAIN_MATCH
+# is false (it relied on the docker socket).
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: robofleet-orchestrator
+  labels:
+    run.googleapis.com/managed-by: gcloud
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.googleapis.com/min-scale: "1"
+        autoscaling.googleapis.com/max-scale: "3"
+        run.googleapis.com/vpc-access-connector: __VPC_CONNECTOR_PATH__
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - name: orchestrator
+          image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/robofleet-orchestrator:latest
+          ports:
+            - name: http1
+              containerPort: 8000
+          env:
+            # --- Database (Cloud SQL via the cloudsql-instances annotation) ---
+            - name: ROBOFLEET_DATABASE_HOST
+              value: "__CLOUDSQL_PRIVATE_IP__"
+            - name: ROBOFLEET_DATABASE_PORT
+              value: "5432"
+            - name: ROBOFLEET_DATABASE_USER
+              value: "robofleet"
+            - name: ROBOFLEET_DATABASE_NAME
+              value: "robofleet"
+            # DB password: Secret Manager reference (seed-secrets.sh), never a
+            # plain value in the service env. Inline secretKeyRef so alembic can
+            # connect on first boot.
+            - name: ROBOFLEET_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: robofleet-database-password
+                  key: latest
+
+            # --- Redis (Memorystore, reached over the VPC connector) ---
+            - name: ROBOFLEET_REDIS_HOST
+              value: "__MEMORYSTORE_HOST__"
+            - name: ROBOFLEET_REDIS_PORT
+              value: "6379"
+            - name: ROBOFLEET_REDIS_DB
+              value: "0"
+            # ROBOFLEET_REDIS_PASSWORD: set by deploy script via --update-env-vars.
+
+            # --- GCP infra references (from terraform output) ---
+            - name: ROBOFLEET_GCP_PROJECT_ID
+              value: "__PROJECT_ID__"
+            - name: ROBOFLEET_GCP_REGION
+              value: "__REGION__"
+            # Vertex MODEL location, separate from the Cloud Run Job region
+            # above. gemini-3.5-flash's canonical Vertex endpoint is global
+            # (regional availability was preview/unstable Aug 2026); the Job
+            # region stays us-central1.
+            - name: ROBOFLEET_GCP_VERTEX_MODEL_LOCATION
+              value: "global"
+            - name: ROBOFLEET_GCP_CLOUDSQL_INSTANCE
+              value: "__CLOUDSQL_INSTANCE__"
+            - name: ROBOFLEET_GCP_MEMORYSTORE_HOST
+              value: "__MEMORYSTORE_HOST__"
+            - name: ROBOFLEET_GCP_MEMORYSTORE_PORT
+              value: "6379"
+            # TLS off: this Memorystore instance is no-auth/no-TLS. The config
+            # default gcp_memorystore_tls=True would build a rediss:// URL that
+            # TLS-handshakes a plaintext port and hangs to a timeout.
+            - name: ROBOFLEET_GCP_MEMORYSTORE_TLS
+              value: "false"
+            - name: ROBOFLEET_GCP_FILESTORE_SHARE
+              value: "__FILESTORE_SHARE__"
+            # The three below are what CloudRunJobsProvider reads to attach the
+            # same NFS volume + VPC connector to every agent Job. Without them
+            # a Job gets a workingDir on Filestore but no mount, and Cloud Run
+            # fails the container exec before the entrypoint runs.
+            - name: ROBOFLEET_GCP_FILESTORE_IP
+              value: "__FILESTORE_IP__"
+            - name: ROBOFLEET_GCP_FILESTORE_NFS_PATH
+              value: "/__FILESTORE_SHARE__"
+            - name: ROBOFLEET_GCP_VPC_CONNECTOR_NAME
+              value: "__VPC_CONNECTOR_PATH__"
+            - name: ROBOFLEET_GCP_GCS_BUCKET
+              value: "__GCS_BUCKET__"
+            - name: ROBOFLEET_GCP_ARTIFACT_REGISTRY_REPO
+              value: "__AR_REPO__"
+            - name: ROBOFLEET_GCP_SECRET_MANAGER_PREFIX
+              value: "robofleet"
+            - name: ROBOFLEET_GCP_CLOUD_RUN_AGENT_JOB_PREFIX
+              value: "robofleet-agent"
+
+            # --- Agent auth ---
+            - name: ROBOFLEET_AGENT_AUTH_REQUIRED
+              value: "true"
+
+            # --- Cloud auth (armed: panel is publicly reachable) ---
+            - name: ROBOFLEET_CLOUD_AUTH_ENABLED
+              value: "true"
+            # Cloud auth seeded-CEO login: the email is substituted from the
+            # deploy env; the password is a Secret Manager reference
+            # (seed-secrets.sh) so it never sits as a plain value in the env.
+            - name: ROBOFLEET_CLOUD_AUTH_EMAIL
+              value: "__CLOUD_AUTH_EMAIL__"
+            - name: ROBOFLEET_CLOUD_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: robofleet-cloud-auth-password
+                  key: latest
+
+            # --- Bind: Cloud Run requires 0.0.0.0 (config default is 127.0.0.1) ---
+            - name: ROBOFLEET_HOST
+              value: "0.0.0.0"
+            - name: ROBOFLEET_PORT
+              value: "8000"
+
+            # --- URLs ---
+            # ROBOFLEET_API_URL / _ORCHESTRATOR_URL point at this service's own
+            # public Cloud Run URL: the orchestrator's internal self-calls
+            # (auto-submit, self-PATCH) AND the spawned agent Cloud Run Jobs both
+            # resolve their callback URL from settings.api_url. localhost:8000
+            # would be unreachable from a separate agent job container. The
+            # service is --allow-unauthenticated (see deploy script) so the Cloud
+            # Run IAM gate does not block these; cloud auth + the agent HMAC token
+            # remain the app-layer gate (the intended design).
+            - name: ROBOFLEET_PUBLIC_BASE_URL
+              value: "https://robo-fleet.run.app"
+            - name: ROBOFLEET_API_URL
+              value: "__ORCH_SELF_URL__"
+            - name: ROBOFLEET_ORCHESTRATOR_URL
+              value: "__ORCH_SELF_URL__"
+
+            # --- Agent images ---
+            - name: ROBOFLEET_AGENT_IMAGE_REGISTRY
+              value: "__AR_HOST__/__PROJECT_ID__/__AR_REPO__"
+            - name: ROBOFLEET_AGENT_IMAGE_TAG
+              value: "latest"
+            # Cloud Run has no docker socket: skip the startup docker pull/build
+            # of agent images. Agents spawn as Cloud Run Jobs that reference the
+            # registry image by name and pull it on the job's own execution.
+            - name: ROBOFLEET_AGENT_IMAGE_SKIP_ENSURE
+              value: "true"
+
+            # --- Validator / local LLM ---
+            - name: ROBOFLEET_LOCAL_LLM_BASE_URL
+              value: "http://localhost:11434/v1"
+            - name: ROBOFLEET_LOCAL_LLM_BASE_URL_ALLOW_EXTERNAL
+              value: "true"
+            - name: ROBOFLEET_LOCAL_LLM_MODEL
+              value: "gemini-2.5-flash"
+
+            # --- Feature flags armed for GCP ---
+            - name: ROBOFLEET_ORG_MEMORY_ENABLED
+              value: "true"
+            - name: ROBOFLEET_TOOLCHAIN_MATCH_ENABLED
+              value: "false"
+            - name: ROBOFLEET_GATEWAY_HEALTH_ENABLED
+              value: "true"
+            - name: ROBOFLEET_OVERLOAD_BREAK_ENABLED
+              value: "true"
+            # Hard $ cap per task / per project-month (null budget = no cap; the
+            # CEO sets monthly_budget_usd on the project from the panel).
+            - name: ROBOFLEET_TASK_BUDGETS_ENABLED
+              value: "true"
+
+            # --- Secrets (Secret Manager, inline via secretKeyRef) ---
+            # The 4 Secret Manager secrets are inlined here so a single
+            # `gcloud run services replace` deploys a boot-healthy revision
+            # (the config validator requires CLOUD_AUTH_SECRET at import, and
+            # these must be present before the container can listen on the port).
+            # The valid v1 form is secretKeyRef (name + key); the secretRef-without-
+            # key form the deploy script used to attach post-replace is rejected
+            # by the v1 proto. The compute SA has roles/secretmanager.secretAccessor.
+            - name: ROBOFLEET_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: robofleet-fernet-key
+                  key: latest
+            - name: ROBOFLEET_AGENT_AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: robofleet-agent-auth-secret
+                  key: latest
+            - name: ROBOFLEET_CLOUD_AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: robofleet-cloud-auth-secret
+                  key: latest
+            - name: ROBOFLEET_GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: robofleet-gemini-api-key
+                  key: latest
+
+          volumeMounts:
+            - mountPath: /data/workspaces
+              name: filestore
+              readOnly: false
+
+          # The orchestrator is a heavy process: FastAPI + asyncpg + the Cloud SQL
+          # connector + redis + AgentOrchestrator + background loops (dispatcher,
+          # reaper, telemetry). The Cloud Run default 512MiB/1CPU OOM-kills it
+          # mid-request (uvicorn's lifespan is killed while idle-awaiting
+          # shutdown), which flap-crashes the single min-scale instance. 2Gi /
+          # 2 CPU holds it.
+          resources:
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+
+      volumes:
+        - name: filestore
+          nfs:
+            server: __FILESTORE_IP__
+            path: /__FILESTORE_SHARE__
+            readOnly: false

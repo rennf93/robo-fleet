@@ -1,0 +1,110 @@
+"""Company-goals service — CRUD for the singleton company charter.
+
+The charter (north star + objectives + constraints + operating policy) is a
+single row. It is read by every agent (injected into the context_briefing) and
+written only by the CEO via the API. Code here is layer-pure: business logic +
+DB access, no HTTP concerns; the caller owns the transaction commit.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+from uuid import UUID
+
+from sqlalchemy import select
+
+from robofleet.db.tables import CompanyGoalsTable
+from robofleet.services.base import BaseService
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from robofleet.db.tables import ProjectTable
+
+# Canonical single-row marker — the charter is a singleton.
+SINGLETON_ID = UUID("00000000-0000-0000-0000-000000000000")
+
+# Charter fields ``upsert`` writes verbatim when present in the partial-update
+# payload (``updated_by`` is handled separately — it's not a charter field).
+_MUTABLE_FIELDS = (
+    "north_star",
+    "objectives",
+    "constraints",
+    "operating_policy",
+    "brand_voice",
+    "company_name",
+)
+
+_EMPTY: dict[str, Any] = {
+    "north_star": "",
+    "objectives": [],
+    "constraints": [],
+    "operating_policy": {},
+    "brand_voice": "",
+    "company_name": "",
+    "updated_at": None,
+    "updated_by": None,
+}
+
+
+class CompanyGoalsService(BaseService):
+    """CRUD for the singleton ``company_goals`` row."""
+
+    async def get(self) -> dict[str, Any]:
+        """Return the charter as a primitive dict, or empty defaults if unset."""
+        result = await self.session.execute(select(CompanyGoalsTable).limit(1))
+        row = result.scalar_one_or_none()
+        return self._to_dict(row) if row is not None else dict(_EMPTY)
+
+    async def upsert(
+        self, data: dict[str, Any], updated_by: UUID | None = None
+    ) -> dict[str, Any]:
+        """Create or update the singleton charter. Caller commits.
+
+        Only the keys present in ``data`` are written (partial update); the rest
+        keep their current values.
+        """
+        row = await self.session.get(CompanyGoalsTable, SINGLETON_ID)
+        if row is None:
+            row = CompanyGoalsTable(id=SINGLETON_ID)
+            self.session.add(row)
+        for field in _MUTABLE_FIELDS:
+            if field in data:
+                setattr(row, field, data[field])
+        if updated_by is not None:
+            row.updated_by = updated_by
+        await self.session.flush()
+        return self._to_dict(row)
+
+    async def resolve_product_name(self, project: ProjectTable | None) -> str:
+        """The shared product-name fallback chain: ``project``'s own name,
+        else this charter's ``company_name``, else the "RoboFleet" literal.
+
+        The single source of this resolution — XEngine and VideoEngine both
+        call it (rather than each keeping its own copy) so a drafted post/
+        video is never unbranded when neither identity source is set, and the
+        fallback order can't drift between the two callers.
+        """
+        if project is not None and project.name:
+            return project.name
+        charter = await self.get()
+        company_name = (charter.get("company_name") or "").strip()
+        return company_name or "RoboFleet"
+
+    @staticmethod
+    def _to_dict(row: CompanyGoalsTable) -> dict[str, Any]:
+        return {
+            "north_star": row.north_star,
+            "objectives": row.objectives or [],
+            "constraints": row.constraints or [],
+            "operating_policy": row.operating_policy or {},
+            "brand_voice": row.brand_voice or "",
+            "company_name": row.company_name or "",
+            "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+            "updated_by": str(row.updated_by) if row.updated_by else None,
+        }
+
+
+def get_company_goals_service(session: AsyncSession) -> CompanyGoalsService:
+    """Construct a CompanyGoalsService bound to ``session``."""
+    return CompanyGoalsService(session)

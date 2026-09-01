@@ -1,0 +1,326 @@
+#!/usr/bin/env bash
+# One-command bring-up for the registry (pull-and-run) deploy — the
+# `make quickstart` target. Idempotent: a missing .env is created and
+# populated with freshly generated secrets; an existing .env is reused
+# byte-for-byte (never touched). Then `pull` + `up -d`, then a doctor-style
+# readiness sweep with a bounded timeout, failing loud with an actionable
+# message at whichever stage doesn't check out.
+#
+# Grounded probes (don't guess at endpoints — see docker/nginx.conf and
+# robofleet/api/routes/health.py):
+#   - The health check is GET /health at the ROOT (no /api prefix) — the
+#     health router is mounted with none. GET /api/health genuinely 404s;
+#     nginx itself only proxies literal /health (and /ready) unauthenticated
+#     straight to the orchestrator.
+#   - GET /api/auth/status is ALWAYS mounted, unauthenticated regardless of
+#     ROBOFLEET_AGENT_AUTH_REQUIRED (robofleet/api/auth/routes.py — "always
+#     available probe; the panel's middleware gates on this"), so it's a
+#     reliable second 200 that exercises the nginx -> /api/ -> orchestrator
+#     path end to end, independent of /health's simpler direct route.
+#   - DB migration-head is logged by robofleet/db/base.py's run_migrations()
+#     ("Alembic upgrade finished") — there is no dedicated status endpoint,
+#     so we grep the orchestrator container's own log for that line.
+#   - Ollama model presence mirrors what the ollama-init one-shot itself
+#     verifies (docker-compose.registry.yml): `ollama list` naming both
+#     qwen3-embedding and glm-5.2.
+#
+# ROBOFLEET_PANEL_AGENT_TOKEN is a standing CEO credential (see .env.example) —
+# minted here whether or not cloud auth is armed, because docker-compose.
+# registry.yml's `${ROBOFLEET_PANEL_AGENT_TOKEN:?...}` refuses an EMPTY value
+# exactly like an unset one, unconditionally (verified: setting
+# ROBOFLEET_CLOUD_AUTH_ENABLED=true alongside an empty token still fails `docker
+# compose config` — the `:?` message's "unless ROBOFLEET_CLOUD_AUTH_ENABLED=true"
+# is documentation, not encoded logic). Blanking it is not currently an option
+# that lets the stack start; quickstart mints it and warns loudly instead.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}/.."
+REPO_ROOT="$(pwd)"
+
+COMPOSE_FILE="docker-compose.registry.yml"
+# docker-compose.registry.yml's fallbacks for the two host-path vars. The
+# orchestrator runs in a container but bind-mounts these into every agent it
+# spawns, so they must name paths as the HOST sees them — not as the
+# orchestrator sees them.
+COMPOSE_DEFAULT_HOST_PROJECT_DIR="/opt/robofleet"
+COMPOSE_DEFAULT_HOST_DATA_DIR="/opt/robofleet/data"
+ENV_FILE=".env"
+ENV_EXAMPLE=".env.example"
+BASE_URL="http://localhost:3000"
+# Well-known CEO identity (robofleet/foundation/identity.py — "0000-0000:
+# System sentinel + CEO"), used only to derive the panel token below.
+CEO_AGENT_ID="00000000-0000-0000-0000-000000000001"
+
+TIMEOUT_SECONDS="${ROBOFLEET_BOOTSTRAP_TIMEOUT:-300}"
+POLL_INTERVAL_SECONDS="${ROBOFLEET_BOOTSTRAP_POLL_INTERVAL:-5}"
+
+log() {
+    echo "[bootstrap] $(date -u -Iseconds) $*"
+}
+
+fail() {
+    echo "[bootstrap] $(date -u -Iseconds) FATAL: $*" >&2
+    exit 1
+}
+
+# require_nonempty_env_var <VAR> <remedy hint> — fails loud, naming the
+# exact missing var and how to fix it, instead of handing off to docker
+# compose's own opaque interpolation error later.
+require_nonempty_env_var() {
+    local var="$1" hint="$2" value
+    # `|| true`: same set -e/pipefail guard as require_host_path_var — an
+    # unset var makes grep exit 1, pipefail surfaces that as the pipeline
+    # status, and set -e would exit before the diagnosis below can print.
+    value="$(grep -E "^${var}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d= -f2- || true)"
+    [ -n "$value" ] \
+        || fail "${ENV_FILE} has no value for ${var} (docker-compose.registry.yml requires it non-empty to start). ${hint}"
+}
+
+# require_host_path_var <VAR> <want> <compose_default> — guards the silent,
+# total failure mode where compose's /opt/robofleet fallback doesn't match where
+# this checkout actually lives. The orchestrator hands these paths to the
+# Docker daemon as bind-mount SOURCES for every agent it spawns; a source that
+# doesn't exist is not an error to Docker, it CREATES it as a directory. The
+# agent then finds a directory where its /app/system-prompt.md should be and
+# dies with IsADirectoryError before reading a single instruction — so every
+# spawn fails identically, with nothing in the compose logs pointing here.
+#
+# An explicitly-set value is trusted and never compared: a split host/daemon
+# setup (remote or rootless Docker, a bind-mounted checkout) legitimately names
+# paths this script cannot see. Only an ABSENT var is checked, and only against
+# the one case where absence is safe — the checkout already being at the
+# compose default.
+require_host_path_var() {
+    local var="$1" want="$2" compose_default="$3" value
+    # `|| true`: an unset var means grep exits 1, and under `set -o pipefail`
+    # that becomes the assignment's status, which `set -e` would turn into a
+    # bare exit — swallowing the very diagnosis this function exists to print.
+    value="$(grep -E "^${var}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d= -f2- || true)"
+    # Plain `if`, not `[ ... ] && return 0`: that list evaluates to 1 whenever
+    # the test is false, and `set -e` kills the script on it.
+    if [ -n "$value" ]; then
+        return 0
+    fi
+    if [ "$want" = "$compose_default" ]; then
+        return 0
+    fi
+    fail "${ENV_FILE} does not set ${var}, so docker compose falls back to ${compose_default} — but this checkout is at ${want}. Every agent spawn would fail (Docker would invent ${compose_default} as an empty directory and each agent would read its system prompt as a directory). Add to ${ENV_FILE}: ${var}=${want}"
+}
+
+# retry_until <deadline_epoch> <cmd...> — polls a boolean command every
+# POLL_INTERVAL_SECONDS until it succeeds or the deadline passes.
+retry_until() {
+    local deadline="$1"
+    shift
+    while true; do
+        if "$@"; then
+            return 0
+        fi
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+            return 1
+        fi
+        sleep "$POLL_INTERVAL_SECONDS"
+    done
+}
+
+# --- Stage 0: preflight -----------------------------------------------------
+
+command -v docker >/dev/null 2>&1 \
+    || fail "docker not found on PATH. Install Docker: https://docs.docker.com/get-docker/"
+
+docker info >/dev/null 2>&1 \
+    || fail "Docker daemon not reachable (is Docker running? do you have permission to use it?)."
+
+docker compose version >/dev/null 2>&1 \
+    || fail "'docker compose' (v2 plugin) not found. Install/update Docker Desktop, or the docker-compose-plugin package."
+
+command -v curl >/dev/null 2>&1 \
+    || fail "curl not found on PATH — required to poll the health endpoints. Install curl and re-run."
+
+log "Docker reachable: $(docker info --format '{{.ServerVersion}}' 2>/dev/null || echo unknown)"
+
+# --- Stage 1: .env ----------------------------------------------------------
+
+if [ -f "$ENV_FILE" ]; then
+    log "Reusing existing ${ENV_FILE} (left untouched)."
+    require_nonempty_env_var ROBOFLEET_ENCRYPTION_KEY \
+        "Generate: python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+    require_nonempty_env_var ROBOFLEET_AGENT_AUTH_SECRET \
+        "Generate: python3 -c 'import secrets; print(secrets.token_hex(32))'"
+    require_nonempty_env_var ROBOFLEET_PANEL_AGENT_TOKEN \
+        "Mint with 'make panel-token' (after ROBOFLEET_AGENT_AUTH_SECRET is set) — see .env.example. Required even with cloud auth armed; docker-compose.registry.yml refuses an empty value either way."
+    require_host_path_var ROBOFLEET_HOST_PROJECT_DIR \
+        "$REPO_ROOT" "$COMPOSE_DEFAULT_HOST_PROJECT_DIR"
+    require_host_path_var ROBOFLEET_HOST_DATA_DIR \
+        "${REPO_ROOT}/data" "$COMPOSE_DEFAULT_HOST_DATA_DIR"
+else
+    [ -f "$ENV_EXAMPLE" ] || fail "${ENV_EXAMPLE} not found — can't scaffold a fresh ${ENV_FILE}."
+
+    command -v python3 >/dev/null 2>&1 \
+        || fail "python3 not found on PATH — required to generate the secrets a fresh ${ENV_FILE} needs (ROBOFLEET_ENCRYPTION_KEY, ROBOFLEET_AGENT_AUTH_SECRET, ROBOFLEET_PANEL_AGENT_TOKEN). Install python3, or copy ${ENV_EXAMPLE} to ${ENV_FILE} yourself and fill those in (see the generation one-liners documented next to each in ${ENV_EXAMPLE}; ROBOFLEET_PANEL_AGENT_TOKEN can also be minted later with 'make panel-token' once ROBOFLEET_AGENT_AUTH_SECRET is set)."
+
+    cp "$ENV_EXAMPLE" "$ENV_FILE"
+    log "Created ${ENV_FILE} from ${ENV_EXAMPLE}."
+
+    # Does this .env (or the shell environment quickstart was invoked from)
+    # ask for cloud auth? Checked so the post-generation warning below can
+    # call out the standing-credential conflict specifically, not just as a
+    # generic footnote.
+    CLOUD_AUTH_HINT=false
+    if grep -qE '^ROBOFLEET_CLOUD_AUTH_ENABLED=true$' "$ENV_FILE" 2>/dev/null \
+        || [ "${ROBOFLEET_CLOUD_AUTH_ENABLED:-}" = "true" ]; then
+        CLOUD_AUTH_HINT=true
+    fi
+
+    # The exact one-liners documented in .env.example, next to each var.
+    if ! ENCRYPTION_KEY="$(python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"; then
+        rm -f "$ENV_FILE"
+        fail "Could not generate ROBOFLEET_ENCRYPTION_KEY (python3 -c 'from cryptography.fernet import Fernet; ...' failed above). Is the 'cryptography' package installed for this python3 (pip install cryptography)? ${ENV_FILE} removed — re-run once fixed."
+    fi
+    if ! AGENT_AUTH_SECRET="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"; then
+        rm -f "$ENV_FILE"
+        fail "Could not generate ROBOFLEET_AGENT_AUTH_SECRET (python3 -c 'import secrets; ...' failed above). ${ENV_FILE} removed — re-run once fixed."
+    fi
+
+    # docker-compose.registry.yml's nginx service hard-requires
+    # ROBOFLEET_PANEL_AGENT_TOKEN non-empty (`${VAR:?...}`) unconditionally — an
+    # .env copied verbatim from .env.example fails `up -d` before a single
+    # container starts, and (verified above) an empty value is refused the
+    # same way even with ROBOFLEET_CLOUD_AUTH_ENABLED=true set alongside it, so
+    # there is no "leave it blank for cloud auth" option today. Mint it the
+    # same way `make panel-token` does (robofleet/agents_config.py
+    # issue_panel_token: hex HMAC-SHA256 of "<ceo-id>:ceo:" keyed by the auth
+    # secret) using only stdlib, so a fresh .env is actually runnable end to
+    # end — the cloud-auth conflict is surfaced as a loud warning below
+    # instead of a startup failure.
+    if ! PANEL_TOKEN="$(python3 -c "
+import hashlib, hmac, sys
+secret = sys.argv[1].encode()
+msg = sys.argv[2].encode()
+print(hmac.new(secret, msg, hashlib.sha256).hexdigest())
+" "$AGENT_AUTH_SECRET" "${CEO_AGENT_ID}:ceo:")"; then
+        rm -f "$ENV_FILE"
+        fail "Could not derive ROBOFLEET_PANEL_AGENT_TOKEN from the generated secret. ${ENV_FILE} removed — re-run once fixed."
+    fi
+
+    sed -i.bak "s/^ROBOFLEET_ENCRYPTION_KEY=$/ROBOFLEET_ENCRYPTION_KEY=${ENCRYPTION_KEY}/" "$ENV_FILE"
+    sed -i.bak "s/^ROBOFLEET_AGENT_AUTH_SECRET=$/ROBOFLEET_AGENT_AUTH_SECRET=${AGENT_AUTH_SECRET}/" "$ENV_FILE"
+    sed -i.bak "s/^ROBOFLEET_PANEL_AGENT_TOKEN=$/ROBOFLEET_PANEL_AGENT_TOKEN=${PANEL_TOKEN}/" "$ENV_FILE"
+
+    # Pin the host paths to THIS checkout (see require_host_path_var above for
+    # why the /opt/robofleet fallback is a silent, total spawn failure anywhere
+    # else). .env.example ships both commented out, so uncomment-and-set. `|`
+    # delimiters — these values contain slashes.
+    sed -i.bak \
+        "s|^# *ROBOFLEET_HOST_PROJECT_DIR=.*$|ROBOFLEET_HOST_PROJECT_DIR=${REPO_ROOT}|" \
+        "$ENV_FILE"
+    sed -i.bak \
+        "s|^# *ROBOFLEET_HOST_DATA_DIR=.*$|ROBOFLEET_HOST_DATA_DIR=${REPO_ROOT}/data|" \
+        "$ENV_FILE"
+    rm -f "${ENV_FILE}.bak"
+
+    log "Generated ROBOFLEET_ENCRYPTION_KEY, ROBOFLEET_AGENT_AUTH_SECRET, and ROBOFLEET_PANEL_AGENT_TOKEN into ${ENV_FILE}."
+    log "Pinned ROBOFLEET_HOST_PROJECT_DIR=${REPO_ROOT} and ROBOFLEET_HOST_DATA_DIR=${REPO_ROOT}/data (host-side bind-mount sources for spawned agents)."
+    log "Edit ${ENV_FILE} now if you want a pinned ROBOFLEET_VERSION, Grok, or other optional settings — quickstart won't touch it again."
+
+    if [ "$CLOUD_AUTH_HINT" = "true" ]; then
+        log "WARNING: ROBOFLEET_CLOUD_AUTH_ENABLED=true detected, but docker-compose.registry.yml's nginx service still hard-requires a non-empty ROBOFLEET_PANEL_AGENT_TOKEN just to start (an empty value is refused the same as unset, cloud auth or not — verified). quickstart minted one anyway so 'up -d' doesn't fail outright, but THIS TOKEN IS A STANDING CEO CREDENTIAL THAT BYPASSES YOUR LOGIN PAGE. Once cloud auth (TLS + creds) is fully live, blank ROBOFLEET_PANEL_AGENT_TOKEN= in ${ENV_FILE} and restart the stack."
+    fi
+    log "Note: ROBOFLEET_PANEL_AGENT_TOKEN is a standing CEO credential — blank it if you later arm cloud auth (see ${ENV_EXAMPLE})."
+fi
+
+# --- Stage 2: pull + up ------------------------------------------------------
+
+log "Pulling images (docker compose -f ${COMPOSE_FILE} pull)..."
+docker compose -f "$COMPOSE_FILE" pull \
+    || fail "'docker compose -f ${COMPOSE_FILE} pull' failed. Check network access to ghcr.io/rennf93 and docker.io/renzof93, or that ROBOFLEET_REGISTRY/ROBOFLEET_VERSION in ${ENV_FILE} name a reachable registry/tag."
+
+log "Starting the stack (docker compose -f ${COMPOSE_FILE} up -d)..."
+docker compose -f "$COMPOSE_FILE" up -d \
+    || fail "'docker compose -f ${COMPOSE_FILE} up -d' failed. Run 'docker compose -f ${COMPOSE_FILE} logs' for details."
+
+# --- Stage 3: doctor-style readiness sweep ----------------------------------
+
+DEADLINE=$(($(date +%s) + TIMEOUT_SECONDS))
+CORE_SERVICES="postgres redis ollama orchestrator panel nginx"
+
+check_services_running() {
+    local running
+    running="$(docker compose -f "$COMPOSE_FILE" ps --status running --services 2>/dev/null)" || return 1
+    local svc
+    for svc in $CORE_SERVICES; do
+        echo "$running" | grep -qx "$svc" || return 1
+    done
+}
+
+check_health() {
+    curl -sf -o /dev/null "${BASE_URL}/health"
+}
+
+check_api_routing() {
+    curl -sf -o /dev/null "${BASE_URL}/api/auth/status"
+}
+
+# NOTE: deliberately no pipeline here. `... logs | grep -q PATTERN` looks
+# correct but cannot work under this script's `set -o pipefail`: grep -q exits
+# the moment it matches, the still-writing `docker compose logs` takes SIGPIPE
+# (141), and pipefail surfaces that as the pipeline's status — so a SUCCESSFUL
+# match reports failure. It only appears to work while the log still fits in
+# the 64K pipe buffer (logs finishes before grep exits), which makes it a
+# latent flake that turns solid as soon as the orchestrator gets chatty: the
+# readiness sweep then polls until timeout and falsely blames the migrations.
+# Capture first, match in-process instead.
+check_migrations() {
+    local logs
+    logs="$(docker compose -f "$COMPOSE_FILE" logs orchestrator 2>/dev/null)" || return 1
+    [[ "$logs" == *"Alembic upgrade finished"* ]]
+}
+
+check_ollama_models() {
+    local models
+    models="$(docker compose -f "$COMPOSE_FILE" exec -T ollama ollama list 2>/dev/null)" || return 1
+    echo "$models" | grep -q "qwen3-embedding" && echo "$models" | grep -q "glm-5.2"
+}
+
+log "Waiting for the stack to become ready (timeout ${TIMEOUT_SECONDS}s)..."
+
+DOCTOR_LINES=()
+
+if retry_until "$DEADLINE" check_services_running; then
+    DOCTOR_LINES+=("[ok] compose services up: ${CORE_SERVICES}")
+else
+    fail "Timed out waiting for core services to reach 'running' (${CORE_SERVICES}). Run 'docker compose -f ${COMPOSE_FILE} ps' and 'docker compose -f ${COMPOSE_FILE} logs' to see which one is stuck."
+fi
+
+if retry_until "$DEADLINE" check_health; then
+    DOCTOR_LINES+=("[ok] health endpoint: GET ${BASE_URL}/health")
+else
+    fail "Timed out waiting for GET ${BASE_URL}/health (nginx's direct, unauthenticated proxy to the orchestrator — see docker/nginx.conf; NOT /api/health, which 404s since robofleet/api/routes/health.py mounts with no /api prefix). Run 'docker compose -f ${COMPOSE_FILE} logs orchestrator nginx'."
+fi
+
+if retry_until "$DEADLINE" check_api_routing; then
+    DOCTOR_LINES+=("[ok] API routing: GET ${BASE_URL}/api/auth/status")
+else
+    fail "Timed out waiting for GET ${BASE_URL}/api/auth/status (always-mounted, unauthenticated probe — robofleet/api/auth/routes.py). /health passed but the nginx -> /api/ -> orchestrator path isn't answering; run 'docker compose -f ${COMPOSE_FILE} logs nginx orchestrator'."
+fi
+
+if retry_until "$DEADLINE" check_migrations; then
+    DOCTOR_LINES+=("[ok] DB migrations at head (orchestrator log: \"Alembic upgrade finished\")")
+else
+    fail "Timed out waiting for the orchestrator log to report \"Alembic upgrade finished\" (robofleet/db/base.py run_migrations()). Run 'docker compose -f ${COMPOSE_FILE} logs orchestrator | grep -i alembic'."
+fi
+
+if retry_until "$DEADLINE" check_ollama_models; then
+    DOCTOR_LINES+=("[ok] Ollama models present: qwen3-embedding, glm-5.2")
+else
+    fail "Timed out waiting for Ollama to report both qwen3-embedding and glm-5.2 (docker compose exec ollama ollama list). Run 'docker compose -f ${COMPOSE_FILE} logs ollama-init' — a fresh pull can take a couple of minutes."
+fi
+
+echo ""
+echo "=== RoboFleet doctor summary ==="
+for line in "${DOCTOR_LINES[@]}"; do
+    echo "  ${line}"
+done
+echo ""
+log "RoboFleet is up: ${BASE_URL}"

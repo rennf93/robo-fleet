@@ -1,0 +1,198 @@
+"""#170: the closure dispatcher auto-resumes a paused parent before respawn.
+
+A PM auto-pauses its owned parent on i_am_idle (by design, so the
+closure dispatcher knows to respawn it when subtasks finish). Pre-gateway
+the parent was resumed at respawn so the PM landed actionable; the
+gateway refactor dropped that, so the respawned PM had to issue
+`resume()` itself — which minimax reliably failed, wedging smoke-15.
+_maybe_spawn_pm_closure must resume a `paused` parent (and only a
+paused one) immediately before spawning its PM.
+
+#177: symmetric handling for a `blocked` parent. At closure all
+descendants are terminal, so a still-`blocked` parent is an errant/
+stale block — it must be recovered to in_progress too, else the chain
+wedges forever waiting for a PM to manually unblock (this run wedged
+exactly there). `paused` and `blocked` are mutually exclusive — each
+triggers only its own recovery helper.
+"""
+
+from __future__ import annotations
+
+from typing import Any, cast
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from robofleet.runtime.orchestrator import AgentOrchestrator
+
+
+def _orch() -> Any:
+    with patch.object(AgentOrchestrator, "__init__", return_value=None):
+        return AgentOrchestrator.__new__(AgentOrchestrator)
+
+
+def _ready_orch() -> Any:
+    """Orchestrator with every closure gate stubbed so _maybe_spawn_pm_closure
+    reaches the spawn (descendants terminal, not recently paused, not
+    already promoted, PM idle)."""
+    orch = _orch()
+    orch._is_recently_paused = MagicMock(return_value=False)
+    orch._fetch_all_descendants = AsyncMock(
+        return_value=[{"id": "leaf", "status": "completed"}]
+    )
+    orch._all_descendants_terminal = MagicMock(return_value=True)
+    orch._already_promoted_for_closure = MagicMock(return_value=False)
+    orch._closure_pm_for_team = MagicMock(return_value="be-pm")
+    orch._is_agent_active = MagicMock(return_value=False)
+    orch._build_pm_closure_prompt = MagicMock(return_value="PROMPT")
+    orch._task_git_context = MagicMock(return_value=None)
+    orch.spawn_agent = AsyncMock()
+    orch._auto_resume_paused_parent = AsyncMock()
+    orch._auto_recover_blocked_parent = AsyncMock()
+    return orch
+
+
+@pytest.mark.asyncio
+async def test_paused_parent_is_resumed_before_spawn() -> None:
+    orch = _ready_orch()
+    client = AsyncMock()
+    task = {"id": "parent-1", "status": "paused", "team": "backend"}
+
+    await orch._maybe_spawn_pm_closure(client, task)
+
+    cast("AsyncMock", orch._auto_resume_paused_parent).assert_awaited_once_with(
+        client, "parent-1"
+    )
+    cast("AsyncMock", orch._auto_recover_blocked_parent).assert_not_awaited()
+    cast("AsyncMock", orch.spawn_agent).assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_blocked_parent_is_recovered_before_spawn() -> None:
+    """#177: a blocked parent at closure is recovered (not the paused path)."""
+    orch = _ready_orch()
+    client = AsyncMock()
+    task = {"id": "parent-2", "status": "blocked", "team": "backend"}
+
+    await orch._maybe_spawn_pm_closure(client, task)
+
+    cast("AsyncMock", orch._auto_recover_blocked_parent).assert_awaited_once_with(
+        client, "parent-2"
+    )
+    cast("AsyncMock", orch._auto_resume_paused_parent).assert_not_awaited()
+    cast("AsyncMock", orch.spawn_agent).assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_non_paused_parent_is_not_resumed() -> None:
+    """awaiting_pm_review / in_progress parents must NOT be touched by
+    either recovery path."""
+    for st in ("awaiting_pm_review", "in_progress"):
+        orch = _ready_orch()
+        client = AsyncMock()
+        task = {"id": "p", "status": st, "team": "backend"}
+
+        await orch._maybe_spawn_pm_closure(client, task)
+
+        cast("AsyncMock", orch._auto_resume_paused_parent).assert_not_awaited()
+        cast("AsyncMock", orch._auto_recover_blocked_parent).assert_not_awaited()
+        cast("AsyncMock", orch.spawn_agent).assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_resume_skipped_when_closure_gate_blocks_spawn() -> None:
+    """If descendants aren't terminal there is no spawn — and no resume."""
+    orch = _ready_orch()
+    orch._all_descendants_terminal = MagicMock(return_value=False)
+    client = AsyncMock()
+
+    await orch._maybe_spawn_pm_closure(
+        client, {"id": "p", "status": "paused", "team": "backend"}
+    )
+
+    cast("AsyncMock", orch._auto_resume_paused_parent).assert_not_awaited()
+    cast("AsyncMock", orch.spawn_agent).assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_auto_resume_patches_status_in_progress() -> None:
+    orch = _orch()
+    client = AsyncMock()
+
+    await orch._auto_resume_paused_parent(client, "parent-9")
+
+    client.patch.assert_awaited_once()
+    call = client.patch.await_args
+    assert call.args[0].endswith("/tasks/parent-9")
+    assert call.kwargs["json"] == {"status": "in_progress"}
+
+
+@pytest.mark.asyncio
+async def test_auto_resume_swallows_errors() -> None:
+    """A resume failure must not block the spawn (best-effort)."""
+    orch = _orch()
+    client = AsyncMock()
+    client.patch = AsyncMock(side_effect=RuntimeError("api down"))
+
+    # Must not raise.
+    await orch._auto_resume_paused_parent(client, "p")
+
+
+@pytest.mark.asyncio
+async def test_auto_recover_blocked_patches_status_in_progress() -> None:
+    """#177: blocked -> in_progress (same transition unblock(restore=True)
+    performs)."""
+    orch = _orch()
+    client = AsyncMock()
+
+    await orch._auto_recover_blocked_parent(client, "parent-7")
+
+    client.patch.assert_awaited_once()
+    call = client.patch.await_args
+    assert call.args[0].endswith("/tasks/parent-7")
+    assert call.kwargs["json"] == {"status": "in_progress"}
+
+
+@pytest.mark.asyncio
+async def test_auto_recover_blocked_swallows_errors() -> None:
+    """A recovery failure must not block the spawn (best-effort)."""
+    orch = _orch()
+    client = AsyncMock()
+    client.patch = AsyncMock(side_effect=RuntimeError("api down"))
+
+    # Must not raise.
+    await orch._auto_recover_blocked_parent(client, "p")
+
+
+@pytest.mark.asyncio
+async def test_childless_awaiting_pm_review_reaches_closure() -> None:
+    """A leaf task in awaiting_pm_review (dev->qa->doc ran on the task itself)
+    is the PM's review turn — it must flow past the descendants gate, or a
+    restart-stranded review has no periodic pickup at all."""
+    orch = _ready_orch()
+    orch._fetch_all_descendants = AsyncMock(return_value=[])
+    orch._closure_handled_without_pm = AsyncMock(return_value=(True, None))
+    task = {"id": "t1", "status": "awaiting_pm_review", "team": "frontend"}
+    await orch._maybe_spawn_pm_closure(MagicMock(), task)
+    orch._closure_handled_without_pm.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_childless_in_progress_still_bails() -> None:
+    """A childless claimed/in_progress task is a dev's work, not PM closure
+    material — the descendants gate must still bail."""
+    orch = _ready_orch()
+    orch._fetch_all_descendants = AsyncMock(return_value=[])
+    orch._closure_handled_without_pm = AsyncMock(return_value=(True, None))
+    task = {"id": "t1", "status": "in_progress", "team": "frontend"}
+    await orch._maybe_spawn_pm_closure(MagicMock(), task)
+    orch._closure_handled_without_pm.assert_not_awaited()
+
+
+def test_promoted_skip_excludes_the_pm_merge_turn() -> None:
+    """awaiting_pm_review IS the PM's turn — a PR-bearing task there must not
+    be skipped as already-promoted (the submit-time PM session may be gone)."""
+    promoted = AgentOrchestrator._already_promoted_for_closure
+    assert not promoted({"pr_number": 5, "status": "awaiting_pm_review"})
+    assert promoted({"pr_number": 5, "status": "awaiting_ceo_approval"})
+    assert promoted({"pr_number": 5, "status": "completed"})
+    assert not promoted({"pr_number": None, "status": "completed"})

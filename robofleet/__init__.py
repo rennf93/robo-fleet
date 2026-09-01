@@ -1,0 +1,36 @@
+"""
+RoboFleet - AI Agents Company
+
+A virtual organization of 25 AI agents + 1 human CEO,
+designed to operate as a complete software development workforce.
+"""
+
+__version__ = "0.28.0"
+
+# Core exports
+from robofleet.config import settings
+from robofleet.exceptions import (
+    AgentError,
+    NotFoundError,
+    PermissionDeniedError,
+    RobofleetError,
+    TaskError,
+    TaskLifecycleError,
+    ValidationError,
+)
+from robofleet.logging import LogContext, get_logger, setup_logging
+
+__all__ = [
+    "AgentError",
+    "LogContext",
+    "NotFoundError",
+    "PermissionDeniedError",
+    "RobofleetError",
+    "TaskError",
+    "TaskLifecycleError",
+    "ValidationError",
+    "__version__",
+    "get_logger",
+    "settings",
+    "setup_logging",
+]

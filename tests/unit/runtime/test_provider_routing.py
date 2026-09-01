@@ -1,0 +1,47 @@
+"""The orchestrator routes only dedicated-backend providers through the registry.
+
+GROK gets the GrokCliProvider, GEMINI gets the GeminiCliProvider; Anthropic /
+Ollama Cloud / self-hosted (and any unknown value) return None so
+``_spawn_container`` raises RuntimeError (the Claude CLI docker spawn path was
+stripped in Leg D1; ADK_CLOUD_RUN is the live delivery spawn path). This keeps
+the GROK / GEMINI additions purely additive.
+"""
+
+from __future__ import annotations
+
+from unittest.mock import patch
+
+from robofleet.llm.providers import GeminiCliProvider, GrokCliProvider
+from robofleet.runtime.orchestrator import AgentOrchestrator
+
+
+def _make_orch() -> AgentOrchestrator:
+    with patch.object(AgentOrchestrator, "__init__", return_value=None):
+        orch = AgentOrchestrator.__new__(AgentOrchestrator)
+    orch._provider_registry = None
+    return orch
+
+
+def test_provider_for_grok_returns_grok_provider() -> None:
+    assert isinstance(_make_orch()._provider_for("grok"), GrokCliProvider)
+
+
+def test_provider_for_gemini_returns_gemini_provider() -> None:
+    assert isinstance(_make_orch()._provider_for("gemini"), GeminiCliProvider)
+
+
+def test_provider_for_anthropic_returns_none() -> None:
+    assert _make_orch()._provider_for("anthropic") is None
+
+
+def test_provider_for_ollama_cloud_returns_none() -> None:
+    assert _make_orch()._provider_for("ollama_cloud") is None
+
+
+def test_provider_for_unknown_value_returns_none() -> None:
+    assert _make_orch()._provider_for("bogus") is None
+
+
+def test_provider_registry_built_once() -> None:
+    orch = _make_orch()
+    assert orch._ensure_provider_registry() is orch._ensure_provider_registry()

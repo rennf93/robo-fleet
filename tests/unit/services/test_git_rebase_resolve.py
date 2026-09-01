@@ -1,0 +1,351 @@
+"""GitService PR-divergence primitives: rebase_onto_base + close_pull_request.
+
+These back both the sequence-ordered merge (rebase a later sibling onto the
+prior one's merged result) and the conflict resolver (rebase a wedged PR,
+then close-if-superseded / re-merge / escalate). The classification a rebase
+yields — superseded vs rebased vs conflicts — drives the whole resolution, so
+each branch is pinned here against a mocked git.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
+from robofleet.services.forge import RepoRef
+from robofleet.services.git import GitService
+
+
+def _git_service() -> GitService:
+    return GitService.__new__(GitService)
+
+
+def _result(returncode: int = 0, stdout: str = "") -> Any:
+    return type("R", (), {"returncode": returncode, "stdout": stdout})()
+
+
+_HEAD = "feature/frontend/root--cell--leaf"
+_BASE = "feature/frontend/root--cell"
+
+
+@pytest.mark.asyncio
+async def test_rebase_superseded_when_no_unique_commits() -> None:
+    """Clean rebase + zero commits ahead of base => superseded (safe to close)."""
+    svc = _git_service()
+    pushed: list[list[str]] = []
+
+    async def fake_run(_ws: Any, args: list[str], **_kw: Any) -> Any:
+        if args[0] == "push":
+            pushed.append(args)
+        if args[:2] == ["rev-list", "--count"]:
+            return _result(stdout="0\n")
+        return _result()
+
+    with patch.object(svc, "_run_git", new=fake_run):
+        out = await svc.rebase_onto_base(
+            Path("/tmp/ws"), head_branch=_HEAD, base_branch=_BASE, git_token="tok"
+        )
+    assert out == {"status": "superseded"}
+    # A superseded branch must NOT be force-pushed — nothing changed.
+    assert pushed == []
+
+
+@pytest.mark.asyncio
+async def test_rebase_rebased_force_pushes_when_unique_commits() -> None:
+    """Clean rebase + commits ahead of base => rebased + force-push the head."""
+    svc = _git_service()
+    pushed: list[list[str]] = []
+
+    async def fake_run(_ws: Any, args: list[str], **_kw: Any) -> Any:
+        if args[0] == "push":
+            pushed.append(args)
+            return _result()
+        if args[:2] == ["rev-list", "--count"]:
+            # Only the post-rebase unique-vs-base count is non-zero; the
+            # pre-rebase local-vs-origin(HEAD) classification must read as
+            # "nothing unique on either side" or this would misclassify as
+            # diverged before the rebase ever runs.
+            range_spec = next(iter(args[2:]), "")
+            if range_spec == f"origin/{_BASE}..HEAD":
+                return _result(stdout="3\n")
+            return _result(stdout="0\n")
+        return _result()
+
+    with patch.object(svc, "_run_git", new=fake_run):
+        out = await svc.rebase_onto_base(
+            Path("/tmp/ws"), head_branch=_HEAD, base_branch=_BASE, git_token="tok"
+        )
+    assert out == {"status": "rebased", "unique_commits": 3}
+    # Only the head branch is force-pushed, with lease, never the base.
+    assert pushed == [["push", "--force-with-lease", "origin", f"HEAD:{_HEAD}"]]
+
+
+@pytest.mark.asyncio
+async def test_rebase_conflicts_aborts_and_reports_files() -> None:
+    """A failed rebase is aborted and the conflicting files reported."""
+    svc = _git_service()
+    aborted = False
+
+    async def fake_run(_ws: Any, args: list[str], **_kw: Any) -> Any:
+        nonlocal aborted
+        if args == ["rebase", f"origin/{_BASE}"]:
+            return _result(returncode=1)
+        if args[:2] == ["diff", "--name-only"]:
+            return _result(stdout="src/a.tsx\nsrc/b.tsx\n")
+        if args == ["rebase", "--abort"]:
+            aborted = True
+            return _result()
+        return _result()
+
+    with patch.object(svc, "_run_git", new=fake_run):
+        out = await svc.rebase_onto_base(
+            Path("/tmp/ws"), head_branch=_HEAD, base_branch=_BASE, git_token="tok"
+        )
+    assert out == {"status": "conflicts", "files": ["src/a.tsx", "src/b.tsx"]}
+    assert aborted is True
+
+
+@pytest.mark.asyncio
+async def test_rebase_never_force_pushes_on_conflict() -> None:
+    """Guard: the destructive force-push must not fire when a rebase conflicts."""
+    svc = _git_service()
+    pushed: list[list[str]] = []
+
+    async def fake_run(_ws: Any, args: list[str], **_kw: Any) -> Any:
+        if args[0] == "push":
+            pushed.append(args)
+        if args == ["rebase", f"origin/{_BASE}"]:
+            return _result(returncode=1)
+        if args[:2] == ["diff", "--name-only"]:
+            return _result(stdout="")
+        return _result()
+
+    with patch.object(svc, "_run_git", new=fake_run):
+        await svc.rebase_onto_base(
+            Path("/tmp/ws"), head_branch=_HEAD, base_branch=_BASE, git_token="tok"
+        )
+    assert pushed == []
+
+
+@pytest.mark.asyncio
+async def test_close_pull_request_patches_state_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """close_pull_request issues a PATCH state=closed (and an optional comment)."""
+    svc = _git_service()
+    # Stub the task/project/workspace/token/remote resolution chain via
+    # monkeypatch.setattr (not direct assignment) so mypy's method-assign check
+    # stays satisfied without silencing it.
+    task = type("T", (), {"id": "t", "assigned_to": None, "created_by": None})()
+    session = AsyncMock()
+    session.execute = AsyncMock(
+        return_value=type("Res", (), {"scalar_one_or_none": lambda _self: task})()
+    )
+    delete_branch = AsyncMock()
+    monkeypatch.setattr(svc, "session", session, raising=False)
+    monkeypatch.setattr(
+        svc,
+        "_project_for_task",
+        AsyncMock(return_value=type("P", (), {"slug": "proj"})()),
+    )
+    monkeypatch.setattr(
+        svc, "_resolve_workspace_agent_id", MagicMock(return_value=None)
+    )
+    monkeypatch.setattr(svc, "get_workspace", AsyncMock(return_value=Path("/tmp/ws")))
+    monkeypatch.setattr(
+        svc, "_get_project_token_or_raise", AsyncMock(return_value="tok")
+    )
+    monkeypatch.setattr(
+        svc, "_parse_github_remote", MagicMock(return_value=RepoRef("owner", "repo"))
+    )
+    monkeypatch.setattr(svc, "_delete_pr_branch_best_effort", delete_branch)
+
+    calls: list[tuple[str, str]] = []
+
+    class _Resp:
+        is_success = True
+        status_code = 200
+        text = ""
+
+        def json(self) -> dict[str, str]:
+            return {"state": "open"}
+
+    class _Client:
+        async def __aenter__(self) -> _Client:
+            return self
+
+        async def __aexit__(self, *_a: Any) -> None:
+            return None
+
+        async def get(self, url: str, **_kw: Any) -> _Resp:
+            calls.append(("GET", url))
+            return _Resp()
+
+        async def post(self, url: str, **_kw: Any) -> _Resp:
+            calls.append(("POST", url))
+            return _Resp()
+
+        async def patch(self, url: str, **_kw: Any) -> _Resp:
+            calls.append(("PATCH", url))
+            return _Resp()
+
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=_Client()):
+        await svc.close_pull_request(
+            159,
+            project_id=uuid4(),
+            comment="superseded by #158",
+            delete_branch=True,
+        )
+
+    assert (
+        "POST",
+        "https://api.github.com/repos/owner/repo/issues/159/comments",
+    ) in calls
+    assert ("PATCH", "https://api.github.com/repos/owner/repo/pulls/159") in calls
+    delete_branch.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_close_pull_request_does_not_delete_branch_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#109: close_pull_request defaulted delete_branch=True, so the
+    choreographer supersede path deleted a superseded PR's branch while the
+    orchestrator supersede path explicitly preserved it — the two disagreed,
+    and the destructive default ran on the "close the dead PR" path where the
+    branch may still be referenced / useful for audit. The default is now
+    False (opt-in deletion); a superseded-PR close preserves the branch unless
+    the caller explicitly asks to delete. The PATCH still fires.
+    """
+    svc = _git_service()
+    task = type("T", (), {"id": "t", "assigned_to": None, "created_by": None})()
+    session = AsyncMock()
+    session.execute = AsyncMock(
+        return_value=type("Res", (), {"scalar_one_or_none": lambda _self: task})()
+    )
+    delete_branch = AsyncMock()
+    monkeypatch.setattr(svc, "session", session, raising=False)
+    monkeypatch.setattr(
+        svc,
+        "_project_for_task",
+        AsyncMock(return_value=type("P", (), {"slug": "proj"})()),
+    )
+    monkeypatch.setattr(
+        svc, "_resolve_workspace_agent_id", MagicMock(return_value=None)
+    )
+    monkeypatch.setattr(svc, "get_workspace", AsyncMock(return_value=Path("/tmp/ws")))
+    monkeypatch.setattr(
+        svc, "_get_project_token_or_raise", AsyncMock(return_value="tok")
+    )
+    monkeypatch.setattr(
+        svc, "_parse_github_remote", MagicMock(return_value=RepoRef("owner", "repo"))
+    )
+    monkeypatch.setattr(svc, "_delete_pr_branch_best_effort", delete_branch)
+
+    class _Resp:
+        is_success = True
+        status_code = 200
+        text = ""
+
+        def json(self) -> dict[str, str]:
+            return {"state": "open"}
+
+    class _Client:
+        async def __aenter__(self) -> _Client:
+            return self
+
+        async def __aexit__(self, *_a: Any) -> None:
+            return None
+
+        async def get(self, _url: str, **_kw: Any) -> _Resp:
+            return _Resp()
+
+        async def post(self, _url: str, **_kw: Any) -> _Resp:
+            return _Resp()
+
+        async def patch(self, _url: str, **_kw: Any) -> _Resp:
+            return _Resp()
+
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=_Client()):
+        # No delete_branch kwarg → default must preserve the branch.
+        await svc.close_pull_request(159, project_id=uuid4(), comment="superseded")
+
+    # The close PATCH still fires (the PR is closed); the branch is NOT deleted.
+    delete_branch.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_close_pull_request_idempotent_when_already_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An already-closed PR is a no-op: no duplicate comment, no PATCH.
+
+    Guards the close-on-land retry path — a transient failure between the
+    comment POST and the close PATCH must not re-post the explanatory comment
+    on the next sweep.
+    """
+    svc = _git_service()
+    task = type("T", (), {"id": "t", "assigned_to": None, "created_by": None})()
+    session = AsyncMock()
+    session.execute = AsyncMock(
+        return_value=type("Res", (), {"scalar_one_or_none": lambda _self: task})()
+    )
+    monkeypatch.setattr(svc, "session", session, raising=False)
+    monkeypatch.setattr(
+        svc,
+        "_project_for_task",
+        AsyncMock(return_value=type("P", (), {"slug": "proj"})()),
+    )
+    monkeypatch.setattr(
+        svc, "_resolve_workspace_agent_id", MagicMock(return_value=None)
+    )
+    monkeypatch.setattr(svc, "get_workspace", AsyncMock(return_value=Path("/tmp/ws")))
+    monkeypatch.setattr(
+        svc, "_get_project_token_or_raise", AsyncMock(return_value="tok")
+    )
+    monkeypatch.setattr(
+        svc, "_parse_github_remote", MagicMock(return_value=RepoRef("owner", "repo"))
+    )
+    monkeypatch.setattr(svc, "_delete_pr_branch_best_effort", AsyncMock())
+
+    calls: list[tuple[str, str]] = []
+
+    class _Resp:
+        is_success = True
+        status_code = 200
+        text = ""
+
+        def json(self) -> dict[str, str]:
+            return {"state": "closed"}
+
+    class _Client:
+        async def __aenter__(self) -> _Client:
+            return self
+
+        async def __aexit__(self, *_a: Any) -> None:
+            return None
+
+        async def get(self, url: str, **_kw: Any) -> _Resp:
+            calls.append(("GET", url))
+            return _Resp()
+
+        async def post(self, url: str, **_kw: Any) -> _Resp:
+            calls.append(("POST", url))
+            return _Resp()
+
+        async def patch(self, url: str, **_kw: Any) -> _Resp:
+            calls.append(("PATCH", url))
+            return _Resp()
+
+    with patch("robofleet.services.git.httpx.AsyncClient", return_value=_Client()):
+        await svc.close_pull_request(
+            159,
+            project_id=uuid4(),
+            comment="superseded by #158",
+            delete_branch=False,
+        )
+
+    assert [c[0] for c in calls] == ["GET"]  # no POST comment, no PATCH

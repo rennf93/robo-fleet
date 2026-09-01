@@ -1,0 +1,64 @@
+name: Panel CI
+
+on:
+  push:
+    branches:
+      - master
+      - slave
+      - 'feature/**'
+      - 'bug/**'
+      - 'chore/**'
+      - 'docs/**'
+      - 'hotfix/**'
+    paths:
+      - 'panel/**'
+      - '.github/workflows/panel-ci.yml'
+  pull_request:
+    branches:
+      - master
+      # Fleet PRs target the dev branch — see ci.yml's pull_request note.
+      - slave
+    paths:
+      - 'panel/**'
+      - '.github/workflows/panel-ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  panel:
+    name: Panel (Next.js)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: panel
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm exec tsc --noEmit
+
+      - name: Test (vitest + coverage)
+        run: pnpm test

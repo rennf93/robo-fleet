@@ -1,0 +1,33 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+    allow:
+      - dependency-type: "all"
+
+  - package-ecosystem: "npm"
+    directory: "/panel"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+    allow:
+      - dependency-type: "all"
+    ignore:
+      - dependency-name: "next"
+        versions: ["16.2.x"]
+      - dependency-name: "eslint-config-next"
+        versions: ["16.2.x"]

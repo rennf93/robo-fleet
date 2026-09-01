@@ -1,0 +1,607 @@
+"""Tests for QA-facing Choreographer methods."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
+
+import pytest
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+
+
+def _make_deps(**overrides: Any) -> ChoreographerDeps:
+    base = {
+        "task": AsyncMock(),
+        "work_session": AsyncMock(),
+        "git": AsyncMock(),
+        "a2a": AsyncMock(),
+        "journal": AsyncMock(),
+        "audit": AsyncMock(),
+        "evidence_repo": AsyncMock(),
+    }
+    base.update(overrides)
+    repo = base["evidence_repo"]
+    for method in (
+        "list_unread_a2a",
+        "list_unread_mentions",
+        "list_pending_notifications",
+        "task_metadata_gaps",
+        "recent_team_activity",
+        "blockers_in_lane",
+        "journal_highlights_for_task",
+    ):
+        getattr(repo, method).return_value = []
+    # C8: default-fresh journal:decision so PM-decision gate passes.
+    # Tests that exercise the gate boundary stub their own value.
+    # The check matches MagicMock and AsyncMock (the two default sentinel
+    # types pytest's unittest.mock leaves on un-stubbed return_values).
+    _ldef = base["journal"].latest_decision_at.return_value
+    if type(_ldef).__name__ in ("MagicMock", "AsyncMock"):
+        base["journal"].latest_decision_at.return_value = datetime.now(UTC)
+    return ChoreographerDeps(**base)
+
+
+_EXPECTED_PR_NUMBER = 8
+_EXPECTED_PR_URL = "https://github.com/x/y/pull/8"
+_EXPECTED_FINDINGS_COUNT = 2
+
+
+@pytest.mark.asyncio
+async def test_claim_review_returns_evidence_inline() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    t_initial = MagicMock(
+        id=task_id,
+        status="awaiting_qa",
+        assigned_to=None,
+        pr_number=_EXPECTED_PR_NUMBER,
+        pr_url=_EXPECTED_PR_URL,
+        commits=[{"sha": "abc123", "message": "feat: x"}],
+        team="backend",
+        branch_name="feature/backend/abc--def",
+        work_session_id=uuid4(),
+        documents=[],
+        dev_notes="implemented x",
+        acceptance_criteria=["AC1"],
+        acceptance_criteria_status=[
+            {"criterion": "AC1", "referencing_artifact_id": "abc123"},
+        ],
+        active_claimant_id=None,
+    )
+    t_claimed = MagicMock(
+        **{**t_initial.__dict__, "assigned_to": qa_id, "status": "claimed"},
+    )
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t_initial
+    task_svc.agent_for.return_value = MagicMock(role="qa", team="backend")
+    task_svc.list_in_progress_for_agent.return_value = []
+    task_svc.list_paused_for_agent.return_value = []
+    task_svc.qa_claim.return_value = t_claimed
+    _stub_empty_ledger(task_svc.session)
+    work_svc = AsyncMock()
+    git_svc = AsyncMock()
+    git_svc.diff_and_files.return_value = ("+++ diff content", ["README.md"])
+    deps = _make_deps(task=task_svc, work_session=work_svc, git=git_svc)
+    c = Choreographer(deps)
+
+    env = await c.claim_review(qa_id, task_id)
+    body = env.as_dict()
+    assert body["error"] is None
+    assert body["evidence"]["pr_url"] == _EXPECTED_PR_URL
+    assert body["evidence"]["pr_number"] == _EXPECTED_PR_NUMBER
+    assert body["evidence"]["commits"][0]["sha"] == "abc123"
+    assert "README.md" in body["evidence"]["files_changed"]
+
+
+@pytest.mark.asyncio
+async def test_claim_review_blocks_if_task_not_awaiting_qa() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = MagicMock(
+        id=task_id,
+        status="in_progress",
+        task_type="code",
+        team="backend",
+        quick_context=None,
+    )
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = MagicMock(
+        id=qa_id, role="qa", team="backend", slug=None
+    )
+    deps = _make_deps(task=task_svc)
+    c = Choreographer(deps)
+
+    env = await c.claim_review(qa_id, task_id)
+    body = env.as_dict()
+    # Spec rejects: in_progress is not in `claim` action's source_statuses
+    # (PENDING, NEEDS_REVISION, AWAITING_QA, AWAITING_DOCUMENTATION).
+    assert body["error"] == "invalid_state"
+    assert "in_progress" in body["message"] or "awaiting_qa" in body["message"]
+
+
+@pytest.mark.asyncio
+async def test_claim_review_marks_evidence_inspected() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = MagicMock(
+        id=task_id,
+        status="awaiting_qa",
+        pr_number=8,
+        pr_url="x",
+        commits=[],
+        team="backend",
+        branch_name="feature/backend/abc",
+        work_session_id=None,
+        documents=[],
+        dev_notes="",
+        acceptance_criteria=[],
+        acceptance_criteria_status=[],
+        active_claimant_id=None,
+    )
+    t_claimed = MagicMock(**{**t.__dict__, "assigned_to": qa_id})
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = MagicMock(role="qa", team="backend")
+    task_svc.list_in_progress_for_agent.return_value = []
+    task_svc.list_paused_for_agent.return_value = []
+    task_svc.qa_claim.return_value = t_claimed
+    _stub_empty_ledger(task_svc.session)
+    git_svc = AsyncMock()
+    git_svc.diff_and_files.return_value = ("", [])
+    deps = _make_deps(task=task_svc, git=git_svc)
+    c = Choreographer(deps)
+
+    await c.claim_review(qa_id, task_id)
+    task_svc.mark_evidence_inspected.assert_awaited_once_with(task_id)
+
+
+@pytest.mark.asyncio
+async def test_claim_review_task_not_found_returns_not_found() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    task_svc = AsyncMock()
+    task_svc.get.return_value = None
+    deps = _make_deps(task=task_svc)
+    c = Choreographer(deps)
+
+    env = await c.claim_review(qa_id, task_id)
+    body = env.as_dict()
+    assert body["error"] == "not_found"
+
+
+@pytest.mark.asyncio
+async def test_pass_review_task_not_found_returns_not_found() -> None:
+    """Line 117 of qa.py: _verify_qa_owner emits not_found when task is None."""
+    qa_id = uuid4()
+    task_id = uuid4()
+    task_svc = AsyncMock()
+    task_svc.get.return_value = None
+    deps = _make_deps(task=task_svc)
+    c = Choreographer(deps)
+    env = await c.pass_review(qa_id, task_id, notes="x" * 80)
+    assert env.as_dict()["error"] == "not_found"
+
+
+def _qa_owned_task(task_id: Any, qa_id: Any, **overrides: Any) -> MagicMock:
+    """Build a QA-owned awaiting_qa task fixture compatible with the spec gate.
+
+    Status defaults to awaiting_qa (which matches qa_pass / qa_fail's
+    spec source_statuses). task_type / team / quick_context defaulted
+    so the spec gate's role/state/task_type checks all evaluate against
+    real values rather than auto-generated MagicMock attributes.
+    """
+    base = {
+        "id": task_id,
+        "status": "awaiting_qa",
+        "task_type": "code",
+        "team": "backend",
+        "assigned_to": qa_id,
+        "qa_evidence_inspected": True,
+        "quick_context": None,
+    }
+    base.update(overrides)
+    return MagicMock(**base)
+
+
+def _qa_agent_mock(qa_id: Any) -> MagicMock:
+    return MagicMock(id=qa_id, role="qa", team="backend", slug=None)
+
+
+def _stub_empty_ledger(session: MagicMock) -> None:
+    """Configure a mock session's ``execute`` so ``ReviewFindingsRepository``
+    finds no rows — covers pass_review's verified-stamp read (list_for_task),
+    which a bare ``session.add``/``flush`` stub doesn't reach."""
+    session.execute = AsyncMock(
+        return_value=MagicMock(
+            scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))
+        )
+    )
+
+
+@pytest.mark.asyncio
+async def test_pass_review_requires_qa_notes_min_chars() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(task_id, qa_id)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = True
+    deps = _make_deps(task=task_svc, journal=journal_svc)
+    c = Choreographer(deps)
+
+    env = await c.pass_review(qa_id, task_id, notes="too short")
+    body = env.as_dict()
+    assert body["error"] == "tracing_gap"
+    assert "qa_notes>=min" in body["missing"]
+
+
+@pytest.mark.asyncio
+async def test_pass_review_requires_journal_learning() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(task_id, qa_id)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = False
+    deps = _make_deps(task=task_svc, journal=journal_svc)
+    c = Choreographer(deps)
+
+    notes = "x" * 100  # long enough
+    env = await c.pass_review(qa_id, task_id, notes=notes)
+    body = env.as_dict()
+    assert body["error"] == "tracing_gap"
+    assert "journal:learning" in body["missing"]
+
+
+@pytest.mark.asyncio
+async def test_pass_review_requires_evidence_inspected() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(task_id, qa_id, qa_evidence_inspected=False)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = True
+    deps = _make_deps(task=task_svc, journal=journal_svc)
+    c = Choreographer(deps)
+
+    notes = "x" * 100
+    env = await c.pass_review(qa_id, task_id, notes=notes)
+    body = env.as_dict()
+    assert body["error"] == "tracing_gap"
+    assert "qa_evidence_inspected" in body["missing"]
+
+
+@pytest.mark.asyncio
+async def test_pass_review_succeeds_and_transitions() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(task_id, qa_id)
+    after = MagicMock(
+        id=task_id,
+        status="awaiting_documentation",
+        assigned_to=qa_id,
+        team="backend",
+        pr_url="https://x/pr/8",
+        qa_evidence_inspected=True,
+    )
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    task_svc.qa_pass.return_value = after
+    task_svc.documenter_for_team.return_value = MagicMock(id=uuid4())
+    task_svc.session = MagicMock()
+    task_svc.session.begin_nested = MagicMock(
+        return_value=MagicMock(
+            __aenter__=AsyncMock(return_value=None),
+            __aexit__=AsyncMock(return_value=False),
+        )
+    )
+    _stub_empty_ledger(task_svc.session)
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = True
+    a2a_svc = AsyncMock()
+    deps = _make_deps(task=task_svc, journal=journal_svc, a2a=a2a_svc)
+    c = Choreographer(deps)
+
+    notes = (
+        "Reviewed PR carefully. Branch convention correct. Commit prefix "
+        "verified. README diff matches spec. All acceptance criteria met."
+    )
+    env = await c.pass_review(qa_id, task_id, notes=notes)
+    assert env.error is None
+    assert env.status == "awaiting_documentation"
+    task_svc.qa_pass.assert_awaited_once()
+    a2a_svc.send.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_pass_review_rejects_without_criteria_verified_when_acs_present() -> None:
+    """A task with real acceptance criteria demands criteria_verified — a
+    gestalt "looks good" notes string alone is no longer enough."""
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(
+        task_id, qa_id, acceptance_criteria=["returns 200", "includes timestamp"]
+    )
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = True
+    deps = _make_deps(task=task_svc, journal=journal_svc)
+    c = Choreographer(deps)
+
+    notes = "x" * 100
+    env = await c.pass_review(qa_id, task_id, notes=notes)
+    body = env.as_dict()
+    assert body["error"] == "invalid_state", body
+    assert "returns 200" in body["message"]
+    assert "includes timestamp" in body["message"]
+
+
+@pytest.mark.asyncio
+async def test_pass_review_renders_criteria_verified_into_notes() -> None:
+    """Happy path: every AC matched + evidenced renders '[AC] ...' lines into
+    the persisted qa_notes and the transition still fires."""
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(
+        task_id, qa_id, acceptance_criteria=["returns 200", "includes timestamp"]
+    )
+    after = MagicMock(
+        id=task_id,
+        status="awaiting_documentation",
+        assigned_to=qa_id,
+        team="backend",
+        pr_url="https://x/pr/8",
+        qa_evidence_inspected=True,
+    )
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    task_svc.qa_pass.return_value = after
+    task_svc.documenter_for_team.return_value = MagicMock(id=uuid4())
+    task_svc.session = MagicMock()
+    task_svc.session.begin_nested = MagicMock(
+        return_value=MagicMock(
+            __aenter__=AsyncMock(return_value=None),
+            __aexit__=AsyncMock(return_value=False),
+        )
+    )
+    _stub_empty_ledger(task_svc.session)
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = True
+    a2a_svc = AsyncMock()
+    deps = _make_deps(task=task_svc, journal=journal_svc, a2a=a2a_svc)
+    c = Choreographer(deps)
+
+    notes = (
+        "Reviewed PR carefully. Rendered every scene and checked each frame "
+        "against the brief before approving."
+    )
+    env = await c.pass_review(
+        qa_id,
+        task_id,
+        notes=notes,
+        criteria_verified=[
+            {"criterion": "returns 200", "evidence": "test_healthz asserts 200"},
+            {
+                "criterion": "includes timestamp",
+                "evidence": "frame diff shows ts field at README.md line 12",
+            },
+        ],
+    )
+    assert env.error is None, env.as_dict()
+    assert env.status == "awaiting_documentation"
+    task_svc.qa_pass.assert_awaited_once()
+    persisted_notes = task_svc.qa_pass.call_args.args[2]
+    assert "[AC] returns 200 — verified: test_healthz asserts 200" in persisted_notes
+    assert (
+        "[AC] includes timestamp — verified: frame diff shows ts field at "
+        "README.md line 12" in persisted_notes
+    )
+
+
+@pytest.mark.asyncio
+async def test_pass_review_not_assigned_returns_not_authorized() -> None:
+    qa_id = uuid4()
+    other = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(task_id, other)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    deps = _make_deps(task=task_svc)
+    c = Choreographer(deps)
+
+    env = await c.pass_review(qa_id, task_id, notes="x")
+    body = env.as_dict()
+    assert body["error"] == "not_authorized"
+
+
+@pytest.mark.asyncio
+async def test_fail_review_succeeds() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    dev_id = uuid4()
+    t = _qa_owned_task(task_id, qa_id)
+    after = MagicMock(
+        id=task_id,
+        status="needs_revision",
+        assigned_to=dev_id,
+        team="backend",
+    )
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    task_svc.qa_fail.return_value = after
+    task_svc.session = MagicMock()
+    task_svc.session.add = MagicMock()
+    task_svc.session.flush = AsyncMock()
+    task_svc.session.begin_nested = MagicMock(
+        return_value=MagicMock(
+            __aenter__=AsyncMock(return_value=None),
+            __aexit__=AsyncMock(return_value=False),
+        )
+    )
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = True
+    a2a_svc = AsyncMock()
+    deps = _make_deps(task=task_svc, journal=journal_svc, a2a=a2a_svc)
+    c = Choreographer(deps)
+
+    issues = [
+        "Missing unit test coverage for /healthz endpoint — add at least one assertion",
+        "Lint errors in /api/foo.py: unused import and missing return type annotation",
+    ]
+    env = await c.fail_review(qa_id, task_id, issues)
+    assert env.error is None
+    assert env.status == "needs_revision"
+    task_svc.qa_fail.assert_awaited_once()
+    a2a_svc.send.assert_awaited_once()
+    # The ledger insert ran (2 shimmed findings) before the transition.
+    assert task_svc.session.add.call_count == _EXPECTED_FINDINGS_COUNT
+
+
+@pytest.mark.asyncio
+async def test_fail_review_requires_at_least_one_issue() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(task_id, qa_id)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = True
+    deps = _make_deps(task=task_svc, journal=journal_svc)
+    c = Choreographer(deps)
+
+    env = await c.fail_review(qa_id, task_id, issues=[])
+    body = env.as_dict()
+    assert body["error"] == "invalid_state"
+    assert "finding" in body["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_fail_review_rejects_prose_file_names_evidence_in_remediate() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(task_id, qa_id)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = True
+    deps = _make_deps(task=task_svc, journal=journal_svc)
+    c = Choreographer(deps)
+
+    findings = [
+        {
+            "file": "PR #676 description",
+            "severity": "major",
+            "expected": "matches the acceptance criteria",
+            "actual": "diverges from the acceptance criteria",
+        }
+    ]
+    env = await c.fail_review(qa_id, task_id, findings=findings)
+    body = env.as_dict()
+    assert body["error"] == "invalid_state"
+    assert "evidence" in body["remediate"]
+    assert "file" in body["remediate"]
+
+
+@pytest.mark.asyncio
+async def test_fail_review_not_assigned_returns_not_authorized() -> None:
+    qa_id = uuid4()
+    other = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(task_id, other)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    deps = _make_deps(task=task_svc)
+    c = Choreographer(deps)
+
+    env = await c.fail_review(qa_id, task_id, issues=["x"])
+    body = env.as_dict()
+    assert body["error"] == "not_authorized"
+
+
+@pytest.mark.asyncio
+async def test_fail_review_blocks_when_journal_learning_missing() -> None:
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(task_id, qa_id)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = False  # no learning
+    deps = _make_deps(task=task_svc, journal=journal_svc)
+    c = Choreographer(deps)
+
+    env = await c.fail_review(qa_id, task_id, issues=["x" * 20])
+    body = env.as_dict()
+    assert body["error"] == "tracing_gap"
+    assert "journal:learning" in body["missing"]
+
+
+# ---------------------------------------------------------------------------
+# H6: pass_review survives a2a.send failure
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_pass_review_survives_a2a_send_failure() -> None:
+    """a2a.send throws after the runner commits the QA-pass transition.
+    The verb must NOT 500 — the transition is committed; the side-effect
+    failure is logged and the envelope carries a warning."""
+    qa_id = uuid4()
+    task_id = uuid4()
+    t = _qa_owned_task(task_id, qa_id, pr_url="https://x/pr/8")
+    after = MagicMock(
+        id=task_id,
+        status="awaiting_documentation",
+        assigned_to=qa_id,
+        team="backend",
+        pr_url="https://x/pr/8",
+        qa_evidence_inspected=True,
+    )
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = _qa_agent_mock(qa_id)
+    task_svc.qa_pass.return_value = after
+    task_svc.documenter_for_team.return_value = MagicMock(id=uuid4())
+    task_svc.session = MagicMock()
+    task_svc.session.begin_nested = MagicMock(
+        return_value=MagicMock(
+            __aenter__=AsyncMock(return_value=None),
+            __aexit__=AsyncMock(return_value=False),
+        )
+    )
+    _stub_empty_ledger(task_svc.session)
+    journal_svc = AsyncMock()
+    journal_svc.has_learning_for_task.return_value = True
+    a2a_svc = AsyncMock()
+    a2a_svc.send = AsyncMock(side_effect=RuntimeError("a2a down"))
+    deps = _make_deps(task=task_svc, journal=journal_svc, a2a=a2a_svc)
+    c = Choreographer(deps)
+
+    notes = (
+        "Reviewed PR carefully. Branch convention correct. Commit prefix "
+        "verified. README diff matches spec. All acceptance criteria met."
+    )
+    env = await c.pass_review(qa_id, task_id, notes=notes)
+    body = env.as_dict()
+    assert body.get("error") is None, body
+    assert body.get("warning") is not None
+    assert "a2a" in body["warning"].lower()

@@ -1,0 +1,181 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish-images:
+    name: Build & push all RoboFleet images to GHCR + Docker Hub
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+
+    env:
+      GHCR: ghcr.io/rennf93         # GitHub Container Registry namespace
+      DOCKERHUB: docker.io/renzof93 # Docker Hub namespace (different username)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Free up runner disk space
+        run: |
+          # Eleven images on one runner is disk-heavy; drop preinstalled tooling
+          # we don't use so the builds don't run out of space.
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4.6.0
+        with:
+          username: renzof93
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Derive version tag
+        id: ver
+        run: |
+          # release → the tag (v0.1.0 → 0.1.0). Any manual dispatch runs against a
+          # branch whose name can contain "/" (e.g. feature/x) — not a valid image
+          # tag — so use the short SHA, which always is one.
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RAW="${{ github.event.release.tag_name }}"
+            VERSION="${RAW#v}"
+          else
+            VERSION="$(git rev-parse --short HEAD)"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Release version: $VERSION"
+
+      - name: Build & push every RoboFleet image
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          # Tag one built image for both registries at :VERSION and :latest.
+          regtags() {
+            local name="$1"
+            echo "-t ${GHCR}/${name}:${VERSION} -t ${GHCR}/${name}:latest" \
+                 "-t ${DOCKERHUB}/${name}:${VERSION} -t ${DOCKERHUB}/${name}:latest"
+          }
+          # Push one image's four tags (both registries, both labels).
+          pushall() {
+            local name="$1"
+            for ref in "${GHCR}/${name}" "${DOCKERHUB}/${name}"; do
+              docker push "${ref}:${VERSION}"
+              docker push "${ref}:latest"
+            done
+          }
+
+          # agent-base MUST build first: the agent images build
+          # `FROM robofleet-agent-base` — a local tag that has to exist in the daemon
+          # before they build. Tag it locally (for the FROM) and for both registries.
+          echo "::group::build robofleet-agent-base"
+          docker build -f docker/agent-base.Dockerfile \
+            -t robofleet-agent-base $(regtags robofleet-agent-base) .
+          echo "::endgroup::"
+
+          # robofleet-agent-grok MUST build next, ahead of the loop: the two
+          # interactive Grok roles (prompter, secretary) build `FROM
+          # robofleet-agent-grok` — a local tag that has to exist in the daemon
+          # before they build, and bash associative-array iteration order is
+          # unspecified, so it can't just be another entry in IMAGES below.
+          echo "::group::build robofleet-agent-grok"
+          docker build -f docker/agent-grok.Dockerfile \
+            -t robofleet-agent-grok $(regtags robofleet-agent-grok) .
+          echo "::endgroup::"
+
+          # Every other image → its Dockerfile. Names mirror docker-compose's
+          # `image:` values exactly, so compose can later pull instead of build.
+          declare -A IMAGES=(
+            [robofleet-orchestrator]=docker/orchestrator.Dockerfile
+            [robofleet-panel]=docker/panel.Dockerfile
+            [robofleet-video-renderer]=docker/video-renderer.Dockerfile
+            [robofleet-sandbox-pg]=docker/sandbox-pg.Dockerfile
+            [robofleet-agent-prompter]=docker/agent-prompter.Dockerfile
+            [robofleet-agent-secretary]=docker/agent-secretary.Dockerfile
+            [robofleet-agent-grok-prompter]=docker/agent-grok-prompter.Dockerfile
+            [robofleet-agent-grok-secretary]=docker/agent-grok-secretary.Dockerfile
+            [robofleet-agent-codex]=docker/agent-codex.Dockerfile
+            # Gemini (Google, official CLI) — one-shot delivery roles only (V1),
+            # no interactive prompter/secretary variant depends FROM it, so
+            # (unlike robofleet-agent-grok above) it needs no special build-order
+            # carve-out and is just another entry here.
+            [robofleet-agent-gemini]=docker/agent-gemini.Dockerfile
+            # Kimi (Moonshot, official kimi-code CLI) — same shape as gemini/
+            # codex: one-shot delivery roles only, plain FROM agent-base.
+            # Missing from this map on v0.28.0 shipped the release without the
+            # image; pull-smoke went red on exactly that pull. Every new
+            # docker/agent-*.Dockerfile MUST land here in the same PR.
+            [robofleet-agent-kimi]=docker/agent-kimi.Dockerfile
+          )
+          for name in "${!IMAGES[@]}"; do
+            echo "::group::build ${name}"
+            docker build -f "${IMAGES[$name]}" $(regtags "${name}") .
+            echo "::endgroup::"
+          done
+
+          # Push only after every build succeeds, so a failure never leaves a
+          # half-published release. Base first, then the rest.
+          echo "::group::push robofleet-agent-base"
+          pushall robofleet-agent-base
+          echo "::endgroup::"
+          echo "::group::push robofleet-agent-grok"
+          pushall robofleet-agent-grok
+          echo "::endgroup::"
+          for name in "${!IMAGES[@]}"; do
+            echo "::group::push ${name}"
+            pushall "${name}"
+            echo "::endgroup::"
+          done
+
+          echo "Published robofleet-agent-base + robofleet-agent-grok + ${#IMAGES[@]} more images to GHCR + Docker Hub at :${VERSION} and :latest"
+
+  pull-smoke:
+    name: Registry pull smoke — verify every published image is pullable
+    needs: publish-images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      ROBOFLEET_REGISTRY: ghcr.io/rennf93
+      ROBOFLEET_VERSION: ${{ needs.publish-images.outputs.version }}
+      ROBOFLEET_ENCRYPTION_KEY: pull-smoke-placeholder-not-a-real-key
+      ROBOFLEET_AGENT_AUTH_SECRET: pull-smoke-placeholder-not-a-real-secret
+      ROBOFLEET_PANEL_AGENT_TOKEN: pull-smoke-placeholder-not-a-real-token
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Free up runner disk space
+        run: |
+          # Same trick as publish-images: pulling ~20 images (robo-fleet's own
+          # plus postgres/redis/ollama/nginx) on one runner is disk-heavy.
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull every image docker-compose.registry.yml references
+        run: |
+          echo "Pulling ${ROBOFLEET_REGISTRY}/robofleet-*:${ROBOFLEET_VERSION} (+ upstream deps) — failing on any missing image..."
+          docker compose -f docker-compose.registry.yml pull

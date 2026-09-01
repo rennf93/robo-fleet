@@ -1,0 +1,228 @@
+"""WorkspaceService._sync_read_clone — the conventions read-clone refresh.
+
+The read clone is hard-reset to the default branch on every refresh. The bug it
+fixes: the old refresh used a token-less fetch, so a private repo's clone stayed
+frozen at clone-time and never saw commits merged afterwards. This proves the
+refresh actually advances the clone to a post-clone commit.
+"""
+
+from __future__ import annotations
+
+import base64
+import subprocess
+from types import SimpleNamespace
+from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from robofleet.services import workspace as ws_mod
+from robofleet.services.workspace import WorkspaceService
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args], cwd=str(cwd), capture_output=True, text=True, check=False
+    )
+
+
+def _commit(repo: Path, message: str) -> str:
+    _git(repo, "add", "-A")
+    _git(repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", message)
+    return _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+
+def test_sync_read_clone_advances_to_a_post_clone_commit(tmp_path: Path) -> None:
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    _git(origin, "init", "-q", "-b", "master")
+    (origin / "README.md").write_text("v1\n")
+    _commit(origin, "first")
+
+    clone = tmp_path / "clone"
+    _git(tmp_path, "clone", "-q", str(origin), str(clone))
+    first = _git(clone, "rev-parse", "HEAD").stdout.strip()
+
+    # A new commit lands on origin AFTER the clone — the frozen-clone scenario.
+    (origin / "NEW.txt").write_text("added later\n")
+    second = _commit(origin, "second")
+    assert first != second
+
+    # token=None: a file:// fetch needs no auth (mirrors a public-repo refresh);
+    # for a private https repo the token would be injected into the fetch URL.
+    WorkspaceService._sync_read_clone(clone, f"file://{origin}", "master", None)
+
+    assert _git(clone, "rev-parse", "HEAD").stdout.strip() == second
+    assert (clone / "NEW.txt").is_file()
+
+
+def test_sync_read_clone_fetches_tags(tmp_path: Path) -> None:
+    """The read clone must carry tags: the release manager derives "commits
+    since last release" from the newest tag, and a tagless clone makes
+    ``git describe`` fail so it walks the entire history (the 729-commit bug)."""
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    _git(origin, "init", "-q", "-b", "master")
+    (origin / "README.md").write_text("v1\n")
+    _commit(origin, "first")
+
+    # The clone itself is tagless (--no-tags, as agent clones are) — the tag
+    # lands on origin and the read-clone refresh must pull it in.
+    clone = tmp_path / "clone"
+    _git(tmp_path, "clone", "-q", "--no-tags", str(origin), str(clone))
+    assert _git(clone, "tag").stdout.strip() == ""
+
+    # -c tag.gpgsign=false: create a lightweight tag regardless of a global
+    # signing config that would otherwise force an annotated (signed) tag.
+    _git(origin, "-c", "tag.gpgsign=false", "tag", "v0.17.0")
+
+    WorkspaceService._sync_read_clone(clone, f"file://{origin}", "master", None)
+
+    assert "v0.17.0" in _git(clone, "tag").stdout.split()
+    assert _git(clone, "describe", "--tags", "--abbrev=0").stdout.strip() == "v0.17.0"
+
+
+def test_sync_read_clone_is_best_effort_on_unreachable_origin(tmp_path: Path) -> None:
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    _git(origin, "init", "-q", "-b", "master")
+    (origin / "README.md").write_text("v1\n")
+    _commit(origin, "first")
+    clone = tmp_path / "clone"
+    _git(tmp_path, "clone", "-q", str(origin), str(clone))
+    head = _git(clone, "rev-parse", "HEAD").stdout.strip()
+
+    # A bogus origin must not raise — the refresh logs and leaves the clone as-is.
+    WorkspaceService._sync_read_clone(clone, "file:///nonexistent/repo", "master", None)
+    assert _git(clone, "rev-parse", "HEAD").stdout.strip() == head
+
+
+def test_sync_read_clone_with_token_uses_extraheader_not_url(tmp_path: Path) -> None:
+    """A private-repo refresh injects the PAT via ``-c http.extraheader``, never
+    URL-embedded into the fetch argv (mirrors the clone PAT-leak fix — H11)."""
+    clone = tmp_path / "clone"
+    clone.mkdir()
+    token = "ghp_SECRETARGV"
+    git_url = "https://github.com/o/r"
+    captured: list[list[str]] = []
+
+    def _fake_run(argv: list[str], **_kw: object) -> subprocess.CompletedProcess[str]:
+        captured.append(list(argv))
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    with patch("robofleet.services.workspace.subprocess.run", side_effect=_fake_run):
+        WorkspaceService._sync_read_clone(clone, git_url, "master", token)
+
+    fetch_argv = next(a for a in captured if "fetch" in a)
+    # Token never appears in argv...
+    assert token not in fetch_argv
+    assert f"https://{token}@" not in fetch_argv
+    # ...the bare URL is the fetch ref...
+    assert git_url in fetch_argv
+    # ...and the basic-auth extraheader carries the encoded token.
+    expected = base64.b64encode(f"x-access-token:{token}".encode()).decode()
+    assert f"http.extraheader=Authorization: Basic {expected}" in fetch_argv
+
+
+# --- ensure_read_clone force-refetch (M45) -------------------------------------
+# The 30s refresh TTL on the conventions read clone means a conventions commit
+# that merges to the default branch within 30s leaves the clone's HEAD stale,
+# so the sha-keyed conventions cache serves a stale map. `force=True` bypasses
+# the TTL so conventions reads always see the current default-branch HEAD.
+
+
+def _read_clone_service(tmp_path: Path) -> WorkspaceService:
+    # AsyncMock, not MagicMock: ensure_read_clone's fetch/clone branches now
+    # call session.commit() (_release_pool_connection, the pool-hold fix) -
+    # a MagicMock session's .commit() isn't awaitable and would TypeError.
+    svc = WorkspaceService(AsyncMock())
+    object.__setattr__(svc, "root", tmp_path)
+    return svc
+
+
+def _read_clone_workspace(svc: WorkspaceService, slug: str) -> Path:
+    workspace = svc.root / slug / "_meta" / "conventions"
+    (workspace / ".git" / "objects").mkdir(parents=True)
+    (workspace / ".git" / "HEAD").write_text("ref: refs/heads/master\n")
+    return workspace
+
+
+@pytest.mark.asyncio
+async def test_ensure_read_clone_force_bypasses_ttl(tmp_path: Path) -> None:
+    """force=True fetches even when the workspace was just synced (within TTL)."""
+    svc = _read_clone_service(tmp_path)
+    slug = "p"
+    workspace = _read_clone_workspace(svc, slug)
+    project = SimpleNamespace(
+        slug=slug, default_branch="master", git_url="https://example/o/r"
+    )
+    project_service = MagicMock()
+    project_service.get_by_slug = AsyncMock(return_value=project)
+    fetched: list[Path] = []
+
+    def _fake_sync(root: Path, *_a: object, **_k: object) -> None:
+        fetched.append(root)
+
+    # Pre-seed the synced map to "just now" so the TTL branch would skip.
+    ws_mod._read_clone_synced[str(workspace)] = ws_mod._monotonic()
+    try:
+        with (
+            patch(
+                "robofleet.services.project.get_project_service",
+                return_value=project_service,
+            ),
+            patch.object(WorkspaceService, "_is_workspace_healthy", return_value=True),
+            patch.object(
+                WorkspaceService,
+                "_read_clone_token",
+                new=staticmethod(AsyncMock(return_value=None)),
+            ),
+            patch.object(WorkspaceService, "_prune_broken_refs", return_value=None),
+            patch.object(WorkspaceService, "_sync_read_clone", side_effect=_fake_sync),
+        ):
+            await svc.ensure_read_clone(slug, force=True)
+    finally:
+        ws_mod._read_clone_synced.pop(str(workspace), None)
+
+    assert fetched, "force=True must fetch even within the 30s TTL"
+
+
+@pytest.mark.asyncio
+async def test_ensure_read_clone_default_respects_ttl(tmp_path: Path) -> None:
+    """Default force=False skips the fetch when the workspace was just synced."""
+    svc = _read_clone_service(tmp_path)
+    slug = "p"
+    workspace = _read_clone_workspace(svc, slug)
+    project = SimpleNamespace(
+        slug=slug, default_branch="master", git_url="https://example/o/r"
+    )
+    project_service = MagicMock()
+    project_service.get_by_slug = AsyncMock(return_value=project)
+    fetched: list[Path] = []
+
+    def _fake_sync(root: Path, *_a: object, **_k: object) -> None:
+        fetched.append(root)
+
+    ws_mod._read_clone_synced[str(workspace)] = ws_mod._monotonic()
+    try:
+        with (
+            patch(
+                "robofleet.services.project.get_project_service",
+                return_value=project_service,
+            ),
+            patch.object(WorkspaceService, "_is_workspace_healthy", return_value=True),
+            patch.object(
+                WorkspaceService,
+                "_read_clone_token",
+                new=staticmethod(AsyncMock(return_value=None)),
+            ),
+            patch.object(WorkspaceService, "_prune_broken_refs", return_value=None),
+            patch.object(WorkspaceService, "_sync_read_clone", side_effect=_fake_sync),
+        ):
+            await svc.ensure_read_clone(slug)
+    finally:
+        ws_mod._read_clone_synced.pop(str(workspace), None)
+
+    assert not fetched, "default force=False must skip the fetch within the TTL"

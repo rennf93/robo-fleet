@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      # The dev branch: the gated release manager's readiness sweep is
+      # fail-closed on the head rung's CI conclusion — no run reads as
+      # "unknown", which blocks every release proposal.
+      - slave
+      # Fleet task branches (GitService push/merge, robofleet/services/git.py).
+      # A revision commit that lands on a PR's head via the merge API
+      # (squash-merging a subtask PR into a parent branch) doesn't reliably
+      # fire `pull_request`'s synchronize trigger for the PR that already
+      # has that branch as its head — proven live on PR #406, where two
+      # revision merges left CI/CodeQL absent (not red) while `push` and
+      # `pull_request_target` both fired for the same ref update. A real git
+      # push always fires `pull_request`; this redundant trigger (paired
+      # with the concurrency group below) closes the gap for merge-API
+      # revisions without double-running when both events land.
+      - 'feature/**'
+      - 'bug/**'
+      - 'chore/**'
+      - 'docs/**'
+      - 'hotfix/**'
+    paths:
+      - 'robofleet/**'
+      - 'agents/**'
+      - 'alembic/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'docker/**'
+      - 'docker-compose.yml'
+      - 'Makefile'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'alembic.ini'
+      - '.github/workflows/ci.yml'
+      # Slave carries docs/panel-only commits too; the release gate needs a
+      # verdict on every head, so cover what actually lands there.
+      - 'panel/**'
+      - 'CLAUDE.md'
+      - 'CHANGELOG.md'
+      - 'docs/**'
+      # `make quality`'s prose gate lints motion/**, so a motion-only commit
+      # can still turn the gate red — without this it fires no run and a PR
+      # merges on a false green.
+      - 'motion/**'
+  pull_request:
+    branches:
+      - master
+      # Every fleet PR targets the dev branch, not master (cell->root and
+      # root->slave alike). Listing master alone meant `pull_request` never
+      # fired for them, so their ONLY coverage was the `push` trigger above
+      # — which is branch-PREFIX gated, silently leaving any head outside
+      # feature/bug/chore/docs/hotfix with zero checks rather than a red
+      # one. Basing on the target branch (what the PR merges INTO) instead
+      # of the head's name makes coverage independent of branch naming.
+      - slave
+    paths:
+      - 'robofleet/**'
+      - 'agents/**'
+      - 'alembic/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'docker/**'
+      - 'docker-compose.yml'
+      - 'Makefile'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'alembic.ini'
+      - '.github/workflows/ci.yml'
+      # Kept identical to the push trigger's paths above so an external-fork
+      # PR touching only these (panel/docs-only, motion-only, ...) still
+      # fires CI instead of merging on a false "no checks required" green.
+      - 'panel/**'
+      - 'CLAUDE.md'
+      - 'CHANGELOG.md'
+      - 'docs/**'
+      - 'motion/**'
+  workflow_dispatch:
+
+# A fleet branch that's also an open PR head can get both a `push` and a
+# `pull_request` run for the same commit; cancel the older one instead of
+# burning two runners on identical work. `head_ref` (set only for
+# pull_request) and `ref_name` (the short branch name, valid for push) both
+# resolve to the SAME branch name, so the two event shapes share one group —
+# plain `github.ref` would NOT (it's `refs/pull/<n>/merge` for pull_request
+# vs `refs/heads/<branch>` for push, so it'd never collapse them).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Python quality gate
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: robofleet
+          POSTGRES_PASSWORD: robofleet
+          POSTGRES_DB: robofleet
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U robofleet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Runtime settings (robofleet.config.Settings reads ROBOFLEET_*).
+      ROBOFLEET_DATABASE_HOST: localhost
+      ROBOFLEET_DATABASE_PORT: '5432'
+      ROBOFLEET_DATABASE_USER: robofleet
+      ROBOFLEET_DATABASE_PASSWORD: robofleet
+      ROBOFLEET_DATABASE_NAME: robofleet
+      ROBOFLEET_REDIS_HOST: localhost
+      ROBOFLEET_REDIS_PORT: '6379'
+      # Fernet key required by the security layer (utils/crypto). Test-only —
+      # a valid generated key (the previous value was 43 chars, not a real
+      # Fernet key, so encryption tests failed with "Incorrect padding").
+      ROBOFLEET_ENCRYPTION_KEY: 'yp3Awiv0zmxpRa6Gi9Y9hJbi4pZ2FXHRNr4EI6-Gx9U='
+      # The pytest harness (tests/conftest.py) provisions its own ephemeral
+      # databases via an admin connection to the `postgres` DB and reads a
+      # separate ROBOFLEET_TEST_DB_* set. The pgvector image's POSTGRES_USER is a
+      # superuser, so it can CREATE/DROP DATABASE and enable the vector extension.
+      ROBOFLEET_TEST_DB_HOST: localhost
+      ROBOFLEET_TEST_DB_PORT: '5432'
+      ROBOFLEET_TEST_DB_USER: robofleet
+      ROBOFLEET_TEST_DB_PASSWORD: robofleet
+      ROBOFLEET_TEST_DB_ADMIN_DB: postgres
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          # The release-readiness smoke test calls ``git describe --tags`` to
+          # find the most recent release tag. ``actions/checkout``'s default
+          # shallow + no-tags clone makes that return empty, which made
+          # ``test_gather_snapshot_reads_the_real_repo`` fail with
+          # ``last_tag is None`` even though master had a tagged v0.13.0.
+          # ``fetch-depth: 0`` clones full history; the default ``fetch-tags``
+          # would still skip tags on shallow clones, so we also pin it true.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Apply database migrations
+        run: uv run alembic upgrade head
+
+      - name: Run quality gate
+        run: make quality

@@ -1,0 +1,14 @@
+# Knowledge Base Tools
+
+**None of the tools this file used to document are reachable by a spawned delivery agent under the current runtime.** `robofleet_kb_search`, `robofleet_rag_query`, `robofleet_ask_mentor`, `robofleet_kb_stats`, `robofleet_docs_write`/`_read`/`_list`, `robofleet_kb_index_code`/`_index_docs`, `robofleet_search_error`/`_record_error_solution`, `robofleet_check_decision`/`_record_decision`, `robofleet_get_standards`, `robofleet_validate_action`, `robofleet_review_code` - all of these are real MCP tools defined in `robofleet/mcp/optimal_server.py` and `robofleet/mcp/docs_server.py`, but they are mounted only for the legacy Docker/CLI-container provider path (`robofleet/runtime/orchestrator.py`'s `_generate_mcp_config`). The default and, on this fleet, only actually-used delivery runtime is `ModelProvider.ADK_CLOUD_RUN` (`robofleet.agent.adk_entry`, a Google ADK `LlmAgent` on Gemini), whose tool manifest is built by `AgentOrchestrator._generate_adk_manifest` from exactly `{flow_tools, do_tools}` (`robofleet/services/gateway/role_config.py`) - no MCP server of any kind. See `docs/rag/README.md` for the full mechanism and the one automatic exception (org-memory's institutional-memory briefing).
+
+## What this means in practice
+
+- You cannot search the knowledge base, ask a mentor, or run a semantic query yourself, at all, regardless of role.
+- Documentation is written by writing a real file into the project's worktree (`write_file`, `robofleet/agent/git_tools.py`) and committing it (`commit` do-tool, developer/documenter only) - see `docs/rag/roles/documenter.md` - not through any `robofleet_docs_*` call.
+- There is no code/docs bulk-indexing tool, no error-tracking tool, no decision-tracking tool, no `validate_action`/`review_code` LLM-gate tool available to you. Rely on the task's own acceptance criteria, the conventions standard's ambient prompt block, and whatever the task prompt/evidence hands you inline.
+- The org-memory "institutional memory" briefing (`context_briefing["institutional_memory"]`, injected automatically at claim time when `org_memory_enabled` is armed, default off) is the one path that still gets KB-derived content in front of you - and only for the `LEARNINGS`/`PLAYBOOKS` indexes, never `DOCUMENTATION`. You never call anything to get it; it either shows up in your briefing or it doesn't.
+
+## If you're extending this codebase
+
+Wiring any of the above into the ADK path means adding a real named-argument `FunctionTool` to `robofleet/agent/gateway_shim.py` (an HTTP route + a specialized wrapper function, the same pattern every other tool here follows) and adding the verb/tool name to the relevant role's `do_tools` tuple in `role_config.py` - not restoring an MCP mount, which the ADK runtime has no mechanism to consume at all.

@@ -124,20 +124,26 @@ async def test_sums_closed_and_prices_open_session(db_session: AsyncSession) -> 
     price (calculate_cost) — not the open session silently counted as $0."""
     project_id, agent_id = await _seed_project(db_session)
     task_id = await _seed_task(db_session, project_id, agent_id)
-    now = datetime.now(UTC)
+    # Seed from month_start, not now: the query has a started_at >= month_start
+    # lower bound and no upper bound, so a run just after midnight on the 1st
+    # would otherwise put "now - 2h" in last month and sum 0.0. Inside the
+    # month but later than now is fine by design.
+    month_start = datetime.now(UTC).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
 
     db_session.add(
         _spawn_session(
             task_id,
-            started_at=now - timedelta(hours=2),
+            started_at=month_start + timedelta(hours=2),
             estimated_cost_usd=2.5,
-            ended_at=now - timedelta(hours=1),
+            ended_at=month_start + timedelta(hours=3),
         )
     )
     db_session.add(
         _spawn_session(
             task_id,
-            started_at=now - timedelta(minutes=30),
+            started_at=month_start + timedelta(hours=1),
             estimated_cost_usd=None,
             ended_at=None,
             tokens=(100_000, 50_000),
@@ -192,22 +198,26 @@ async def test_join_excludes_other_projects_tasks(db_session: AsyncSession) -> N
     other_project_id, other_agent_id = await _seed_project(db_session)
     my_task_id = await _seed_task(db_session, project_id, agent_id)
     other_task_id = await _seed_task(db_session, other_project_id, other_agent_id)
-    now = datetime.now(UTC)
+    # Same month_start seeding as the sums test: "now - 1h" falls in last
+    # month on a just-after-midnight run on the 1st.
+    month_start = datetime.now(UTC).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
 
     db_session.add(
         _spawn_session(
             my_task_id,
-            started_at=now - timedelta(hours=1),
+            started_at=month_start + timedelta(hours=1),
             estimated_cost_usd=1.0,
-            ended_at=now,
+            ended_at=month_start + timedelta(hours=2),
         )
     )
     db_session.add(
         _spawn_session(
             other_task_id,
-            started_at=now - timedelta(hours=1),
+            started_at=month_start + timedelta(hours=1),
             estimated_cost_usd=999.0,
-            ended_at=now,
+            ended_at=month_start + timedelta(hours=2),
         )
     )
     await db_session.flush()

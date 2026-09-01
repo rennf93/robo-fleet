@@ -1,0 +1,260 @@
+from __future__ import annotations
+
+from types import SimpleNamespace
+from typing import TYPE_CHECKING, cast
+from uuid import UUID, uuid4
+
+import pytest
+import pytest_asyncio
+from robofleet.db.tables import AgentTable, ProjectTable, TaskTable
+from robofleet.models import AgentRole, AgentStatus, Team
+from robofleet.models.base import TaskNature, TaskStatus, TaskType
+from robofleet.seeds.initial_data import AGENT_UUIDS
+from robofleet.services.base import NotFoundError
+from robofleet.services.prompter import (
+    PrompterService,
+    compose_batch_redraft_message,
+    compose_redraft_message,
+    format_board_briefing,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+
+# --------------------------------------------------------------------------- #
+# Pure helpers (no DB)
+# --------------------------------------------------------------------------- #
+def test_format_board_briefing_labels_and_orders() -> None:
+    entries = [
+        {"author_role": "product_owner", "author": "po", "title": "PO", "content": "x"},
+        {
+            "author_role": "head_marketing",
+            "author": "hom",
+            "title": "HoM",
+            "content": "y",
+        },
+    ]
+    out = format_board_briefing(entries)
+    assert "Product Owner" in out
+    assert "Head of Marketing" in out
+    assert out.index("Product Owner") < out.index("Head of Marketing")
+    assert "x" in out and "y" in out
+
+
+def test_format_board_briefing_empty() -> None:
+    assert format_board_briefing([]) == ""
+
+
+def test_compose_redraft_message_includes_draft_and_brief() -> None:
+    task = SimpleNamespace(
+        title="My Task",
+        description="The current description.",
+        acceptance_criteria=["does X", "does Y"],
+    )
+    entries = [
+        {"author_role": "product_owner", "author": "po", "title": "PO", "content": "z"}
+    ]
+    msg = compose_redraft_message(cast("TaskTable", task), entries)
+    assert "My Task" in msg
+    assert "The current description." in msg
+    assert "- does X" in msg
+    assert "Product Owner" in msg
+    assert "z" in msg
+
+
+def test_compose_batch_redraft_message_includes_every_child_and_brief() -> None:
+    umbrella = SimpleNamespace(
+        title="MegaTask: Ship the thing",
+        description="Coordinate 2 sequenced tasks as one MegaTask.",
+    )
+    children = [
+        SimpleNamespace(
+            title="Backend piece",
+            description="Backend description.",
+            acceptance_criteria=["backend ac"],
+            project=SimpleNamespace(name="robofleet-api"),
+            cell_projects=[],
+        ),
+        SimpleNamespace(
+            title="Frontend piece",
+            description="Frontend description.",
+            acceptance_criteria=["frontend ac"],
+            project=None,
+            cell_projects=[
+                SimpleNamespace(
+                    team=Team.FRONTEND, project=SimpleNamespace(name="panel-repo")
+                )
+            ],
+        ),
+    ]
+    entries = [
+        {
+            "author_role": "product_owner",
+            "author": "po",
+            "title": "PO",
+            "content": "board feedback",
+        }
+    ]
+    msg = compose_batch_redraft_message(
+        cast("TaskTable", umbrella), cast("list[TaskTable]", children), entries
+    )
+    assert "Ship the thing" in msg
+    assert "Backend piece" in msg
+    assert "robofleet-api" in msg
+    assert "backend ac" in msg
+    assert "Frontend piece" in msg
+    assert "panel-repo" in msg
+    assert "Product Owner" in msg
+    assert "board feedback" in msg
+    assert "propose_batch" in msg
+
+
+def test_compose_batch_redraft_message_no_children_is_still_valid() -> None:
+    umbrella = SimpleNamespace(title="MegaTask: Empty", description="Nothing yet.")
+    msg = compose_batch_redraft_message(cast("TaskTable", umbrella), [], [])
+    assert "Empty" in msg
+    assert "propose_batch" in msg
+
+
+# --------------------------------------------------------------------------- #
+# update_live_draft (DB)
+# --------------------------------------------------------------------------- #
+@pytest_asyncio.fixture
+async def redraft_setup(db_session: AsyncSession) -> AsyncIterator[dict]:
+    def _agent(slug: str, role: AgentRole) -> AgentTable:
+        return AgentTable(
+            id=uuid4(),
+            name=slug,
+            slug=slug,
+            role=role,
+            team=None,
+            status=AgentStatus.ACTIVE,
+            model_config={},
+            system_prompt="x",
+            capabilities=[],
+            permissions={},
+            metrics={},
+        )
+
+    # merge() with the fixed AGENT_UUIDS id: idempotent whether or not another
+    # test already committed this exact "main-pm"-slugged row on the shared
+    # session-scoped test DB (mirrors test_prompter.py's identical upsert) —
+    # an unconditional insert with a fresh random id here would collide with
+    # any other test's row on the slug's unique index.
+    main_pm = await db_session.merge(
+        AgentTable(
+            id=UUID(AGENT_UUIDS["main-pm"]),
+            name="main-pm",
+            slug="main-pm",
+            role=AgentRole.MAIN_PM,
+            team=None,
+            status=AgentStatus.ACTIVE,
+            model_config={},
+            system_prompt="x",
+            capabilities=[],
+            permissions={},
+            metrics={},
+        )
+    )
+    po = _agent(f"product-owner-{uuid4().hex[:4]}", AgentRole.PRODUCT_OWNER)
+    db_session.add(po)
+    await db_session.flush()
+    project = ProjectTable(
+        id=uuid4(),
+        name="P",
+        slug=f"p-{uuid4().hex[:6]}",
+        git_url="https://example.com/r.git",
+        assigned_cell=Team.BACKEND,
+        created_by=po.id,
+    )
+    db_session.add(project)
+    await db_session.flush()
+
+    def _board_task(board_review_complete: bool) -> TaskTable:
+        t = TaskTable(
+            id=uuid4(),
+            title="Original title",
+            description="Original description, long enough.",
+            acceptance_criteria=["original ac"],
+            status=TaskStatus.PENDING,
+            priority=2,
+            task_type=TaskType.CODE,
+            nature=TaskNature.TECHNICAL,
+            project_id=project.id,
+            created_by=po.id,
+            team=Team.BOARD,
+            board_review_complete=board_review_complete,
+            assigned_to=po.id,
+        )
+        db_session.add(t)
+        return t
+
+    yield {
+        "svc": PrompterService(db_session),
+        "db": db_session,
+        "main_pm": main_pm,
+        "po": po,
+        "mk": _board_task,
+    }
+
+
+_DRAFT = {
+    "title": "Revised title",
+    "objective": "Revised objective after board feedback for the task at hand.",
+    "acceptance_criteria": ["revised ac one", "revised ac two"],
+    "description": "Revised description that is comfortably over twenty chars.",
+}
+
+
+@pytest.mark.asyncio
+async def test_update_live_draft_main_pm_updates_and_hands_off(
+    redraft_setup: dict,
+) -> None:
+    task = redraft_setup["mk"](True)  # board review complete
+    await redraft_setup["db"].flush()
+    out_id = await redraft_setup["svc"].update_live_draft(
+        task.id, _DRAFT, route="main_pm"
+    )
+    assert out_id == task.id
+    assert task.title == "Revised title"
+    assert task.acceptance_criteria == ["revised ac one", "revised ac two"]
+    assert "Revised" in task.description
+    # Approve & Start ran → handed to Main PM.
+    assert task.assigned_to == redraft_setup["main_pm"].id
+    assert task.team == Team.MAIN_PM
+
+
+@pytest.mark.asyncio
+async def test_update_live_draft_reconciles_acceptance_criteria_ids(
+    redraft_setup: dict,
+) -> None:
+    # The wiping path: update_live_draft patches acceptance_criteria via the
+    # generic TaskService.update(), which used to leave acceptance_criteria_ids
+    # stale/mismatched against the revised criteria (the fe-pm delegate-loop
+    # incident). Must come out 1:1 with the new criteria after a redraft.
+    _N = 2
+    task = redraft_setup["mk"](True)
+    await redraft_setup["db"].flush()
+    await redraft_setup["svc"].update_live_draft(task.id, _DRAFT, route="main_pm")
+    assert len(task.acceptance_criteria_ids) == len(task.acceptance_criteria) == _N
+    assert len(set(task.acceptance_criteria_ids)) == _N
+
+
+@pytest.mark.asyncio
+async def test_update_live_draft_reboard_resets_flag(redraft_setup: dict) -> None:
+    task = redraft_setup["mk"](True)
+    await redraft_setup["db"].flush()
+    await redraft_setup["svc"].update_live_draft(task.id, _DRAFT, route="board")
+    assert task.title == "Revised title"
+    assert task.board_review_complete is False  # back for another review round
+    assert task.assigned_to == redraft_setup["po"].id  # still on the board
+    assert task.team == Team.BOARD
+
+
+@pytest.mark.asyncio
+async def test_update_live_draft_missing_task_raises(redraft_setup: dict) -> None:
+    with pytest.raises(NotFoundError):
+        await redraft_setup["svc"].update_live_draft(uuid4(), _DRAFT, route="main_pm")

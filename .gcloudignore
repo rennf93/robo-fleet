@@ -1,0 +1,56 @@
+# Trim the `gcloud builds submit .` source upload to source only.
+# Mirrors .dockerignore (the per-build context filter) so the docker steps
+# never need what is excluded here. Without this, Cloud Build uploads ~2GB
+# (.venv, node_modules, .git) on every build.
+
+.git
+.github
+.venv
+.env
+.env.*
+.gcloudignore
+
+# Python caches + build artifacts
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+dist
+build
+*.egg-info
+.tasks
+
+# Panel / motion / video-renderer node trees (each Dockerfile installs its own)
+panel/node_modules
+panel/.next
+panel/out
+panel/coverage
+panel/tsconfig.tsbuildinfo
+motion/node_modules
+video-renderer/node_modules
+
+# Local stateful data + logs
+data/
+logs/
+*.log
+
+# Terraform runtime state (secrets live in Secret Manager, not in the image)
+infra/.terraform
+infra/.terraform*
+infra/terraform.tfstate*
+infra/terraform.tfvars
+*.tfstate*
+*.tfstate.lock.info
+
+# NAS recycle bin
+\#recycle
+Recycling Bin
+
+# Editor / OS cruft
+.idea
+.vscode
+.DS_Store

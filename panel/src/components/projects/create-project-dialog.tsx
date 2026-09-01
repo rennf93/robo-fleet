@@ -1,0 +1,476 @@
+"use client";
+
+import { useState } from "react";
+import { useCreateProject } from "@/hooks/use-projects";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DIALOG_SIZES,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Key } from "lucide-react";
+import { toast } from "sonner";
+import { Team, type ProjectCreate } from "@/types";
+import { EnvironmentLadderEditor } from "@/components/projects/environment-ladder-editor";
+import { validateLadder } from "@/components/projects/ladder-validation";
+import {
+  SelectRepoDialog,
+  type SelectedRepo,
+} from "@/components/projects/select-repo-picker";
+import { HelpTip } from "@/components/ui/help-tip";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
+
+const cells: { value: Team; label: string }[] = [
+  { value: Team.BACKEND, label: "Backend" },
+  { value: Team.FRONTEND, label: "Frontend" },
+  { value: Team.UX_UI, label: "UX/UI" },
+];
+
+// Generate slug from name
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function CreateProjectDialog() {
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState<Partial<ProjectCreate>>({
+    name: "",
+    slug: "",
+    git_url: "",
+    git_token: "",
+    assigned_cell: Team.BACKEND,
+    default_branch: "main",
+    environments: null,
+  });
+  // "auto" is a UI-only sentinel — never sent as-is; null on the wire lets
+  // the backend auto-detect from the Git URL host at creation time.
+  const [gitProvider, setGitProvider] = useState("auto");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  // Set only via the "Select repo" picker below; a manually-typed/edited Git
+  // URL clears it so the project never binds to an installation whose repo
+  // no longer matches what's in the field.
+  const [githubInstallationId, setGithubInstallationId] = useState<
+    number | null
+  >(null);
+
+  const createProject = useCreateProject();
+
+  const handleNameChange = (name: string) => {
+    setFormData({
+      ...formData,
+      name,
+      slug: generateSlug(name),
+    });
+  };
+
+  const handleRepoSelected = (repo: SelectedRepo) => {
+    setFormData({ ...formData, git_url: repo.git_url });
+    setGithubInstallationId(repo.installation_id);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (
+      !formData.name ||
+      !formData.slug ||
+      !formData.git_url ||
+      !formData.assigned_cell
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    const envError = validateLadder(formData.environments ?? null);
+    if (envError) {
+      toast.error(envError);
+      return;
+    }
+
+    try {
+      await createProject.mutateAsync({
+        name: formData.name,
+        slug: formData.slug,
+        git_url: formData.git_url,
+        git_provider: gitProvider === "auto" ? null : gitProvider,
+        github_installation_id: githubInstallationId ?? undefined,
+        assigned_cell: formData.assigned_cell,
+        git_token: formData.git_token || undefined,
+        default_branch: formData.default_branch || "main",
+        environments: formData.environments ?? undefined,
+        test_command: formData.test_command || undefined,
+        lint_command: formData.lint_command || undefined,
+        format_command: formData.format_command || undefined,
+        typecheck_command: formData.typecheck_command || undefined,
+        build_command: formData.build_command || undefined,
+        quality_command: formData.quality_command || undefined,
+        codegen_command: formData.codegen_command || undefined,
+      });
+      toast.success("Project created successfully");
+      setOpen(false);
+      setFormData({
+        name: "",
+        slug: "",
+        git_url: "",
+        git_token: "",
+        assigned_cell: Team.BACKEND,
+        default_branch: "main",
+        environments: null,
+      });
+      setGitProvider("auto");
+      setGithubInstallationId(null);
+      setShowAdvanced(false);
+    } catch (error) {
+      toast.error(
+        `Failed to create project: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <HelpTip label="Registers a git repository — sets cell ownership, branch/environment ladder, and CI/CD gate commands for agents to work on it.">
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            New Project
+          </Button>
+        </DialogTrigger>
+      </HelpTip>
+      <DialogContent className={DIALOG_SIZES.md}>
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Create Project</DialogTitle>
+            <DialogDescription>
+              Register a git repository for agents to work on.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* Name */}
+            <div className="grid gap-2">
+              <HelpTip label="Display name shown across the panel and CEO approval queues; changing it later never touches the slug or workspace path already derived from it.">
+                <Label htmlFor="name">Project Name *</Label>
+              </HelpTip>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="RoboFleet API"
+              />
+            </div>
+
+            {/* Slug */}
+            <div className="grid gap-2">
+              <HelpTip label="Immutable after creation — composes each agent's workspace clone path (/data/workspaces/<slug>/<cell>/<agent>) and appears in every branch name for this project.">
+                <Label htmlFor="slug">Slug *</Label>
+              </HelpTip>
+              <Input
+                id="slug"
+                value={formData.slug}
+                onChange={(e) =>
+                  setFormData({ ...formData, slug: e.target.value })
+                }
+                placeholder="robofleet-api"
+                pattern="^[a-z0-9-]+$"
+              />
+              <p className="text-xs text-muted-foreground">
+                URL-safe identifier (lowercase letters, numbers, hyphens)
+              </p>
+            </div>
+
+            {/* Git URL */}
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <HelpTip label="Cloned into each assigned agent's workspace on first access; use HTTPS so the encrypted token below can authenticate clone, push, and PR operations.">
+                  <Label htmlFor="git_url">Git URL *</Label>
+                </HelpTip>
+                <SelectRepoDialog onSelect={handleRepoSelected} />
+              </div>
+              <Input
+                id="git_url"
+                value={formData.git_url}
+                onChange={(e) => {
+                  setFormData({ ...formData, git_url: e.target.value });
+                  // A manual edit invalidates any prior "Select repo" pick —
+                  // never bind an installation to a URL the user then changed.
+                  setGithubInstallationId(null);
+                }}
+                placeholder="https://github.com/org/repo.git"
+              />
+              <p className="text-xs text-muted-foreground">
+                {githubInstallationId
+                  ? "Filled from the GitHub App picker — git operations will use a minted installation token."
+                  : "Use HTTPS URL for token-based authentication"}
+              </p>
+            </div>
+
+            {/* Forge */}
+            <div className="grid gap-2">
+              <HelpTip label="Which forge API serves PR/CI/review operations. Auto-detect resolves from the Git URL's host at creation (github.com -> GitHub, gitlab.com -> GitLab); a self-hosted Gitea/GitLab instance or GitHub Enterprise can't be told apart by host alone and must be set explicitly.">
+                <Label>Forge</Label>
+              </HelpTip>
+              <Select value={gitProvider} onValueChange={setGitProvider}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Auto-detect" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto-detect</SelectItem>
+                  <SelectItem value="github">
+                    GitHub / GitHub Enterprise
+                  </SelectItem>
+                  <SelectItem value="gitea">Gitea (self-hosted)</SelectItem>
+                  <SelectItem value="gitlab">
+                    GitLab (gitlab.com / self-hosted)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Git Token */}
+            <div className="grid gap-2">
+              <Label htmlFor="git_token" className="flex items-center gap-1">
+                <HelpTip label="Optional at creation — stored encrypted (Fernet) and never re-displayed once saved; add or replace it later from the project's edit settings.">
+                  <Key className="h-3.5 w-3.5" />
+                </HelpTip>
+                GitHub Token
+              </Label>
+              <Input
+                id="git_token"
+                type="password"
+                value={formData.git_token || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, git_token: e.target.value })
+                }
+                placeholder="ghp_xxxxxxxxxxxx..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Personal access token with repo access for clone, push, and PR
+                operations
+              </p>
+            </div>
+
+            {/* Assigned Cell */}
+            <div className="grid gap-2">
+              <HelpTip label="Which cell owns this project — only that cell's agents can claim its tasks (enforced server-side, not just a UI filter).">
+                <Label htmlFor="assigned_cell">Assigned Cell *</Label>
+              </HelpTip>
+              <Select
+                value={formData.assigned_cell}
+                onValueChange={(value: Team) =>
+                  setFormData({ ...formData, assigned_cell: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select cell" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cells.map((cell) => (
+                    <SelectItem key={cell.value} value={cell.value}>
+                      {cell.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Default Branch */}
+            <div className="grid gap-2">
+              <HelpTip label="Used as both head and prod when no environment ladder is set below (a degenerate single-rung ladder) — the PR review gate diffs against it and releases cut from it.">
+                <Label htmlFor="default_branch">Default Branch</Label>
+              </HelpTip>
+              <Input
+                id="default_branch"
+                value={formData.default_branch}
+                onChange={(e) =>
+                  setFormData({ ...formData, default_branch: e.target.value })
+                }
+                placeholder="main"
+              />
+              <p className="text-xs text-muted-foreground">
+                Where PRs land and releases are cut when no environment ladder
+                is set below.
+              </p>
+            </div>
+
+            {/* Environment ladder */}
+            <EnvironmentLadderEditor
+              rungs={formData.environments ?? null}
+              onChange={(rungs) =>
+                setFormData({ ...formData, environments: rungs })
+              }
+            />
+
+            {/* Advanced Options */}
+            <CollapsibleSection
+              variant="button"
+              open={showAdvanced}
+              onOpenChange={setShowAdvanced}
+              title={
+                <HelpTip label="Test/Format/Build are reference-only today; Lint + Typecheck (or Quality Gate below, which replaces both) run automatically at the dev's pre-submit gate.">
+                  <span>CI/CD Commands</span>
+                </HelpTip>
+              }
+            >
+              {/* CI/CD Commands */}
+              <div className="grid gap-2">
+                <HelpTip label="Reference only — not yet wired into any automated gate or CI run by RoboFleet itself.">
+                  <Label htmlFor="test_command">Test Command</Label>
+                </HelpTip>
+                <Input
+                  id="test_command"
+                  value={formData.test_command || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, test_command: e.target.value })
+                  }
+                  placeholder="uv run pytest"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <HelpTip label="Runs at the dev's pre-submit gate (i_am_done) alongside Typecheck — unless Quality Gate Command below is set, which replaces both.">
+                  <Label htmlFor="lint_command">Lint Command</Label>
+                </HelpTip>
+                <Input
+                  id="lint_command"
+                  value={formData.lint_command || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, lint_command: e.target.value })
+                  }
+                  placeholder="uv run ruff check ."
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <HelpTip label="Reference only — deliberately excluded from the automated gate since formatting mutates files.">
+                  <Label htmlFor="format_command">Format Command</Label>
+                </HelpTip>
+                <Input
+                  id="format_command"
+                  value={formData.format_command || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      format_command: e.target.value,
+                    })
+                  }
+                  placeholder="uv run ruff format ."
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <HelpTip label="Runs at the dev's pre-submit gate (i_am_done) alongside Lint — unless Quality Gate Command below is set, which replaces both.">
+                  <Label htmlFor="typecheck_command">Typecheck Command</Label>
+                </HelpTip>
+                <Input
+                  id="typecheck_command"
+                  value={formData.typecheck_command || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      typecheck_command: e.target.value,
+                    })
+                  }
+                  placeholder="uv run mypy src/"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <HelpTip label="Reference only — not run automatically; the slow build/test suite is left to CI.">
+                  <Label htmlFor="build_command">Build Command</Label>
+                </HelpTip>
+                <Input
+                  id="build_command"
+                  value={formData.build_command || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      build_command: e.target.value,
+                    })
+                  }
+                  placeholder="pnpm build"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <HelpTip label="When set, replaces the Lint + Typecheck pair as the dev's complete pre-submit gate command.">
+                  <Label htmlFor="quality_command">Quality Gate Command</Label>
+                </HelpTip>
+                <Input
+                  id="quality_command"
+                  value={formData.quality_command || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      quality_command: e.target.value,
+                    })
+                  }
+                  placeholder="make gate"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Fast pre-submit gate (lint + types + complexity, no tests) run
+                  in the dev&apos;s workspace at hand-off to QA.
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <HelpTip label="Command that regenerates checked-in generated files, e.g. `make codegen`; run and committed before push so codegen drift never fails CI. Leave blank if the project has no generated artifacts.">
+                  <Label htmlFor="codegen_command">Codegen Command</Label>
+                </HelpTip>
+                <Input
+                  id="codegen_command"
+                  value={formData.codegen_command || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      codegen_command: e.target.value,
+                    })
+                  }
+                  placeholder="make codegen"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Regenerates checked-in generated artifacts; any drift is
+                  committed in the task&apos;s workspace before each push.
+                </p>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Autonomous maintenance (CI-watch, video engine,
+                dependency-update bot, sandbox DB/Redis/Mongo) is configured
+                after creation, from this project&apos;s Edit Project dialog.
+              </p>
+            </CollapsibleSection>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createProject.isPending}>
+              {createProject.isPending ? "Creating..." : "Create Project"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

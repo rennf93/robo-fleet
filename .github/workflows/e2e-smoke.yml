@@ -1,0 +1,93 @@
+name: E2E Smoke
+
+on:
+  push:
+    branches:
+      - master
+      - slave
+      - 'feature/**'
+      - 'bug/**'
+      - 'chore/**'
+      - 'docs/**'
+      - 'hotfix/**'
+    paths:
+      - 'robofleet/**'
+      - 'alembic/**'
+      - 'tests/**'
+      - 'Makefile'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/e2e-smoke.yml'
+  pull_request:
+    branches:
+      - master
+      - slave
+    paths:
+      - 'robofleet/**'
+      - 'alembic/**'
+      - 'tests/**'
+      - 'Makefile'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/e2e-smoke.yml'
+  workflow_dispatch:
+    
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-smoke:
+    name: e2e lifecycle smoke (scripted agents)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: robofleet
+          POSTGRES_PASSWORD: robofleet
+          POSTGRES_DB: robofleet
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U robofleet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ROBOFLEET_DATABASE_HOST: localhost
+      ROBOFLEET_DATABASE_PORT: '5432'
+      ROBOFLEET_DATABASE_USER: robofleet
+      ROBOFLEET_DATABASE_PASSWORD: robofleet
+      ROBOFLEET_DATABASE_NAME: robofleet
+      ROBOFLEET_ENCRYPTION_KEY: 'yp3Awiv0zmxpRa6Gi9Y9hJbi4pZ2FXHRNr4EI6-Gx9U='
+      ROBOFLEET_TEST_DB_HOST: localhost
+      ROBOFLEET_TEST_DB_PORT: '5432'
+      ROBOFLEET_TEST_DB_USER: robofleet
+      ROBOFLEET_TEST_DB_PASSWORD: robofleet
+      ROBOFLEET_TEST_DB_ADMIN_DB: postgres
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Configure git identity for the scripted agents
+        run: |
+          git config --global user.name "robofleet-e2e"
+          git config --global user.email "e2e@robofleet.local"
+
+      - name: Run the lifecycle smoke
+        run: make e2e-smoke

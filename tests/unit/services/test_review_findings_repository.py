@@ -1,0 +1,517 @@
+"""Real-DB tests for ReviewFindingsRepository — the revision-findings ledger.
+
+Follows the ``test_audit_real_query.py`` / ``test_vault_task_queries_real.py``
+pattern: real Postgres via the session-scoped test DB (local:
+ROBOFLEET_TEST_DB_PORT=55432 ROBOFLEET_TEST_DB_USER=renzof).
+``Base.metadata.create_all``
+builds the schema from live ORM metadata, so ``TaskReviewFindingTable`` needs no
+migration replay here.
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
+
+import pytest
+from robofleet.db.tables import AgentTable, TaskTable
+from robofleet.foundation.policy.content import Finding, Severity
+from robofleet.models.base import AgentRole, AgentStatus, TaskStatus, TaskType, Team
+from robofleet.services.repositories.review_findings import (
+    STATUS_ADDRESSED,
+    STATUS_OPEN,
+    STATUS_VERIFIED,
+    STATUS_WAIVED,
+    ReviewFindingsRepository,
+)
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+_EXPECTED_TWO = 2
+
+
+async def _seed_agent(session: AsyncSession) -> UUID:
+    agent = AgentTable(
+        id=uuid4(),
+        name="Ledger Test Agent",
+        slug=f"ledger-test-{uuid4().hex[:8]}",
+        role=AgentRole.DEVELOPER,
+        team=None,
+        status=AgentStatus.ACTIVE,
+        model_config={},
+        system_prompt="ledger test",
+        capabilities=[],
+        permissions={},
+        metrics={},
+    )
+    session.add(agent)
+    await session.flush()
+    return UUID(str(agent.id))
+
+
+async def _seed_task(
+    session: AsyncSession,
+    created_by: UUID,
+    *,
+    status: TaskStatus = TaskStatus.NEEDS_REVISION,
+    completed_at: datetime | None = None,
+) -> UUID:
+    task = TaskTable(
+        id=uuid4(),
+        title="ledger seed task",
+        description="seed",
+        acceptance_criteria=["seeded"],
+        status=status,
+        priority=2,
+        task_type=TaskType.CODE,
+        team=Team.BACKEND,
+        created_by=created_by,
+        completed_at=completed_at,
+    )
+    session.add(task)
+    await session.flush()
+    return UUID(str(task.id))
+
+
+def _finding(**overrides: object) -> Finding:
+    base: dict[str, object] = {
+        "file": "robofleet/services/task.py",
+        "line": 10,
+        "severity": Severity.MAJOR,
+        "expected": "raises on bad input",
+        "actual": "swallows the error",
+    }
+    base.update(overrides)
+    return Finding.model_validate(base)
+
+
+@pytest.mark.asyncio
+async def test_insert_many_persists_one_row_per_finding(
+    db_session: AsyncSession,
+) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding(), _finding(criterion="AC1")],
+    )
+
+    assert len(rows) == _EXPECTED_TWO
+    assert all(r.id is not None for r in rows)
+    assert all(r.status == STATUS_OPEN for r in rows)
+    assert all(r.round == 1 for r in rows)
+    assert all(r.origin == "qa" for r in rows)
+    assert rows[1].criterion == "AC1"
+
+
+@pytest.mark.asyncio
+async def test_list_for_task_orders_newest_round_first(
+    db_session: AsyncSession,
+) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+
+    await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding()],
+    )
+    await repo.insert_many(
+        task_id=task_id,
+        origin="pr_gate",
+        round=2,
+        author_slug="be-pr-reviewer",
+        findings=[_finding(actual="round 2 issue")],
+    )
+
+    rows = await repo.list_for_task(task_id)
+    assert [r.round for r in rows] == [2, 1]
+
+
+@pytest.mark.asyncio
+async def test_list_for_task_filters_by_status(db_session: AsyncSession) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding()],
+    )
+    await repo.mark_addressed(task_id, str(rows[0].id), commit="abc123", note="fixed")
+
+    open_rows = await repo.list_for_task(task_id, status=STATUS_OPEN)
+    addressed_rows = await repo.list_for_task(task_id, status=STATUS_ADDRESSED)
+    assert open_rows == []
+    assert len(addressed_rows) == 1
+
+
+@pytest.mark.asyncio
+async def test_list_for_task_scoped_to_one_task(db_session: AsyncSession) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_a = await _seed_task(db_session, agent_id)
+    task_b = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+    await repo.insert_many(
+        task_id=task_a, origin="qa", round=1, author_slug="be-qa", findings=[_finding()]
+    )
+
+    assert len(await repo.list_for_task(task_a)) == 1
+    assert await repo.list_for_task(task_b) == []
+
+
+@pytest.mark.asyncio
+async def test_mark_addressed_by_full_id(db_session: AsyncSession) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding()],
+    )
+
+    updated = await repo.mark_addressed(
+        task_id, str(rows[0].id), commit="deadbeef", note="fixed the guard"
+    )
+    assert updated is not None
+    assert updated.status == STATUS_ADDRESSED
+    assert updated.addressed_by_commit == "deadbeef"
+    assert updated.resolution_note == "fixed the guard"
+
+
+@pytest.mark.asyncio
+async def test_mark_addressed_by_8_char_prefix(db_session: AsyncSession) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding()],
+    )
+    prefix = str(rows[0].id)[:8]
+
+    updated = await repo.mark_addressed(task_id, prefix, commit=None, note=None)
+    assert updated is not None
+    assert updated.id == rows[0].id
+
+
+@pytest.mark.asyncio
+async def test_mark_addressed_unknown_ref_is_a_noop(db_session: AsyncSession) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+    await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding()],
+    )
+
+    result = await repo.mark_addressed(task_id, "ffffffff", commit=None, note=None)
+    assert result is None
+    assert len(await repo.list_for_task(task_id, status=STATUS_OPEN)) == 1
+
+
+@pytest.mark.asyncio
+async def test_mark_addressed_wrong_task_is_a_noop(db_session: AsyncSession) -> None:
+    """A finding_ref that exists but belongs to a DIFFERENT task must not match —
+    an agent can never address another task's finding."""
+    agent_id = await _seed_agent(db_session)
+    task_a = await _seed_task(db_session, agent_id)
+    task_b = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_a, origin="qa", round=1, author_slug="be-qa", findings=[_finding()]
+    )
+
+    result = await repo.mark_addressed(task_b, str(rows[0].id), commit=None, note=None)
+    assert result is None
+    assert len(await repo.list_for_task(task_a, status=STATUS_OPEN)) == 1
+
+
+@pytest.mark.asyncio
+async def test_mark_verified_bulk_by_id(db_session: AsyncSession) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding(), _finding(actual="second")],
+    )
+    ids = [UUID(str(r.id)) for r in rows]
+
+    count = await repo.mark_verified(ids)
+    assert count == _EXPECTED_TWO
+    verified = await repo.list_for_task(task_id, status=STATUS_VERIFIED)
+    assert len(verified) == _EXPECTED_TWO
+
+
+@pytest.mark.asyncio
+async def test_mark_verified_empty_list_is_a_noop(db_session: AsyncSession) -> None:
+    repo = ReviewFindingsRepository(db_session)
+    assert await repo.mark_verified([]) == 0
+
+
+@pytest.mark.asyncio
+async def test_mark_waived_requires_note(db_session: AsyncSession) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding()],
+    )
+
+    ok = await repo.mark_waived(UUID(str(rows[0].id)), "not a real defect")
+    assert ok is True
+    waived = await repo.list_for_task(task_id, status=STATUS_WAIVED)
+    assert len(waived) == 1
+    assert waived[0].resolution_note == "not a real defect"
+
+
+@pytest.mark.asyncio
+async def test_mark_waived_unknown_id_returns_false(db_session: AsyncSession) -> None:
+    repo = ReviewFindingsRepository(db_session)
+    assert await repo.mark_waived(uuid4(), "note") is False
+
+
+@pytest.mark.asyncio
+async def test_list_open_findings_cross_task_blocking_first(
+    db_session: AsyncSession,
+) -> None:
+    """list_open_findings returns OPEN rows across tasks, blocker first."""
+    agent_id = await _seed_agent(db_session)
+    task_a = await _seed_task(db_session, agent_id)
+    task_b = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+
+    await repo.insert_many(
+        task_id=task_a,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding(severity=Severity.MINOR)],
+    )
+    await repo.insert_many(
+        task_id=task_b,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding(severity=Severity.BLOCKER)],
+    )
+    # Waive the minor one so only the blocker is OPEN.
+    open_rows = await repo.list_for_task(task_a, status=STATUS_OPEN)
+    await repo.mark_waived(UUID(str(open_rows[0].id)), "waived in test")
+
+    result = await repo.list_open_findings(limit=20)
+    assert len(result) == 1
+    assert result[0].severity == Severity.BLOCKER.value
+    assert str(result[0].task_id) == str(task_b)
+
+
+@pytest.mark.asyncio
+async def test_list_open_findings_excludes_non_open(
+    db_session: AsyncSession,
+) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(db_session, agent_id)
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding(severity=Severity.NIT)],
+    )
+    await repo.mark_waived(UUID(str(rows[0].id)), "nit, skip")
+    assert await repo.list_open_findings(limit=20) == []
+
+
+# escaped_defects_since — the Company Scorecard's "0 critical escaped defects"
+# metric: a blocker finding still ADDRESSED (never independently VERIFIED by
+# its own raising origin) on a task that has since gone COMPLETED, in-window.
+
+
+@pytest.mark.asyncio
+async def test_escaped_defects_since_counts_addressed_blocker_on_completed_task(
+    db_session: AsyncSession,
+) -> None:
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(
+        db_session,
+        agent_id,
+        status=TaskStatus.COMPLETED,
+        completed_at=datetime.now(UTC),
+    )
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="pr_gate",
+        round=1,
+        author_slug="be-dev-1",
+        findings=[_finding(severity=Severity.BLOCKER)],
+    )
+    await repo.mark_addressed(task_id, str(rows[0].id), commit="abc123", note="fixed")
+
+    result = await repo.escaped_defects_since(datetime.now(UTC) - timedelta(days=30))
+    assert result == [(task_id, "pr_gate")]
+
+
+@pytest.mark.asyncio
+async def test_escaped_defects_since_excludes_verified_blocker(
+    db_session: AsyncSession,
+) -> None:
+    """A blocker VERIFIED by its raising origin was actually re-confirmed —
+    not an escaped defect."""
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(
+        db_session,
+        agent_id,
+        status=TaskStatus.COMPLETED,
+        completed_at=datetime.now(UTC),
+    )
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding(severity=Severity.BLOCKER)],
+    )
+    await repo.mark_addressed(task_id, str(rows[0].id), commit=None, note=None)
+    await repo.mark_verified([UUID(str(rows[0].id))])
+
+    result = await repo.escaped_defects_since(datetime.now(UTC) - timedelta(days=30))
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_escaped_defects_since_excludes_non_blocker_severity(
+    db_session: AsyncSession,
+) -> None:
+    """Only blocker severity counts — a major finding, however unresolved,
+    is not a "critical escaped defect"."""
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(
+        db_session,
+        agent_id,
+        status=TaskStatus.COMPLETED,
+        completed_at=datetime.now(UTC),
+    )
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding(severity=Severity.MAJOR)],
+    )
+    await repo.mark_addressed(task_id, str(rows[0].id), commit=None, note=None)
+
+    result = await repo.escaped_defects_since(datetime.now(UTC) - timedelta(days=30))
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_escaped_defects_since_excludes_non_terminal_task(
+    db_session: AsyncSession,
+) -> None:
+    """A still-open task hasn't shipped anything yet — nothing has escaped.
+    (This case is actually pinned by the `completed_at IS NOT NULL` condition,
+    since a non-terminal task never has one set — see the sibling test below
+    for a case that isolates the `status == COMPLETED` filter itself.)"""
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(db_session, agent_id)  # default: NEEDS_REVISION
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding(severity=Severity.BLOCKER)],
+    )
+    await repo.mark_addressed(task_id, str(rows[0].id), commit=None, note=None)
+
+    result = await repo.escaped_defects_since(datetime.now(UTC) - timedelta(days=30))
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_escaped_defects_since_excludes_non_completed_status(
+    db_session: AsyncSession,
+) -> None:
+    """Isolates the `TaskTable.status == COMPLETED` filter: a CANCELLED task
+    with a (synthetic, out-of-band) `completed_at` set inside the window would
+    still pass the two `completed_at` conditions alone — only the status
+    check excludes it. Without this case, deleting the status filter leaves
+    every other test passing (proven by mutation testing)."""
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(
+        db_session,
+        agent_id,
+        status=TaskStatus.CANCELLED,
+        completed_at=datetime.now(UTC),
+    )
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding(severity=Severity.BLOCKER)],
+    )
+    await repo.mark_addressed(task_id, str(rows[0].id), commit=None, note=None)
+
+    result = await repo.escaped_defects_since(datetime.now(UTC) - timedelta(days=30))
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_escaped_defects_since_excludes_outside_window(
+    db_session: AsyncSession,
+) -> None:
+    """A task completed before the window cutoff doesn't count toward it."""
+    agent_id = await _seed_agent(db_session)
+    task_id = await _seed_task(
+        db_session,
+        agent_id,
+        status=TaskStatus.COMPLETED,
+        completed_at=datetime.now(UTC) - timedelta(days=40),
+    )
+    repo = ReviewFindingsRepository(db_session)
+    rows = await repo.insert_many(
+        task_id=task_id,
+        origin="qa",
+        round=1,
+        author_slug="be-qa",
+        findings=[_finding(severity=Severity.BLOCKER)],
+    )
+    await repo.mark_addressed(task_id, str(rows[0].id), commit=None, note=None)
+
+    result = await repo.escaped_defects_since(datetime.now(UTC) - timedelta(days=30))
+    assert result == []

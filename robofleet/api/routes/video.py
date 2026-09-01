@@ -1,0 +1,431 @@
+"""Video engine API — on-demand requests, the held-draft approve/reject/list
+queue, and the engine's own poster credentials. CEO-only throughout. Nothing
+here posts except an explicit ``approve``; credentials are write-only (the
+API never returns plaintext)."""
+
+from __future__ import annotations
+
+import asyncio
+from typing import cast
+from uuid import UUID
+
+from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import FileResponse, StreamingResponse
+
+from robofleet.api.deps import CurrentAgentContext, DbSession
+from robofleet.api.schemas.video import (
+    TikTokCredentialsSetRequest,
+    TikTokCredentialsStatus,
+    VideoPipelineItemResponse,
+    VideoPostApproveRequest,
+    VideoPostExecuteResponse,
+    VideoPostHistoryResponse,
+    VideoPostRejectRequest,
+    VideoPostResponse,
+    VideoPreviewFramesResponse,
+    VideoRequestBody,
+    VideoRequestResponse,
+)
+from robofleet.api.utils.video import (
+    _list_orientation_frames,
+    _previews_root,
+    _real_video_post_service,
+    _require_ceo,
+    _resolve_preview_path,
+    _resolve_video_cut,
+    _resolve_video_task_project,
+    _to_history_response,
+    _to_pipeline_item,
+    _to_response,
+)
+from robofleet.config import settings
+from robofleet.foundation.policy.content import markers
+from robofleet.security import guard_deco
+from robofleet.services import minio_client
+from robofleet.services.project import get_project_service
+from robofleet.services.task import VIDEO_POST_SOURCE, VIDEO_SOURCE, get_task_service
+from robofleet.services.tiktok_credentials import (
+    TikTokCredentialsValidationError,
+    get_tiktok_credentials_service,
+)
+from robofleet.services.video_engine import get_video_engine
+from robofleet.services.video_post_service import (
+    VideoCaptionTooLongError,
+    get_video_post_service,
+)
+from robofleet.services.workspace import WorkspaceError, get_workspace_service
+
+router = APIRouter()
+tiktok_router = APIRouter()
+
+_VALID_CUTS = ("vertical", "square")
+
+
+@router.post("/request", response_model=VideoRequestResponse)
+@guard_deco.rate_limit(requests=20, window=60)
+@guard_deco.block_clouds()
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+async def request_video(
+    data: VideoRequestBody,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> VideoRequestResponse:
+    """Open a UX/UI video-authoring task for the CEO's on-demand brief,
+    scoped to ``data.project_id``.
+
+    Returns ``disabled`` when the video engine is off. 404s when
+    ``project_id`` doesn't resolve to a project, or that project hasn't
+    opted into the video engine (``video_engine_enabled`` is off on it).
+    Returns ``not_opened`` when ``open_video_task`` no-ops for any other
+    reason (a duplicate occasion or the open-post cap) — not an error, just
+    nothing to do.
+    """
+    _require_ceo(agent)
+    if not settings.video_engine_enabled:
+        return VideoRequestResponse(
+            status="disabled",
+            detail="The video engine is disabled (video_engine_enabled is off).",
+        )
+    engine = get_video_engine(db)
+    project = await engine.resolve_authoring_project(
+        project_id=data.project_id, occasion=data.occasion
+    )
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="project not found or not opted into the video engine",
+        )
+    task = await engine.open_video_task(
+        occasion=data.occasion,
+        script=data.brief,
+        platforms=data.platforms,
+        brief=data.brief,
+        project_id=data.project_id,
+    )
+    if task is None:
+        return VideoRequestResponse(
+            status="not_opened",
+            detail=(
+                "No video task was opened (a duplicate occasion or the open-post cap)."
+            ),
+        )
+    await db.commit()
+    return VideoRequestResponse(
+        status="opened", task_id=str(task.id), detail="Video-authoring task opened."
+    )
+
+
+@router.get("/posts", response_model=list[VideoPostResponse])
+async def list_video_posts(
+    db: DbSession, agent: CurrentAgentContext
+) -> list[VideoPostResponse]:
+    """Every held video_post draft (rendered clip) awaiting the CEO."""
+    _require_ceo(agent)
+    tasks = await get_video_post_service(db).list_held_video_posts()
+    return [_to_response(t) for t in tasks]
+
+
+@router.get("/pipeline", response_model=list[VideoPipelineItemResponse])
+async def list_video_pipeline(
+    db: DbSession, agent: CurrentAgentContext
+) -> list[VideoPipelineItemResponse]:
+    """Every in-flight source=video authoring task, from claim through the
+    render loop's retry/failure states — the Social page's pipeline-
+    visibility strip. A rendered task has already materialized its
+    video_post draft (visible instead via ``/posts``) and drops out here."""
+    _require_ceo(agent)
+    tasks = await get_task_service(db).list_video_pipeline_tasks()
+    return [_to_pipeline_item(t) for t in tasks]
+
+
+@router.post("/pipeline/{task_id}/rerender", response_model=VideoPipelineItemResponse)
+@guard_deco.rate_limit(requests=20, window=60)
+@guard_deco.block_clouds()
+async def rerender_video_task(
+    task_id: UUID, db: DbSession, agent: CurrentAgentContext
+) -> VideoPipelineItemResponse:
+    """Clear a completed video-authoring task's render idempotency keys
+    (``render_status``/``render_attempts``/``render_error``) so the next
+    render cycle re-picks it up and re-renders it. 404s when there's no such
+    completed authoring task with a proposed composition."""
+    _require_ceo(agent)
+    task = await get_video_engine(db).rerender(task_id)
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No such completed video task with a proposed composition",
+        )
+    await db.commit()
+    return _to_pipeline_item(task)
+
+
+@router.get("/preview/{task_id}/{file_path:path}", response_model=None)
+async def get_video_preview(
+    task_id: UUID,
+    file_path: str,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> FileResponse:
+    """Serve a video-authoring task's composition HTML + sibling assets
+    (kit/public/etc.) straight off its project's merged read-clone — the
+    panel's live preview iframe. ``file_path`` is relative to the resolved
+    workspace root (e.g. ``motion/compositions/<id>/vertical.html``);
+    confined there so it can't traverse out, per ``_resolve_preview_path``.
+    CEO-only; the response carries explicit iframe-permitting headers so the
+    panel can embed it.
+    """
+    _require_ceo(agent)
+    task = await get_task_service(db).get(task_id)
+    if task is None or task.source != VIDEO_SOURCE or task.project_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No such video task"
+        )
+    project = await get_project_service(db).get(cast("UUID", task.project_id))
+    if project is None or not project.slug:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+    try:
+        workspace = await get_workspace_service(db).ensure_read_clone(project.slug)
+    except WorkspaceError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    resolved = _resolve_preview_path(workspace.resolve(), file_path)
+    if resolved is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No such preview file"
+        )
+    return FileResponse(
+        resolved,
+        headers={
+            "X-Frame-Options": "SAMEORIGIN",
+            "Content-Security-Policy": "frame-ancestors 'self'",
+        },
+    )
+
+
+@router.get("/preview-frames/{task_id}", response_model=VideoPreviewFramesResponse)
+async def get_video_preview_frames(
+    task_id: UUID,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> VideoPreviewFramesResponse:
+    """A video-authoring task's request_render preview — every extracted
+    frame per orientation, ordered, with its in-video timestamp. The only
+    thing the CEO has to look at before the post-completion render loop
+    produces the real MP4 — an awaiting_ceo_approval task otherwise has
+    nothing to preview. 404s when there's no such video task, or nothing
+    was ever rendered.
+    """
+    _require_ceo(agent)
+    task, project = await _resolve_video_task_project(task_id, db)
+    root = _previews_root(project.slug, task_id)
+    frames = {cut: _list_orientation_frames(root / cut) for cut in _VALID_CUTS}
+    if not any(frames.values()):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No render preview frames for this task",
+        )
+    preview = markers.get_render_preview(task) or {}
+    return VideoPreviewFramesResponse(
+        task_id=str(task.id),
+        composition_id=preview.get("composition_id"),
+        duration_seconds=preview.get("duration_seconds"),
+        head_sha=preview.get("head_sha"),
+        dirty=preview.get("dirty"),
+        rendered_at=preview.get("at"),
+        frames=frames,
+    )
+
+
+@router.get("/preview-frames/{task_id}/{orientation}/{filename}", response_model=None)
+async def get_video_preview_frame(
+    task_id: UUID,
+    orientation: str,
+    filename: str,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> FileResponse:
+    """Stream one extracted preview-frame PNG. Confinement mirrors
+    ``_resolve_preview_path`` (get_video_preview's composition-HTML proxy) —
+    same root-relative resolve + ``..``/escape rejection + is_file check,
+    scoped to this task's ``.previews/`` dir instead of its read-clone.
+    400 on an orientation outside {vertical, square}; 404 on a missing
+    task/frame.
+    """
+    _require_ceo(agent)
+    if orientation not in _VALID_CUTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"orientation must be one of {_VALID_CUTS!r}",
+        )
+    _task, project = await _resolve_video_task_project(task_id, db)
+    root = _previews_root(project.slug, task_id)
+    resolved = _resolve_preview_path(root, f"{orientation}/{filename}")
+    if resolved is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No such preview frame"
+        )
+    return FileResponse(resolved, media_type="image/png")
+
+
+@router.get("/posts/history", response_model=list[VideoPostHistoryResponse])
+async def list_video_post_history(
+    db: DbSession,
+    agent: CurrentAgentContext,
+    limit: int = Query(default=50, ge=1, le=200),
+) -> list[VideoPostHistoryResponse]:
+    """Posted or rejected video_post drafts, newest-acted-first, bounded by
+    `limit`."""
+    _require_ceo(agent)
+    tasks = await get_video_post_service(db).list_video_post_history(limit=limit)
+    return [_to_history_response(t) for t in tasks]
+
+
+@router.get("/posts/{task_id}/media", response_model=None)
+async def get_video_post_media(
+    task_id: UUID,
+    cut: str,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> StreamingResponse | FileResponse:
+    """Serve one rendered MP4 cut of a held video_post draft — the panel
+    preview player's ``src``. 404s on a missing task/cut/file; 400 on a
+    ``cut`` outside {vertical, square}.
+
+    When MinIO is configured (``minio_endpoint`` set) the route streams the
+    object from MinIO via ``minio_client.get_object_stream`` (key = the
+    basename of ``mp4_path``). Auth stays end-to-end — ``_require_ceo`` is
+    kept, no presigned URLs, no redirect — so the panel's axios-blob flow is
+    unchanged (same URL, headers, body — just chunked). Falls back to
+    ``FileResponse`` from the local render dir when MinIO is unconfigured OR
+    on ``S3Error`` (old renders not yet in MinIO / MinIO down). The local file
+    existence + confinement checks stay as defense-in-depth."""
+    _require_ceo(agent)
+    if cut not in _VALID_CUTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"cut must be one of {_VALID_CUTS!r}",
+        )
+    task = await get_task_service(db).get(task_id)
+    if task is None or task.source != VIDEO_POST_SOURCE:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No such video draft"
+        )
+    mp4_path = _resolve_video_cut(task, cut)
+    key = mp4_path.name
+    if minio_client.get_client() is not None:
+        try:
+            # Eager probe so a missing object / down MinIO raises HERE — the
+            # fallback below catches it. get_object_stream is a lazy generator,
+            # so wrapping StreamingResponse(...) alone wouldn't catch S3Error:
+            # it fires on the first next(), after Starlette has started
+            # streaming and the response is no longer take-back-able.
+            await asyncio.to_thread(minio_client.stat_object, key)
+        except Exception:
+            # NoSuchKey (old render not yet in MinIO) or MinIO down — fall
+            # back to the local file, which is the source of truth. Auth
+            # already passed; this is purely a storage-read fallback.
+            pass
+        else:
+            return StreamingResponse(
+                minio_client.get_object_stream(key),
+                media_type="video/mp4",
+            )
+    return FileResponse(mp4_path, media_type="video/mp4")
+
+
+@router.post("/posts/{task_id}/approve", response_model=VideoPostExecuteResponse)
+@guard_deco.rate_limit(requests=20, window=60)
+@guard_deco.block_clouds()
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+async def approve_video_post(
+    task_id: UUID,
+    data: VideoPostApproveRequest,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> VideoPostExecuteResponse:
+    """Post the draft's platforms (optionally with the CEO's edited captions).
+
+    Idempotent: approving an already-posted draft returns ``already_posted``
+    without calling any poster again.
+    """
+    _require_ceo(agent)
+    svc = await _real_video_post_service(db)
+    try:
+        result = await svc.approve(
+            task_id, x_caption=data.x_caption, tiktok_caption=data.tiktok_caption
+        )
+    except VideoCaptionTooLongError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No such open video draft"
+        )
+    await db.commit()
+    return VideoPostExecuteResponse(
+        status=result.status, posted=result.posted, detail=result.detail
+    )
+
+
+@router.post("/posts/{task_id}/reject", response_model=VideoPostResponse)
+@guard_deco.rate_limit(requests=20, window=60)
+@guard_deco.block_clouds()
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+async def reject_video_post(
+    task_id: UUID,
+    data: VideoPostRejectRequest,
+    db: DbSession,
+    agent: CurrentAgentContext,
+) -> VideoPostResponse:
+    """Decline the draft with a reason; it is cancelled (never posted)."""
+    _require_ceo(agent)
+    task = await get_video_post_service(db).reject(task_id, data.reason)
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No such open video draft"
+        )
+    await db.commit()
+    return _to_response(task)
+
+
+@tiktok_router.get("/credentials", response_model=TikTokCredentialsStatus)
+async def get_tiktok_credentials(
+    db: DbSession, agent: CurrentAgentContext
+) -> TikTokCredentialsStatus:
+    """Whether the four TikTok OAuth2 secrets are stored. Never the secrets."""
+    _require_ceo(agent)
+    has_creds = await get_tiktok_credentials_service(db).has_credentials()
+    return TikTokCredentialsStatus(has_credentials=has_creds)
+
+
+@tiktok_router.post("/credentials", response_model=TikTokCredentialsStatus)
+@guard_deco.rate_limit(requests=10, window=60)
+@guard_deco.max_request_size(size_bytes=8192)
+@guard_deco.block_clouds()
+@guard_deco.content_type_filter(["application/json"])
+@guard_deco.honeypot_detection(["email", "phone", "website"])
+@guard_deco.usage_monitor(max_calls=30, window=3600)
+async def set_tiktok_credentials(
+    data: TikTokCredentialsSetRequest, db: DbSession, agent: CurrentAgentContext
+) -> TikTokCredentialsStatus:
+    """Set (or, passing all four empty, clear) the four TikTok OAuth2 secrets."""
+    _require_ceo(agent)
+    svc = get_tiktok_credentials_service(db)
+    try:
+        has_creds = await svc.set_credentials(
+            client_key=data.client_key,
+            client_secret=data.client_secret,
+            access_token=data.access_token,
+            refresh_token=data.refresh_token,
+        )
+    except TikTokCredentialsValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
+    await db.commit()
+    return TikTokCredentialsStatus(has_credentials=has_creds)

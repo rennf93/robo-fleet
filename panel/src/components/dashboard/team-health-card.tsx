@@ -1,0 +1,94 @@
+"use client";
+
+import { TeamHealth } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { HelpTip } from "@/components/ui/help-tip";
+import { HealthIndicator } from "./health-indicator";
+import { Users, AlertTriangle, TrendingUp } from "lucide-react";
+
+interface TeamHealthCardProps {
+  health: TeamHealth;
+}
+
+const HEALTH_STATUS_TIP: Record<TeamHealth["status"], string> = {
+  ok: "Healthy — blocked ratio is low and work is flowing",
+  slow: "Slow — a meaningful share of this team's tasks are blocked",
+  critical: "Critical — most of this team's tasks are blocked; needs attention",
+};
+
+export function TeamHealthCard({ health }: TeamHealthCardProps) {
+  const teamName = health.team.replace(/_/g, " ");
+
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg capitalize">{teamName}</CardTitle>
+          <HelpTip label={HEALTH_STATUS_TIP[health.status]}>
+            <span>
+              <HealthIndicator status={health.status} size="sm" />
+            </span>
+          </HelpTip>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Active Tasks */}
+        <HelpTip label="Tasks this team currently has claimed or in progress">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Users className="h-4 w-4" />
+              Active
+            </div>
+            <span className="font-medium">{health.active_tasks}</span>
+          </div>
+        </HelpTip>
+
+        {/* Blocked Tasks */}
+        <HelpTip label="Tasks this team currently has in the blocked status">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <AlertTriangle className="h-4 w-4" />
+              Blocked
+            </div>
+            <span
+              className={`font-medium ${health.blocked_tasks > 0 ? "text-red-600" : ""}`}
+            >
+              {health.blocked_tasks}
+            </span>
+          </div>
+        </HelpTip>
+
+        {/* Completed This Week */}
+        <HelpTip label="Tasks this team completed in the last 7 days">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <TrendingUp className="h-4 w-4" />
+              Completed (7d)
+            </div>
+            <span className="font-medium">{health.completed_this_week}</span>
+          </div>
+        </HelpTip>
+
+        {/* Blocked Ratio */}
+        {health.blocked_ratio > 0 && (
+          <div className="pt-2 border-t">
+            <HelpTip label="Share of this team's active tasks currently blocked">
+              <Badge
+                variant={
+                  health.blocked_ratio > 0.3
+                    ? "destructive"
+                    : health.blocked_ratio > 0.1
+                      ? "secondary"
+                      : "outline"
+                }
+              >
+                {Math.round(health.blocked_ratio * 100)}% blocked
+              </Badge>
+            </HelpTip>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

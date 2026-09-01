@@ -1,0 +1,446 @@
+"""Server-overload parking: break the 529/500 -> crash -> respawn cost loop.
+
+A persistent overload (HTTP 529 / 500 / 503) from the model API kills the run;
+the orchestrator parks the provider — the same break as a 429 rate limit —
+instead of crash-retrying straight back into the overload. The probe-resume
+loop revives the task when the provider recovers. These tests exercise the
+decision points deterministically (logs + tracker + finalize stubbed).
+"""
+
+from __future__ import annotations
+
+import asyncio
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock
+
+import pytest
+from robofleet.config import settings
+from robofleet.models.runtime import AgentInstance, WaitingRecord
+from robofleet.runtime.orchestrator import (
+    _OVERLOAD_RETRY_AFTER_S,
+    _RATE_LIMIT_RETRY_AFTER_S,
+    AgentOrchestrator,
+    AgentState,
+)
+
+_OVERLOAD_LOG = (
+    'API Error: 529 {"type":"error","error":{"type":"overloaded_error",'
+    '"message":"Overloaded"}}'
+)
+_CLEAN_LOG = "be-dev-1 finished editing src/app.py; all checks passed"
+_SESSION_LIMIT_LOG = (
+    '{"type":"result","is_error":true,"api_error_status":429,'
+    '"result":"You have hit your session limit - resets 1am (UTC)",'
+    '"rate_limit_info":{"rateLimitType":"five_hour"}}'
+)
+
+
+def _instance(provider_type: str | None = "anthropic") -> AgentInstance:
+    cfg = type(
+        "C",
+        (),
+        {"provider_type": provider_type, "model": "claude-x", "git_context": None},
+    )()
+    inst = AgentInstance(agent_id="be-dev-1", state=AgentState.ACTIVE, config=cfg)
+    inst.current_task_id = "task-1"
+    inst.container_id = "cid"
+    return inst
+
+
+@pytest.fixture
+def orch(monkeypatch: pytest.MonkeyPatch) -> AgentOrchestrator:
+    orch = AgentOrchestrator.__new__(AgentOrchestrator)
+    # Tests for parking detection control docker logs directly; keep the durable
+    # transcript fallback empty by default so dev environments with stray
+    # transcripts do not make the tests flaky.
+    monkeypatch.setattr(orch, "_transcript_tail_text", lambda _a, _lines=80: "")
+    orch._waiting_records = {}
+    orch._rate_limit_ceo_notified = set()
+    orch._instances = {}
+    orch._bg_tasks = set()
+    orch._resume_confirm_delay = 0.0  # #71: deterministic liveness confirmation
+    return orch
+
+
+class _FakeTracker:
+    def __init__(self) -> None:
+        self.activated_with: dict[str, object] | None = None
+        self.clear = AsyncMock()
+
+    async def activate(
+        self, *, retry_after: float, affected_agents: list[str], kind: str
+    ) -> None:
+        self.activated_with = {
+            "retry_after": retry_after,
+            "affected_agents": affected_agents,
+            "kind": kind,
+        }
+
+
+# ---------------------------------------------------------------------------
+# _provider_overload_park_target — the detection decision
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_detects_overload_marker_for_anthropic(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "overload_break_enabled", True)
+    monkeypatch.setattr(
+        orch, "_tail_container_logs", AsyncMock(return_value=_OVERLOAD_LOG)
+    )
+    assert (
+        await orch._provider_overload_park_target("be-dev-1", _instance())
+        == "anthropic"
+    )
+
+
+@pytest.mark.asyncio
+async def test_clean_output_is_not_overload(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "overload_break_enabled", True)
+    monkeypatch.setattr(
+        orch, "_tail_container_logs", AsyncMock(return_value=_CLEAN_LOG)
+    )
+    assert await orch._provider_overload_park_target("be-dev-1", _instance()) is None
+
+
+@pytest.mark.asyncio
+async def test_detects_overload_marker_in_transcript(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The overload marker may appear only in the durable Claude transcript, not
+    # stdout; without reading it an overload is missed and the agent
+    # crash-respawns straight back into it.
+    monkeypatch.setattr(settings, "overload_break_enabled", True)
+    monkeypatch.setattr(orch, "_tail_container_logs", AsyncMock(return_value=""))
+    monkeypatch.setattr(
+        orch, "_transcript_tail_text", lambda _a, _lines=80: _OVERLOAD_LOG
+    )
+    assert (
+        await orch._provider_overload_park_target("be-dev-1", _instance())
+        == "anthropic"
+    )
+
+
+@pytest.mark.asyncio
+async def test_agent_writing_about_error_500_does_not_park(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # An agent merely writing about an HTTP error code in its own notes must NOT
+    # trip the detector and park the whole fleet — markers must be specific to
+    # the API error formatter, not bare "error NNN".
+    monkeypatch.setattr(settings, "overload_break_enabled", True)
+    agent_note = (
+        "be-dev-1: the /health endpoint returned error 500 on retry; "
+        "adding a backoff. Also saw error 529 and error 503 upstream. "
+        "Not a model-API issue."
+    )
+    monkeypatch.setattr(
+        orch, "_tail_container_logs", AsyncMock(return_value=agent_note)
+    )
+    monkeypatch.setattr(orch, "_transcript_tail_text", lambda _a, _lines=80: "")
+    assert await orch._provider_overload_park_target("be-dev-1", _instance()) is None
+
+
+@pytest.mark.asyncio
+async def test_disabled_flag_never_parks(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "overload_break_enabled", False)
+    tail = AsyncMock(return_value=_OVERLOAD_LOG)
+    monkeypatch.setattr(orch, "_tail_container_logs", tail)
+    assert await orch._provider_overload_park_target("be-dev-1", _instance()) is None
+    tail.assert_not_awaited()  # short-circuits before reading logs
+
+
+@pytest.mark.asyncio
+async def test_grok_provider_is_skipped(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Grok has its own exit-75 detector; the log-marker path ignores it."""
+    monkeypatch.setattr(settings, "overload_break_enabled", True)
+    monkeypatch.setattr(
+        orch, "_tail_container_logs", AsyncMock(return_value=_OVERLOAD_LOG)
+    )
+    assert (
+        await orch._provider_overload_park_target("gk-dev-1", _instance("grok")) is None
+    )
+
+
+# ---------------------------------------------------------------------------
+# _park_provider_unavailable — the park action
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_park_offlines_and_activates_with_kind(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inst = _instance()
+    inst.error_count = 2  # prior crashes — parking must NOT count one
+    tracker = _FakeTracker()
+    monkeypatch.setattr(orch, "_make_tracker", lambda _p: tracker)
+    monkeypatch.setattr(orch, "_finalize_spawn_session", AsyncMock())
+
+    await orch._park_provider_unavailable(
+        "be-dev-1", inst, provider="anthropic", retry_after=45.0, kind="overloaded"
+    )
+
+    assert inst.state == AgentState.OFFLINE
+    assert inst.container_id is None
+    assert inst.error_count == 0
+    assert tracker.activated_with == {
+        "retry_after": pytest.approx(45.0),
+        "affected_agents": ["be-dev-1"],
+        "kind": "overloaded",
+    }
+
+
+@pytest.mark.asyncio
+async def test_park_registers_waiting_record_so_probe_can_resume(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The probe-resume loop reads _waiting_records filtered by
+    # waiting_for == "rate_limit_lifted" + context.provider; without a record
+    # here recovery falls to the 600s stale-claim reaper instead of the
+    # probe-success path.
+    orch._waiting_records = {}
+    inst = _instance()
+    inst.current_task_id = "task-1"
+    tracker = _FakeTracker()
+    monkeypatch.setattr(orch, "_make_tracker", lambda _p: tracker)
+    monkeypatch.setattr(orch, "_finalize_spawn_session", AsyncMock())
+    monkeypatch.setattr(orch, "_persist_waiting_record", AsyncMock())
+
+    await orch._park_provider_unavailable(
+        "be-dev-1", inst, provider="anthropic", retry_after=45.0, kind="rate_limited"
+    )
+
+    assert "be-dev-1" in orch._waiting_records
+    rec = orch._waiting_records["be-dev-1"]
+    assert rec.waiting_for == "rate_limit_lifted"
+    assert rec.context.get("provider") == "anthropic"
+    assert rec.task_id == "task-1"
+    assert orch._parked_agents_for("anthropic") == ["be-dev-1"]
+
+
+@pytest.mark.asyncio
+async def test_probe_success_respawns_parked_agent(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Once the probe succeeds, the parked agent must be respawned via
+    # resolve_wait — not left stranded for the 600s reaper.
+    orch._waiting_records = {
+        "be-dev-1": WaitingRecord(
+            agent_id="be-dev-1",
+            task_id="task-1",
+            waiting_for="rate_limit_lifted",
+            waiting_since=datetime.now(UTC),
+            context={"provider": "anthropic"},
+        )
+    }
+    tracker = _FakeTracker()
+    tracker.clear = AsyncMock()
+    monkeypatch.setattr(orch, "_make_tracker", lambda _p: tracker)
+    monkeypatch.setattr(orch, "_delete_waiting_record", AsyncMock())
+    monkeypatch.setattr(orch, "_generate_resume_prompt", lambda _r, _res: "resume")
+    spawn = AsyncMock()
+    monkeypatch.setattr(orch, "spawn_agent", spawn)
+
+    await orch._on_probe_success("anthropic", tracker)
+
+    spawn.assert_awaited_once()  # parked agent respawned, not stranded
+    # #71: the record is kept past the launch and torn down only once liveness
+    # is confirmed (deferred, not on the bare launch) — so a container that
+    # launches then dies immediately keeps its record for the orphan fallback.
+    assert "be-dev-1" in orch._waiting_records
+    await asyncio.gather(*orch._bg_tasks, return_exceptions=True)
+
+
+# ---------------------------------------------------------------------------
+# _handle_stopped_container — overload short-circuits the crash-retry path
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_stopped_container_parks_on_overload(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inst = _instance()
+    park = AsyncMock()
+    spawn = AsyncMock()
+    monkeypatch.setattr(orch, "_is_grok_rate_limit_exit", lambda _i, _e: False)
+    monkeypatch.setattr(
+        orch, "_provider_rate_limit_park_target", AsyncMock(return_value=None)
+    )
+    monkeypatch.setattr(
+        orch, "_provider_overload_park_target", AsyncMock(return_value="anthropic")
+    )
+    monkeypatch.setattr(orch, "_park_provider_unavailable", park)
+    monkeypatch.setattr(orch, "_finalize_spawn_session", AsyncMock())
+    monkeypatch.setattr(orch, "spawn_agent", spawn)
+
+    await orch._handle_stopped_container("be-dev-1", inst, exit_code=1)
+
+    park.assert_awaited_once_with(
+        "be-dev-1",
+        inst,
+        provider="anthropic",
+        retry_after=_OVERLOAD_RETRY_AFTER_S,
+        kind="overloaded",
+    )
+    spawn.assert_not_awaited()  # the crash-retry path is short-circuited
+
+
+@pytest.mark.asyncio
+async def test_stopped_container_crash_retries_when_not_overload(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inst = _instance()
+    inst.error_count = 0
+    spawn = AsyncMock()
+    monkeypatch.setattr(orch, "_is_grok_rate_limit_exit", lambda _i, _e: False)
+    monkeypatch.setattr(
+        orch, "_provider_rate_limit_park_target", AsyncMock(return_value=None)
+    )
+    monkeypatch.setattr(
+        orch, "_provider_overload_park_target", AsyncMock(return_value=None)
+    )
+    monkeypatch.setattr(orch, "_finalize_spawn_session", AsyncMock())
+    monkeypatch.setattr(orch, "spawn_agent", spawn)
+
+    await orch._handle_stopped_container("be-dev-1", inst, exit_code=1)
+
+    # Not an overload → the normal crash-retry path runs.
+    spawn.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# Session/usage-limit (429) parking — the same break for a different signal
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_detects_session_limit_marker_for_anthropic(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "overload_break_enabled", True)
+    monkeypatch.setattr(
+        orch, "_tail_container_logs", AsyncMock(return_value=_SESSION_LIMIT_LOG)
+    )
+    assert (
+        await orch._provider_rate_limit_park_target("be-dev-1", _instance())
+        == "anthropic"
+    )
+
+
+@pytest.mark.asyncio
+async def test_detects_session_limit_marker_in_transcript(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Docker logs miss the SDK-server log; the durable transcript still has it."""
+    monkeypatch.setattr(settings, "overload_break_enabled", True)
+    monkeypatch.setattr(orch, "_tail_container_logs", AsyncMock(return_value=""))
+    monkeypatch.setattr(
+        orch, "_transcript_tail_text", lambda _a, _lines=80: _SESSION_LIMIT_LOG
+    )
+    assert (
+        await orch._provider_rate_limit_park_target("be-dev-1", _instance())
+        == "anthropic"
+    )
+
+
+@pytest.mark.asyncio
+async def test_clean_output_is_not_a_session_limit(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "overload_break_enabled", True)
+    monkeypatch.setattr(
+        orch, "_tail_container_logs", AsyncMock(return_value=_CLEAN_LOG)
+    )
+    assert await orch._provider_rate_limit_park_target("be-dev-1", _instance()) is None
+
+
+@pytest.mark.asyncio
+async def test_session_limit_disabled_flag_never_parks(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "overload_break_enabled", False)
+    tail = AsyncMock(return_value=_SESSION_LIMIT_LOG)
+    monkeypatch.setattr(orch, "_tail_container_logs", tail)
+    assert await orch._provider_rate_limit_park_target("be-dev-1", _instance()) is None
+    tail.assert_not_awaited()  # short-circuits before reading logs
+
+
+@pytest.mark.asyncio
+async def test_stopped_container_parks_on_session_limit(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inst = _instance()
+    park = AsyncMock()
+    spawn = AsyncMock()
+    overload = AsyncMock(return_value=None)
+    monkeypatch.setattr(orch, "_is_grok_rate_limit_exit", lambda _i, _e: False)
+    monkeypatch.setattr(
+        orch, "_provider_rate_limit_park_target", AsyncMock(return_value="anthropic")
+    )
+    monkeypatch.setattr(orch, "_provider_overload_park_target", overload)
+    monkeypatch.setattr(orch, "_park_provider_unavailable", park)
+    monkeypatch.setattr(orch, "_finalize_spawn_session", AsyncMock())
+    monkeypatch.setattr(orch, "spawn_agent", spawn)
+
+    await orch._handle_stopped_container("be-dev-1", inst, exit_code=1)
+
+    park.assert_awaited_once_with(
+        "be-dev-1",
+        inst,
+        provider="anthropic",
+        retry_after=_RATE_LIMIT_RETRY_AFTER_S,
+        kind="rate_limited",
+    )
+    spawn.assert_not_awaited()  # crash-retry short-circuited
+    overload.assert_not_awaited()  # session-limit checked before the overload path
+
+
+# ---------------------------------------------------------------------------
+# Ollama Cloud (glm-5.2:cloud) weekly limit — surfaces as a 429 in docker logs
+# ---------------------------------------------------------------------------
+
+_OLLAMA_RATE_LIMIT_LOG = (
+    '{"error":"rate limit exceeded","message":"ollama.com weekly limit reached"}'
+)
+
+
+@pytest.mark.asyncio
+async def test_detects_ollama_cloud_rate_limit_marker(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "overload_break_enabled", True)
+    monkeypatch.setattr(
+        orch, "_tail_container_logs", AsyncMock(return_value=_OLLAMA_RATE_LIMIT_LOG)
+    )
+    assert (
+        await orch._provider_rate_limit_park_target(
+            "be-dev-1", _instance("ollama_cloud")
+        )
+        == "ollama_cloud"
+    )
+
+
+@pytest.mark.asyncio
+async def test_clean_ollama_output_is_not_a_rate_limit(
+    orch: AgentOrchestrator, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "overload_break_enabled", True)
+    monkeypatch.setattr(
+        orch, "_tail_container_logs", AsyncMock(return_value=_CLEAN_LOG)
+    )
+    assert (
+        await orch._provider_rate_limit_park_target(
+            "be-dev-1", _instance("ollama_cloud")
+        )
+        is None
+    )

@@ -1,0 +1,161 @@
+"""unclaim returns claimed/in_progress task to pending and clears assigned_to.
+
+Audit J33 — `Choreographer._pending_assignment_guard` remediate string says
+"or unclaim it first" pointing to a verb that did not exist. The verb now
+exists. These tests pin the four behaviors:
+
+- happy path: claimed -> pending, assigned_to cleared
+- not_found: unknown task id returns the not_found envelope
+- not_authorized: only the current claimant can unclaim
+- invalid_state: only claimed/in_progress tasks can be unclaimed
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
+
+import pytest
+from robofleet.services.gateway.choreographer import Choreographer, ChoreographerDeps
+
+
+def _make_deps(**overrides: Any) -> ChoreographerDeps:
+    """Local dep-builder. Established pattern: per-test-file, not centralized."""
+    base: dict[str, Any] = {
+        "task": AsyncMock(),
+        "work_session": AsyncMock(),
+        "git": AsyncMock(),
+        "a2a": AsyncMock(),
+        "journal": AsyncMock(),
+        "audit": AsyncMock(),
+        "evidence_repo": AsyncMock(),
+    }
+    base.update(overrides)
+    repo = base["evidence_repo"]
+    for method in (
+        "list_unread_a2a",
+        "list_unread_mentions",
+        "list_pending_notifications",
+        "task_metadata_gaps",
+        "recent_team_activity",
+        "blockers_in_lane",
+    ):
+        getattr(repo, method).return_value = []
+    # C8: default-fresh journal:decision so PM-decision gate passes.
+    # Tests that exercise the gate boundary stub their own value.
+    # The check matches MagicMock and AsyncMock (the two default sentinel
+    # types pytest's unittest.mock leaves on un-stubbed return_values).
+    _ldef = base["journal"].latest_decision_at.return_value
+    if type(_ldef).__name__ in ("MagicMock", "AsyncMock"):
+        base["journal"].latest_decision_at.return_value = datetime.now(UTC)
+    return ChoreographerDeps(**base)
+
+
+@pytest.mark.asyncio
+async def test_unclaim_returns_task_to_pending() -> None:
+    aid = uuid4()
+    tid = uuid4()
+    t = MagicMock(id=tid, status="claimed", assigned_to=aid)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = MagicMock(
+        id=aid, role="developer", team="backend", slug=None
+    )
+    task_svc.unclaim_for_agent.return_value = MagicMock(
+        id=tid, status="pending", assigned_to=None
+    )
+    deps = _make_deps(task=task_svc)
+    c = Choreographer(deps)
+
+    env = await c.unclaim(aid, tid)
+
+    assert env.error is None
+    task_svc.unclaim_for_agent.assert_awaited_once_with(tid, aid)
+    assert env.status == "pending"
+    assert env.task_id == str(tid)
+
+
+@pytest.mark.asyncio
+async def test_unclaim_returns_not_found_for_unknown_task() -> None:
+    aid = uuid4()
+    tid = uuid4()
+    task_svc = AsyncMock()
+    task_svc.get.return_value = None
+    deps = _make_deps(task=task_svc)
+    c = Choreographer(deps)
+
+    env = await c.unclaim(aid, tid)
+
+    assert env.error == "not_found"
+    task_svc.unclaim_for_agent.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_unclaim_rejects_when_not_claimant() -> None:
+    aid = uuid4()
+    other = uuid4()
+    tid = uuid4()
+    t = MagicMock(id=tid, status="claimed", assigned_to=other)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = MagicMock(
+        id=aid, role="developer", team="backend", slug=None
+    )
+    deps = _make_deps(task=task_svc)
+    c = Choreographer(deps)
+
+    env = await c.unclaim(aid, tid)
+
+    # The spec gate accepts (developer is in unclaim's allowed_roles and
+    # composes=() means no state check); the reassignment-rejection branch
+    # (Task 6 fix in commit a5d358d) is what rejects with "current owner".
+    assert env.error == "not_authorized"
+    assert "current owner" in (env.message or "")
+    task_svc.unclaim_for_agent.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_unclaim_rejects_invalid_state() -> None:
+    aid = uuid4()
+    tid = uuid4()
+    # unclaim's IntentSpec has composes=(), so the spec gate does NOT
+    # enforce a source-status — the verb body owns dispatch, and the
+    # service-level guard is what refuses (e.g. status drifted between
+    # get and write). Returning None from unclaim_for_agent surfaces as
+    # invalid_state from the verb body.
+    t = MagicMock(id=tid, status="verifying", assigned_to=aid)
+    task_svc = AsyncMock()
+    task_svc.get.return_value = t
+    task_svc.agent_for.return_value = MagicMock(
+        id=aid, role="developer", team="backend", slug=None
+    )
+    task_svc.unclaim_for_agent.return_value = None
+    deps = _make_deps(task=task_svc)
+    c = Choreographer(deps)
+
+    env = await c.unclaim(aid, tid)
+
+    assert env.error == "invalid_state"
+    task_svc.unclaim_for_agent.assert_awaited_once_with(tid, aid)
+
+
+@pytest.mark.asyncio
+async def test_unclaim_rejection_writes_audit_row() -> None:
+    """Every rejection envelope must call audit.log_event (Task 6 contract)."""
+    aid = uuid4()
+    tid = uuid4()
+    task_svc = AsyncMock()
+    task_svc.get.return_value = None
+    audit_svc = AsyncMock()
+    deps = _make_deps(task=task_svc, audit=audit_svc)
+    c = Choreographer(deps)
+
+    env = await c.unclaim(aid, tid)
+
+    assert env.error == "not_found"
+    audit_svc.log_event.assert_awaited_once()
+    kwargs = audit_svc.log_event.await_args.kwargs
+    assert kwargs["event_type"] == "gateway.rejected"
+    assert kwargs["details"]["verb"] == "unclaim"

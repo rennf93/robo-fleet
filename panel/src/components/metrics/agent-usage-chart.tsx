@@ -1,0 +1,138 @@
+"use client";
+
+import { useState } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { HelpTip } from "@/components/ui/help-tip";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { formatTokens } from "@/lib/format";
+import { chartTooltipStyle } from "@/components/charts/chart-tooltip";
+import type { AgentUsageRow } from "@/types";
+
+interface AgentUsageChartProps {
+  data: AgentUsageRow[] | undefined;
+  isLoading: boolean;
+}
+
+const VIEW_OPTIONS = [
+  { value: "chart", label: "Chart" },
+  { value: "table", label: "Table" },
+];
+
+export function AgentUsageChart({ data, isLoading }: AgentUsageChartProps) {
+  const isMobile = useIsMobile();
+  const [view, setView] = useState<"chart" | "table">("chart");
+  // Fewer bars on a phone — 10 labels at ~30deg rotation still overlap below
+  // ~400px, so cap the label density instead of shrinking text further.
+  const chartData = [...(data ?? [])]
+    .sort((a, b) => b.total_tokens - a.total_tokens)
+    .slice(0, isMobile ? 6 : 10)
+    .map((row) => ({
+      name: row.agent_slug,
+      Tokens: row.total_tokens,
+    }));
+  const tableRows = [...(data ?? [])].sort(
+    (a, b) => b.total_tokens - a.total_tokens,
+  );
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base">Agent Tokens</CardTitle>
+          <SegmentedControl
+            options={VIEW_OPTIONS}
+            value={view}
+            onValueChange={(v) => setView(v as "chart" | "table")}
+            aria-label="Agent tokens view"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <Skeleton className="h-52 w-full" />
+        ) : tableRows.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-16 text-center">
+            No usage recorded in this window yet.
+          </p>
+        ) : view === "table" ? (
+          <div className="max-h-52 overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead className="text-muted-foreground text-xs">
+                <tr>
+                  <th className="text-left font-medium py-1">Agent</th>
+                  <th className="text-right font-medium py-1">Tokens</th>
+                  <th className="text-right font-medium py-1">
+                    <HelpTip label="Share of total tokens across all agents in this window">
+                      <span>%</span>
+                    </HelpTip>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.map((row) => (
+                  <tr key={row.agent_slug} className="border-t">
+                    <td className="py-1 truncate">{row.agent_slug}</td>
+                    <td className="py-1 text-right tabular-nums">
+                      {row.total_tokens.toLocaleString()}
+                    </td>
+                    <td className="py-1 text-right tabular-nums">
+                      {row.pct_of_total.toFixed(1)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={208}>
+            <BarChart
+              data={chartData}
+              margin={{ top: 4, right: 8, left: 0, bottom: isMobile ? 40 : 32 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: isMobile ? 9 : 10 }}
+                angle={isMobile ? -45 : -30}
+                textAnchor="end"
+                interval={0}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tickFormatter={formatTokens}
+                tick={{ fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+                width={46}
+              />
+              <Tooltip
+                {...chartTooltipStyle}
+                formatter={(value) => [
+                  formatTokens(typeof value === "number" ? value : 0),
+                  "Tokens",
+                ]}
+              />
+              <Bar
+                dataKey="Tokens"
+                fill="var(--chart-1)"
+                radius={[3, 3, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

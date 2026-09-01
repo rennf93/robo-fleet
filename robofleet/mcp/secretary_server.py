@@ -1,0 +1,82 @@
+"""robofleet-secretary MCP server — the Secretary's CEO-authority tools.
+
+Parity with the Secretary's tool surface across runtimes:
+``read_company_state`` / ``read_task`` / ``search_tasks`` (reads) and
+``submit_directive`` (acts).
+Each calls the backend ``/api/secretary/*`` routes with the container's HMAC
+agent token; the backend gate-list queues high-impact directive kinds for the
+CEO's confirmation and runs low-risk ones directly. The backend-calling logic is
+reused verbatim from ``secretary_driver`` (every runtime shares one HTTP seam),
+so this server only wraps those helpers as MCP tools.
+
+Wired into ``~/.grok/config.toml`` by ``grok_secretary_main`` and into the ADK
+``McpToolset`` by ``gemini_secretary_main``; the container provides
+``ROBOFLEET_API_URL`` / ``ROBOFLEET_AGENT_ID`` / ``ROBOFLEET_AGENT_ROLE`` /
+``ROBOFLEET_AGENT_TOKEN`` (the same auth substrate every runtime uses).
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+from mcp.server.fastmcp import FastMCP
+
+from robofleet.agent_sdk.secretary_driver import (
+    _do_read_state,
+    _do_read_task,
+    _do_search_tasks,
+    _do_submit_directive,
+)
+
+mcp = FastMCP("robofleet-secretary")
+
+
+@mcp.tool()
+async def read_company_state() -> str:
+    """Read a compact snapshot of company state.
+
+    The charter (goals), task counts by status, pending pitches, and any
+    directives awaiting the CEO's confirmation.
+    """
+    return json.dumps(await _do_read_state())
+
+
+@mcp.tool()
+async def read_task(task_id: str) -> str:
+    """Read one task's full detail by its id — content, notes, plan,
+    progress, and PR reference (Secretary FULL task access)."""
+    return json.dumps(await _do_read_task(task_id))
+
+
+@mcp.tool()
+async def search_tasks(q: str, limit: int = 20) -> str:
+    """Resolve a task NAME to concrete task ids.
+
+    The CEO refers to tasks by name; search a title/description substring
+    (min 2 chars) to get matching ids, then pass an id to read_task or to
+    submit_directive's control_task. Returns up to 'limit' (default 20)
+    matches under the 'tasks' key.
+    """
+    return json.dumps(await _do_search_tasks(q, limit))
+
+
+@mcp.tool()
+async def submit_directive(kind: str, payload: dict[str, Any]) -> str:
+    """Act on the CEO's command.
+
+    'kind' is one of: relay_message (payload: text), update_charter
+    (payload: charter), control_task (payload: task_id, action[start|cancel|
+    override|edit], status? for override, fields? for edit — edit accepts
+    title/description/acceptance_criteria/priority/team/estimated_complexity/
+    nature/assigned_to; assigned_to may be a UUID or an agent slug like
+    "be-dev-1"), approve_pitch (payload: pitch_id, notes?), announce
+    (payload: text). High-impact kinds (charter, control_task, approve_pitch,
+    announce) are queued for the CEO's explicit confirmation; relay_message runs
+    directly.
+    """
+    return json.dumps(await _do_submit_directive(kind, payload or {}))
+
+
+if __name__ == "__main__":
+    mcp.run()

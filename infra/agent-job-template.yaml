@@ -1,0 +1,116 @@
+# Cloud Run v2 Job template for RoboFleet agents (ADK + Gemini on Cloud Run).
+#
+# This is the REFERENCE shape: the CloudRunJobsProvider (Task 2.2,
+# robofleet/llm/providers/cloudrun_jobs.py) creates the real per-agent Job in
+# code via the run_v2 client, setting ROBOFLEET_AGENT_ID / ROBOFLEET_AGENT_MODEL /
+# ROBOFLEET_INITIAL_PROMPT / ROBOFLEET_TOOL_MANIFEST_PATH from the spawn call. This
+# YAML documents the full field set an operator can also apply manually with
+# `gcloud run jobs replace infra/agent-job-template.yaml` for debugging or a
+# one-off spawn. Plain hyphens only, no em-dashes.
+#
+# Per-agent fields the provider fills at spawn time (left as placeholders here):
+#   metadata.name                    -> robofleet-agent-<agent-slug>
+#   ROBOFLEET_AGENT_ID                  -> agent UUID (not the slug; gateway
+#                                       X-Agent-ID is Annotated[UUID, Header])
+#   ROBOFLEET_AGENT_ROLE                -> role slug (developer, qa, cell_pm, ...)
+#   ROBOFLEET_AGENT_TOKEN               -> HMAC token issued by the orchestrator
+#                                       at spawn (issue_agent_token over the
+#                                       UUID); on GCP the provider stores it in
+#                                       a per-agent Secret Manager secret and the
+#                                       Job carries a secretKeyRef, never the value.
+#   ROBOFLEET_INITIAL_PROMPT            -> the composed task prompt
+#   ROBOFLEET_TOOL_MANIFEST_PATH        -> gs://<bucket>/manifests/<agent-id>.json
+#   ROBOFLEET_GIT_TOKEN                 -> per-project decrypted PAT (the provider
+#                                       resolves it via ProjectService when the
+#                                       task carries a git_context project slug)
+#
+# Infra placeholders the deploy script (or terraform output) fills:
+#   __AR_HOST__ / __PROJECT_ID__ / __AR_REPO__  -> image path
+#   __VPC_CONNECTOR_PATH__                      -> VPC connector for Cloud SQL/Memorystore
+#   __FILESTORE_IP__ / __FILESTORE_SHARE__      -> NFS workspaces mount
+#   __ORCHESTRATOR_URL__                        -> orchestrator Cloud Run URL
+
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: robofleet-agent-__AGENT_SLUG__
+  labels:
+    run.googleapis.com/managed-by: gcloud
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/vpc-access-connector: __VPC_CONNECTOR_PATH__
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      template:
+        spec:
+          containers:
+            - name: agent
+              image: __AR_HOST__/__PROJECT_ID__/__AR_REPO__/robofleet-agent-adk:latest
+              env:
+                # --- Agent identity (filled by CloudRunJobsProvider at spawn) ---
+                # ROBOFLEET_AGENT_ID is the agent UUID, not the slug: the gateway
+                # declares X-Agent-ID as Annotated[UUID, Header] and 422s on a
+                # non-UUID value.
+                - name: ROBOFLEET_AGENT_ID
+                  value: "__AGENT_UUID__"
+                - name: ROBOFLEET_AGENT_ROLE
+                  value: "__AGENT_ROLE__"
+                - name: ROBOFLEET_AGENT_MODEL
+                  value: "gemini-3.5-flash"
+                # Gemini API key (forwarded by CloudRunJobsProvider from
+                # ROBOFLEET_GEMINI_API_KEY) so the ADK LlmAgent can authenticate
+                # to the Gemini API.
+                # On GCP the provider injects this as a secretKeyRef, never a value.
+                - name: GEMINI_API_KEY
+                  value: "__GEMINI_API_KEY__"
+                - name: ROBOFLEET_INITIAL_PROMPT
+                  value: "__INITIAL_PROMPT__"
+                - name: ROBOFLEET_TOOL_MANIFEST_PATH
+                  value: "__TOOL_MANIFEST_GS_URI__"
+
+                # --- Orchestrator URL (agent calls the gateway over HTTP) ---
+                - name: ROBOFLEET_ORCHESTRATOR_URL
+                  value: "__ORCHESTRATOR_URL__"
+                - name: ROBOFLEET_API_URL
+                  value: "__ORCHESTRATOR_URL__"
+
+                # --- Agent auth (issued HMAC token; on GCP the provider stores it in
+                #     a per-agent Secret Manager secret and the Job references it
+                #     via secretKeyRef, so a real Job never carries the value) ---
+                # The orchestrator signs ROBOFLEET_AGENT_TOKEN at spawn via
+                # issue_agent_token(uuid, role, team) and injects it as a plain
+                # env var. The raw signing secret stays server-side; the agent
+                # never receives it. Placeholder below for the manual-deploy
+                # reference only, the provider computes the real value.
+                - name: ROBOFLEET_AGENT_TOKEN
+                  value: "__AGENT_TOKEN__"
+
+                # --- Flow verb timeouts (mirror the server-side budgets) ---
+                - name: ROBOFLEET_FLOW_VERB_TIMEOUT_SECONDS
+                  value: "120"
+                - name: ROBOFLEET_FLOW_VERB_SLOW_TIMEOUT_SECONDS
+                  value: "900"
+
+                # --- Git token (per-project decrypted PAT) ---
+                # The provider sets ROBOFLEET_GIT_TOKEN directly from the project's
+                # decrypted PAT (ProjectService.get_decrypted_token_by_slug)
+                # when the task carries a git_context project slug. The ADK
+                # git_push tool reads it and pushes via x-access-token
+                # extraheader. Omit for tasks without a project.
+
+              volumeMounts:
+                - mountPath: /data/workspaces
+                  name: filestore
+                  readOnly: false
+
+          volumes:
+            - name: filestore
+              nfs:
+                server: __FILESTORE_IP__
+                path: /__FILESTORE_SHARE__
+                readOnly: false
+
+          timeoutSeconds: 1800
+          maxRetries: 0

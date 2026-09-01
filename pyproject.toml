@@ -1,0 +1,596 @@
+[project]
+name = "robofleet"
+version = "0.28.0"
+description = "AI Agents Company - A virtual organization of AI agents functioning as a software development workforce"
+authors = [
+    {name = "Renzo Franceschini", email = "rennf93@users.noreply.github.com"}
+]
+readme = "README.md"
+license = { text = "AGPL-3.0-or-later" }
+requires-python = ">=3.13,<3.15"
+
+dependencies = [
+    # Core
+    "pydantic",
+    "pydantic-settings",
+    # API
+    "fastapi",
+    "uvicorn[standard]",
+    "websockets",
+    # Database
+    "sqlalchemy[asyncio]",
+    "asyncpg",  # PostgreSQL async driver
+    "alembic",  # Migrations
+    # Cache/Queue
+    "redis",
+    "hiredis",  # Redis performance
+    # AI/LLM
+    "anthropic",
+    "openai",  # For embeddings
+    "tiktoken",  # Token counting
+    "python-toon",  # Token-efficient LLM serialization
+    # MCP (Model Context Protocol)
+    "mcp",
+    "tomli-w",  # grok_cli_config renders ~/.grok/config.toml in the agent image
+    # Utilities
+    "httpx",
+    "python-multipart",
+    "passlib[bcrypt]",  # Password hashing
+    "tenacity",  # Retry logic
+    "structlog",  # Structured logging
+    # Storage
+    "minio",  # Object storage client for rendered videos (sync, to_thread-wrapped)
+    # Streaming
+    "sse-starlette",  # Server-Sent Events for A2A streaming
+    # Direct imports (promoted from transitive)
+    "cryptography",  # utils/crypto.py — Fernet-encrypted project git tokens
+    "packaging",  # services/toolchain.py — PEP 440 requires-python resolution
+    "pyyaml",  # foundation/policy/conventions — .robofleet/conventions.yml parse
+    # Conventions validator (robofleet.conventions) — tree-sitter ASTs, Python + TS
+    "tree-sitter",
+    "tree-sitter-python",
+    "tree-sitter-typescript",
+    "fastapi-guard>=7.7.0",  # HTTP security middleware + per-route decorators (import: guard); floor matches the guard-core pairing below
+    "guard-core[redis]>=3.13.0",  # SecurityConfig/decorator models + protocols; redis extra for enable_redis=True (build_security_config sets it unconditionally); floor: 3.13.0 widens the argless @block_clouds() default from {AWS,GCP,Azure} to all six supported providers (test_security.py asserts the widened set)
+    "fastapi-users[sqlalchemy]",  # Cloud auth: cookie session for the seeded CEO login
+    "fastapi-users-db-sqlalchemy",  # imported directly (SQLAlchemyUserDatabase); declare it
+    "pyjwt",  # imported directly as `jwt` in the cloud-auth JWT strategy
+    # GCP — Cloud Run Jobs spawn backend (robofleet.llm.providers.cloudrun_jobs)
+    "google-cloud-run",
+    "google-cloud-storage",
+    # ADK agent runtime (robofleet.agent) — LlmAgent + Runner on Gemini
+    "google-adk",
+    "google-genai",
+    "cloud-sql-python-connector[asyncpg]",  # PyPI pkg name; import is google.cloud.sql.connector; asyncpg extra matches existing async stack
+    "google-cloud-secret-manager",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-xdist",
+    "httpx",  # For TestClient
+    "factory-boy",
+    "faker",
+
+    # Code Quality
+    "ruff",
+    "mypy",
+    "vulture",
+    "bandit",
+    "pip-audit",
+    "radon",
+    "xenon",
+    "deptry",
+    "import-linter",
+
+    # Type Stubs
+    "types-passlib",
+    "types-PyYAML",
+
+    # Development
+    "ipython",
+    "rich",
+]
+
+[project.scripts]
+robofleet = "robofleet.cli:cli"
+robofleet-bootstrap = "robofleet.bootstrap:cli"
+
+[project.urls]
+Homepage = "https://github.com/rennf93/robo-fleet"
+Documentation = "https://github.com/rennf93/robo-fleet#readme"
+Repository = "https://github.com/rennf93/robo-fleet"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["robofleet"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+# =============================================================================
+# uv: raise the floor on vulnerable transitive dependencies
+# =============================================================================
+# pyjwt is pulled in transitively (by mcp and msal). 2.12.1 carries four
+# disclosed CVEs that are fixed in 2.13.0; constrain the floor so the resolver
+# picks a patched release while leaving the direct dependents' own ranges intact.
+[tool.uv]
+constraint-dependencies = ["pyjwt>=2.13.0"]
+
+# =============================================================================
+# RUFF Configuration
+# =============================================================================
+[tool.ruff]
+target-version = "py313"
+src = ["src"]
+exclude = ["vulture_whitelist.py", ".venv", "alembic"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "PTH",    # flake8-use-pathlib
+    "PL",     # Pylint
+    "RUF",    # Ruff-specific
+]
+
+# Lazy imports to avoid circular dependencies
+[tool.ruff.lint.per-file-ignores]
+# B010: the behavioral usage-rule redis-fail-open patch (see the module
+# docstring block) must use setattr, not a direct method assignment - mypy's
+# method-assign check rejects `BehavioralProcessor.process_usage_rules = ...`
+# outright, and a `# type: ignore` is not allowed in this codebase.
+"robofleet/security.py" = ["B010"]
+# robofleet/infra/* adapters lazy-import google clients inside methods so a bare
+# `from robofleet.infra import ...` never requires GCP credentials at load time.
+"robofleet/infra/*.py" = ["PLC0415"]
+# tests/unit/infra/* - pytest fixtures (tmp_path/monkeypatch) and lambdas are
+# standard test shape; pytest is imported for type hints only; lazy imports
+# control mock ordering (the wiring tests patch the module before importing).
+"tests/unit/infra/*.py" = ["ARG001", "ARG005", "PLR2004", "TC001", "TC002", "TC003", "PLC0415"]
+# tests/compliance/* - the hackathon-stack checklist uses lazy imports inside
+# test bodies (importlib + module reloads) to prove ADK/Gemini wiring, and
+# monkeypatch fixtures with unused _settings args; same shape as tests/unit/infra.
+"tests/compliance/*.py" = ["ARG001", "PLC0415", "TC001", "TC002", "TC003"]
+# MCP tool surfaces ARE the LLM-facing contract — every parameter must be
+# top-level + typed so the SDK exposes it as a discrete schema field with
+# enum constraints. Bundling into a dataclass would hide enum hints from
+# the LLM and bring back invented values like nature='standard'.
+"robofleet/mcp/**/*.py" = ["PLC0415", "PLR0913"]
+"robofleet/services/*.py" = ["PLC0415"]
+# confirm_live_batch carries the MegaTask confirm contract (title, drafts,
+# agent_id, project_ids, route, session_id) — same >5-kwarg rationale as the
+# gateway verb surfaces below.
+"robofleet/services/prompter.py" = ["PLR0913"]
+# send_dependency_revival_notification carries the coordination-event contract
+# (task_id, assignee, completed_dependency_id, from_agent, to_ceo, db_session) —
+# db_session is the caller's session for event-loop-safe notification creation.
+"robofleet/services/notification.py" = ["PLR0913"]
+# record_decision carries the LEARN-write contract (program_key, item_ref,
+# verdict, reason, exploration_task_id, item_payload) shared by every one of
+# its ~10 per-program callers; bundling would just relocate the same named
+# fields behind one hop, same rationale as prompter.py above.
+"robofleet/services/board_programs.py" = ["PLR0913"]
+# open_video_task's kwargs (occasion, script, platforms, brief,
+# suggested_input_props, project_id) are the authoring-task contract shared
+# by the release/spotlight/on-demand callers — same "bundling would just
+# relocate the same named fields behind one hop" rationale as prompter.py.
+"robofleet/services/video_engine.py" = ["PLR0913"]
+# GitHubProvisioningService.__init__ is a provider-selection constructor
+# (token/org/base_url/timeout/client plus Phase-4's provider_name/host) —
+# every kwarg is independently override-able by callers/tests, same
+# bundling-adds-no-clarity rationale as prompter.py above.
+"robofleet/services/github_provisioning.py" = ["PLR0913"]
+# ensure_workspace carries the workspace-resolution contract (project_slug,
+# agent_id, git_url, default_branch, force, skip_refresh) - skip_refresh is
+# the supersede branch-cut path's skip of the 60s origin refresh-fetch;
+# bundling would just relocate the same named fields behind one hop.
+"robofleet/services/workspace.py" = ["PLR0913"]
+# Gateway methods are typed verb surfaces — agent-facing kwargs reflect the
+# verb contract (task title, description, acceptance criteria, assignee, etc.). Bundling
+# into a dataclass hides the field-by-field schema the LLM needs at the
+# tool layer; we accept the >5 kwarg signatures here for the same reason
+# they're accepted in `robofleet/mcp/**`.
+"robofleet/services/gateway/**/*.py" = ["PLC0415", "PLR0913"]
+# The forge provider ABC/transport mirror REST endpoint parameter contracts
+# (e.g. list_pulls' head/base/state/per_page, create_release's tag/name/body/
+# target_commitish) — a bundle dataclass would just relocate the same named
+# fields behind one hop, same rationale as robofleet/mcp/** and gateway/** above.
+"robofleet/services/forge/*.py" = ["PLR0913"]
+# Route signatures ARE the HTTP contract — each FastAPI query/path/body
+# param must be a discrete typed argument for OpenAPI + validation, so the
+# >5-arg rule doesn't fit them (same rationale as robofleet/mcp/**). TC001/TC003:
+# FastAPI resolves path/query/dependency param annotations at runtime via
+# get_type_hints(), even under `from __future__ import annotations` — a
+# stdlib OR first-party type used only in a route param (e.g. `task_id: UUID`,
+# `agent: CurrentAgentContext`) can't be deferred into TYPE_CHECKING without
+# breaking route registration.
+"robofleet/api/routes/*.py" = ["PLC0415", "PLR0913", "TC001", "TC003"]
+# deps.py is the DI wiring hub; it defers a few service imports to call time
+# to avoid import cycles with the modules it wires (same rationale as above).
+# get_agent_context's dual-path helpers carry the same header/cookie contract
+# as the routes above (X-Agent-* + the session cookie), hence PLR0913 too.
+"robofleet/api/deps.py" = ["PLC0415", "PLR0913"]
+# tasks.py/telegram.py hold route-layer helpers extracted verbatim from
+# robofleet/api/routes/*.py (no_helpers_in_routes cleanup) — they keep the same
+# lazy, call-time service imports the originals used to dodge import cycles
+# with the modules they wire (same rationale as robofleet/api/deps.py above).
+"robofleet/api/utils/tasks.py" = ["PLC0415"]
+"robofleet/api/utils/telegram.py" = ["PLC0415"]
+# v1_role_dep.py holds the role-guard/envelope helpers extracted verbatim from
+# robofleet/api/routes/v1/_role_dep.py (no_helpers_in_routes cleanup) — same
+# lazy, call-time robofleet.api.deps import the original used to dodge the
+# import cycle with deps.py, same rationale as robofleet/api/deps.py above.
+"robofleet/api/utils/v1_role_dep.py" = ["PLC0415"]
+# board_programs.py's to_response() defers importing BoardProgramResponse
+# from its route module — a genuine circular import (the route module
+# imports this module for its extracted helpers), not dodgeable by hoisting.
+"robofleet/api/utils/board_programs.py" = ["PLC0415"]
+"robofleet/runtime/*.py" = ["PLC0415"]
+# The e2e smoke harness defers every robo-fleet import until the stack fixture
+# runs, so the default (skipped) suite never pays the app-surface import
+# cost; ARG001 covers FastAPI path params the fake-GitHub handlers must
+# name but not read.
+"tests/e2e_smoke/*.py" = ["PLC0415", "ARG001"]
+# The eval bench (offline CLI, not part of the served app) defers heavy/
+# optional imports — tests.e2e_smoke.harness, robofleet.runtime.orchestrator,
+# robofleet.services.task, asyncpg — to call time for the same reason
+# tests/e2e_smoke and robofleet/services do; PLR0913 covers the stage-driving
+# and scoring call surfaces (task/spawner/role/timeout tuples), same
+# rationale as robofleet/services/gateway/**.
+"robofleet/eval/*.py" = ["PLC0415", "PLR0913"]
+# PTH119: _grok_usage_json sanitizes the agent id with os.path.basename — the
+# path-injection sanitizer CodeQL's query models; the pathlib equivalent
+# (Path(...).name) is not recognized by that query, so we keep os.path here.
+# PLR0913: spawn_agent / _launch_spawn carry the spawn contract (task, model,
+# git context, spawner attribution) — a bundle dataclass would just relocate
+# the same six fields behind one hop at the fleet's hottest call surface.
+"robofleet/runtime/orchestrator.py" = ["PTH119", "PLR0913"]
+# The intake/secretary entrypoints lazily import the heavy `uvicorn` so the
+# modules import without it installed and don't pay the cost until a live
+# container runs them — same rationale as the dirs above.
+"robofleet/agent_sdk/*.py" = ["PLC0415"]
+# ADK entrypoint lazy-imports google.cloud.storage inside _dump_crash so a
+# crash dump never requires the optional GCS dep at agent load time and an
+# upload failure is swallowed — same rationale as the agent_sdk lazy imports.
+"robofleet/agent/adk_entry.py" = ["PLC0415"]
+# Lifecycle validators: foundation/_validate_lifecycle is imported from the
+# bottom of policy/lifecycle.py at module-load time, so the validators must
+# defer their inverse imports until call time to avoid a cycle.
+"robofleet/foundation/_validate_lifecycle.py" = ["PLC0415"]
+# The conventions validator loads tree-sitter grammars lazily, per language, so
+# the package imports without tree-sitter present and a missing grammar fails
+# loud at call time (GrammarUnavailable) instead of crashing the import.
+"robofleet/conventions/grammars.py" = ["PLC0415"]
+# The conventions ambient-layer resolver defers its config + ConventionsService
+# imports so the prompt-composition utility stays decoupled from the heavy
+# service graph (it loads at every agent spawn).
+"robofleet/agents/factories/_base.py" = ["PLC0415"]
+# robofleet/vault.py's cheap ensure_vault_assets() is imported at orchestrator
+# startup; _rebuild()'s full service graph (Task/Journal/A2A/Agent services)
+# stays deferred so that startup path never pays for it.
+"robofleet/vault.py" = ["PLC0415"]
+# Test fixtures that reload modules to test env-var-at-import-time behavior.
+# ARG002: ApiClient-subclassing fakes must keep the superclass parameter names
+# for mypy's override check, so unused override-stub args can't be renamed.
+"tests/unit/mcp_servers/*.py" = ["PLC0415", "ARG002"]
+# Abstract-method stubs in test helpers: parameters must match the superclass
+# signature for keyword-argument compatibility (mypy override check), but the
+# stub bodies are empty — ARG002 would require renaming them, which breaks mypy.
+"tests/unit/services/test_optimal_grounding.py" = ["ARG002"]
+# _FakeJudge.score overrides BenchJudge.score — same override-signature
+# rationale as test_optimal_grounding.py above (a fixed fixture/diff/notes
+# stand-in body has nothing to do with those args).
+"tests/e2e_smoke/test_eval_bench.py" = ["ARG002"]
+# CloudRunJobsProvider.stop/remove override AgentProvider but can't use
+# `graceful` (Cloud Run cancel is unconditional) or `instance_id` in remove
+# (executions self-clean; the Job is reused across spawns). Renaming would
+# break the orchestrator's `provider.stop(id, graceful=graceful)` keyword
+# call, same kwarg-compat rationale as the test stubs above. PLC0415:
+# _upload_manifest lazy-imports google.cloud.storage (a heavy optional dep)
+# behind a config/bucket guard, so environments without GCS configured never
+# pay the import cost, the same intentional-lazy-import sanction applied to
+# robofleet/services/*.py.
+"robofleet/llm/providers/cloudrun_jobs.py" = ["ARG002", "PLC0415"]
+# AgentProvider.execution_outcome default returns None without reading its
+# instance_id arg (only the Cloud Run Jobs override uses it); renaming to
+# _instance_id would break the override naming convention, so sanction it
+# the same way cloudrun_jobs.py's own stub bodies are sanctioned.
+"robofleet/llm/providers/base.py" = ["ARG002"]
+# ADK gateway shim: lazy `google.cloud.storage` import is Cloud-Run-only, kept
+# out of the local-dev import path the same way cloudrun_jobs.py sanctions it.
+# PLR0913: the specialized verb wrappers (_delegate, _i_will_plan) mirror the
+# verb request schemas as top-level typed params so ADK exposes each as a
+# discrete tool-schema field (same rationale as mcp/** and gateway/**); args
+# are keyword-only so PLR0917 doesn't fire, PLR0913 (total count) is ignored.
+"robofleet/agent/gateway_shim.py" = ["PLC0415", "PLR0913"]
+# Collision-builder test helpers mirror the builder's many keyword inputs
+# (parent/project/intends/migration/shared/sequence) — bundling them would
+# hurt readability more than the arg count hurts.
+"tests/unit/gateway/test_collision_context.py" = ["PLR0913"]
+# _metrics()'s many optional kwargs mirror DeterministicMetrics' own field
+# count (a plain, no-defaults dataclass) — same rationale as the collision
+# builder above.
+"tests/unit/eval/test_scoring.py" = ["PLR0913"]
+# _seed_task mirrors test_review_findings_repository.py's helper plus the
+# governance-specific fields (self_verified, qa_verified, revision_count);
+# same >5-kwarg seed-helper rationale. PLR2004: literal counts in test
+# assertions are idiomatic for DB-seeded expectations.
+"tests/unit/services/test_governance_service.py" = ["PLR0913", "PLR2004"]
+# ADK agent-runtime tests: inline imports run AFTER monkeypatch.setenv so the
+# module reads the patched env at import time (PLC0415); monkeypatched
+# httpx.post fakes keep the bound-method self/unused url/kw signature
+# (ARG001); small literal counts in assertions (PLR2004).
+"tests/unit/agent/*.py" = ["PLC0415", "ARG001", "ARG002", "PLR2004", "TC003"]
+
+# =============================================================================
+# MyPy Configuration
+# =============================================================================
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+exclude = ["vulture_whitelist.py", ".venv", "alembic"]
+
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = [
+    "redis.*",
+    "anthropic.*",
+    "toon.*",
+    "sse_starlette.*",
+    "asyncpg.*",
+    "google.cloud.*",  # namespace pkg, storage submodule ships no py.typed at root
+]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# =============================================================================
+# Pytest Configuration
+# =============================================================================
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+asyncio_default_fixture_loop_scope = "function"
+addopts = "--cov=robofleet --cov-report=term-missing"
+markers = [
+    "asyncio: mark tests as async",
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.coverage.run]
+# Coverage core. Python 3.12+ supports sys.monitoring; the legacy `pytrace`
+# core loses trace events across `await` boundaries on 3.13, under-counting
+# every async route by ~30%. `sysmon` is the only core that gives accurate
+# coverage for async route handlers.
+core = "sysmon"
+# Modules excluded from the coverage gate because they require live
+# infrastructure (Ollama, real audio/video stacks, real workspaces,
+# Docker daemon, Claude Code CLI) that the unit-coverage gate does not
+# provision. They're covered by dedicated integration runs (smoke tests
+# on the NAS) rather than the unit-coverage threshold.
+omit = [
+    # RAG / proactive context — needs Ollama + real embedding model.
+    "robofleet/services/proactive.py",
+    "robofleet/services/optimal.py",
+    "robofleet/services/optimal_brain/*",
+    # Audio transcription — needs Whisper-class model.
+    "robofleet/services/transcription.py",
+    # Agent classes — instantiated by the orchestrator when spawning
+    # Docker containers running the Claude CLI. No usable unit-test
+    # surface; integration coverage is the smoke run.
+    "robofleet/agents/*",
+    "robofleet/agent_sdk/*",
+    # Container orchestration — drives Docker daemon, agent spawning,
+    # health/dispatch loops. Covered by smoke runs.
+    "robofleet/runtime/orchestrator.py",
+    # MCP server entry points — modeled around the Claude CLI's STDIO
+    # MCP transport and only meaningful when running inside an agent
+    # container with the orchestrator reachable. Their _post() bridges
+    # ARE unit-tested separately (test_envelope_on_4xx, test_flow_server,
+    # test_do_server) — just not via direct module import here.
+    "robofleet/mcp/*",
+    # WebSocket route — needs a running ASGI app + WS client.
+    "robofleet/api/websocket.py",
+    # Event stream bus — wraps Redis Streams; tested via integration only.
+    "robofleet/events/stream_bus.py",
+    # GitService — runs `git` subprocesses against per-agent workspaces.
+    # Unit-testable surface is < 5% of the module; covered via the
+    # _StubGit-based real-DB integration test + live smoke runs.
+    "robofleet/services/git.py",
+    "robofleet/services/workspace.py",
+    # Notification delivery — Redis Streams + push to MCP transport.
+    "robofleet/services/notification_delivery.py",
+    # CLI entry point.
+    "robofleet/cli.py",
+    # Auto-generated migrations.
+    "alembic/*",
+]
+
+# =============================================================================
+# Vulture Configuration
+# =============================================================================
+[tool.vulture]
+paths = ["robofleet", "tests", "vulture_whitelist.py"]
+exclude = ["**/conftest.py", ".venv", "alembic"]
+min_confidence = 100
+ignore_decorators = [
+    "@app.route",
+    "@app.get",
+    "@app.post",
+    "@app.put",
+    "@app.delete",
+    "@app.patch",
+    "@pytest.fixture",
+    "@pytest.mark.*",
+    "@validator",
+    "@root_validator",
+    "@field_validator",
+    "@model_validator",
+]
+ignore_names = [
+    "test_*",
+    "Test*",
+    "cleanup_*",
+    "mock_*",
+    "expected_*",
+    "exc_*",
+    "__*__",
+    "Config",
+    "Field",
+]
+sort_by_size = true
+
+# =============================================================================
+# Bandit Configuration
+# =============================================================================
+[tool.bandit]
+skips = []
+exclude_dirs = ["tests", ".venv", "vulture_whitelist.py", "alembic"]
+severity = "medium"
+
+# =============================================================================
+# Radon Configuration
+# =============================================================================
+[tool.radon]
+exclude = "tests/*,.venv/*,vulture_whitelist.py,alembic/*"
+cc_min = "C"
+mi_min = "A"
+no_assert = false
+show_closures = true
+total_average = true
+
+# =============================================================================
+# Xenon Configuration
+# =============================================================================
+[tool.xenon]
+max_absolute = "B"
+max_modules = "A"
+max_average = "A"
+exclude = ["tests/*", ".venv/*", "vulture_whitelist.py", "alembic/*"]
+ignore = []
+
+# =============================================================================
+# Deptry Configuration
+# =============================================================================
+[tool.deptry]
+exclude = ["tests", ".venv", ".uv-cache", ".claude", "vulture_whitelist.py", "alembic"]
+extend_exclude = ["conftest.py", "setup.py"]
+known_first_party = ["robofleet"]
+
+[tool.deptry.per_rule_ignores]
+# DEP002: Dependencies not directly imported but used at runtime or via CLI
+DEP002 = [
+    # Runtime server/driver dependencies (used by frameworks, not imported)
+    "uvicorn",
+    "websockets",
+    "asyncpg",
+    "hiredis",
+    "python-multipart",
+    # Database migrations (CLI tool)
+    "alembic",
+    # Auth libraries (used via passlib[bcrypt])
+    "passlib",
+    # LLM utilities (embeddings/token counting)
+    "openai",
+    "tiktoken",
+    # Retry logic (used in production services)
+    "tenacity",
+    # Dev tools (CLI, not imported)
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-xdist",
+    "factory-boy",
+    "faker",
+    "ruff",
+    "mypy",
+    "vulture",
+    "bandit",
+    "pip-audit",
+    "radon",
+    "xenon",
+    "deptry",
+    # CLI tool — invoked as `lint-imports` from the Makefile / quality gate
+    "import-linter",
+    "ipython",
+    "rich",
+    # Type stubs (used by mypy)
+    "types-passlib",
+    "types-PyYAML",
+]
+# DEP003: Starlette is a transitive dep of FastAPI, but BaseHTTPMiddleware is needed.
+# "tests": robofleet/eval/runner.py deliberately imports tests.e2e_smoke.harness/arcs
+# (the offline eval bench's disposable-project machinery — see that module's
+# docstring) — deptry sees the local `tests` package as an unresolvable
+# transitive import since it isn't a PyPI dependency at all. The runtime side
+# of this is guarded separately (an ImportError there raises a clear "this
+# needs a source checkout" error), so this is a lint-posture ignore, not a
+# correctness gap.
+DEP003 = ["starlette", "tests"]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]
+
+# =============================================================================
+# Import Linter (architectural boundaries)
+# =============================================================================
+[tool.importlinter]
+root_package = "robofleet"
+
+[[tool.importlinter.contracts]]
+name = "Gateway layer must not import from API routes or MCP servers"
+type = "forbidden"
+source_modules = ["robofleet.services.gateway"]
+forbidden_modules = ["robofleet.api.routes", "robofleet.mcp"]
+
+[[tool.importlinter.contracts]]
+name = "Services must not import from API routes"
+type = "forbidden"
+source_modules = ["robofleet.services"]
+forbidden_modules = ["robofleet.api.routes"]
+
+# =============================================================================
+# RoboFleet Commit Validator
+# =============================================================================
+[tool.robofleet.commits]
+subject_min_chars = 20
+banned_words = ["wip", "tmp", "asdf", "oops", "fix", "update", "change", "stuff", "things"]
+prefer_conventional = true

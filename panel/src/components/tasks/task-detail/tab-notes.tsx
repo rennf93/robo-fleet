@@ -1,0 +1,466 @@
+"use client";
+
+import { useState } from "react";
+import { Task } from "@/types";
+import { useUpdateTask } from "@/hooks/use-tasks";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Markdown } from "@/components/ui/markdown";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { exceedsReadabilityThreshold } from "@/lib/content-readability";
+import {
+  FileText,
+  Code,
+  TestTube,
+  Shield,
+  GitPullRequest,
+  BookText,
+  Edit3,
+  Eye,
+  Check,
+  X,
+  Plus,
+} from "lucide-react";
+import { toast } from "sonner";
+import { HelpTip } from "@/components/ui/help-tip";
+
+interface TabNotesProps {
+  task: Task;
+}
+
+type NoteField =
+  | "quick_context"
+  | "dev_notes"
+  | "qa_notes"
+  | "auditor_notes"
+  | "pr_reviewer_notes"
+  | "doc_notes";
+
+// The PR reviewer's verdict pill, read from the structured source of truth.
+function prReviewBadge(task: Task): React.ReactNode {
+  const verdict = (
+    task.notes_structured as
+      { pr_review?: { verdict?: string } } | null | undefined
+  )?.pr_review?.verdict;
+  if (!verdict) {
+    return (
+      <HelpTip label="PR review has not been submitted yet">
+        <Badge variant="outline" className="ml-2 text-teal-600 border-teal-300">
+          Review Gate
+        </Badge>
+      </HelpTip>
+    );
+  }
+  const map: Record<string, { label: string; cls: string }> = {
+    approved: { label: "Approved", cls: "bg-green-500" },
+    passed: { label: "Passed", cls: "bg-green-500" },
+    changes_requested: { label: "Changes Requested", cls: "bg-amber-500" },
+    failed: { label: "Failed", cls: "bg-red-500" },
+  };
+  const v = map[verdict] ?? { label: verdict, cls: "bg-gray-500" };
+  const tip: Record<string, string> = {
+    approved: "The PR reviewer approved this task's assembled PR.",
+    passed: "The PR reviewer passed the in-path gate — on to PM review.",
+    changes_requested: "The PR reviewer asked for changes before merging.",
+    failed: "The PR reviewer failed this task back to needs_revision.",
+  };
+  return (
+    <HelpTip label={tip[verdict]}>
+      <Badge className={`ml-2 ${v.cls} text-white`}>{v.label}</Badge>
+    </HelpTip>
+  );
+}
+
+// The card background mirrors the PR reviewer's verdict, so a FAILED review reads
+// as red — not the neutral teal that made a failure look green/passing at a glance.
+function prReviewCardBg(task: Task): string {
+  const verdict = (
+    task.notes_structured as
+      { pr_review?: { verdict?: string } } | null | undefined
+  )?.pr_review?.verdict;
+  const map: Record<string, string> = {
+    approved:
+      "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800",
+    passed:
+      "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800",
+    changes_requested:
+      "bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800",
+    failed:
+      "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800",
+  };
+  return (
+    (verdict ? map[verdict] : undefined) ??
+    "bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800"
+  );
+}
+
+// Mirror-column -> structured-section key (the write-time source of truth).
+const FIELD_TO_SECTION: Record<NoteField, string> = {
+  quick_context: "resumption",
+  dev_notes: "developer",
+  qa_notes: "qa",
+  auditor_notes: "auditor",
+  pr_reviewer_notes: "pr_review",
+  doc_notes: "doc",
+};
+
+// When the section was last written (apply_structured_note stamps it). Falls
+// back to the task's creation time when content exists but predates the stamp
+// (older notes written before apply_structured_note started stamping) so a
+// populated field never renders with no timestamp at all.
+function writtenAt(task: Task, field: NoteField): string | null {
+  const sections = task.notes_structured as
+    Record<string, { written_at?: string }> | null | undefined;
+  const stamp =
+    sections?.[FIELD_TO_SECTION[field]]?.written_at ?? task.created_at;
+  if (!stamp) return null;
+  const date = new Date(stamp);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function WrittenAtStamp({ task, field }: { task: Task; field: NoteField }) {
+  const stamp = writtenAt(task, field);
+  if (!stamp) return null;
+  return (
+    <span
+      className="text-xs font-normal text-muted-foreground ml-2"
+      data-testid={`written-at-${field}`}
+    >
+      {stamp}
+    </span>
+  );
+}
+
+interface NoteCardProps {
+  task: Task;
+  field: NoteField;
+  title: string;
+  icon: React.ReactNode;
+  badge?: React.ReactNode;
+  bgClass?: string;
+}
+
+function EditableNoteCard({
+  task,
+  field,
+  title,
+  icon,
+  badge,
+  bgClass,
+}: NoteCardProps) {
+  const updateTask = useUpdateTask();
+  const currentValue = task[field];
+  const [isEditing, setIsEditing] = useState(false);
+  const [localEditValue, setLocalEditValue] = useState("");
+  const [editMode, setEditMode] = useState<"write" | "preview">("write");
+  // Long content starts collapsed; short content starts expanded.
+  const [sectionOpen, setSectionOpen] = useState(
+    () => !exceedsReadabilityThreshold(currentValue ?? ""),
+  );
+
+  // Display prop value when not editing, local value when editing
+  const editValue = isEditing ? localEditValue : (currentValue ?? "");
+  const setEditValue = (value: string) => setLocalEditValue(value);
+
+  // Start editing - copy current prop value to local state
+  const startEditing = () => {
+    setLocalEditValue(currentValue ?? "");
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    const newValue = editValue.trim() || null;
+    if (newValue === currentValue) {
+      setIsEditing(false);
+      setEditMode("write");
+      return;
+    }
+
+    try {
+      await updateTask.mutateAsync({
+        taskId: task.id,
+        updates: { [field]: newValue },
+      });
+      setIsEditing(false);
+      setEditMode("write");
+    } catch {
+      toast.error(`Failed to update ${title.toLowerCase()}`);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditValue(currentValue ?? "");
+    setIsEditing(false);
+    setEditMode("write");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      handleCancel();
+    }
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
+  // If no content and not editing, show placeholder
+  if (!currentValue && !isEditing) {
+    return (
+      <CollapsibleSection
+        title={
+          <>
+            {icon}
+            {title}
+            {badge}
+          </>
+        }
+        open={sectionOpen}
+        onOpenChange={setSectionOpen}
+        actions={
+          <Button size="sm" variant="ghost" onClick={startEditing}>
+            <Plus className="h-4 w-4 mr-1" />
+            Add
+          </Button>
+        }
+      >
+        <p
+          className="text-muted-foreground italic cursor-pointer hover:bg-muted/30 rounded-md p-2 -m-2 transition-colors"
+          onClick={startEditing}
+        >
+          No {title.toLowerCase()} added yet. Click to add.
+        </p>
+      </CollapsibleSection>
+    );
+  }
+
+  return (
+    <CollapsibleSection
+      title={
+        <>
+          {icon}
+          {title}
+          {badge}
+          <WrittenAtStamp task={task} field={field} />
+        </>
+      }
+      open={isEditing || sectionOpen}
+      onOpenChange={setSectionOpen}
+      content={currentValue ?? undefined}
+      actions={
+        isEditing ? (
+          <>
+            <Tabs
+              value={editMode}
+              onValueChange={(v) => setEditMode(v as "write" | "preview")}
+            >
+              <TabsList className="h-8">
+                <TabsTrigger value="write" className="text-xs px-2 h-6">
+                  <Edit3 className="h-3 w-3 mr-1" />
+                  Write
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="text-xs px-2 h-6">
+                  <Eye className="h-3 w-3 mr-1" />
+                  Preview
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <HelpTip label="Discard changes without saving">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleCancel}
+                disabled={updateTask.isPending}
+                aria-label="Cancel edit"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </HelpTip>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={updateTask.isPending}
+            >
+              <Check className="h-4 w-4 mr-1" />
+              Save
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" variant="ghost" onClick={startEditing}>
+            <Edit3 className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+        )
+      }
+    >
+      {isEditing ? (
+        <div className="space-y-2">
+          {editMode === "write" ? (
+            <Textarea
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={`Add ${title.toLowerCase()}...`}
+              className="min-h-[150px] font-mono text-sm"
+              disabled={updateTask.isPending}
+              autoFocus
+            />
+          ) : (
+            <div
+              className={`min-h-[150px] p-4 rounded-lg ${bgClass ?? "bg-muted/50"}`}
+            >
+              {editValue ? (
+                <Markdown className="text-sm">{editValue}</Markdown>
+              ) : (
+                <p className="text-muted-foreground text-sm italic">
+                  Nothing to preview
+                </p>
+              )}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Markdown supported. Press Ctrl/Cmd + Enter to save, Escape to
+            cancel.
+          </p>
+        </div>
+      ) : (
+        <div
+          className={`rounded-lg p-4 cursor-pointer hover:opacity-80 transition-opacity ${bgClass ?? "bg-muted/50"}`}
+          onClick={startEditing}
+          title="Click to edit"
+        >
+          <Markdown className="text-sm">{currentValue!}</Markdown>
+        </div>
+      )}
+    </CollapsibleSection>
+  );
+}
+
+export function TabNotes({ task }: TabNotesProps) {
+  // Show all note sections, even empty ones (they can be added)
+  return (
+    <div className="space-y-6">
+      {/* Quick Context */}
+      <EditableNoteCard
+        task={task}
+        field="quick_context"
+        title="Quick Context"
+        icon={<FileText className="h-5 w-5" />}
+        badge={
+          <HelpTip label="Short context notes for quickly resuming work after an interruption">
+            <Badge variant="outline" className="ml-2">
+              For Resumption
+            </Badge>
+          </HelpTip>
+        }
+        bgClass="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800"
+      />
+
+      {/* Dev Notes */}
+      <EditableNoteCard
+        task={task}
+        field="dev_notes"
+        title="Developer Notes"
+        icon={
+          <HelpTip label="Written by the developer — approach, decisions, anything QA should know">
+            <Code className="h-5 w-5" />
+          </HelpTip>
+        }
+        bgClass="bg-muted/50"
+      />
+
+      {/* Documenter Notes */}
+      <EditableNoteCard
+        task={task}
+        field="doc_notes"
+        title="Documenter Notes"
+        icon={
+          <HelpTip label="Written by the documenter during the awaiting_documentation phase">
+            <BookText className="h-5 w-5" />
+          </HelpTip>
+        }
+        bgClass="bg-muted/50"
+      />
+
+      {/* QA Notes */}
+      <EditableNoteCard
+        task={task}
+        field="qa_notes"
+        title="QA Notes"
+        icon={<TestTube className="h-5 w-5" />}
+        badge={
+          <HelpTip
+            label={
+              task.qa_verified === true
+                ? "QA passed this task on to documentation."
+                : task.qa_verified === false
+                  ? "QA failed this task back to needs_revision."
+                  : "QA hasn't reviewed this task yet."
+            }
+          >
+            <Badge
+              variant={
+                task.qa_verified === true
+                  ? "default"
+                  : task.qa_verified === false
+                    ? "destructive"
+                    : "secondary"
+              }
+              className="ml-2"
+            >
+              {task.qa_verified === true
+                ? "Passed"
+                : task.qa_verified === false
+                  ? "Failed"
+                  : "Pending"}
+            </Badge>
+          </HelpTip>
+        }
+        bgClass={
+          task.qa_verified === true
+            ? "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800"
+            : task.qa_verified === false
+              ? "bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800"
+              : "bg-muted/50"
+        }
+      />
+
+      {/* PR Reviewer Notes */}
+      <EditableNoteCard
+        task={task}
+        field="pr_reviewer_notes"
+        title="PR Reviewer Notes"
+        icon={<GitPullRequest className="h-5 w-5" />}
+        badge={prReviewBadge(task)}
+        bgClass={prReviewCardBg(task)}
+      />
+
+      {/* Auditor Notes */}
+      <EditableNoteCard
+        task={task}
+        field="auditor_notes"
+        title="Auditor Notes"
+        icon={<Shield className="h-5 w-5" />}
+        badge={
+          <HelpTip label="Visible only to the Auditor and CEO">
+            <Badge
+              variant="outline"
+              className="ml-2 text-purple-600 border-purple-300"
+            >
+              Confidential
+            </Badge>
+          </HelpTip>
+        }
+        bgClass="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800"
+      />
+    </div>
+  );
+}

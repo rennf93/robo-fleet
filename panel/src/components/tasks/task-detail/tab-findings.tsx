@@ -1,0 +1,253 @@
+"use client";
+
+import { Task } from "@/types";
+import { useTaskFindings } from "@/hooks/use-tasks";
+import type { TaskFinding } from "@/lib/api/tasks";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { HelpTip } from "@/components/ui/help-tip";
+import { ListChecks } from "lucide-react";
+import { CodeSnippet } from "@/components/git/code-snippet";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
+
+// Mirrors the server-side shape gate (Finding._file_repo_relative in
+// robofleet/foundation/policy/content/models.py) — keep the character classes
+// in sync, knowing they deliberately diverge on non-ASCII: Python's \w is
+// unicode, JS's is ASCII, so a unicode path the server accepted renders
+// snippetless here (fail-open — the plain-text metadata still shows). A
+// prose `file` (e.g. a PR reference) predates that gate on older ledger
+// rows and must not drive a doomed CodeSnippet fetch.
+const FILE_SHAPE_RE = /^[\w.\-/()[\]+@]+$/;
+function looksLikePath(file: string): boolean {
+  return FILE_SHAPE_RE.test(file);
+}
+
+interface TabFindingsProps {
+  task: Task;
+}
+
+const SEVERITY_CLASS: Record<string, string> = {
+  blocker: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+  major:
+    "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+  minor:
+    "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
+  nit: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+};
+
+const STATUS_CLASS: Record<string, string> = {
+  open: "border-red-300 text-red-700 dark:border-red-800 dark:text-red-300",
+  addressed:
+    "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300",
+  verified:
+    "border-green-300 text-green-700 dark:border-green-800 dark:text-green-300",
+  waived: "border-border text-muted-foreground",
+};
+
+const ORIGIN_LABEL: Record<string, string> = {
+  qa: "QA",
+  pr_gate: "PR Review",
+  pm: "PM",
+  ceo: "CEO",
+};
+
+// Per-state description maps (task-status-badge.tsx idiom), local to the
+// findings-ledger domain (robofleet/foundation/policy/conventions/findings.py).
+const SEVERITY_DESCRIPTIONS: Record<string, string> = {
+  blocker: "Must be fixed before this task can pass review.",
+  major:
+    "A significant defect; should be fixed but isn't review-blocking alone.",
+  minor: "A smaller defect worth fixing.",
+  nit: "A nitpick — cosmetic or stylistic; fix if convenient.",
+};
+
+const STATUS_DESCRIPTIONS: Record<string, string> = {
+  open: "Not yet addressed by the assignee.",
+  addressed:
+    "The assignee says this is fixed — awaiting reviewer verification.",
+  verified: "A reviewer confirmed the fix.",
+  waived: "Explicitly waived — no fix required.",
+};
+
+function FindingCard({
+  finding,
+  branch,
+}: {
+  finding: TaskFinding;
+  branch: string | null;
+}) {
+  return (
+    <Card>
+      <CardContent className="pt-4 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <HelpTip label={SEVERITY_DESCRIPTIONS[finding.severity]}>
+            <Badge
+              className={SEVERITY_CLASS[finding.severity] ?? SEVERITY_CLASS.nit}
+            >
+              {finding.severity}
+            </Badge>
+          </HelpTip>
+          <HelpTip label={STATUS_DESCRIPTIONS[finding.status]}>
+            <Badge variant="outline" className={STATUS_CLASS[finding.status]}>
+              {finding.status}
+            </Badge>
+          </HelpTip>
+          {finding.file && (
+            <code className="text-xs text-muted-foreground">
+              {finding.file}
+              {finding.line != null ? `:${finding.line}` : ""}
+            </code>
+          )}
+          {finding.criterion && (
+            <span className="text-xs text-muted-foreground">
+              · {finding.criterion}
+            </span>
+          )}
+          {finding.addressed_by_commit && (
+            <HelpTip label="Short git commit hash (first 7 characters) that addressed this finding">
+              <code className="ml-auto text-xs text-muted-foreground">
+                {finding.addressed_by_commit.slice(0, 7)}
+              </code>
+            </HelpTip>
+          )}
+        </div>
+        {finding.file && looksLikePath(finding.file) && (
+          <CodeSnippet
+            branch={branch}
+            file={finding.file}
+            activeLine={finding.line}
+          />
+        )}
+        <div className="space-y-1 text-sm">
+          <p>
+            <span className="text-muted-foreground">Expected:</span>{" "}
+            {finding.expected}
+          </p>
+          <p>
+            <span className="text-muted-foreground">Actual:</span>{" "}
+            {finding.actual}
+          </p>
+          {finding.fix && (
+            <p>
+              <span className="text-muted-foreground">Fix:</span> {finding.fix}
+            </p>
+          )}
+        </div>
+        {finding.evidence && (
+          <details className="text-xs text-muted-foreground">
+            <HelpTip label="The raw evidence text the reviewer captured for this finding">
+              <summary className="cursor-pointer select-none w-fit">
+                Evidence
+              </summary>
+            </HelpTip>
+            <pre className="mt-1 whitespace-pre-wrap rounded bg-muted/50 p-2">
+              {finding.evidence}
+            </pre>
+          </details>
+        )}
+        {finding.resolution_note && (
+          <p className="text-xs text-muted-foreground">
+            Resolution: {finding.resolution_note}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function TabFindings({ task }: TabFindingsProps) {
+  const { data, isLoading } = useTaskFindings(task.id);
+  const findings = data?.findings ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+
+  if (findings.length === 0) {
+    return (
+      <div className="py-12 text-center text-muted-foreground">
+        <ListChecks className="mx-auto mb-4 h-12 w-12 opacity-50" />
+        <p>No revision findings recorded yet.</p>
+        <p className="mt-2 text-sm">
+          Findings appear here after the first QA / PR-review / PM / CEO bounce.
+        </p>
+      </div>
+    );
+  }
+
+  // Findings arrive newest-round-first; group while preserving that order.
+  const rounds: { round: number; origin: string; items: TaskFinding[] }[] = [];
+  for (const f of findings) {
+    const last = rounds[rounds.length - 1];
+    if (last && last.round === f.round) last.items.push(f);
+    else rounds.push({ round: f.round, origin: f.origin, items: [f] });
+  }
+
+  return (
+    <div className="space-y-6">
+      {(data?.summary.length ?? 0) > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {data!.summary.map((s) => (
+            <HelpTip
+              key={s.origin}
+              label="Closed combines addressed, verified, and waived findings"
+            >
+              <Badge variant="outline">
+                {ORIGIN_LABEL[s.origin] ?? s.origin}: {s.open} open ·{" "}
+                {s.addressed + s.verified + s.waived} closed
+              </Badge>
+            </HelpTip>
+          ))}
+        </div>
+      )}
+      {rounds.map((group, idx) => {
+        const openCount = group.items.filter((f) => f.status === "open").length;
+        return (
+          <CollapsibleSection
+            key={group.round}
+            // Rounds arrive newest-first (see the grouping loop above) — only
+            // the newest is worth seeing without a click; older rounds are
+            // usually already resolved history.
+            defaultOpen={idx === 0}
+            title={
+              <div className="flex flex-wrap items-center gap-2">
+                <HelpTip label="Each bounce back to the assignee starts a new round">
+                  <span>Round {group.round}</span>
+                </HelpTip>
+                <HelpTip label="Which reviewer stage raised this round's findings">
+                  <Badge variant="outline">
+                    {ORIGIN_LABEL[group.origin] ?? group.origin}
+                  </Badge>
+                </HelpTip>
+                <HelpTip label="Total findings this round, and how many are still unaddressed">
+                  <Badge variant="secondary">
+                    {group.items.length}{" "}
+                    {group.items.length === 1 ? "finding" : "findings"}
+                    {openCount > 0 ? ` · ${openCount} open` : ""}
+                  </Badge>
+                </HelpTip>
+              </div>
+            }
+          >
+            <div className="space-y-3">
+              {group.items.map((f) => (
+                <FindingCard key={f.id} finding={f} branch={task.branch_name} />
+              ))}
+            </div>
+          </CollapsibleSection>
+        );
+      })}
+      {data?.truncated && (
+        <p className="text-xs text-muted-foreground">
+          … {data.total - findings.length} more not shown ({data.total} total)
+        </p>
+      )}
+    </div>
+  );
+}

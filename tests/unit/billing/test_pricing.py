@@ -224,6 +224,18 @@ class TestSonnet5PromoTier:
     """claude-sonnet-5 promotional pricing — 33% off Sonnet 4.6 (through
     2026-08-31). A dedicated table entry wins over the bare 'sonnet' fragment."""
 
+    @pytest.fixture(autouse=True)
+    def _pin_promo_active(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # The promo is date-gated; pin today to its last day so the promo-rate
+        # assertions hold regardless of when the suite runs. The module-level
+        # gate tests below cover both sides of the boundary unchanged.
+        class _D:
+            @staticmethod
+            def today() -> date:
+                return date(2026, 8, 31)
+
+        monkeypatch.setattr(p, "date", _D)
+
     def test_input_only(self) -> None:
         cost = calculate_cost("claude-sonnet-5", tokens_input=_M, tokens_output=0)
         assert abs(cost - _SONNET5_INPUT) < _TOL

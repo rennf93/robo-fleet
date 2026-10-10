@@ -2,10 +2,12 @@ import subprocess
 import sys
 from datetime import datetime
 
+import pytest
+
 from robofleet import tree_check
 
 
-def test_tree_check_epoch_exists():
+def test_tree_check_epoch_exists() -> None:
     assert hasattr(tree_check, "TREE_CHECK_EPOCH")
     assert isinstance(tree_check.TREE_CHECK_EPOCH, str)
 
@@ -15,7 +17,7 @@ def test_tree_check_epoch_exists():
 _MIN_ISO8601_LEN = 19
 
 
-def test_tree_check_epoch_is_valid_iso8601():
+def test_tree_check_epoch_is_valid_iso8601() -> None:
     epoch = tree_check.TREE_CHECK_EPOCH
     # Basic format check (starts with year, has T separator)
     assert len(epoch) >= _MIN_ISO8601_LEN
@@ -32,14 +34,14 @@ def test_tree_check_epoch_is_valid_iso8601():
     assert dt is not None
 
 
-def test_tree_check_cli_direct(capsys):
+def test_tree_check_cli_direct(capsys: pytest.CaptureFixture[str]) -> None:
     """Test calling the main() function directly and capturing stdout."""
     tree_check.main()
     captured = capsys.readouterr()
     assert captured.out.strip() == tree_check.TREE_CHECK_EPOCH
 
 
-def test_tree_check_cli_subprocess():
+def test_tree_check_cli_subprocess() -> None:
     """Test calling the module as a CLI using subprocess."""
     result = subprocess.run(
         [sys.executable, "-m", "robofleet.tree_check"],

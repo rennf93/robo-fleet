@@ -131,6 +131,8 @@ constraint-dependencies = [
     # httpx2 is transitive via fastapi-guard/guard-core/httpx clients;
     # 2.12.0 clears PYSEC-2026-3846/3848/3849 (pip-audit gate).
     "httpx2>=2.12.0",
+    # multidict is transitive via aiohttp; 6.9.1 clears CVE-2026-104874.
+    "multidict>=6.9.1",
 ]
 
 # =============================================================================

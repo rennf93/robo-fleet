@@ -121,8 +121,11 @@ allow-direct-references = true
 # pyjwt is pulled in transitively (by mcp and msal). 2.12.1 carries four
 # disclosed CVEs that are fixed in 2.13.0; constrain the floor so the resolver
 # picks a patched release while leaving the direct dependents' own ranges intact.
+# 2.15.0 additionally clears PYSEC-2026-4183 (pip-audit fails the quality gate
+# on anything older). urllib3 2.8.0 clears PYSEC-2026-4175/4176/4177 the same
+# way; it is transitive via requests/botocore, so it rides the same constraint.
 [tool.uv]
-constraint-dependencies = ["pyjwt>=2.13.0"]
+constraint-dependencies = ["pyjwt>=2.15.0", "urllib3>=2.8.0"]
 
 # =============================================================================
 # RUFF Configuration

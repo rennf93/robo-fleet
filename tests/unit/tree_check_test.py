@@ -3,7 +3,6 @@ import sys
 from datetime import datetime
 
 import pytest
-
 from robofleet import tree_check
 
 
